@@ -75,6 +75,17 @@ BEGIN
       'messages.error_code/error_title/error_details are missing — migration 042 did not apply';
   END IF;
 
+  -- 043 swaps the `pipelines` existence check inside redeem_invitation
+  -- for a `deals` check — a client-seeded empty "Sales Pipeline" (no
+  -- trigger involved) otherwise false-positives as "has data" and
+  -- blocks legitimate invite acceptance. Assert the fixed body is
+  -- actually installed, not the pre-043 one.
+  IF pg_get_functiondef('public.redeem_invitation(text)'::regprocedure)
+       LIKE '%UNION ALL SELECT 1 FROM pipelines WHERE account_id%' THEN
+    RAISE EXCEPTION
+      'redeem_invitation still checks pipelines instead of deals — migration 043 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;
