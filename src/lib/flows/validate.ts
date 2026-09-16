@@ -132,7 +132,66 @@ export function validateFlowForActivation(
     }
   }
 
+  // Auto-advance cycles — the engine walks start/send_message/send_media/
+  // condition/set_tag nodes synchronously, with no suspend in between
+  // (see `isAutoAdvancing` in lib/flows/engine.ts, kept in sync here — a
+  // graph-shape check, not a runtime import, so this stays usable from
+  // the client builder). Two send_message nodes pointing at each other
+  // pass every check above and, at runtime, blast messages to the
+  // customer until the engine's 64-iteration safety valve trips. Report
+  // every node on a detected cycle so the builder can highlight it.
+  issues.push(...detectAutoAdvanceCycles(nodes));
+
   return issues;
+}
+
+const AUTO_ADVANCE_NODE_TYPES = new Set([
+  "start",
+  "send_message",
+  "send_media",
+  "condition",
+  "set_tag",
+]);
+
+function detectAutoAdvanceCycles(nodes: NodeInput[]): ValidationIssue[] {
+  const byKey = new Map<string, NodeInput>();
+  for (const n of nodes) byKey.set(n.node_key, n);
+
+  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const color = new Map<string, number>();
+  for (const n of nodes) color.set(n.node_key, WHITE);
+  const inCycle = new Set<string>();
+
+  function visit(key: string, stack: string[]): void {
+    const node = byKey.get(key);
+    if (!node || !AUTO_ADVANCE_NODE_TYPES.has(node.node_type)) return;
+    color.set(key, GRAY);
+    stack.push(key);
+    for (const next of outgoingEdges(node)) {
+      const nextColor = color.get(next);
+      if (nextColor === GRAY) {
+        // Back-edge to a node still on the stack — every node from
+        // there to here (inclusive) forms the cycle.
+        const cycleStart = stack.indexOf(next);
+        for (const k of stack.slice(cycleStart)) inCycle.add(k);
+      } else if (nextColor === WHITE) {
+        visit(next, stack);
+      }
+    }
+    stack.pop();
+    color.set(key, BLACK);
+  }
+
+  for (const n of nodes) {
+    if (color.get(n.node_key) === WHITE) visit(n.node_key, []);
+  }
+
+  return Array.from(inCycle).map((node_key) => ({
+    severity: "error" as const,
+    scope: "node" as const,
+    node_key,
+    message: `Node "${node_key}" is part of a loop of auto-advancing steps with no pause for a reply — it would send messages to the customer in an uncontrolled loop.`,
+  }));
 }
 
 // ============================================================

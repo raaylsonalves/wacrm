@@ -547,3 +547,93 @@ describe("reachableFromEntry", () => {
     expect(set).toEqual(new Set(["a", "b"]));
   });
 });
+
+describe("validateFlowForActivation — auto-advance cycles", () => {
+  it("flags two send_message nodes looping into each other", () => {
+    const nodes = [
+      {
+        node_key: "start",
+        node_type: "start",
+        config: { next_node_key: "a" },
+      },
+      {
+        node_key: "a",
+        node_type: "send_message",
+        config: { text: "hi", next_node_key: "b" },
+      },
+      {
+        node_key: "b",
+        node_type: "send_message",
+        config: { text: "there", next_node_key: "a" },
+      },
+    ];
+    const issues = validateFlowForActivation(
+      { ...validFlow, entry_node_id: "start" },
+      nodes,
+    );
+    const cycleIssues = issues.filter((i) =>
+      i.message.includes("uncontrolled loop"),
+    );
+    expect(cycleIssues.length).toBeGreaterThan(0);
+    expect(cycleIssues.every((i) => i.severity === "error")).toBe(true);
+    expect(new Set(cycleIssues.map((i) => i.node_key))).toEqual(
+      new Set(["a", "b"]),
+    );
+  });
+
+  it("flags a self-looping condition node", () => {
+    const nodes = [
+      {
+        node_key: "start",
+        node_type: "start",
+        config: { next_node_key: "cond" },
+      },
+      {
+        node_key: "cond",
+        node_type: "condition",
+        config: { true_next: "cond", false_next: "end" },
+      },
+      { node_key: "end", node_type: "end", config: {} },
+    ];
+    const issues = validateFlowForActivation(
+      { ...validFlow, entry_node_id: "start" },
+      nodes,
+    );
+    expect(
+      issues.some(
+        (i) => i.node_key === "cond" && i.message.includes("uncontrolled loop"),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not flag a loop that passes through a suspending node", () => {
+    // send_buttons waits for a customer reply, so looping back through
+    // it is a legitimate "keep asking" pattern, not a runaway send.
+    const nodes = [
+      { node_key: "a", node_type: "start", config: { next_node_key: "b" } },
+      {
+        node_key: "b",
+        node_type: "send_buttons",
+        config: {
+          text: "Pick one",
+          buttons: [{ reply_id: "x", title: "Retry", next_node_key: "a" }],
+        },
+      },
+    ];
+    const issues = validateFlowForActivation(
+      { ...validFlow, entry_node_id: "a" },
+      nodes,
+    );
+    expect(issues.some((i) => i.message.includes("uncontrolled loop"))).toBe(
+      false,
+    );
+  });
+
+  it("does not flag a well-formed acyclic flow", () => {
+    expect(
+      validateFlowForActivation(validFlow, validNodes).some((i) =>
+        i.message.includes("uncontrolled loop"),
+      ),
+    ).toBe(false);
+  });
+});
