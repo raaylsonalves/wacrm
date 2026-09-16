@@ -1762,7 +1762,9 @@
       "useMode": "Use {mode} mode",
       "active": "Active",
       "accentColor": "Accent color",
-      "useTheme": "Use {name} theme"
+      "useTheme": "Use {name} theme",
+      "brandColorLocked": "Your account uses a custom brand color set in Settings → Branding, so the accent color below is fixed for everyone and can't be changed here.",
+      "brandColorLockedAdmin": "Your account uses a custom brand color, so the accent color below is fixed for everyone. Change it in Settings → Branding."
     },
     "security": {
       "title": "Login & security",

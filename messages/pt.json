@@ -1750,7 +1750,9 @@
       "useMode": "Usar o modo {mode}",
       "active": "Ativo",
       "accentColor": "Cor de destaque",
-      "useTheme": "Usar o tema {name}"
+      "useTheme": "Usar o tema {name}",
+      "brandColorLocked": "Sua conta usa uma cor de marca personalizada, definida em Configurações → Identidade visual — a cor de destaque abaixo é fixa para todos e não pode ser alterada aqui.",
+      "brandColorLockedAdmin": "Sua conta usa uma cor de marca personalizada, então a cor de destaque abaixo é fixa para todos. Altere em Configurações → Identidade visual."
     },
     "security": {
       "title": "Login e segurança",

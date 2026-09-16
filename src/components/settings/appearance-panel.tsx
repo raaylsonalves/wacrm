@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, Moon, Palette, SunMoon, Sun } from "lucide-react";
+import { Check, Lock, Moon, Palette, SunMoon, Sun } from "lucide-react";
 
 import { useTheme } from "@/hooks/use-theme";
+import { useAuth } from "@/hooks/use-auth";
 import { MODES, THEMES, type Mode, type ThemeId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
@@ -22,7 +23,14 @@ import { SettingsPanelHead } from "./settings-panel-head";
  */
 export function AppearancePanel() {
   const { theme, setTheme, mode, setMode } = useTheme();
+  const { account, canEditSettings } = useAuth();
   const t = useTranslations("Settings.appearance");
+  // A brand color (Settings > Branding) overrides --primary for the
+  // whole account via an inline style with higher specificity than
+  // the [data-theme] blocks below — picking a different accent here
+  // would otherwise silently do nothing, which read as a bug rather
+  // than "this is locked" (issue: reported after shipping branding).
+  const brandLocked = !!account?.brand_color;
 
   return (
     <section className="max-w-3xl animate-in fade-in-50 duration-200">
@@ -59,7 +67,24 @@ export function AppearancePanel() {
           {t("accentColor")}
         </h3>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {brandLocked && (
+          <p className="flex items-start gap-2 rounded-lg border border-border bg-muted p-3 text-xs text-muted-foreground">
+            <Lock className="mt-0.5 size-3.5 shrink-0" />
+            <span>
+              {canEditSettings
+                ? t("brandColorLockedAdmin")
+                : t("brandColorLocked")}
+            </span>
+          </p>
+        )}
+
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3",
+            brandLocked && "pointer-events-none opacity-50",
+          )}
+          aria-disabled={brandLocked}
+        >
           {THEMES.map((tObj) => (
             <ThemeCard
               key={tObj.id}
