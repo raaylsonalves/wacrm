@@ -95,7 +95,9 @@ The UI ships in English, Korean, Brazilian Portuguese and Spanish — set
 (catalogues live in `messages/`).
 
 Prefer containers? See [docs/docker.md](./docs/docker.md) for the
-Dockerfile + Docker Compose setup.
+Dockerfile + Docker Compose setup. Deploying to Vercel instead? See
+[docs/deploy-vercel.md](./docs/deploy-vercel.md) for the cron and
+Supabase Auth redirect config that setup needs.
 
 ## 🚀 Deploy on Hostinger (recommended)
 
