@@ -386,13 +386,13 @@ export function DealForm({
                     type="button"
                     onClick={() => handleStatusChange("won")}
                     disabled={!!statusAction || deal.status === "won"}
-                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    className="h-auto min-w-0 shrink flex-1 basis-0 flex-wrap whitespace-normal bg-primary py-2 text-center text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                   >
                     {statusAction === "won" ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
                     ) : (
                       <>
-                        <Check className="mr-1 h-4 w-4" />
+                        <Check className="mr-1 h-4 w-4 shrink-0" />
                         {t("markAsWon")}
                       </>
                     )}
@@ -401,13 +401,13 @@ export function DealForm({
                     type="button"
                     onClick={() => handleStatusChange("lost")}
                     disabled={!!statusAction || deal.status === "lost"}
-                    className="flex-1 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                    className="h-auto min-w-0 shrink flex-1 basis-0 flex-wrap whitespace-normal bg-red-600 py-2 text-center text-white hover:bg-red-700 disabled:opacity-50"
                   >
                     {statusAction === "lost" ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
                     ) : (
                       <>
-                        <X className="mr-1 h-4 w-4" />
+                        <X className="mr-1 h-4 w-4 shrink-0" />
                         {t("markAsLost")}
                       </>
                     )}
