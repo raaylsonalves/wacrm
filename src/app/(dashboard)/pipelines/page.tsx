@@ -232,11 +232,17 @@ export default function PipelinesPage() {
       setDeals((prev) =>
         prev.map((d) => (d.id === dealId ? { ...d, stage_id: newStageId } : d)),
       );
-      const { error } = await supabase
+      // RLS silently denies an UPDATE it filters out — PostgREST still
+      // answers 200 with zero rows affected, not an error. `.select("id")`
+      // makes the denial visible so a viewer/agent dragging a card they
+      // aren't allowed to move gets rolled back instead of a card that
+      // looks moved but reverts on the next real reload.
+      const { data, error } = await supabase
         .from("deals")
         .update({ stage_id: newStageId })
-        .eq("id", dealId);
-      if (error) {
+        .eq("id", dealId)
+        .select("id");
+      if (error || !data || data.length === 0) {
         toast.error(t("toastFailedMoveDeal"));
         refreshDeals();
       }
@@ -365,7 +371,7 @@ export default function PipelinesPage() {
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator className="bg-border" />
-              {selectedPipeline && (
+              {selectedPipeline && canEditSettings && (
                 <DropdownMenuItem
                   onClick={() => setSettingsOpen(true)}
                   className="text-popover-foreground"

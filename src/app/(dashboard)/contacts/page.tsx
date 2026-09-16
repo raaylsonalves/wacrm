@@ -253,12 +253,18 @@ export default function ContactsPage() {
     if (!deleteTarget) return;
     setDeleting(true);
 
-    const { error } = await supabase
+    // RLS silently denies a DELETE it filters out — PostgREST still
+    // answers 200 with zero rows, not an error. `.select('id')` makes a
+    // denied delete (contacts_delete requires agent+, migration 017)
+    // show as failed instead of a "Deleted" toast for a row that's
+    // still there.
+    const { data, error } = await supabase
       .from('contacts')
       .delete()
-      .eq('id', deleteTarget.id);
+      .eq('id', deleteTarget.id)
+      .select('id');
 
-    if (error) {
+    if (error || !data || data.length === 0) {
       toast.error(t('toastFailedDelete'));
     } else {
       toast.success(t('toastDeleted'));
@@ -672,17 +678,21 @@ export default function ContactsPage() {
                           <Pencil className="size-4" />
                           {t('editAction')}
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-border" />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            confirmDelete(contact);
-                          }}
-                        >
-                          <Trash2 className="size-4" />
-                          {t('deleteAction')}
-                        </DropdownMenuItem>
+                        {canEdit && (
+                          <>
+                            <DropdownMenuSeparator className="bg-border" />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmDelete(contact);
+                              }}
+                            >
+                              <Trash2 className="size-4" />
+                              {t('deleteAction')}
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

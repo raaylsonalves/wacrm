@@ -122,13 +122,24 @@ export function PipelineSettings({
       supabase
         .from("pipelines")
         .update({ name: name.trim() })
-        .eq("id", pipeline.id),
-      supabase.from("pipeline_stages").upsert(stageRows, { onConflict: "id" }),
+        .eq("id", pipeline.id)
+        .select("id"),
+      supabase.from("pipeline_stages").upsert(stageRows, { onConflict: "id" }).select("id"),
     ]);
 
     setSaving(false);
 
-    if (renameRes.error || stagesRes.error) {
+    // RLS silently denies an UPDATE/upsert it filters out — PostgREST
+    // still answers 200 with zero rows, not an error. Only `pipelines`
+    // and `pipeline_stages` writes require 'admin' (migration 017), so
+    // an agent viewing this dialog would otherwise see "Saved" while
+    // nothing changed.
+    if (
+      renameRes.error ||
+      stagesRes.error ||
+      !renameRes.data?.length ||
+      stagesRes.data?.length !== stageRows.length
+    ) {
       toast.error(t("toastFailedSave"));
       return;
     }
@@ -171,11 +182,12 @@ export function PipelineSettings({
       toast.error(t("toastMoveOrDeleteDeals"));
       return;
     }
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("pipeline_stages")
       .delete()
-      .eq("id", stageId);
-    if (error) {
+      .eq("id", stageId)
+      .select("id");
+    if (error || !data || data.length === 0) {
       toast.error(t("toastFailedDeleteStage"));
       return;
     }
@@ -185,12 +197,13 @@ export function PipelineSettings({
   async function handleDeletePipeline() {
     setDeleting(true);
     // ON DELETE CASCADE handles deals + stages.
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("pipelines")
       .delete()
-      .eq("id", pipeline.id);
+      .eq("id", pipeline.id)
+      .select("id");
     setDeleting(false);
-    if (error) {
+    if (error || !data || data.length === 0) {
       toast.error(t("toastFailedDeletePipeline"));
       return;
     }
