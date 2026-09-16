@@ -97,7 +97,22 @@
       "timeS": "há {sec}s",
       "timeM": "há {min}min",
       "timeH": "há {hr}h",
-      "timeD": "há {day}d"
+      "timeD": "há {day}d",
+      "unknownContact": "Desconhecido",
+      "aContact": "um contato",
+      "defaultAutomationName": "Automação",
+      "itemMessage": "Nova mensagem de {who}",
+      "itemNewContact": "Novo contato: {who}",
+      "itemDealInStage": "Negócio \"{title}\" em {stage}",
+      "itemDealUpdated": "Negócio \"{title}\" atualizado",
+      "itemBroadcastSent": "Disparo \"{name}\" enviado para {count} contatos",
+      "itemBroadcastStatus": "Disparo \"{name}\" {status} ({count} destinatários)",
+      "itemAutomationTriggered": "Automação \"{name}\" acionada para {who}",
+      "itemAutomationFailed": "Automação \"{name}\" falhou para {who}",
+      "statusDraft": "rascunho",
+      "statusScheduled": "agendado",
+      "statusSending": "enviando",
+      "statusFailed": "falhou"
     },
     "conversationsChart": {
       "title": "Conversas ao longo do tempo",
@@ -127,7 +142,9 @@
       "thisWeek": "Esta semana:",
       "lastWeek": "Semana passada:",
       "noReplies": "Nenhuma resposta registrada ainda",
-      "noRepliesHint": "Este gráfico é preenchido conforme você responde às mensagens dos clientes."
+      "noRepliesHint": "Este gráfico é preenchido conforme você responde às mensagens dos clientes.",
+      "dowShortMonFirst": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
+      "avgMinutesLabel": "Minutos médios"
     },
     "emptyState": {
       "title": "Ainda não há dados suficientes"

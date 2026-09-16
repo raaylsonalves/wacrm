@@ -97,7 +97,22 @@
       "timeS": "{sec}s ago",
       "timeM": "{min}m ago",
       "timeH": "{hr}h ago",
-      "timeD": "{day}d ago"
+      "timeD": "{day}d ago",
+      "unknownContact": "Unknown",
+      "aContact": "a contact",
+      "defaultAutomationName": "Automation",
+      "itemMessage": "New message from {who}",
+      "itemNewContact": "New contact: {who}",
+      "itemDealInStage": "Deal \"{title}\" in {stage}",
+      "itemDealUpdated": "Deal \"{title}\" updated",
+      "itemBroadcastSent": "Broadcast \"{name}\" sent to {count} contacts",
+      "itemBroadcastStatus": "Broadcast \"{name}\" {status} ({count} recipients)",
+      "itemAutomationTriggered": "Automation \"{name}\" triggered for {who}",
+      "itemAutomationFailed": "Automation \"{name}\" failed for {who}",
+      "statusDraft": "draft",
+      "statusScheduled": "scheduled",
+      "statusSending": "sending",
+      "statusFailed": "failed"
     },
     "conversationsChart": {
       "title": "Conversations Over Time",
@@ -127,7 +142,9 @@
       "thisWeek": "This week:",
       "lastWeek": "Last week:",
       "noReplies": "No replies recorded yet",
-      "noRepliesHint": "This chart fills in as you reply to customer messages."
+      "noRepliesHint": "This chart fills in as you reply to customer messages.",
+      "dowShortMonFirst": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      "avgMinutesLabel": "Avg minutes"
     },
     "emptyState": {
       "title": "Not enough data yet"
