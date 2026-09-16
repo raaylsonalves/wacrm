@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
+import { dateFnsLocale } from "@/lib/date-fns-locale";
 import {
   ChevronLeft,
   ChevronRight,
@@ -116,7 +117,7 @@ export function MediaLightbox({
   if (!item) return null;
 
   const authorLabel = item.fromCustomer ? contactLabel : t("you");
-  const timestamp = format(new Date(item.createdAt), "MMM d, yyyy HH:mm");
+  const timestamp = format(new Date(item.createdAt), "MMM d, yyyy HH:mm", { locale: dateFnsLocale });
 
   return (
     <Dialog

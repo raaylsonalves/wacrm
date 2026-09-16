@@ -536,6 +536,8 @@
       "pipelineName": "Pipeline Name",
       "pipelineNamePlaceholder": "e.g., Enterprise Sales",
       "defaultStagesDesc": "Default stages (New Lead → Won) will be created automatically.",
+      "defaultStageNames": ["New Lead", "Qualified", "Proposal Sent", "Negotiation", "Won"],
+      "defaultPipelineName": "Sales Pipeline",
       "cancel": "Cancel",
       "creating": "Creating...",
       "createPipelineBtn": "Create Pipeline",
@@ -2034,5 +2036,22 @@
   },
   "DashboardShell": {
     "loading": "Loading..."
+  },
+  "Currencies": {
+    "USD": "US Dollar",
+    "EUR": "Euro",
+    "GBP": "British Pound",
+    "INR": "Indian Rupee",
+    "AUD": "Australian Dollar",
+    "CAD": "Canadian Dollar",
+    "BRL": "Brazilian Real",
+    "JPY": "Japanese Yen",
+    "CNY": "Chinese Yuan",
+    "AED": "UAE Dirham",
+    "ZAR": "South African Rand",
+    "NGN": "Nigerian Naira",
+    "SGD": "Singapore Dollar",
+    "MXN": "Mexican Peso",
+    "COP": "Colombian Peso"
   }
 }

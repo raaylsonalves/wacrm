@@ -536,6 +536,8 @@
       "pipelineName": "파이프라인 이름",
       "pipelineNamePlaceholder": "예: 기업 영업",
       "defaultStagesDesc": "기본 단계(신규 리드 → 성사)가 자동으로 생성됩니다.",
+      "defaultStageNames": ["신규 리드", "자격 확인", "제안 발송", "협상", "성사"],
+      "defaultPipelineName": "영업 파이프라인",
       "cancel": "취소",
       "creating": "만드는 중...",
       "createPipelineBtn": "파이프라인 만들기",
@@ -2034,5 +2036,22 @@
   },
   "DashboardShell": {
     "loading": "불러오는 중..."
+  },
+  "Currencies": {
+    "USD": "미국 달러",
+    "EUR": "유로",
+    "GBP": "영국 파운드",
+    "INR": "인도 루피",
+    "AUD": "호주 달러",
+    "CAD": "캐나다 달러",
+    "BRL": "브라질 헤알",
+    "JPY": "일본 엔",
+    "CNY": "중국 위안",
+    "AED": "아랍에미리트 디르함",
+    "ZAR": "남아프리카 랜드",
+    "NGN": "나이지리아 나이라",
+    "SGD": "싱가포르 달러",
+    "MXN": "멕시코 페소",
+    "COP": "콜롬비아 페소"
   }
 }

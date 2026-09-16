@@ -41,6 +41,7 @@ export function DealsSettings() {
   const [selected, setSelected] = useState(defaultCurrency);
   const [saving, setSaving] = useState(false);
   const t = useTranslations("Settings.deals");
+  const tCurrency = useTranslations("Currencies");
 
   // Keep the select in sync once the profile (and its account default)
   // resolves, and after a save round-trips through refreshProfile.
@@ -96,7 +97,7 @@ export function DealsSettings() {
             >
               {CURRENCIES.map((c) => (
                 <option key={c.code} value={c.code}>
-                  {c.code} — {c.label}
+                  {c.code} — {tCurrency.has(c.code) ? tCurrency(c.code) : c.label}
                 </option>
               ))}
             </select>

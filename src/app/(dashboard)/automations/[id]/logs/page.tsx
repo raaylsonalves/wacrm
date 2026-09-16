@@ -31,6 +31,7 @@ export default function AutomationLogsPage({
   const router = useRouter()
   const t = useTranslations("Automations.logs")
   const tRelative = useTranslations("Automations.relative")
+  const tBuilder = useTranslations("Automations.builder")
 
   const [automation, setAutomation] = useState<Automation | null>(null)
   const [logs, setLogs] = useState<AutomationLog[] | null>(null)
@@ -133,7 +134,7 @@ export default function AutomationLogsPage({
                       {log.contact?.name ?? log.contact?.phone ?? t("unknownContact")}
                     </div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {log.trigger_event} · {log.steps_executed?.length ?? 0}{" "}
+                      {triggerLabel(tBuilder, log.trigger_event)} · {log.steps_executed?.length ?? 0}{" "}
                       {log.steps_executed?.length === 1 ? t("step", { count: 1 }).replace("1 ", "") : t("stepPlural", { count: log.steps_executed?.length ?? 0 }).replace(/^[0-9]+ /, "")}
                     </div>
                   </div>
@@ -150,7 +151,7 @@ export default function AutomationLogsPage({
                     )}
                     <ul className="space-y-1.5">
                       {(log.steps_executed ?? []).map((r, i) => (
-                        <StepRow key={i} result={r} />
+                        <StepRow key={i} result={r} tBuilder={tBuilder} />
                       ))}
                       {(log.steps_executed ?? []).length === 0 && (
                         <li className="text-xs text-muted-foreground">{t("noSteps")}</li>
@@ -186,7 +187,34 @@ function StatusBadge({ status, t }: { status: AutomationLog["status"], t: Return
   )
 }
 
-function StepRow({ result }: { result: AutomationLogStepResult }) {
+// Both catalogues (`Automations.builder.triggers.<id>.label` /
+// `.steps.<id>`) exist for the automation builder UI, but the labels
+// are exactly what the log list needs too — falls back to the raw
+// enum value for anything not in the catalogue (future step/trigger
+// types) so this never throws on a stale build.
+function triggerLabel(
+  tBuilder: ReturnType<typeof useTranslations>,
+  triggerEvent: string,
+): string {
+  const key = `triggers.${triggerEvent}.label`
+  return tBuilder.has(key) ? tBuilder(key) : triggerEvent
+}
+
+function stepLabel(
+  tBuilder: ReturnType<typeof useTranslations>,
+  stepType: string,
+): string {
+  const key = `steps.${stepType}`
+  return tBuilder.has(key) ? tBuilder(key) : stepType
+}
+
+function StepRow({
+  result,
+  tBuilder,
+}: {
+  result: AutomationLogStepResult
+  tBuilder: ReturnType<typeof useTranslations>
+}) {
   const ok = result.status === "success"
   return (
     <li className="flex items-start gap-2 text-xs">
@@ -199,7 +227,7 @@ function StepRow({ result }: { result: AutomationLogStepResult }) {
       >
         {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
       </span>
-      <span className="text-muted-foreground">{result.step_type}</span>
+      <span className="text-muted-foreground">{stepLabel(tBuilder, result.step_type)}</span>
       {result.detail && (
         <span className="truncate text-muted-foreground">— {result.detail}</span>
       )}

@@ -536,6 +536,8 @@
       "pipelineName": "Nombre del pipeline",
       "pipelineNamePlaceholder": "p. ej. Ventas corporativas",
       "defaultStagesDesc": "Las etapas predeterminadas (Nuevo lead → Ganado) se crearán automáticamente.",
+      "defaultStageNames": ["Nuevo lead", "Calificado", "Propuesta enviada", "Negociación", "Ganado"],
+      "defaultPipelineName": "Pipeline de ventas",
       "cancel": "Cancelar",
       "creating": "Creando...",
       "createPipelineBtn": "Crear pipeline",
@@ -2022,5 +2024,22 @@
   },
   "DashboardShell": {
     "loading": "Cargando..."
+  },
+  "Currencies": {
+    "USD": "Dólar estadounidense",
+    "EUR": "Euro",
+    "GBP": "Libra esterlina",
+    "INR": "Rupia india",
+    "AUD": "Dólar australiano",
+    "CAD": "Dólar canadiense",
+    "BRL": "Real brasileño",
+    "JPY": "Yen japonés",
+    "CNY": "Yuan chino",
+    "AED": "Dirham de los Emiratos Árabes Unidos",
+    "ZAR": "Rand sudafricano",
+    "NGN": "Naira nigeriana",
+    "SGD": "Dólar de Singapur",
+    "MXN": "Peso mexicano",
+    "COP": "Peso colombiano"
   }
 }
