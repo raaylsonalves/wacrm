@@ -637,7 +637,25 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
  */
 async function resolveConversationId(args: ExecuteArgs): Promise<string> {
   const fromCtx = args.context.conversation_id
-  if (fromCtx) return fromCtx
+  if (fromCtx) {
+    // `context` can be caller-supplied (POST /api/automations/engine
+    // passes the request body's `context` through verbatim, and a
+    // parked wait replays it from automation_pending_executions), and
+    // every send step below writes through the service-role client,
+    // bypassing RLS. Unlike `contactId` above, this id was never
+    // ownership-checked — verify it belongs to the automation's own
+    // account before handing it to a send step, or a forged/foreign id
+    // lets one account write into another account's conversation.
+    const { data: owned, error: ownErr } = await supabaseAdmin()
+      .from('conversations')
+      .select('id')
+      .eq('id', fromCtx)
+      .eq('account_id', args.automation.account_id)
+      .maybeSingle()
+    if (ownErr) throw new Error(`conversation ownership check failed: ${ownErr.message}`)
+    if (!owned) throw new Error('cannot send: conversation not in this account')
+    return fromCtx
+  }
   if (!args.contactId) throw new Error('cannot resolve conversation: no contact')
   const { data, error } = await supabaseAdmin()
     .from('conversations')
