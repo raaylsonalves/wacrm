@@ -140,27 +140,31 @@ deployment.
 - [ ] `supabase/ci/verify-schema.sql` gets a check for the new
       columns, following the pattern used for migrations 040/042.
 
+## Decisions
+
+- **Contrast**: auto-compute `--primary-foreground` from
+  `brand_color` via relative luminance (WCAG formula) — pick black or
+  white, whichever contrasts more. No second color picker, no curated
+  palette. A `getContrastForeground(hex): '#000000' | '#ffffff'`
+  helper, unit-tested with known light/dark hexes. Accepted trade-off:
+  a pastel brand color will read as "technically passable, a bit flat"
+  against pure black/white rather than a hand-tuned near-white — fine
+  for a v1, revisit only if real feedback says otherwise.
+- **Flash of default branding**: don't solve it. No `localStorage`
+  caching keyed by account id — the branding swap (default icon/name →
+  custom logo) is a low-stakes, sub-second flash once per session,
+  unlike the light/dark flash the theme boot script exists for (which
+  is jarring precisely because it inverts the whole page's contrast).
+  Render the default, swap in place once the account loads, exactly
+  like every other account-scoped value already on this page
+  (currency, member list, etc.).
+
 ## Risks / open questions
 
-- **Contrast/accessibility**: an arbitrary admin-picked hex color used
-  as `--primary` needs a readable `--primary-foreground` (button
-  text, etc.). Decide: auto-compute (e.g. pick black/white by
-  luminance) or require the admin to also pick a foreground, or
-  constrain to a curated set of pickable colors (less "custom" but
-  much safer). This is the single biggest design decision in this
-  spec — resolve it before implementing step 4.
-- **Flash of default branding**: the theme boot script avoids a flash
-  by reading `localStorage` synchronously before paint. Account
-  branding lives in Postgres, not `localStorage`, so it cannot be
-  read synchronously pre-hydration the same way — there will be a
-  brief default-branding flash on first paint before the account
-  loads client-side, unless branding fields are cached in
-  `localStorage` after first load (keyed by account id) as a
-  fast-path for repeat visits. Decide whether that's worth the
-  complexity for a v1.
 - **Logo upload abuse**: any admin can upload arbitrary images to a
   public bucket — confirm file-type/size validation happens
-  server-side too, not just client-side (client checks are
+  server-side too (Storage bucket `file_size_limit` +
+  `allowed_mime_types`), not just client-side (client checks are
   bypassable).
-- Confirm whether `header.tsx` duplicates the name/logo before
-  assuming `sidebar.tsx` is the only render site.
+- `header.tsx` confirmed to carry no duplicate logo/name render —
+  `sidebar.tsx` is the only site.

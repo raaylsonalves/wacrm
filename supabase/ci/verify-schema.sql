@@ -75,6 +75,21 @@ BEGIN
       'messages.error_code/error_title/error_details are missing — migration 042 did not apply';
   END IF;
 
+  -- Branding columns (044) — see specs/account-branding.md. Nullable,
+  -- so their absence wouldn't break anything visibly; it would just
+  -- mean Settings > Branding writes 400 forever.
+  IF (
+    SELECT COUNT(*) FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'accounts'
+      AND column_name IN ('display_name', 'logo_url', 'brand_color')
+  ) <> 3 THEN
+    RAISE EXCEPTION
+      'accounts.display_name/logo_url/brand_color are missing — migration 044 did not apply';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'account-logos') THEN
+    RAISE EXCEPTION 'the account-logos bucket row was not created (migration 044)';
+  END IF;
+
   -- 043 swaps the `pipelines` existence check inside redeem_invitation
   -- for a `deals` check — a client-seeded empty "Sales Pipeline" (no
   -- trigger involved) otherwise false-positives as "has data" and

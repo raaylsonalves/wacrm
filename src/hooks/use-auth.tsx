@@ -43,6 +43,11 @@ interface AccountSummary {
   /** Default deal currency (ISO-4217). NOT NULL DEFAULT 'USD' in the
    *  DB (migration 021); narrowed to DEFAULT_CURRENCY when absent. */
   default_currency: string;
+  /** Optional branding (migration 044) — all null until an admin
+   *  configures Settings > Branding. See specs/account-branding.md. */
+  display_name: string | null;
+  logo_url: string | null;
+  brand_color: string | null;
 }
 
 /**
@@ -237,9 +242,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.account_id) {
           const { data: account, error: accountErr } = await supabase
             .from("accounts")
-            // default_currency added in migration 021; narrowed to the
-            // USD fallback below for older schemas where it reads null.
-            .select("id, name, default_currency")
+            // default_currency added in migration 021 (narrowed to the
+            // USD fallback below for older schemas where it reads null);
+            // display_name/logo_url/brand_color added in migration 044.
+            .select("id, name, default_currency, display_name, logo_url, brand_color")
             .eq("id", data.account_id)
             .maybeSingle();
           if (accountErr) {
@@ -254,6 +260,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               id: account.id,
               name: account.name,
               default_currency: account.default_currency ?? DEFAULT_CURRENCY,
+              display_name: account.display_name ?? null,
+              logo_url: account.logo_url ?? null,
+              brand_color: account.brand_color ?? null,
             };
           }
         }
