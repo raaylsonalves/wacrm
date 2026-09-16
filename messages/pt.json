@@ -1800,6 +1800,27 @@
       "done": "Concluído",
       "networkError": "Não foi possível conectar ao servidor"
     },
+    "quickReplies": {
+      "title": "Respostas rápidas",
+      "description": "Trechos reutilizáveis — texto simples ou uma mensagem interativa salva — que os agentes podem inserir a partir do compositor do inbox.",
+      "newQuickReply": "Nova resposta rápida",
+      "empty": "Nenhuma resposta rápida ainda. Crie uma para reutilizá-la em várias conversas.",
+      "editTitle": "Editar resposta rápida",
+      "createTitle": "Nova resposta rápida",
+      "nameLabel": "Nome",
+      "namePlaceholder": "ex.: Horário de atendimento",
+      "kindText": "Texto",
+      "kindInteractive": "Interativa",
+      "textPlaceholder": "O texto da mensagem a inserir",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "deleteConfirm": "Excluir esta resposta rápida?",
+      "toastNameRequired": "Dê um nome para a resposta rápida.",
+      "toastSaveFailed": "Não foi possível salvar a resposta rápida.",
+      "toastUpdated": "Resposta rápida atualizada.",
+      "toastCreated": "Resposta rápida criada.",
+      "toastDeleteFailed": "Não foi possível excluir a resposta rápida."
+    },
     "deals": {
       "title": "Negócios e moeda",
       "description": "A moeda usada em novos negócios e nos totais do pipeline e do painel.",

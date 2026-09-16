@@ -1812,6 +1812,27 @@
       "done": "완료",
       "networkError": "서버에 연결할 수 없습니다"
     },
+    "quickReplies": {
+      "title": "빠른 답장",
+      "description": "인박스 작성창에서 상담원이 바로 삽입할 수 있는 재사용 가능한 스니펫 — 일반 텍스트 또는 저장된 인터랙티브 메시지입니다.",
+      "newQuickReply": "새 빠른 답장",
+      "empty": "아직 빠른 답장이 없습니다. 하나를 만들어 여러 대화에서 재사용하세요.",
+      "editTitle": "빠른 답장 편집",
+      "createTitle": "새 빠른 답장",
+      "nameLabel": "이름",
+      "namePlaceholder": "예: 영업시간",
+      "kindText": "텍스트",
+      "kindInteractive": "인터랙티브",
+      "textPlaceholder": "삽입할 메시지 텍스트",
+      "cancel": "취소",
+      "save": "저장",
+      "deleteConfirm": "이 빠른 답장을 삭제하시겠습니까?",
+      "toastNameRequired": "빠른 답장의 이름을 입력하세요.",
+      "toastSaveFailed": "빠른 답장을 저장하지 못했습니다.",
+      "toastUpdated": "빠른 답장이 업데이트되었습니다.",
+      "toastCreated": "빠른 답장이 생성되었습니다.",
+      "toastDeleteFailed": "빠른 답장을 삭제하지 못했습니다."
+    },
     "deals": {
       "title": "딜 & 통화",
       "description": "새 딜과 파이프라인, 대시보드 합계에 사용되는 통화입니다.",

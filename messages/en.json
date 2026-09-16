@@ -1812,6 +1812,27 @@
       "done": "Done",
       "networkError": "Could not reach the server"
     },
+    "quickReplies": {
+      "title": "Quick replies",
+      "description": "Reusable snippets — plain text or a saved interactive message — that agents can insert from the inbox composer.",
+      "newQuickReply": "New quick reply",
+      "empty": "No quick replies yet. Create one to reuse it across conversations.",
+      "editTitle": "Edit quick reply",
+      "createTitle": "New quick reply",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Business hours",
+      "kindText": "Text",
+      "kindInteractive": "Interactive",
+      "textPlaceholder": "The message text to insert",
+      "cancel": "Cancel",
+      "save": "Save",
+      "deleteConfirm": "Delete this quick reply?",
+      "toastNameRequired": "Give the quick reply a name.",
+      "toastSaveFailed": "Couldn't save the quick reply.",
+      "toastUpdated": "Quick reply updated.",
+      "toastCreated": "Quick reply created.",
+      "toastDeleteFailed": "Couldn't delete the quick reply."
+    },
     "deals": {
       "title": "Deals & currency",
       "description": "The currency used for new deals and for pipeline and dashboard totals.",
