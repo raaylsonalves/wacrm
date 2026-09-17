@@ -165,7 +165,7 @@
       "noReplies": "Nenhuma resposta registrada ainda",
       "noRepliesHint": "Este gráfico é preenchido conforme você responde às mensagens dos clientes.",
       "dowShortMonFirst": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
-      "avgMinutesLabel": "Minutos médios"
+      "avgResponseTimeLabel": "Tempo médio de resposta"
     },
     "emptyState": {
       "title": "Ainda não há dados suficientes"

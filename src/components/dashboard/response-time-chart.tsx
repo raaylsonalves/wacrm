@@ -27,13 +27,16 @@ export function ResponseTimeChart({
 }: ResponseTimeChartProps) {
   const t = useTranslations('Dashboard.responseTimeChart')
   const dowShort = t.raw('dowShortMonFirst') as string[]
-  // Single category, single colour — the data is "average minutes
-  // per weekday". Tremor expects categories as the second tuple in
-  // the row object, so we shape the buckets into
-  // `{ day: 'Mon', [avgMinutesLabel]: 4.2 }` rows below. Translated
+  // Single category, single colour — the data is "average response
+  // time per weekday". Tremor expects categories as the second tuple
+  // in the row object, so we shape the buckets into
+  // `{ day: 'Mon', [avgResponseTimeLabel]: 4.2 }` rows below. Translated
   // (not a module-level constant) because it also doubles as the
-  // series name Tremor's tooltip shows on hover.
-  const category = t('avgMinutesLabel')
+  // series name Tremor's tooltip shows on hover. Named response-time
+  // rather than "minutes" — the values plotted are always minutes, but
+  // the axis/tooltip render them in whatever unit (s/m/h) fits, via
+  // `unit` below.
+  const category = t('avgResponseTimeLabel')
   const hasData = data?.buckets.some((b) => b.avgMinutes != null) ?? false
 
   // Map buckets → Tremor rows. Null `avgMinutes` (no samples)
@@ -46,6 +49,21 @@ export function ResponseTimeChart({
       [category]: b.avgMinutes ?? 0,
       samples: b.samples,
     })) ?? []
+
+  // Tremor calls valueFormatter independently for every axis gridline
+  // AND the tooltip — formatting each value's own magnitude (seconds
+  // for a near-zero tick, hours for the tallest bar) produced an axis
+  // that mixed "0s"/"5.0h"/"17.0h" on the same scale. Pick ONE unit for
+  // the whole chart from its largest value, so every tick/tooltip uses
+  // the same unit consistently.
+  const maxMinutes = Math.max(0, ...chartData.map((d) => d[category] as number))
+  const unit: 'seconds' | 'minutes' | 'hours' =
+    maxMinutes < 1 ? 'seconds' : maxMinutes < 60 ? 'minutes' : 'hours'
+  const formatForUnit = (mins: number) => {
+    if (unit === 'seconds') return `${Math.round(mins * 60)}s`
+    if (unit === 'minutes') return `${mins.toFixed(1)}m`
+    return `${(mins / 60).toFixed(1)}h`
+  }
 
   return (
     <section className="rounded-xl border border-border bg-card">
@@ -98,12 +116,7 @@ export function ResponseTimeChart({
             // 'violet' maps to Tailwind's `fill-violet-500` — matches
             // the brand accent the hand-rolled bars used (#7c3aed).
             colors={['violet']}
-            // Tremor calls this for every axis gridline AND the tooltip.
-            // A flat "Xm" suffix rounded every sub-minute value (bot
-            // auto-replies in a few seconds) down to "0.0m" on every
-            // tick — reuse the same adaptive s/m/h formatting the
-            // header's this-week/last-week pills already use below.
-            valueFormatter={(value) => fmt(value)}
+            valueFormatter={formatForUnit}
             showLegend={false}
             yAxisWidth={48}
             // Compact height so the chart sits well inside the card

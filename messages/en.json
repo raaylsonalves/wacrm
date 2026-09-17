@@ -165,7 +165,7 @@
       "noReplies": "No replies recorded yet",
       "noRepliesHint": "This chart fills in as you reply to customer messages.",
       "dowShortMonFirst": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-      "avgMinutesLabel": "Avg minutes"
+      "avgResponseTimeLabel": "Average response time"
     },
     "emptyState": {
       "title": "Not enough data yet"

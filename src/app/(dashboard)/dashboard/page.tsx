@@ -150,6 +150,24 @@ export default function DashboardPage() {
     loadAll()
   }, [loadAll])
 
+  // Keep the dashboard from going stale on a tab left open: re-fetch
+  // every 2 minutes, and immediately when the user tabs back in after
+  // being away. `loadAll` doesn't flip the `xLoading` flags back to
+  // true on a re-run (they're only ever set once, in the initial
+  // `useState`), so this swaps in fresh numbers without flashing the
+  // skeletons — a no-op re-fetch (nothing changed) is invisible.
+  useEffect(() => {
+    const interval = setInterval(loadAll, 2 * 60 * 1000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadAll()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [loadAll])
+
   // Range switch handler — kept in an event callback (not an effect)
   // so the setState calls stay out of the react-hooks/set-state-in-effect
   // rule's way. The cached bucket check means switching back to a

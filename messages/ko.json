@@ -165,7 +165,7 @@
       "noReplies": "아직 기록된 응답이 없습니다",
       "noRepliesHint": "고객 메시지에 답변하면 이 차트가 채워집니다.",
       "dowShortMonFirst": ["월", "화", "수", "목", "금", "토", "일"],
-      "avgMinutesLabel": "평균 분"
+      "avgResponseTimeLabel": "평균 응답 시간"
     },
     "emptyState": {
       "title": "아직 데이터가 충분하지 않습니다"
