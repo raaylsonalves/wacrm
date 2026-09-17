@@ -10,7 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Conversation, ConversationStatus, Profile, Tag } from "@/types";
-import { Search, ChevronDown, X, Check } from "lucide-react";
+import { Search, ChevronDown, X, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { dateFnsLocale } from "@/lib/date-fns-locale";
 import { useTranslations } from "next-intl";
@@ -554,9 +554,9 @@ interface ConversationItemProps {
   tThread: ReturnType<typeof useTranslations>;
   allTags: Tag[];
   profiles: Profile[];
-  onStatusChange: (conversationId: string, status: ConversationStatus) => void;
-  onAssignChange: (conversationId: string, agentId: string | null) => void;
-  onToggleTag: (contactId: string, currentTags: Tag[], tag: Tag) => void;
+  onStatusChange: (conversationId: string, status: ConversationStatus) => Promise<void>;
+  onAssignChange: (conversationId: string, agentId: string | null) => Promise<void>;
+  onToggleTag: (contactId: string, currentTags: Tag[], tag: Tag) => Promise<void>;
 }
 
 function ConversationItem({
@@ -575,6 +575,22 @@ function ConversationItem({
   const displayName = contact?.name || contact?.phone || t("unknown");
   const initials = displayName.charAt(0).toUpperCase();
   const contactTags = contact?.tags ?? [];
+
+  // Every context-menu mutation is fire-and-forget from the caller's
+  // point of view (optimistic list already re-renders once the parent's
+  // state patch lands), which on a slow connection reads as "did my
+  // click even register?" — track which single menu item is in flight
+  // so it can show a spinner instead of leaving the menu inert.
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+
+  const runPending = useCallback(async (key: string, action: () => Promise<void>) => {
+    setPendingKey(key);
+    try {
+      await action();
+    } finally {
+      setPendingKey(null);
+    }
+  }, []);
 
   const handleClick = useCallback(() => {
     onSelect(conversation);
@@ -671,15 +687,27 @@ function ConversationItem({
       <ContextMenuContent>
         <ContextMenuGroup>
           <ContextMenuLabel>{tThread("status")}</ContextMenuLabel>
-          {(Object.keys(STATUS_LABEL_KEY) as ConversationStatus[]).map((status) => (
-            <ContextMenuItem
-              key={status}
-              onClick={() => onStatusChange(conversation.id, status)}
-            >
-              {conversation.status === status && <Check className="h-3.5 w-3.5" />}
-              {tThread(STATUS_LABEL_KEY[status])}
-            </ContextMenuItem>
-          ))}
+          {(Object.keys(STATUS_LABEL_KEY) as ConversationStatus[]).map((status) => {
+            const key = `status:${status}`;
+            const busy = pendingKey === key;
+            return (
+              <ContextMenuItem
+                key={status}
+                disabled={pendingKey !== null}
+                closeOnClick={false}
+                onClick={() =>
+                  runPending(key, () => onStatusChange(conversation.id, status))
+                }
+              >
+                {busy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  conversation.status === status && <Check className="h-3.5 w-3.5" />
+                )}
+                {tThread(STATUS_LABEL_KEY[status])}
+              </ContextMenuItem>
+            );
+          })}
         </ContextMenuGroup>
 
         <ContextMenuSeparator />
@@ -689,20 +717,41 @@ function ConversationItem({
           {profiles.length === 0 ? (
             <ContextMenuItem disabled>{tThread("noTeammates")}</ContextMenuItem>
           ) : (
-            profiles.map((p) => (
-              <ContextMenuItem
-                key={p.id}
-                onClick={() => onAssignChange(conversation.id, p.user_id)}
-              >
-                {conversation.assigned_agent_id === p.user_id && (
-                  <Check className="h-3.5 w-3.5" />
-                )}
-                {p.full_name}
-              </ContextMenuItem>
-            ))
+            profiles.map((p) => {
+              const key = `assign:${p.user_id}`;
+              const busy = pendingKey === key;
+              return (
+                <ContextMenuItem
+                  key={p.id}
+                  disabled={pendingKey !== null}
+                  closeOnClick={false}
+                  onClick={() =>
+                    runPending(key, () => onAssignChange(conversation.id, p.user_id))
+                  }
+                >
+                  {busy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    conversation.assigned_agent_id === p.user_id && (
+                      <Check className="h-3.5 w-3.5" />
+                    )
+                  )}
+                  {p.full_name}
+                </ContextMenuItem>
+              );
+            })
           )}
           {conversation.assigned_agent_id && (
-            <ContextMenuItem onClick={() => onAssignChange(conversation.id, null)}>
+            <ContextMenuItem
+              disabled={pendingKey !== null}
+              closeOnClick={false}
+              onClick={() =>
+                runPending("assign:null", () => onAssignChange(conversation.id, null))
+              }
+            >
+              {pendingKey === "assign:null" && (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              )}
               {tThread("unassign")}
             </ContextMenuItem>
           )}
@@ -715,12 +764,22 @@ function ConversationItem({
               <ContextMenuLabel>{t("tags")}</ContextMenuLabel>
               {allTags.map((tag) => {
                 const checked = contactTags.some((ct) => ct.id === tag.id);
+                const key = `tag:${tag.id}`;
+                const busy = pendingKey === key;
                 return (
                   <ContextMenuItem
                     key={tag.id}
-                    onClick={() => onToggleTag(contact.id, contactTags, tag)}
+                    disabled={pendingKey !== null}
+                    closeOnClick={false}
+                    onClick={() =>
+                      runPending(key, () => onToggleTag(contact.id, contactTags, tag))
+                    }
                   >
-                    {checked && <Check className="h-3.5 w-3.5" />}
+                    {busy ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      checked && <Check className="h-3.5 w-3.5" />
+                    )}
                     <span
                       className="h-2 w-2 shrink-0 rounded-full"
                       style={{ backgroundColor: tag.color }}

@@ -19,12 +19,21 @@ const TYPE_ICON: Record<Notification["type"], typeof Bell> = {
   conversation_assigned: UserPlus,
 };
 
+// Migration 027's original English template, used to pre-render `body`
+// before migration 048 taught the trigger to hand over raw names
+// instead. Matches `"<actor> assigned you a conversation with <contact>"`
+// (actor is the literal word "Someone" when the assignment had no
+// authenticated actor, e.g. an automation).
+const LEGACY_BODY_PATTERN = /^(.+) assigned you a conversation with (.+)$/;
+
 /**
  * The trigger (migration 048) hands over raw actor/contact names instead
  * of a pre-rendered English sentence, so the sentence itself is built
  * here in the viewer's locale. Rows written before that migration only
- * carry the old `title`/`body` — fall back to those so history doesn't
- * go blank.
+ * carry the old, English-only `title`/`body` — parse the fixed sentence
+ * shape back into actor/contact and re-render it in the viewer's locale
+ * too, rather than showing English forever just because the row predates
+ * the fix.
  */
 function displayText(n: Notification, t: ReturnType<typeof useTranslations>) {
   if (n.type === "conversation_assigned" && (n.actor_name || n.contact_name)) {
@@ -36,6 +45,21 @@ function displayText(n: Notification, t: ReturnType<typeof useTranslations>) {
       }),
     };
   }
+
+  if (n.type === "conversation_assigned" && n.body) {
+    const legacyMatch = n.body.match(LEGACY_BODY_PATTERN);
+    if (legacyMatch) {
+      const [, actor, contact] = legacyMatch;
+      return {
+        title: t("assignedTitle"),
+        body: t("assignedBody", {
+          actor: actor === "Someone" ? t("someone") : actor,
+          contact,
+        }),
+      };
+    }
+  }
+
   return { title: n.title ?? t("assignedTitle"), body: n.body };
 }
 
