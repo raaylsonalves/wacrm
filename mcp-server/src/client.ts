@@ -176,4 +176,32 @@ export class WacrmClient {
   getBroadcast(id: string): Promise<{ data: unknown }> {
     return this.request('GET', `/broadcasts/${encodeURIComponent(id)}`);
   }
+
+  // --- Automations ----------------------------------------------------
+
+  listAutomations(): Promise<{ data: unknown[] }> {
+    return this.request('GET', '/automations');
+  }
+
+  listAutomationTemplates(): Promise<{ data: unknown[] }> {
+    return this.request('GET', '/automations/templates');
+  }
+
+  createAutomation(body: unknown): Promise<{ data: unknown }> {
+    return this.request('POST', '/automations', { body });
+  }
+
+  // --- Flows ------------------------------------------------------------
+
+  listFlows(): Promise<{ data: unknown[] }> {
+    return this.request('GET', '/flows');
+  }
+
+  listFlowTemplates(): Promise<{ data: unknown[] }> {
+    return this.request('GET', '/flows/templates');
+  }
+
+  createFlow(body: unknown): Promise<{ data: unknown }> {
+    return this.request('POST', '/flows', { body });
+  }
 }

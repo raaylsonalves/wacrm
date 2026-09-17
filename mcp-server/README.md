@@ -77,9 +77,15 @@ when their guard is set.
 | `get_conversation`   | read      | `conversations:read` | Read one conversation                           |
 | `list_messages`      | read      | `messages:read`      | List a conversation's messages                  |
 | `get_broadcast`      | read      | `broadcasts:send`    | Poll a broadcast's delivery status              |
+| `list_automations`   | read      | `automations:read`   | List the account's automations                  |
+| `list_automation_templates` | read | `automations:read` | List quick-start automation templates to clone |
+| `list_flows`         | read      | `flows:read`         | List the account's flows                        |
+| `list_flow_templates`| read      | `flows:read`         | List quick-start flow templates to clone        |
 | `send_message`       | write     | `messages:send`      | Send a WhatsApp message (text/template/media)   |
 | `create_contact`     | write     | `contacts:write`     | Create (find-or-create) a contact               |
 | `update_contact`     | write     | `contacts:write`     | Update a contact / replace its tags             |
+| `create_automation`  | write     | `automations:write`  | Create an automation (from a template or custom)|
+| `create_flow`        | write     | `flows:write`        | Create a flow (from a template, or an empty draft)|
 | `send_broadcast`     | broadcast | `broadcasts:send`    | Launch a template broadcast (requires `confirm`)|
 
 ## Safety model

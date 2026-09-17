@@ -43,10 +43,32 @@ data or send messages, add `"WACRM_ENABLE_WRITES": "true"` (and
 ## What it exposes
 
 - **Reads (always on):** `whoami`, contacts (list/get), conversations
-  (list/get), messages (list), broadcast status.
-- **Writes (opt-in):** send a message, create/update a contact.
+  (list/get), messages (list), broadcast status, automations (list),
+  automation templates (list), flows (list), flow templates (list).
+- **Writes (opt-in):** send a message, create/update a contact, create
+  an automation, create a flow.
 - **Broadcasts (opt-in):** launch a template broadcast — requires an
   explicit `confirm` and is marked destructive.
+
+### Creating automations and flows
+
+`create_automation` and `create_flow` are the two tools for building
+"no-code automation" from natural language:
+
+> "Create an automation from the out-of-office template."
+> "Make a flow that greets new contacts with a menu, cloned from the
+> welcome_menu template."
+
+Cloning a quick-start template (`list_automation_templates` /
+`list_flow_templates` first, to see the available slugs) is the
+recommended path — it produces something immediately usable. A custom
+automation can also be built step-by-step via `trigger_type` /
+`trigger_config` / `steps`; a custom flow node graph isn't supported
+over the API yet — build one from a template, then refine it further
+in the dashboard's flow builder. Both tools require the matching
+`automations:write` / `flows:write` scope on top of
+`WACRM_ENABLE_WRITES`, and create in a draft/inactive state unless
+`is_active: true` is explicitly passed.
 
 ## Safety
 

@@ -50,6 +50,10 @@ it. Grant the minimum.
 | `conversations:read` | List and read conversations              |
 | `broadcasts:send`    | Launch broadcast campaigns               |
 | `webhooks:manage`    | Register and manage outbound webhooks    |
+| `automations:read`   | List automations and their templates     |
+| `automations:write`  | Create automations (template or custom)  |
+| `flows:read`         | List flows and their templates           |
+| `flows:write`        | Create flows (from a template)           |
 
 A key with **no scopes** still authenticates and can call
 `GET /api/v1/me` — useful for verifying a key works.
@@ -263,6 +267,85 @@ Broadcast status + counts. Scope: `broadcasts:send`. `status` moves
 `sending` → `sent`; `delivered_count` / `read_count` keep climbing as
 Meta delivery webhooks arrive. `404` for another account's broadcast.
 
+### `GET /api/v1/automations`
+
+List the account's automations, newest first. Scope: `automations:read`.
+Not paginated (accounts rarely have more than a handful).
+
+### `GET /api/v1/automations/templates`
+
+List the quick-start automation templates available to clone (welcome
+message, out-of-office, lead qualifier, follow-up reminder). Scope:
+`automations:read`. Each item is `{ slug, name, description,
+trigger_type }` — pass `slug` as `template` to `POST /api/v1/automations`.
+
+### `POST /api/v1/automations`
+
+Create an automation. Scope: `automations:write`.
+
+```bash
+# Clone a template
+curl -X POST https://your-crm.example.com/api/v1/automations \
+  -H "Authorization: Bearer wacrm_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{ "template": "out_of_office" }'
+
+# Or build a custom one
+curl -X POST https://your-crm.example.com/api/v1/automations \
+  -H "Authorization: Bearer wacrm_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "name": "Tag VIP leads",
+        "trigger_type": "keyword_match",
+        "trigger_config": { "keywords": ["vip"], "match": "contains" },
+        "steps": [
+          { "step_type": "add_tag", "step_config": { "tag_name": "VIP" } }
+        ]
+      }'
+```
+
+Pass either `template` (a slug from the templates endpoint — `steps`
+is ignored when a valid one is given) or `trigger_type` + `steps` built
+from scratch; `trigger_config`'s shape depends on `trigger_type` and
+mirrors what the dashboard's automation builder sends (see
+`src/lib/automations/validate.ts` for the exact fields each trigger and
+step type expects). Created as a draft (`is_active: false`) unless you
+pass `is_active: true`, in which case the same validation the dashboard
+enforces before publishing runs first — an incomplete trigger/step
+configuration is rejected with `400 bad_request` rather than silently
+saved broken.
+
+### `GET /api/v1/flows`
+
+List the account's flows, newest first. Scope: `flows:read`. Not
+paginated.
+
+### `GET /api/v1/flows/templates`
+
+List the quick-start flow templates available to clone (welcome menu,
+FAQ bot, lead capture). Scope: `flows:read`. Each item is `{ slug,
+name, description, trigger_type }` — pass `slug` as `template_slug` to
+`POST /api/v1/flows`.
+
+### `POST /api/v1/flows`
+
+Create a flow. Scope: `flows:write`.
+
+```bash
+curl -X POST https://your-crm.example.com/api/v1/flows \
+  -H "Authorization: Bearer wacrm_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{ "template_slug": "welcome_menu" }'
+```
+
+Pass `template_slug` (recommended — clones the template's full node
+graph as an immediately-activatable draft) or just `name` (and
+optionally `trigger_type`) for an empty draft with no nodes yet.
+Building a custom node graph isn't supported over this endpoint —
+flows are a stateful per-contact conversation graph (see `CLAUDE.md`'s
+"Automations vs Flows" section); add nodes in the dashboard's flow
+builder after creating from a template or an empty draft.
+
 ## Pagination
 
 Every list endpoint pages the same way. Request a page size with
@@ -377,7 +460,8 @@ internal targets are refused at delivery time.
 ## Roadmap
 
 The public API now covers messaging, contacts, conversations,
-broadcasts, and outbound webhooks — the full scope of
-[#245](https://github.com/ArnasDon/wacrm/issues/245). Future ideas
-(deals/pipelines, templates, flows, a delivery queue for webhooks) are
-not yet scheduled.
+broadcasts, automations, flows, and outbound webhooks — the full scope
+of [#245](https://github.com/ArnasDon/wacrm/issues/245) plus the
+automations/flows creation endpoints added afterward. Future ideas
+(deals/pipelines, WhatsApp templates, a custom flow-node-graph
+endpoint, a delivery queue for webhooks) are not yet scheduled.

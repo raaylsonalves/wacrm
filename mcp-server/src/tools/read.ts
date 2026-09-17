@@ -124,4 +124,52 @@ export function registerReadTools(server: McpServer, client: WacrmClient): void 
     },
     handle(async ({ id }) => jsonResult(await client.getBroadcast(id))),
   );
+
+  server.registerTool(
+    'list_automations',
+    {
+      title: 'List automations',
+      description:
+        'List the account\'s automations (trigger → linear step list with conditional branches), newest first. Each includes its trigger type, whether it is active, and its step count.',
+      inputSchema: {},
+      annotations: { ...READ_ONLY, title: 'List automations' },
+    },
+    handle(async () => jsonResult(await client.listAutomations())),
+  );
+
+  server.registerTool(
+    'list_automation_templates',
+    {
+      title: 'List automation templates',
+      description:
+        'List the quick-start automation templates available to clone (welcome message, out-of-office, lead qualifier, follow-up reminder, …). Returns each template\'s slug, name, description, and trigger type — pass a slug as `template` to create_automation to clone one instead of building steps from scratch.',
+      inputSchema: {},
+      annotations: { ...READ_ONLY, title: 'List automation templates' },
+    },
+    handle(async () => jsonResult(await client.listAutomationTemplates())),
+  );
+
+  server.registerTool(
+    'list_flows',
+    {
+      title: 'List flows',
+      description:
+        'List the account\'s flows (stateful per-contact WhatsApp conversation graphs — menus, FAQ bots, lead capture), newest first. Each includes its status (draft/active) and trigger type.',
+      inputSchema: {},
+      annotations: { ...READ_ONLY, title: 'List flows' },
+    },
+    handle(async () => jsonResult(await client.listFlows())),
+  );
+
+  server.registerTool(
+    'list_flow_templates',
+    {
+      title: 'List flow templates',
+      description:
+        'List the quick-start flow templates available to clone (welcome menu, FAQ bot, lead capture, …). Returns each template\'s slug, name, description, and trigger type — pass a slug as `template_slug` to create_flow to clone one, which is the recommended way to create a flow (a fully custom node graph isn\'t supported over this API).',
+      inputSchema: {},
+      annotations: { ...READ_ONLY, title: 'List flow templates' },
+    },
+    handle(async () => jsonResult(await client.listFlowTemplates())),
+  );
 }

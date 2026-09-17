@@ -92,4 +92,69 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
     },
     handle(async ({ id, ...body }) => jsonResult(await client.updateContact(id, body))),
   );
+
+  server.registerTool(
+    'create_automation',
+    {
+      title: 'Create automation',
+      description:
+        'Create an automation (trigger → linear step list with conditional branches). Two ways to build one: pass `template` (a slug from list_automation_templates) to clone a ready-made one, or pass `trigger_type`/`trigger_config`/`steps` to build a custom one — check list_automation_templates first if you are not building something bespoke, it produces something immediately usable. Created as inactive (a draft) unless `is_active: true` is passed; activating with an invalid trigger/step configuration is rejected with the same validation the dashboard builder applies.',
+      inputSchema: {
+        template: z
+          .string()
+          .optional()
+          .describe('Slug of a template from list_automation_templates to clone.'),
+        name: z.string().optional().describe('Required unless cloning a template.'),
+        description: z.string().optional(),
+        trigger_type: z
+          .enum([
+            'new_message_received',
+            'first_inbound_message',
+            'keyword_match',
+            'new_contact_created',
+            'conversation_assigned',
+            'tag_added',
+            'time_based',
+            'interactive_reply',
+          ])
+          .optional()
+          .describe('Required unless cloning a template.'),
+        trigger_config: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe('Shape depends on trigger_type — see docs/public-api.md.'),
+        steps: z
+          .array(z.record(z.string(), z.unknown()))
+          .optional()
+          .describe(
+            'Linear step list (send_message, wait, condition, assign_conversation, create_deal, add_tag, handoff, …) — see docs/public-api.md for each step_type\'s config shape.',
+          ),
+        is_active: z.boolean().optional().describe('Publish immediately instead of saving as a draft.'),
+      },
+      annotations: { title: 'Create automation', readOnlyHint: false, openWorldHint: true },
+    },
+    handle(async (args) => jsonResult(await client.createAutomation(args))),
+  );
+
+  server.registerTool(
+    'create_flow',
+    {
+      title: 'Create flow',
+      description:
+        'Create a flow (a stateful per-contact WhatsApp conversation graph — menus, FAQ bots, lead capture). Pass `template_slug` (from list_flow_templates) to clone a ready-made one — the recommended way, since a fully custom node graph isn\'t supported over this API yet. Without a template, only an empty draft (`name` + optional `trigger_type`) is created; add its conversation logic in the dashboard\'s flow builder afterward.',
+      inputSchema: {
+        template_slug: z
+          .string()
+          .optional()
+          .describe('Slug of a template from list_flow_templates to clone.'),
+        name: z.string().optional().describe('Required unless cloning a template.'),
+        trigger_type: z
+          .enum(['keyword', 'first_inbound_message', 'manual'])
+          .optional()
+          .describe('Only used for the empty-draft path; templates carry their own trigger.'),
+      },
+      annotations: { title: 'Create flow', readOnlyHint: false, openWorldHint: true },
+    },
+    handle(async (args) => jsonResult(await client.createFlow(args))),
+  );
 }
