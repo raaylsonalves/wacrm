@@ -1,5 +1,9 @@
 {
   "Common": {
+    "modes": {
+      "light": "라이트",
+      "dark": "다크"
+    },
     "gatedButton": {
       "tooltip": "읽기 전용 — 회원님의 역할로는 {reason} 수 없습니다",
       "reasons": {
@@ -1782,7 +1786,29 @@
       "accentColor": "강조 색상",
       "useTheme": "{name} 테마 사용",
       "brandColorLocked": "이 계정은 설정 → 브랜딩에서 지정한 사용자 지정 브랜드 색상을 사용하므로, 아래 강조 색상은 모두에게 고정되어 있으며 여기서 변경할 수 없습니다.",
-      "brandColorLockedAdmin": "이 계정은 사용자 지정 브랜드 색상을 사용하므로 아래 강조 색상이 모두에게 고정됩니다. 설정 → 브랜딩에서 변경하세요."
+      "brandColorLockedAdmin": "이 계정은 사용자 지정 브랜드 색상을 사용하므로 아래 강조 색상이 모두에게 고정됩니다. 설정 → 브랜딩에서 변경하세요.",
+      "themes": {
+        "violet": {
+          "name": "바이올렛",
+          "tagline": "기본값 — 자신감 있고 약간의 재미가 있는 색상."
+        },
+        "emerald": {
+          "name": "에메랄드",
+          "tagline": "성장을 연상시키되 WhatsApp 초록색과는 다른 색상."
+        },
+        "cobalt": {
+          "name": "코발트",
+          "tagline": "깔끔한 B2B SaaS 블루 — 차분하고 제품다운 느낌."
+        },
+        "amber": {
+          "name": "앰버",
+          "tagline": "따뜻하고 친근한 — 중소기업 팀에 잘 어울림."
+        },
+        "rose": {
+          "name": "로즈",
+          "tagline": "대담하고 현대적인 — D2C, 크리에이터 이코노미, 라이프스타일."
+        }
+      }
     },
     "security": {
       "title": "로그인 & 보안",

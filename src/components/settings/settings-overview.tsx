@@ -43,6 +43,8 @@ export function SettingsOverview({
   const tRoles = useTranslations('Settings.roles');
   const tSections = useTranslations('Settings.sections');
   const tCurrency = useTranslations('Currencies');
+  const tAppearance = useTranslations('Settings.appearance');
+  const tModes = useTranslations('Common.modes');
 
   const [counts, setCounts] = useState<OverviewCounts | null>(null);
   const [countsLoading, setCountsLoading] = useState(true);
@@ -150,7 +152,10 @@ export function SettingsOverview({
   const currencyLabel = tCurrency.has(defaultCurrency)
     ? tCurrency(defaultCurrency)
     : (CURRENCIES.find((c) => c.code === defaultCurrency)?.label ?? defaultCurrency);
-  const themeName = THEMES.find((t) => t.id === theme)?.name ?? theme;
+  const themeName = THEMES.some((t) => t.id === theme)
+    ? tAppearance(`themes.${theme}.name`)
+    : theme;
+  const modeLabel = tModes.has(mode) ? tModes(mode) : mode;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
   // Per-tile loading + subtitle. `null` counts render as a graceful
@@ -217,7 +222,7 @@ export function SettingsOverview({
     {
       section: 'appearance',
       loading: false,
-      subtitle: t('appearance', { mode: cap(mode), theme: themeName }),
+      subtitle: t('appearance', { mode: cap(modeLabel), theme: themeName }),
     },
   ];
 

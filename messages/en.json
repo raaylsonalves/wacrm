@@ -1,5 +1,9 @@
 {
   "Common": {
+    "modes": {
+      "light": "light",
+      "dark": "dark"
+    },
     "gatedButton": {
       "tooltip": "Read-only — your role can't {reason}",
       "reasons": {
@@ -1782,7 +1786,29 @@
       "accentColor": "Accent color",
       "useTheme": "Use {name} theme",
       "brandColorLocked": "Your account uses a custom brand color set in Settings → Branding, so the accent color below is fixed for everyone and can't be changed here.",
-      "brandColorLockedAdmin": "Your account uses a custom brand color, so the accent color below is fixed for everyone. Change it in Settings → Branding."
+      "brandColorLockedAdmin": "Your account uses a custom brand color, so the accent color below is fixed for everyone. Change it in Settings → Branding.",
+      "themes": {
+        "violet": {
+          "name": "Violet",
+          "tagline": "The default — confident, slightly playful."
+        },
+        "emerald": {
+          "name": "Emerald",
+          "tagline": "Growth-coded, nods at messaging without copying WhatsApp green."
+        },
+        "cobalt": {
+          "name": "Cobalt",
+          "tagline": "Clean B2B-SaaS blue — calm and product-y."
+        },
+        "amber": {
+          "name": "Amber",
+          "tagline": "Warm and friendly — feels good for SMB teams."
+        },
+        "rose": {
+          "name": "Rose",
+          "tagline": "Bold and modern — D2C, creator-economy, lifestyle."
+        }
+      }
     },
     "security": {
       "title": "Login & security",

@@ -89,8 +89,6 @@ export function AppearancePanel() {
             <ThemeCard
               key={tObj.id}
               id={tObj.id}
-              name={tObj.name}
-              tagline={tObj.tagline}
               swatch={tObj.swatch}
               isActive={tObj.id === theme}
               onPick={() => setTheme(tObj.id)}
@@ -112,15 +110,17 @@ function ModeCard({
   onPick: () => void;
 }) {
   const t = useTranslations("Settings.appearance");
+  const tModes = useTranslations("Common.modes");
   const isLight = mode === "light";
   const Icon = isLight ? Sun : Moon;
+  const modeLabel = tModes(mode);
   return (
     <button
       type="button"
       role="radio"
       onClick={onPick}
       aria-checked={isActive}
-      aria-label={t("useMode", { mode })}
+      aria-label={t("useMode", { mode: modeLabel })}
       className={cn(
         "flex items-center gap-3 rounded-lg border bg-card p-4 text-left transition-colors",
         isActive
@@ -135,7 +135,7 @@ function ModeCard({
         <Icon className="h-4 w-4" />
       </span>
       <span className="flex-1 text-sm font-semibold capitalize text-foreground">
-        {mode}
+        {modeLabel}
       </span>
       {isActive && (
         <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">
@@ -149,20 +149,18 @@ function ModeCard({
 
 function ThemeCard({
   id,
-  name,
-  tagline,
   swatch,
   isActive,
   onPick,
 }: {
   id: ThemeId;
-  name: string;
-  tagline: string;
   swatch: string;
   isActive: boolean;
   onPick: () => void;
 }) {
   const t = useTranslations("Settings.appearance");
+  const name = t(`themes.${id}.name`);
+  const tagline = t(`themes.${id}.tagline`);
   return (
     <button
       type="button"

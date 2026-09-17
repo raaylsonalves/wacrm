@@ -1,5 +1,9 @@
 {
   "Common": {
+    "modes": {
+      "light": "claro",
+      "dark": "escuro"
+    },
     "gatedButton": {
       "tooltip": "Somente leitura — sua função não pode {reason}",
       "reasons": {
@@ -1770,7 +1774,29 @@
       "accentColor": "Cor de destaque",
       "useTheme": "Usar o tema {name}",
       "brandColorLocked": "Sua conta usa uma cor de marca personalizada, definida em Configurações → Identidade visual — a cor de destaque abaixo é fixa para todos e não pode ser alterada aqui.",
-      "brandColorLockedAdmin": "Sua conta usa uma cor de marca personalizada, então a cor de destaque abaixo é fixa para todos. Altere em Configurações → Identidade visual."
+      "brandColorLockedAdmin": "Sua conta usa uma cor de marca personalizada, então a cor de destaque abaixo é fixa para todos. Altere em Configurações → Identidade visual.",
+      "themes": {
+        "violet": {
+          "name": "Violeta",
+          "tagline": "O padrão — confiante, com um toque divertido."
+        },
+        "emerald": {
+          "name": "Esmeralda",
+          "tagline": "Remete a crescimento, sem copiar o verde do WhatsApp."
+        },
+        "cobalt": {
+          "name": "Cobalto",
+          "tagline": "Azul B2B-SaaS limpo — calmo e com cara de produto."
+        },
+        "amber": {
+          "name": "Âmbar",
+          "tagline": "Quente e acolhedor — combina com equipes de PME."
+        },
+        "rose": {
+          "name": "Rosa",
+          "tagline": "Ousado e moderno — D2C, economia criativa, lifestyle."
+        }
+      }
     },
     "security": {
       "title": "Login e segurança",

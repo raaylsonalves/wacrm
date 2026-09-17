@@ -55,8 +55,6 @@ export function isMode(value: unknown): value is Mode {
 
 export interface ThemeMeta {
   id: ThemeId;
-  name: string;
-  tagline: string;
   /**
    * Static swatch color for the picker chip. Hard-coded so the boot
    * script / picker cards don't need a getComputedStyle round trip
@@ -66,37 +64,19 @@ export interface ThemeMeta {
   swatch: string;
 }
 
+// Display name + tagline live in messages/*.json under
+// `Settings.appearance.themes.<id>.{name,tagline}` — these used to be
+// hardcoded English right here, so every locale showed "The default —
+// confident, slightly playful." etc. regardless of NEXT_PUBLIC_APP_LOCALE.
+// This module can't call useTranslations (it's plain data, not a
+// component/hook), so consumers look the strings up themselves; look
+// up by `id` from THEME_IDS rather than adding fields back here.
 export const THEMES: ReadonlyArray<ThemeMeta> = [
-  {
-    id: "violet",
-    name: "Violet",
-    tagline: "The default — confident, slightly playful.",
-    swatch: "oklch(0.526 0.247 293)",
-  },
-  {
-    id: "emerald",
-    name: "Emerald",
-    tagline: "Growth-coded, nods at messaging without copying WhatsApp green.",
-    swatch: "oklch(0.62 0.16 162)",
-  },
-  {
-    id: "cobalt",
-    name: "Cobalt",
-    tagline: "Clean B2B-SaaS blue — calm and product-y.",
-    swatch: "oklch(0.585 0.2 254)",
-  },
-  {
-    id: "amber",
-    name: "Amber",
-    tagline: "Warm and friendly — feels good for SMB teams.",
-    swatch: "oklch(0.745 0.16 65)",
-  },
-  {
-    id: "rose",
-    name: "Rose",
-    tagline: "Bold and modern — D2C, creator-economy, lifestyle.",
-    swatch: "oklch(0.645 0.22 16)",
-  },
+  { id: "violet", swatch: "oklch(0.526 0.247 293)" },
+  { id: "emerald", swatch: "oklch(0.62 0.16 162)" },
+  { id: "cobalt", swatch: "oklch(0.585 0.2 254)" },
+  { id: "amber", swatch: "oklch(0.745 0.16 65)" },
+  { id: "rose", swatch: "oklch(0.645 0.22 16)" },
 ];
 
 export function isThemeId(value: unknown): value is ThemeId {

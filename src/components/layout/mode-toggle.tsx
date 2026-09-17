@@ -17,9 +17,10 @@ import { useTranslations } from "next-intl";
  */
 export function ModeToggle({ className }: { className?: string }) {
   const t = useTranslations("ModeToggle");
+  const tModes = useTranslations("Common.modes");
   const { mode, toggleMode } = useTheme();
   const goingTo = mode === "dark" ? "light" : "dark";
-  const switchLabel = t("switchMode", { mode: goingTo });
+  const switchLabel = t("switchMode", { mode: tModes(goingTo) });
   
   return (
     <button

@@ -1,5 +1,9 @@
 {
   "Common": {
+    "modes": {
+      "light": "claro",
+      "dark": "oscuro"
+    },
     "gatedButton": {
       "tooltip": "Solo lectura — tu rol no puede {reason}",
       "reasons": {
@@ -1770,7 +1774,29 @@
       "accentColor": "Color de acento",
       "useTheme": "Usar el tema {name}",
       "brandColorLocked": "Tu cuenta usa un color de marca personalizado, definido en Configuración → Identidad de marca — el color de acento de abajo es fijo para todos y no se puede cambiar aquí.",
-      "brandColorLockedAdmin": "Tu cuenta usa un color de marca personalizado, así que el color de acento de abajo es fijo para todos. Cámbialo en Configuración → Identidad de marca."
+      "brandColorLockedAdmin": "Tu cuenta usa un color de marca personalizado, así que el color de acento de abajo es fijo para todos. Cámbialo en Configuración → Identidad de marca.",
+      "themes": {
+        "violet": {
+          "name": "Violeta",
+          "tagline": "El predeterminado — seguro, con un toque divertido."
+        },
+        "emerald": {
+          "name": "Esmeralda",
+          "tagline": "Evoca crecimiento, sin copiar el verde de WhatsApp."
+        },
+        "cobalt": {
+          "name": "Cobalto",
+          "tagline": "Azul B2B-SaaS limpio — calmado y con aire de producto."
+        },
+        "amber": {
+          "name": "Ámbar",
+          "tagline": "Cálido y cercano — encaja con equipos de pymes."
+        },
+        "rose": {
+          "name": "Rosa",
+          "tagline": "Atrevido y moderno — D2C, economía creativa, lifestyle."
+        }
+      }
     },
     "security": {
       "title": "Acceso y seguridad",
