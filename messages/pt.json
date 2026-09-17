@@ -1789,6 +1789,7 @@
       "quick-replies": "Respostas rápidas",
       "fields": "Campos e tags",
       "deals": "Negócios e moeda",
+      "response-time": "Tempo de resposta",
       "branding": "Identidade visual",
       "members": "Membros da equipe",
       "api": "Chaves de API"
@@ -1981,6 +1982,18 @@
       "saving": "Salvando...",
       "saveFailed": "Falha ao salvar a moeda padrão",
       "saveSuccess": "Moeda padrão atualizada"
+    },
+    "responseTime": {
+      "title": "Tempo de resposta",
+      "description": "A meta de SLA exibida no gráfico de tempo de resposta do painel.",
+      "targetLabel": "Meta de tempo de resposta",
+      "targetDesc": "Dias com média acima deste valor são sinalizados no painel.",
+      "minutesLabel": "Meta (minutos)",
+      "adminOnlyHint": "Somente administradores da conta podem alterar a meta de tempo de resposta.",
+      "save": "Salvar",
+      "saving": "Salvando...",
+      "saveFailed": "Falha ao salvar a meta de tempo de resposta",
+      "saveSuccess": "Meta de tempo de resposta atualizada"
     },
     "branding": {
       "title": "Identidade visual",

@@ -1789,6 +1789,7 @@
       "quick-replies": "Respuestas rápidas",
       "fields": "Campos y etiquetas",
       "deals": "Negocios y moneda",
+      "response-time": "Tiempo de respuesta",
       "branding": "Identidad de marca",
       "members": "Miembros del equipo",
       "api": "Claves de API"
@@ -1981,6 +1982,18 @@
       "saving": "Guardando...",
       "saveFailed": "Error al guardar la moneda predeterminada",
       "saveSuccess": "Moneda predeterminada actualizada"
+    },
+    "responseTime": {
+      "title": "Tiempo de respuesta",
+      "description": "El objetivo de SLA que se muestra en el gráfico de tiempo de respuesta del panel.",
+      "targetLabel": "Objetivo de tiempo de respuesta",
+      "targetDesc": "Los días con un promedio por encima de este valor se marcan en el panel.",
+      "minutesLabel": "Objetivo (minutos)",
+      "adminOnlyHint": "Solo los administradores de la cuenta pueden cambiar el objetivo de tiempo de respuesta.",
+      "save": "Guardar",
+      "saving": "Guardando...",
+      "saveFailed": "Error al guardar el objetivo de tiempo de respuesta",
+      "saveSuccess": "Objetivo de tiempo de respuesta actualizado"
     },
     "branding": {
       "title": "Identidad de marca",

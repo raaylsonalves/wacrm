@@ -1799,6 +1799,7 @@
       "quick-replies": "Quick replies",
       "fields": "Fields & tags",
       "deals": "Deals & currency",
+      "response-time": "Response time",
       "branding": "Branding",
       "members": "Team members",
       "api": "API keys"
@@ -1993,6 +1994,18 @@
       "saving": "Saving...",
       "saveFailed": "Failed to save default currency",
       "saveSuccess": "Default currency updated"
+    },
+    "responseTime": {
+      "title": "Response time",
+      "description": "The SLA target shown on the dashboard's response-time chart.",
+      "targetLabel": "Response time target",
+      "targetDesc": "Days averaging above this are flagged on the dashboard.",
+      "minutesLabel": "Target (minutes)",
+      "adminOnlyHint": "Only account admins can change the response-time target.",
+      "save": "Save",
+      "saving": "Saving...",
+      "saveFailed": "Failed to save response-time target",
+      "saveSuccess": "Response-time target updated"
     },
     "branding": {
       "title": "Branding",

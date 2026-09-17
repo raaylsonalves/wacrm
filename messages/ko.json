@@ -1799,6 +1799,7 @@
       "quick-replies": "빠른 답장",
       "fields": "필드 & 태그",
       "deals": "딜 & 통화",
+      "response-time": "응답 시간",
       "branding": "브랜딩",
       "members": "팀원",
       "api": "API 키"
@@ -1993,6 +1994,18 @@
       "saving": "저장 중...",
       "saveFailed": "기본 통화를 저장하지 못했습니다",
       "saveSuccess": "기본 통화가 업데이트되었습니다"
+    },
+    "responseTime": {
+      "title": "응답 시간",
+      "description": "대시보드의 응답 시간 차트에 표시되는 SLA 목표입니다.",
+      "targetLabel": "응답 시간 목표",
+      "targetDesc": "평균이 이 값을 초과하는 날은 대시보드에 표시됩니다.",
+      "minutesLabel": "목표 (분)",
+      "adminOnlyHint": "계정 관리자만 응답 시간 목표를 변경할 수 있습니다.",
+      "save": "저장",
+      "saving": "저장 중...",
+      "saveFailed": "응답 시간 목표를 저장하지 못했습니다",
+      "saveSuccess": "응답 시간 목표가 업데이트되었습니다"
     },
     "branding": {
       "title": "브랜딩",

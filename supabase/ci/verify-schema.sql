@@ -167,6 +167,19 @@ BEGIN
       'notifications.contact_name is missing — migration 048 did not apply';
   END IF;
 
+  -- 049 gives the dashboard's response-time "target" pill somewhere to
+  -- be configured — before it, `thresholdMinutes` was a component prop
+  -- nobody ever passed. Missing this column is a silent no-op on the
+  -- settings save, not a compile error.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'accounts'
+      AND column_name = 'response_time_target_minutes'
+  ) THEN
+    RAISE EXCEPTION
+      'accounts.response_time_target_minutes is missing — migration 049 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

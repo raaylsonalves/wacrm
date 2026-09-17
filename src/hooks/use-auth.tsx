@@ -13,6 +13,9 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { DEFAULT_CURRENCY } from "@/lib/currency";
+
+/** Mirrors accounts.response_time_target_minutes' DB default (migration 049). */
+const DEFAULT_RESPONSE_TIME_TARGET_MINUTES = 5;
 import {
   canEditSettings as canEditSettingsFor,
   canManageMembers as canManageMembersFor,
@@ -48,6 +51,9 @@ interface AccountSummary {
   display_name: string | null;
   logo_url: string | null;
   brand_color: string | null;
+  /** Minutes the dashboard's response-time chart flags as the SLA
+   *  target (migration 049). NOT NULL DEFAULT 5 in the DB. */
+  response_time_target_minutes: number;
 }
 
 /**
@@ -121,6 +127,9 @@ interface AuthContextValue {
    *  while loading or when no account is resolved, so callers can use
    *  it unconditionally. */
   defaultCurrency: string;
+  /** Account response-time SLA target, in minutes. Falls back to 5
+   *  while loading or when no account is resolved. */
+  responseTimeTargetMinutes: number;
   /** True if `accountRole === 'owner'`. */
   isOwner: boolean;
   /** True if `accountRole === 'admin'` (does NOT include owner — use canManageMembers for "admin or above"). */
@@ -244,8 +253,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .from("accounts")
             // default_currency added in migration 021 (narrowed to the
             // USD fallback below for older schemas where it reads null);
-            // display_name/logo_url/brand_color added in migration 044.
-            .select("id, name, default_currency, display_name, logo_url, brand_color")
+            // display_name/logo_url/brand_color added in migration 044;
+            // response_time_target_minutes added in migration 049.
+            .select(
+              "id, name, default_currency, display_name, logo_url, brand_color, response_time_target_minutes",
+            )
             .eq("id", data.account_id)
             .maybeSingle();
           if (accountErr) {
@@ -263,6 +275,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               display_name: account.display_name ?? null,
               logo_url: account.logo_url ?? null,
               brand_color: account.brand_color ?? null,
+              response_time_target_minutes:
+                account.response_time_target_minutes ?? DEFAULT_RESPONSE_TIME_TARGET_MINUTES,
             };
           }
         }
@@ -445,6 +459,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refreshProfile,
         account,
         defaultCurrency: account?.default_currency ?? DEFAULT_CURRENCY,
+        responseTimeTargetMinutes:
+          account?.response_time_target_minutes ?? DEFAULT_RESPONSE_TIME_TARGET_MINUTES,
         accountStatus,
         accountStatusDetail: statusDetail,
         ...derived,
@@ -477,6 +493,7 @@ export function useAuth(): AuthContextValue {
       refreshProfile: async () => {},
       account: null,
       defaultCurrency: DEFAULT_CURRENCY,
+      responseTimeTargetMinutes: DEFAULT_RESPONSE_TIME_TARGET_MINUTES,
       // Outside the provider there is nothing to resolve yet — 'loading'
       // keeps the access alert from firing on, say, the login page.
       accountStatus: "loading",

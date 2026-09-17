@@ -43,7 +43,7 @@ type RangeDays = 7 | 30 | 90
 export default function DashboardPage() {
   const t = useTranslations('Dashboard.page')
   const tActivity = useTranslations('Dashboard.activityFeed')
-  const { defaultCurrency } = useAuth()
+  const { defaultCurrency, responseTimeTargetMinutes } = useAuth()
   const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [metricsError, setMetricsError] = useState(false)
@@ -289,7 +289,11 @@ export default function DashboardPage() {
       {!responseTimeLoading && responseTimeError ? (
         <WidgetError onRetry={loadAll} t={t} />
       ) : (
-        <ResponseTimeChart data={responseTime} loading={responseTimeLoading} />
+        <ResponseTimeChart
+          data={responseTime}
+          loading={responseTimeLoading}
+          thresholdMinutes={responseTimeTargetMinutes}
+        />
       )}
 
       {/* Activity feed */}

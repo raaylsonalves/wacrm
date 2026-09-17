@@ -98,7 +98,12 @@ export function ResponseTimeChart({
             // 'violet' maps to Tailwind's `fill-violet-500` — matches
             // the brand accent the hand-rolled bars used (#7c3aed).
             colors={['violet']}
-            valueFormatter={(value) => `${value.toFixed(1)}m`}
+            // Tremor calls this for every axis gridline AND the tooltip.
+            // A flat "Xm" suffix rounded every sub-minute value (bot
+            // auto-replies in a few seconds) down to "0.0m" on every
+            // tick — reuse the same adaptive s/m/h formatting the
+            // header's this-week/last-week pills already use below.
+            valueFormatter={(value) => fmt(value)}
             showLegend={false}
             yAxisWidth={48}
             // Compact height so the chart sits well inside the card
@@ -113,6 +118,7 @@ export function ResponseTimeChart({
 
 function fmt(mins: number | null): string {
   if (mins == null) return '—'
+  if (mins <= 0) return '0s'
   if (mins < 1) return `${Math.max(1, Math.round(mins * 60))}s`
   if (mins < 60) return `${mins.toFixed(1)}m`
   return `${(mins / 60).toFixed(1)}h`
