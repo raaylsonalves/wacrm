@@ -145,6 +145,28 @@ BEGIN
       'enforce_account_owner_column trigger is missing on accounts — migration 045 did not apply';
   END IF;
 
+  -- 048 stops notify_conversation_assigned() from writing a pre-rendered
+  -- English sentence into title/body — it now hands the raw actor/contact
+  -- names to the client, which builds the sentence in the app locale.
+  -- Missing these columns is a silent no-op on the trigger's INSERT, not
+  -- a compile error.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'notifications'
+      AND column_name = 'actor_name'
+  ) THEN
+    RAISE EXCEPTION
+      'notifications.actor_name is missing — migration 048 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'notifications'
+      AND column_name = 'contact_name'
+  ) THEN
+    RAISE EXCEPTION
+      'notifications.contact_name is missing — migration 048 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

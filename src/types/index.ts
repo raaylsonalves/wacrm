@@ -210,7 +210,14 @@ export interface Notification {
   contact_id?: string;
   /** Who triggered it. Null when an automation/system assigned it. */
   actor_user_id?: string;
-  title: string;
+  /**
+   * Raw names for the client to build a localized sentence from
+   * (migration 048). `title`/`body` below are the pre-rendered English
+   * text written by rows created before that migration.
+   */
+  actor_name?: string;
+  contact_name?: string;
+  title?: string;
   body?: string;
   read_at?: string;
   created_at: string;

@@ -2156,7 +2156,11 @@
     "retry": "Reintentar",
     "emptyTitle": "Aún no hay notificaciones",
     "emptyDesc": "Verás una alerta aquí cuando alguien te asigne una conversación.",
-    "unread": "Sin leer"
+    "unread": "Sin leer",
+    "assignedTitle": "Nueva conversación asignada",
+    "assignedBody": "{actor} te asignó una conversación con {contact}",
+    "someone": "Alguien",
+    "aContact": "un contacto"
   },
   "Agents": {
     "title": "Agentes de IA",

@@ -19,6 +19,26 @@ const TYPE_ICON: Record<Notification["type"], typeof Bell> = {
   conversation_assigned: UserPlus,
 };
 
+/**
+ * The trigger (migration 048) hands over raw actor/contact names instead
+ * of a pre-rendered English sentence, so the sentence itself is built
+ * here in the viewer's locale. Rows written before that migration only
+ * carry the old `title`/`body` — fall back to those so history doesn't
+ * go blank.
+ */
+function displayText(n: Notification, t: ReturnType<typeof useTranslations>) {
+  if (n.type === "conversation_assigned" && (n.actor_name || n.contact_name)) {
+    return {
+      title: t("assignedTitle"),
+      body: t("assignedBody", {
+        actor: n.actor_name || t("someone"),
+        contact: n.contact_name || t("aContact"),
+      }),
+    };
+  }
+  return { title: n.title ?? t("assignedTitle"), body: n.body };
+}
+
 export default function NotificationsPage() {
   const t = useTranslations("Notifications");
   const router = useRouter();
@@ -205,6 +225,7 @@ export default function NotificationsPage() {
           {notifications.map((n) => {
             const Icon = TYPE_ICON[n.type] ?? Bell;
             const isUnread = !n.read_at;
+            const { title, body } = displayText(n, t);
             return (
               <li key={n.id}>
                 <button
@@ -239,7 +260,7 @@ export default function NotificationsPage() {
                           isUnread ? "text-foreground" : "text-muted-foreground",
                         )}
                       >
-                        {n.title}
+                        {title}
                       </span>
                       {isUnread && (
                         <span
@@ -248,9 +269,9 @@ export default function NotificationsPage() {
                         />
                       )}
                     </div>
-                    {n.body && (
+                    {body && (
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {n.body}
+                        {body}
                       </p>
                     )}
                     <p className="mt-1 text-[11px] text-muted-foreground/70">

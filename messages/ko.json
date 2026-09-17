@@ -2168,7 +2168,11 @@
     "retry": "다시 시도",
     "emptyTitle": "아직 알림이 없습니다",
     "emptyDesc": "누군가 대화를 배정하면 여기에 알림이 표시됩니다.",
-    "unread": "읽지 않음"
+    "unread": "읽지 않음",
+    "assignedTitle": "새 대화가 배정되었습니다",
+    "assignedBody": "{actor}님이 {contact}님과의 대화를 배정했습니다",
+    "someone": "누군가",
+    "aContact": "연락처"
   },
   "Agents": {
     "title": "AI 에이전트",

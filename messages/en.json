@@ -2168,7 +2168,11 @@
     "retry": "Retry",
     "emptyTitle": "No notifications yet",
     "emptyDesc": "You'll see an alert here when someone assigns you a conversation.",
-    "unread": "Unread"
+    "unread": "Unread",
+    "assignedTitle": "New conversation assigned",
+    "assignedBody": "{actor} assigned you a conversation with {contact}",
+    "someone": "Someone",
+    "aContact": "a contact"
   },
   "Agents": {
     "title": "AI Agents",
