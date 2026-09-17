@@ -38,6 +38,20 @@ was found incidentally rather than through a deliberate check.
   class of bug, not a one-time miss.
 - Dashboard, Settings, Pipelines, Flows pages haven't been specifically
   checked at intermediate widths (this spec's job, not yet done).
+- Second confirmed report (user screenshot, ~1217×960 viewport, all
+  three inbox panes visible at once — conversation list + thread +
+  contact sidebar): the thread header's controls visually collide.
+  `message-thread.tsx`'s header packs, left-to-right in one row: back
+  button (mobile-only) → avatar → name/handle (`min-w-0`, truncates) →
+  24h session-timer `Badge` (~line 942, no `flex-shrink-0`) → contact-
+  panel toggle → refresh → status dropdown (`STATUS_OPTIONS`, ~line
+  1017) → assign dropdown. At this width the three-pane layout leaves
+  the thread column too narrow for all of that in one row — the status
+  dropdown's trigger visually overlapped the session-timer badge in the
+  report. This is distinct from the `/inbox`-at-800px bug above (that
+  one is a hard breakpoint gap; this one is controls not wrapping/
+  collapsing gracefully in the space actually available at a width the
+  layout otherwise supports).
 
 ## Proposed change
 
@@ -62,6 +76,13 @@ was found incidentally rather than through a deliberate check.
 
 - [ ] `/inbox` at 768px–1023px: clicking a conversation opens the
       thread (the specific bug that surfaced this spec).
+- [ ] `/inbox` thread header at ~1024px–1280px with all three panes
+      open: the session-timer badge, status dropdown, and assign
+      dropdown never visually overlap — either the header wraps to a
+      second row, the least-critical control (session timer is the
+      best candidate — it's decorative/informational, not a control)
+      collapses to an icon-only or hidden state first, or the contact
+      panel auto-collapses before the header runs out of room.
 - [ ] Every top-level page renders without horizontal scroll or
       overlapping elements at 375px, 768px, 1024px, 1280px.
 - [ ] No page's action buttons/menus become unreachable (off-screen,

@@ -10,6 +10,21 @@ meeting its SLA on average, historically. It says nothing on the
 list today has no way to see "this customer has been waiting 40
 minutes and our target is 5" without doing the math themselves.
 
+## Related, but distinct, existing feature
+
+The inbox thread header already shows a "Xh restantes" / "Xm restantes"
+badge (`message-thread.tsx`, `sessionInfo` ~lines 236-261, rendered
+~line 942-951). That is **not** an SLA — it's the countdown on Meta's
+24-hour WhatsApp customer-service window: once a customer messages you,
+you can send free-form replies for 24 hours from their last message;
+past that, only approved template messages go through
+(`src/lib/whatsapp/meta-api.ts` lines ~355, ~490 reference this same
+rule). It's a fixed platform constraint, not a configurable target, and
+it measures "time left to reply at all," not "time since we should
+have replied." Don't conflate the two when implementing this spec —
+they can (and should) both show in the UI, but they answer different
+questions.
+
 ## Non-goals
 
 - Changing how the SLA target is configured — `Settings > Response
