@@ -143,10 +143,24 @@ export async function resumePendingExecution(pending: {
     .from('automations')
     .select('*')
     .eq('id', pending.automation_id)
+    .eq('account_id', pending.account_id)
     .single()
 
   if (error || !automation) {
     console.error('[automations] resume: missing automation', pending.automation_id, error)
+    await markPending(pending.id, 'failed')
+    return
+  }
+
+  // Toggling an automation off must actually stop it — a wait parked
+  // before the toggle used to fire regardless, since this only checked
+  // that the automation row still existed, not whether it was still
+  // active. "Off" now means every step from here on, including a
+  // multi-day wait already in flight, stops firing.
+  if (!(automation as Automation).is_active) {
+    console.info(
+      `[automations] resume: automation ${pending.automation_id} is inactive, cancelling pending wait ${pending.id}`,
+    )
     await markPending(pending.id, 'failed')
     return
   }
