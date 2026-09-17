@@ -96,10 +96,16 @@ export function ConversationList({
     let cancelled = false;
 
     (async () => {
+      // Ordered most-recent-first, so PostgREST's own row cap (1000 by
+      // default) drops the oldest/least-active conversations rather
+      // than the ones an agent actually needs to see — the safe
+      // direction to truncate in. Explicit for clarity; there's no
+      // "load more" UI yet for an account past this size.
       const { data, error } = await supabase
         .from("conversations")
         .select(CONVERSATION_SELECT)
-        .order("last_message_at", { ascending: false });
+        .order("last_message_at", { ascending: false })
+        .limit(1000);
 
       if (cancelled) return;
 

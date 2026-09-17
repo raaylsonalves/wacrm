@@ -301,18 +301,27 @@ export function MessageThread({
     (async () => {
       setLoading(true);
 
+      // Fetch the most recent messages, not the oldest: with no limit,
+      // PostgREST's own row cap (1000 by default) still applies
+      // server-side, and combined with `ascending: true` that silently
+      // cut off the newest messages on any conversation past that
+      // size — the customer's latest replies just weren't there.
+      // Ordering descending-with-limit then reversing gets the tail of
+      // the conversation instead of the head. No "load older messages"
+      // UI exists yet for anything beyond this window.
       const { data, error } = await supabase
         .from("messages")
         .select("*")
         .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
       if (cancelled) return;
 
       if (error) {
         console.error("Failed to fetch messages:", error);
       } else {
-        onMessagesLoadedRef.current(data ?? []);
+        onMessagesLoadedRef.current((data ?? []).slice().reverse());
       }
 
       if (!cancelled) setLoading(false);
