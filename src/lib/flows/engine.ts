@@ -1043,16 +1043,33 @@ async function handleReplyForActiveRun(
     const cfg = currentNode.config as unknown as CollectInputNodeConfig;
     const captured = message.text.trim();
     if (captured.length > 0 && cfg.var_key) {
-      // Persist captured value + reset reprompt count atomically.
+      // Optimistic UPDATE gated on current_node_key, same guard
+      // advanceCurrentNodeKey uses — without it, two replies arriving
+      // close together (different meta_message_ids, so the inbound
+      // dedupe upsert doesn't catch either one) both read the same
+      // current_node_key, both pass this branch, and both walk the
+      // downstream chain: every message past this node goes out twice.
+      // A 0-row update means another concurrent dispatch already
+      // captured and advanced past this node — stop here instead of
+      // also advancing.
       const newVars = { ...run.vars, [cfg.var_key]: captured };
-      const { error: capErr } = await db
+      const { data: capData, error: capErr } = await db
         .from("flow_runs")
         .update({
           vars: newVars,
           reprompt_count: 0,
         })
-        .eq("id", run.id);
-      if (!capErr) {
+        .eq("id", run.id)
+        .eq("current_node_key", run.current_node_key)
+        .select("id");
+      if (capErr) {
+        console.error("[flows] collect_input capture error:", capErr.message);
+      } else if (!capData || capData.length === 0) {
+        await logEvent(db, run.id, "error", currentNode.node_key, {
+          reason: "lost_race_during_advance",
+        });
+        return { consumed: true, flow_run_id: run.id, outcome: "no_match" };
+      } else {
         // Mirror the UPDATE in-memory so downstream interpolation in
         // the advance loop sees the captured var without us having to
         // re-SELECT the whole row.
