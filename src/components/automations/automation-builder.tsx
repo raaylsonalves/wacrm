@@ -814,11 +814,11 @@ function TriggerCard({
           onClick={() => setOpen((v) => !v)}
           className="flex w-full items-center gap-3 px-4 py-3 text-left"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-500/10 text-blue-400">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
             <Zap className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[11px] uppercase tracking-wide text-blue-300">{t("trigger")}</div>
+            <div className="text-[11px] uppercase tracking-wide text-blue-700 dark:text-blue-300">{t("trigger")}</div>
             <div className="truncate text-sm font-medium text-foreground">
               {t(`triggers.${type}.label`)}
             </div>
@@ -1224,7 +1224,7 @@ function ConditionBranches({
             scope={{ kind: "branch", parentCid: step.cid, branch: "yes" }}
           />
         </BranchColumn>
-        <BranchColumn label={t("branches.no")} color="text-rose-400">
+        <BranchColumn label={t("branches.no")} color="text-rose-600 dark:text-rose-400">
           <StepList
             {...props}
             steps={no}

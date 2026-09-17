@@ -525,7 +525,7 @@ export function ContactDetailView({
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-muted-foreground text-xs">
-                      {t('phone')} <span className="text-red-400">*</span>
+                      {t('phone')} <span className="text-red-600 dark:text-red-400">*</span>
                     </Label>
                     <Input
                       value={editPhone}
@@ -760,7 +760,7 @@ export function ContactDetailView({
                               className={
                                 deal.status === 'won'
                                   ? 'text-primary'
-                                  : 'text-red-400'
+                                  : 'text-red-600 dark:text-red-400'
                               }
                             >
                               {deal.status}

@@ -86,7 +86,7 @@ export function EditorHeader() {
         <StatusChip status={state.status} />
         {dirty && (
           <span
-            className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-amber-300"
+            className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300"
             title={t("unsavedHint")}
             aria-live="polite"
           >
@@ -112,7 +112,7 @@ export function EditorHeader() {
             variant="ghost"
             size="sm"
             onClick={() => void deleteFlow()}
-            className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            className="text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:text-red-300"
           >
             <Trash2 className="h-3.5 w-3.5" />
             {t("delete")}
@@ -186,7 +186,7 @@ function StatusChip({ status }: { status: BuilderState["status"] }) {
       label: t("statusDraft"),
     },
     active: {
-      cls: "border-emerald-600/40 bg-emerald-500/10 text-emerald-300",
+      cls: "border-emerald-600/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
       label: t("statusActive"),
     },
     archived: {

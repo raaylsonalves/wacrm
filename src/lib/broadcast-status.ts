@@ -30,11 +30,11 @@ export const broadcastStatusConfig: Record<BroadcastStatus, StatusDisplay> = {
   },
   scheduled: {
     label: "scheduled",
-    classes: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    classes: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
   },
   sending: {
     label: "sending",
-    classes: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+    classes: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
     pulse: true,
   },
   sent: {
@@ -43,7 +43,7 @@ export const broadcastStatusConfig: Record<BroadcastStatus, StatusDisplay> = {
   },
   failed: {
     label: "failed",
-    classes: "bg-red-500/10 text-red-400 border-red-500/20",
+    classes: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
   },
 };
 
@@ -54,7 +54,7 @@ export const recipientStatusConfig: Record<RecipientStatus, StatusDisplay> = {
   },
   sent: {
     label: "sent",
-    classes: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    classes: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
   },
   delivered: {
     label: "delivered",
@@ -66,11 +66,11 @@ export const recipientStatusConfig: Record<RecipientStatus, StatusDisplay> = {
   },
   replied: {
     label: "replied",
-    classes: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    classes: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
   },
   failed: {
     label: "failed",
-    classes: "bg-red-500/10 text-red-400 border-red-500/20",
+    classes: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
   },
 };
 

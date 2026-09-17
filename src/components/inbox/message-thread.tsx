@@ -135,7 +135,7 @@ function groupMessagesByDate(messages: Message[]) {
 
 const STATUS_OPTIONS: { label: string; value: ConversationStatus; color: string }[] = [
   { label: "Open", value: "open", color: "text-primary" },
-  { label: "Pending", value: "pending", color: "text-amber-400" },
+  { label: "Pending", value: "pending", color: "text-amber-600 dark:text-amber-400" },
   { label: "Closed", value: "closed", color: "text-muted-foreground" },
 ];
 
@@ -943,7 +943,7 @@ export function MessageThread({
             variant="outline"
             className={cn(
               "ml-1 hidden gap-1 border-border text-[10px] sm:inline-flex sm:ml-2",
-              sessionInfo.expired ? "text-red-400" : "text-primary"
+              sessionInfo.expired ? "text-red-600 dark:text-red-400" : "text-primary"
             )}
           >
             <Clock className="h-3 w-3" />

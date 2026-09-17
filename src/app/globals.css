@@ -2,7 +2,19 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/*
+ * Tailwind's stock `dark:` variant matches a `.dark` class ancestor,
+ * but this app's light/dark switch (src/lib/themes.ts, boot script in
+ * layout.tsx) sets `data-mode="dark"` on <html> — it never adds a
+ * `.dark` class anywhere. That mismatch meant every `dark:` utility
+ * already written in the codebase (badge.tsx, settings-chip.tsx, the
+ * shadcn form components, …) was dead: the selector never matched in
+ * either mode, so those components silently always rendered their
+ * light-mode colors — including badges intentionally paired with a
+ * `dark:text-*-300` override for legibility against the dark surfaces
+ * that are this app's own default.
+ */
+@custom-variant dark (&:is([data-mode="dark"] *));
 
 @theme inline {
   --color-background: var(--background);

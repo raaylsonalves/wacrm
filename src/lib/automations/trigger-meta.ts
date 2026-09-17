@@ -13,28 +13,28 @@ export interface TriggerMeta {
  */
 export const TRIGGER_META: Record<AutomationTriggerType, TriggerMeta> = {
   new_message_received: {
-    pillClass: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
+    pillClass: 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300',
   },
   first_inbound_message: {
-    pillClass: 'border-teal-500/30 bg-teal-500/10 text-teal-300',
+    pillClass: 'border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-300',
   },
   keyword_match: {
-    pillClass: 'border-purple-500/30 bg-purple-500/10 text-purple-300',
+    pillClass: 'border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300',
   },
   new_contact_created: {
     pillClass: 'border-primary/30 bg-primary/10 text-primary',
   },
   conversation_assigned: {
-    pillClass: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300',
+    pillClass: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
   },
   tag_added: {
-    pillClass: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+    pillClass: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
   },
   time_based: {
     pillClass: 'border-slate-500/30 bg-slate-500/10 text-muted-foreground',
   },
   interactive_reply: {
-    pillClass: 'border-pink-500/30 bg-pink-500/10 text-pink-300',
+    pillClass: 'border-pink-500/30 bg-pink-500/10 text-pink-700 dark:text-pink-300',
   },
 }
 

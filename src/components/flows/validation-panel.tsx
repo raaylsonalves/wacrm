@@ -32,7 +32,7 @@ export function ValidationPanel() {
     // sticky-positioned over scrolled-behind node cards (a translucent
     // bg-emerald-500/10 would bleed through ugly).
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-emerald-600/50 bg-background p-3 text-sm font-medium text-emerald-300">
+      <div className="flex items-center gap-2 rounded-lg border border-emerald-600/50 bg-background p-3 text-sm font-medium text-emerald-700 dark:text-emerald-300">
         <CircleCheck className="h-4 w-4 shrink-0" />
         {t("noIssues")}
       </div>
@@ -49,9 +49,9 @@ export function ValidationPanel() {
     >
       <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
         {errors.length > 0 ? (
-          <CircleAlert className="h-4 w-4 text-red-400" />
+          <CircleAlert className="h-4 w-4 text-red-600 dark:text-red-400" />
         ) : (
-          <CircleAlert className="h-4 w-4 text-amber-400" />
+          <CircleAlert className="h-4 w-4 text-amber-600 dark:text-amber-400" />
         )}
         {t("summary", { errorCount: errors.length, warningCount: warnings.length })}
       </div>
@@ -80,9 +80,9 @@ export function IssueLine({
   t?: ReturnType<typeof useTranslations>;
 }) {
   const tone =
-    issue.severity === "error" ? "text-red-300" : "text-amber-300";
+    issue.severity === "error" ? "text-red-700 dark:text-red-300" : "text-amber-700 dark:text-amber-300";
   const iconTone =
-    issue.severity === "error" ? "text-red-400" : "text-amber-400";
+    issue.severity === "error" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400";
   const body = (
     <>
       <CircleAlert className={cn("mt-0.5 h-3 w-3 shrink-0", iconTone)} />

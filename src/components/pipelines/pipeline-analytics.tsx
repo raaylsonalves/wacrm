@@ -141,14 +141,14 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
           t={t}
         />
         <Metric
-          icon={<Target className="h-4 w-4 text-blue-400" />}
+          icon={<Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
           label={t("avgDealSize")}
           value={formatByCurrency(stats.avgByCurrency)}
           tooltip={t("avgDealSizeTooltip")}
           t={t}
         />
         <Metric
-          icon={<TrendingUp className="h-4 w-4 text-purple-400" />}
+          icon={<TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
           label={t("weightedValue")}
           value={formatByCurrency(stats.weightedByCurrency)}
           tooltip={t("weightedValueTooltip")}
@@ -162,7 +162,7 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
           t={t}
         />
         <Metric
-          icon={<XCircle className="h-4 w-4 text-red-400" />}
+          icon={<XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />}
           label={t("lostThisMonth")}
           value={String(stats.lostThisMonth)}
           tooltip={t("lostThisMonthTooltip")}

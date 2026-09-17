@@ -166,7 +166,7 @@ export function InteractiveBuilder({
           </label>
 
           {!validation.ok && (
-            <p className="text-xs text-red-400">{validation.error}</p>
+            <p className="text-xs text-red-600 dark:text-red-400">{validation.error}</p>
           )}
         </div>
 
@@ -257,7 +257,7 @@ function ButtonsEditor({
                 variant="ghost"
                 size="sm"
                 onClick={() => remove(i)}
-                className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                className="text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:text-red-300"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -367,7 +367,7 @@ function ListEditor({
                 variant="ghost"
                 size="sm"
                 onClick={() => removeSection(sIdx)}
-                className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                className="text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:text-red-300"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -402,7 +402,7 @@ function ListEditor({
                       variant="ghost"
                       size="sm"
                       onClick={() => removeRow(sIdx, rIdx)}
-                      className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                      className="text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:text-red-300"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

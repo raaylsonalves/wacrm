@@ -69,7 +69,7 @@ export default function AutomationLogsPage({
   if (error) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-3">
-        <p className="text-sm text-red-400">{error}</p>
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         <Button variant="outline" onClick={() => router.push("/automations")}>
           {t("back")}
         </Button>
@@ -145,7 +145,7 @@ export default function AutomationLogsPage({
                 {isOpen && (
                   <div className="border-t border-border px-4 py-3">
                     {log.error_message && (
-                      <p className="mb-3 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                      <p className="mb-3 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-300">
                         {log.error_message}
                       </p>
                     )}
@@ -173,8 +173,8 @@ function StatusBadge({ status, t }: { status: AutomationLog["status"], t: Return
     status === "success"
       ? "border-primary/30 bg-primary/10 text-primary"
       : status === "partial"
-      ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
-      : "border-red-500/30 bg-red-500/10 text-red-300"
+      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+      : "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
   return (
     <span
       className={cn(
@@ -221,7 +221,7 @@ function StepRow({
       <span
         className={cn(
           "mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full",
-          ok ? "bg-primary/20 text-primary" : "bg-red-500/20 text-red-400",
+          ok ? "bg-primary/20 text-primary" : "bg-red-500/20 text-red-600 dark:text-red-400",
         )}
         aria-hidden
       >

@@ -275,7 +275,7 @@ export function Step3Personalize({
               />
             )}
           {headerMediaError && (
-            <p className="mt-1.5 text-xs text-amber-300">
+            <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-300">
               {headerMediaError === 'missing'
                 ? t('personalize.mediaUrlRequired')
                 : t('personalize.mediaUrlInvalid')}
@@ -421,7 +421,7 @@ export function Step3Personalize({
       </div>
 
       {unmappedKeys.length > 0 && (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
           {t.rich('personalize.unmappedWarning', {
             keys: unmappedKeys.join(', '),
             mono: (chunks) => <span className="font-mono font-semibold">{chunks}</span>,
