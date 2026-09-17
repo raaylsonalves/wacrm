@@ -79,7 +79,9 @@
       "newTodayVsYesterday": "new today vs yesterday",
       "vsYesterday": "vs yesterday",
       "openDeals": "{count} open {count, plural, =1 {deal} other {deals}}",
-      "noChange": "No change {suffix}"
+      "noChange": "No change {suffix}",
+      "loadFailed": "Failed to load",
+      "retry": "Retry"
     },
     "quickActions": {
       "newContact": "New Contact",

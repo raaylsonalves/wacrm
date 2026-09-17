@@ -79,7 +79,9 @@
       "newTodayVsYesterday": "어제 대비 신규",
       "vsYesterday": "어제 대비",
       "openDeals": "진행 중인 딜 {count}건",
-      "noChange": "변동 없음 {suffix}"
+      "noChange": "변동 없음 {suffix}",
+      "loadFailed": "불러오지 못했습니다",
+      "retry": "다시 시도"
     },
     "quickActions": {
       "newContact": "새 연락처",
