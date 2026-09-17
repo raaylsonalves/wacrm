@@ -486,7 +486,21 @@ async function executeHandoff(
     status: "pending",
     updated_at: new Date().toISOString(),
   };
-  if (cfg.assign_to) convUpdate.assigned_agent_id = cfg.assign_to;
+  if (cfg.assign_to) {
+    // `assign_to` is caller-supplied node config and this write runs
+    // through the service-role client (RLS bypassed) — confirm the id
+    // is actually a member of this run's account before assigning, same
+    // defense-in-depth as the automations engine's assign_conversation
+    // step. An unverified id would let a flow assign a conversation to
+    // a user outside the account.
+    const { data: member } = await db
+      .from("profiles")
+      .select("user_id")
+      .eq("user_id", cfg.assign_to)
+      .eq("account_id", run.account_id)
+      .maybeSingle();
+    if (member) convUpdate.assigned_agent_id = cfg.assign_to;
+  }
   if (run.conversation_id) {
     await db
       .from("conversations")

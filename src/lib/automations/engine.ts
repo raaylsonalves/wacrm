@@ -494,6 +494,21 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
           .eq('account_id', args.automation.account_id)
           .limit(1)
         agentId = profiles?.[0]?.user_id
+      } else if (agentId) {
+        // `agent_id` is caller-supplied step config, and this write runs
+        // through the service-role client (RLS bypassed) — confirm the
+        // id is actually a member of this account before assigning, same
+        // defense-in-depth as update_contact_field's custom_fields check.
+        // An unverified id would otherwise let one account's automation
+        // assign a conversation to a user in a different account (a
+        // black hole assignment that also suppresses AI auto-reply).
+        const { data: member } = await db
+          .from('profiles')
+          .select('user_id')
+          .eq('user_id', agentId)
+          .eq('account_id', args.automation.account_id)
+          .maybeSingle()
+        if (!member) return `agent ${agentId} is not a member of this account`
       }
       if (!agentId) return 'no agent resolved'
       await db
@@ -559,6 +574,22 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
     case 'create_deal': {
       const cfg = step.step_config as CreateDealStepConfig
       if (!cfg.pipeline_id || !cfg.stage_id) throw new Error('create_deal needs pipeline + stage')
+      // `pipeline_id`/`stage_id` are caller-supplied step config and this
+      // insert runs through the service-role client (RLS bypassed) —
+      // confirm the stage both belongs to this account AND to the given
+      // pipeline before using it. An unverified id would otherwise let
+      // one account's automation create a deal against another
+      // account's pipeline/stage, and a later edit to that stage (e.g.
+      // renaming or deleting it) would silently affect this account's
+      // deal too.
+      const { data: stage } = await db
+        .from('pipeline_stages')
+        .select('id, pipeline_id, pipelines!inner(account_id)')
+        .eq('id', cfg.stage_id)
+        .eq('pipeline_id', cfg.pipeline_id)
+        .eq('pipelines.account_id', args.automation.account_id)
+        .maybeSingle()
+      if (!stage) return `stage ${cfg.stage_id} is not in this account's pipeline ${cfg.pipeline_id}`
       // Match the account's configured default currency rather than
       // the static `deals.currency` DB default — keeps automation-
       // created deals consistent with the one-currency-per-account
