@@ -8,7 +8,7 @@ import {
   CONVERSATION_SELECT,
   normalizeConversation,
 } from "@/lib/inbox/conversations";
-import type { Conversation, Message, Contact, ConversationStatus } from "@/types";
+import type { Conversation, Message, Contact, ConversationStatus, Tag } from "@/types";
 import { useRealtime } from "@/hooks/use-realtime";
 import { ConversationList } from "@/components/inbox/conversation-list";
 import { MessageThread } from "@/components/inbox/message-thread";
@@ -554,6 +554,27 @@ function InboxPageInner() {
     [activeConversation]
   );
 
+  // Mirrors handleStatusChange/handleAssignChange: the conversation-list
+  // row context menu (specs/inbox-context-menu-actions.md) writes the tag
+  // change itself, then hands the resulting tag list here to patch every
+  // conversation for that contact (a contact can have more than one open
+  // conversation) plus the currently open thread's contact, if it matches.
+  const handleContactTagsChange = useCallback(
+    (contactId: string, tags: Tag[]) => {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.contact?.id === contactId
+            ? { ...c, contact: { ...c.contact, tags } }
+            : c
+        )
+      );
+      if (activeContact?.id === contactId) {
+        setActiveContact((prev) => (prev ? { ...prev, tags } : prev));
+      }
+    },
+    [activeContact]
+  );
+
   // On mobile (<lg) we show a SINGLE pane — either the list or the
   // thread — rather than cramming both side-by-side. Selecting a
   // conversation slides the thread in; the thread's back button pops
@@ -590,6 +611,9 @@ function InboxPageInner() {
             conversations={conversations}
             onConversationsLoaded={handleConversationsLoaded}
             resyncToken={resyncToken}
+            onStatusChange={handleStatusChange}
+            onAssignChange={handleAssignChange}
+            onContactTagsChange={handleContactTagsChange}
           />
         </div>
 

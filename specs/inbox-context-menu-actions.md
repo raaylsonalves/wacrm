@@ -1,5 +1,29 @@
 # Spec: Right-click context menu for inbox messages and contacts
 
+**Status: partially implemented.** The conversation-list row menu (item 2
+of the proposed change — "the highest-value net-new surface since none of
+these exist as row-level actions today") is done:
+`src/components/ui/context-menu.tsx` wraps `@base-ui/react`'s
+`ContextMenu` primitive (same shadcn-style pattern as `dropdown-menu.tsx`);
+`src/components/inbox/conversation-list.tsx` right-click opens a menu with
+status change, assign/unassign, and tag toggle, reusing the exact
+`Inbox.messageThread` translation keys the thread header's own dropdowns
+use. Status/assign write straight to `conversations` (mirroring
+`MessageThread`'s `handleStatusChange`/`handleAssignChange`); tags go
+through the existing `/api/contacts/[id]/tags` route. New optional
+`onStatusChange`/`onAssignChange`/`onContactTagsChange` props on
+`ConversationList`, wired in `inbox/page.tsx` to the same state-patch
+handlers `MessageThread` already used, plus a new `handleContactTagsChange`
+for the tag case. Verified live: right-click → change status → change
+tags, confirmed via direct SQL that writes landed and reverted correctly.
+
+**Not implemented:** message-bubble right-click (item 1) — the hover
+toolbar remains the only path to message actions (reply/react/copy/
+forward/delete). Left for a follow-up since it's lower-value per the
+spec's own "Proposed change" ordering and touches the existing touch
+long-press `contextmenu` handler in `message-actions.tsx`, which needs
+its own careful regression check.
+
 ## Problem
 
 The inbox only exposes actions (reply, react, delete, forward, copy,

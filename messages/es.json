@@ -189,7 +189,8 @@
       "clearAll": "Limpiar todo",
       "noConversations": "No se encontraron conversaciones",
       "noMessagesYet": "Aún no hay mensajes",
-      "unknown": "Desconocido"
+      "unknown": "Desconocido",
+      "tagUpdateFailed": "Error al actualizar la etiqueta"
     },
     "messageThread": {
       "backToConversations": "Volver a las conversaciones",

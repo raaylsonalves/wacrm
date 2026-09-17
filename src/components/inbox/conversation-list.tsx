@@ -8,8 +8,9 @@ import {
   normalizeConversations,
 } from "@/lib/inbox/conversations";
 import { cn } from "@/lib/utils";
-import type { Conversation, ConversationStatus, Tag } from "@/types";
-import { Search, ChevronDown, X } from "lucide-react";
+import { toast } from "sonner";
+import type { Conversation, ConversationStatus, Profile, Tag } from "@/types";
+import { Search, ChevronDown, X, Check } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { dateFnsLocale } from "@/lib/date-fns-locale";
 import { useTranslations } from "next-intl";
@@ -21,6 +22,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ConversationListProps {
@@ -35,7 +45,24 @@ interface ConversationListProps {
    * or the tab was throttled. Optional so existing callers keep working.
    */
   resyncToken?: number;
+  /**
+   * Row-level context menu actions (specs/inbox-context-menu-actions.md)
+   * mirror MessageThread's own status/assign handlers — same signature,
+   * so the parent's existing local-state patch works for either origin.
+   * All optional so a caller that doesn't need the context menu (none
+   * today, but keeps the component's public surface backward-compatible)
+   * doesn't have to wire them.
+   */
+  onStatusChange?: (conversationId: string, status: ConversationStatus) => void;
+  onAssignChange?: (conversationId: string, assignedAgentId: string | null) => void;
+  onContactTagsChange?: (contactId: string, tags: Tag[]) => void;
 }
+
+const STATUS_LABEL_KEY: Record<ConversationStatus, string> = {
+  open: "statusOpen",
+  pending: "statusPending",
+  closed: "statusClosed",
+};
 
 const STATUS_COLORS: Record<ConversationStatus, string> = {
   open: "bg-primary",
@@ -53,9 +80,13 @@ export function ConversationList({
   conversations,
   onConversationsLoaded,
   resyncToken = 0,
+  onStatusChange,
+  onAssignChange,
+  onContactTagsChange,
 }: ConversationListProps) {
   const t = useTranslations("Inbox.conversationList");
-  
+  const tThread = useTranslations("Inbox.messageThread");
+
   const FILTER_OPTIONS: { label: string; value: InboxFilter }[] = useMemo(() => [
     { label: t("filterAll"), value: "all" },
     { label: t("filterUnread"), value: "unread" },
@@ -146,6 +177,85 @@ export function ConversationList({
       cancelled = true;
     };
   }, []);
+
+  // Teammates for the context menu's "assign" submenu — same query
+  // MessageThread runs for its own assign dropdown (see that file for
+  // why it's a plain, RLS-scoped select rather than a members endpoint).
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+    supabase
+      .from("profiles")
+      .select("*")
+      .order("full_name")
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("Failed to fetch profiles:", error);
+          return;
+        }
+        setProfiles((data as Profile[]) ?? []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleRowStatusChange = useCallback(
+    async (conversationId: string, status: ConversationStatus) => {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("conversations")
+        .update({ status })
+        .eq("id", conversationId);
+      if (error) {
+        console.error("Failed to update status:", error);
+        toast.error(tThread("assignmentUpdateFailed"));
+        return;
+      }
+      onStatusChange?.(conversationId, status);
+    },
+    [onStatusChange, tThread]
+  );
+
+  const handleRowAssignChange = useCallback(
+    async (conversationId: string, agentId: string | null) => {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("conversations")
+        .update({ assigned_agent_id: agentId })
+        .eq("id", conversationId);
+      if (error) {
+        console.error("Failed to update assignment:", error);
+        toast.error(tThread("assignmentUpdateFailed"));
+        return;
+      }
+      onAssignChange?.(conversationId, agentId);
+    },
+    [onAssignChange, tThread]
+  );
+
+  const handleRowToggleTag = useCallback(
+    async (contactId: string, currentTags: Tag[], tag: Tag) => {
+      const hasTag = currentTags.some((t) => t.id === tag.id);
+      const res = await fetch(`/api/contacts/${contactId}/tags`, {
+        method: hasTag ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag_id: tag.id }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        toast.error(payload.error || t("tagUpdateFailed"));
+        return;
+      }
+      const nextTags = hasTag
+        ? currentTags.filter((t) => t.id !== tag.id)
+        : [...currentTags, tag];
+      onContactTagsChange?.(contactId, nextTags);
+    },
+    [onContactTagsChange, t]
+  );
 
   // Company options are derived from the loaded conversations — there's no
   // separate companies table, and only companies with a live conversation
@@ -421,6 +531,12 @@ export function ConversationList({
                 isActive={conv.id === activeConversationId}
                 onSelect={handleSelect}
                 t={t}
+                tThread={tThread}
+                allTags={tags}
+                profiles={profiles}
+                onStatusChange={handleRowStatusChange}
+                onAssignChange={handleRowAssignChange}
+                onToggleTag={handleRowToggleTag}
               />
             ))}
           </div>
@@ -435,6 +551,12 @@ interface ConversationItemProps {
   isActive: boolean;
   onSelect: (conversation: Conversation) => void;
   t: ReturnType<typeof useTranslations>;
+  tThread: ReturnType<typeof useTranslations>;
+  allTags: Tag[];
+  profiles: Profile[];
+  onStatusChange: (conversationId: string, status: ConversationStatus) => void;
+  onAssignChange: (conversationId: string, agentId: string | null) => void;
+  onToggleTag: (contactId: string, currentTags: Tag[], tag: Tag) => void;
 }
 
 function ConversationItem({
@@ -442,10 +564,17 @@ function ConversationItem({
   isActive,
   onSelect,
   t,
+  tThread,
+  allTags,
+  profiles,
+  onStatusChange,
+  onAssignChange,
+  onToggleTag,
 }: ConversationItemProps) {
   const contact = conversation.contact;
   const displayName = contact?.name || contact?.phone || t("unknown");
   const initials = displayName.charAt(0).toUpperCase();
+  const contactTags = contact?.tags ?? [];
 
   const handleClick = useCallback(() => {
     onSelect(conversation);
@@ -458,7 +587,7 @@ function ConversationItem({
       })
     : "";
 
-  return (
+  const row = (
     <button
       onClick={handleClick}
       className={cn(
@@ -534,5 +663,76 @@ function ConversationItem({
         )}
       </div>
     </button>
+  );
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger render={row} />
+      <ContextMenuContent>
+        <ContextMenuGroup>
+          <ContextMenuLabel>{tThread("status")}</ContextMenuLabel>
+          {(Object.keys(STATUS_LABEL_KEY) as ConversationStatus[]).map((status) => (
+            <ContextMenuItem
+              key={status}
+              onClick={() => onStatusChange(conversation.id, status)}
+            >
+              {conversation.status === status && <Check className="h-3.5 w-3.5" />}
+              {tThread(STATUS_LABEL_KEY[status])}
+            </ContextMenuItem>
+          ))}
+        </ContextMenuGroup>
+
+        <ContextMenuSeparator />
+
+        <ContextMenuGroup>
+          <ContextMenuLabel>{tThread("assign")}</ContextMenuLabel>
+          {profiles.length === 0 ? (
+            <ContextMenuItem disabled>{tThread("noTeammates")}</ContextMenuItem>
+          ) : (
+            profiles.map((p) => (
+              <ContextMenuItem
+                key={p.id}
+                onClick={() => onAssignChange(conversation.id, p.user_id)}
+              >
+                {conversation.assigned_agent_id === p.user_id && (
+                  <Check className="h-3.5 w-3.5" />
+                )}
+                {p.full_name}
+              </ContextMenuItem>
+            ))
+          )}
+          {conversation.assigned_agent_id && (
+            <ContextMenuItem onClick={() => onAssignChange(conversation.id, null)}>
+              {tThread("unassign")}
+            </ContextMenuItem>
+          )}
+        </ContextMenuGroup>
+
+        {contact && allTags.length > 0 && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuGroup>
+              <ContextMenuLabel>{t("tags")}</ContextMenuLabel>
+              {allTags.map((tag) => {
+                const checked = contactTags.some((ct) => ct.id === tag.id);
+                return (
+                  <ContextMenuItem
+                    key={tag.id}
+                    onClick={() => onToggleTag(contact.id, contactTags, tag)}
+                  >
+                    {checked && <Check className="h-3.5 w-3.5" />}
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: tag.color }}
+                    />
+                    <span className="truncate">{tag.name}</span>
+                  </ContextMenuItem>
+                );
+              })}
+            </ContextMenuGroup>
+          </>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
