@@ -61,7 +61,7 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
       .select('id', { count: 'exact', head: true })
       .gte('created_at', yesterdayStart)
       .lt('created_at', todayStart),
-    db.from('deals').select('value, status').eq('status', 'open'),
+    db.from('deals').select('value, currency, status').eq('status', 'open'),
     db
       .from('messages')
       .select('id', { count: 'exact', head: true })
@@ -75,8 +75,15 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
       .lt('created_at', todayStart),
   ])
 
-  const openDealsRows = (openDeals.data ?? []) as { value: number | null }[]
-  const openDealsValue = openDealsRows.reduce((sum, d) => sum + (d.value ?? 0), 0)
+  const openDealsRows = (openDeals.data ?? []) as {
+    value: number | null
+    currency: string | null
+  }[]
+  const openDealsValueByCurrency: Record<string, number> = {}
+  for (const d of openDealsRows) {
+    const cur = d.currency || 'USD'
+    openDealsValueByCurrency[cur] = (openDealsValueByCurrency[cur] ?? 0) + (d.value ?? 0)
+  }
 
   return {
     activeConversations: {
@@ -90,7 +97,7 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
       current: newContactsToday.count ?? 0,
       previous: newContactsYesterday.count ?? 0,
     },
-    openDealsValue,
+    openDealsValueByCurrency,
     openDealsCount: openDealsRows.length,
     messagesSentToday: {
       current: messagesToday.count ?? 0,

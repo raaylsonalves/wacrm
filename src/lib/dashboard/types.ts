@@ -10,7 +10,13 @@ export interface MetricDelta {
 export interface MetricsBundle {
   activeConversations: MetricDelta
   newContactsToday: MetricDelta
-  openDealsValue: number
+  /**
+   * Keyed by currency — deals are meant to be single-currency per
+   * account (#218), but a legacy row can still carry a different one,
+   * and summing them into one number under a single assumed currency
+   * silently misreports the total.
+   */
+  openDealsValueByCurrency: Record<string, number>
   openDealsCount: number
   messagesSentToday: MetricDelta
 }

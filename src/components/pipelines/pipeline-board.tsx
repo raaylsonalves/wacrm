@@ -106,17 +106,24 @@ export function PipelineBoard({
       <div className="pipeline-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 lg:snap-none">
         {sortedStages.map((stage) => {
           const stageDeals = dealsByStage.get(stage.id) ?? [];
-          const totalValue = stageDeals.reduce(
-            (s, d) => s + Number(d.value || 0),
-            0,
-          );
+          // Deals are meant to be single-currency per account (#218),
+          // but a legacy row or one created before the account's
+          // default currency changed can still carry a different one —
+          // summing raw values and labeling the total with whatever
+          // `defaultCurrency` happens to be silently misreported the
+          // total (e.g. a USD deal counted as if it were BRL). Group by
+          // the deal's own currency instead.
+          const totalsByCurrency = new Map<string, number>();
+          for (const d of stageDeals) {
+            const cur = d.currency || defaultCurrency;
+            totalsByCurrency.set(cur, (totalsByCurrency.get(cur) ?? 0) + Number(d.value || 0));
+          }
           return (
             <StageColumn
               key={stage.id}
               stage={stage}
               deals={stageDeals}
-              totalValue={totalValue}
-              currency={defaultCurrency}
+              totalsByCurrency={totalsByCurrency}
               onAddDeal={onAddDeal}
               onEditDeal={onEditDeal}
             />
@@ -189,15 +196,13 @@ export function PipelineBoard({
 function StageColumn({
   stage,
   deals,
-  totalValue,
-  currency,
+  totalsByCurrency,
   onAddDeal,
   onEditDeal,
 }: {
   stage: PipelineStage;
   deals: Deal[];
-  totalValue: number;
-  currency: string;
+  totalsByCurrency: Map<string, number>;
   onAddDeal: (stageId: string) => void;
   onEditDeal: (deal: Deal) => void;
 }) {
@@ -226,7 +231,9 @@ function StageColumn({
         </span>
       </div>
       <p className="text-xs text-muted-foreground">
-        {formatCurrency(totalValue, currency)}
+        {Array.from(totalsByCurrency.entries())
+          .map(([cur, total]) => formatCurrency(total, cur))
+          .join(" + ")}
       </p>
 
       <div

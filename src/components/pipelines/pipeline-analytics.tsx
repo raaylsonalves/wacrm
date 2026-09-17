@@ -59,16 +59,39 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
     const openDeals = active.filter((d) => d.status !== "won");
 
     const totalCount = active.length;
-    const totalValue = active.reduce((sum, d) => sum + Number(d.value || 0), 0);
-    const avgValue = totalCount > 0 ? totalValue / totalCount : 0;
+
+    // Deals are meant to be single-currency per account (#218), but a
+    // legacy row or one created before the account's default currency
+    // changed can still carry a different one — summing raw values
+    // across currencies and labeling the total with `defaultCurrency`
+    // silently misreports it (e.g. a USD deal counted as if BRL). Group
+    // every money figure by the deal's own currency instead.
+    const valueByCurrency = new Map<string, number>();
+    const countByCurrency = new Map<string, number>();
+    for (const d of active) {
+      const cur = d.currency || defaultCurrency;
+      valueByCurrency.set(cur, (valueByCurrency.get(cur) ?? 0) + Number(d.value || 0));
+      countByCurrency.set(cur, (countByCurrency.get(cur) ?? 0) + 1);
+    }
+    const avgByCurrency = new Map(
+      Array.from(valueByCurrency.entries()).map(([cur, total]) => [
+        cur,
+        total / (countByCurrency.get(cur) ?? 1),
+      ]),
+    );
 
     const stageById = new Map(sortedStages.map((s) => [s.id, s]));
-    const weightedValue = openDeals.reduce((sum, d) => {
+    const weightedByCurrency = new Map<string, number>();
+    for (const d of openDeals) {
       const stage = stageById.get(d.stage_id);
-      if (!stage) return sum;
+      if (!stage) continue;
       const prob = computeStageProbability(stage, sortedStages);
-      return sum + Number(d.value || 0) * prob;
-    }, 0);
+      const cur = d.currency || defaultCurrency;
+      weightedByCurrency.set(
+        cur,
+        (weightedByCurrency.get(cur) ?? 0) + Number(d.value || 0) * prob,
+      );
+    }
 
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -85,13 +108,20 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
 
     return {
       totalCount,
-      totalValue,
-      avgValue,
-      weightedValue,
+      valueByCurrency,
+      avgByCurrency,
+      weightedByCurrency,
       wonThisMonth,
       lostThisMonth,
     };
-  }, [deals, sortedStages]);
+  }, [deals, sortedStages, defaultCurrency]);
+
+  const formatByCurrency = (map: Map<string, number>) =>
+    map.size === 0
+      ? formatCurrency(0, defaultCurrency)
+      : Array.from(map.entries())
+          .map(([cur, total]) => formatCurrency(total, cur))
+          .join(" + ");
 
   return (
     <TooltipProvider>
@@ -106,21 +136,21 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
         <Metric
           icon={<DollarSign className="h-4 w-4 text-primary" />}
           label={t("pipelineValue")}
-          value={formatCurrency(stats.totalValue, defaultCurrency)}
+          value={formatByCurrency(stats.valueByCurrency)}
           tooltip={t("pipelineValueTooltip")}
           t={t}
         />
         <Metric
           icon={<Target className="h-4 w-4 text-blue-400" />}
           label={t("avgDealSize")}
-          value={formatCurrency(stats.avgValue, defaultCurrency)}
+          value={formatByCurrency(stats.avgByCurrency)}
           tooltip={t("avgDealSizeTooltip")}
           t={t}
         />
         <Metric
           icon={<TrendingUp className="h-4 w-4 text-purple-400" />}
           label={t("weightedValue")}
-          value={formatCurrency(stats.weightedValue, defaultCurrency)}
+          value={formatByCurrency(stats.weightedByCurrency)}
           tooltip={t("weightedValueTooltip")}
           t={t}
         />

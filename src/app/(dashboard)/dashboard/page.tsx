@@ -167,7 +167,13 @@ export default function DashboardPage() {
             />
             <MetricCard
               title={t('openDealsValue')}
-              value={formatCurrency(metrics.openDealsValue, defaultCurrency)}
+              value={
+                Object.keys(metrics.openDealsValueByCurrency).length === 0
+                  ? formatCurrency(0, defaultCurrency)
+                  : Object.entries(metrics.openDealsValueByCurrency)
+                      .map(([cur, total]) => formatCurrency(total, cur))
+                      .join(' + ')
+              }
               icon={DollarSign}
               subtitle={t('openDeals', { count: metrics.openDealsCount })}
             />
