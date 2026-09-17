@@ -150,6 +150,7 @@
     "pipelineDonut": {
       "title": "Valor do pipeline",
       "description": "Negócios abertos por etapa",
+      "descriptionMixedCurrency": "Negócios abertos por etapa — o anel mostra a proporção pela quantidade de negócios, já que há mais de uma moeda entre os negócios abertos",
       "noOpenDeals": "Nenhum negócio aberto ainda",
       "noOpenDealsHint": "Crie negócios em Pipelines para ver a divisão por etapa aqui.",
       "dealCount": "{count} {count, plural, =1 {negócio} other {negócios}}",

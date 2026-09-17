@@ -137,40 +137,54 @@ export async function loadConversationsSeries(
 
 // --- 3. Pipeline donut -------------------------------------------------
 
-export async function loadPipelineDonut(db: DB): Promise<PipelineDonutData> {
+export async function loadPipelineDonut(
+  db: DB,
+  defaultCurrency: string,
+): Promise<PipelineDonutData> {
   const [stagesRes, dealsRes] = await Promise.all([
     db.from('pipeline_stages').select('id, name, color, pipeline_id, position').order('position'),
-    db.from('deals').select('stage_id, value, status').eq('status', 'open'),
+    db.from('deals').select('stage_id, value, currency, status').eq('status', 'open'),
   ])
 
   const stages =
     (stagesRes.data ?? []) as { id: string; name: string; color: string }[]
-  const deals = (dealsRes.data ?? []) as { stage_id: string; value: number | null }[]
+  const deals = (dealsRes.data ?? []) as {
+    stage_id: string
+    value: number | null
+    currency: string | null
+  }[]
 
-  const byStage = new Map<string, { count: number; total: number }>()
+  const byStage = new Map<string, { count: number; totalByCurrency: Map<string, number> }>()
+  const totalByCurrency = new Map<string, number>()
   for (const d of deals) {
-    const row = byStage.get(d.stage_id) ?? { count: 0, total: 0 }
+    const cur = d.currency || defaultCurrency
+    const row = byStage.get(d.stage_id) ?? { count: 0, totalByCurrency: new Map<string, number>() }
     row.count += 1
-    row.total += d.value ?? 0
+    row.totalByCurrency.set(cur, (row.totalByCurrency.get(cur) ?? 0) + (d.value ?? 0))
     byStage.set(d.stage_id, row)
+    totalByCurrency.set(cur, (totalByCurrency.get(cur) ?? 0) + (d.value ?? 0))
   }
 
   const slices: PipelineStageSlice[] = stages
-    .map((s) => ({
-      id: s.id,
-      name: s.name,
-      color: s.color || '#64748b',
-      dealCount: byStage.get(s.id)?.count ?? 0,
-      totalValue: byStage.get(s.id)?.total ?? 0,
-    }))
+    .map((s) => {
+      const row = byStage.get(s.id)
+      return {
+        id: s.id,
+        name: s.name,
+        color: s.color || '#64748b',
+        dealCount: row?.count ?? 0,
+        totalValueByCurrency: row ? Object.fromEntries(row.totalByCurrency) : {},
+      }
+    })
     // Hide empty stages from the ring (but we'd still show them in the
     // legend if the user wanted a full breakdown — trimming keeps the
     // visual clean for the common case).
-    .filter((s) => s.totalValue > 0 || s.dealCount > 0)
+    .filter((s) => s.dealCount > 0)
 
   return {
     stages: slices,
-    totalValue: slices.reduce((sum, s) => sum + s.totalValue, 0),
+    totalValueByCurrency: Object.fromEntries(totalByCurrency),
+    hasMultipleCurrencies: totalByCurrency.size > 1,
   }
 }
 

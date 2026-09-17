@@ -150,6 +150,7 @@
     "pipelineDonut": {
       "title": "Pipeline Value",
       "description": "Open deals by stage",
+      "descriptionMixedCurrency": "Open deals by stage — ring shows share of deal count, since open deals span more than one currency",
       "noOpenDeals": "No open deals yet",
       "noOpenDealsHint": "Create deals in Pipelines to see stage breakdowns here.",
       "dealCount": "{count} {count, plural, =1 {deal} other {deals}}",

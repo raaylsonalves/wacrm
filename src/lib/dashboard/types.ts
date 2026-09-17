@@ -32,12 +32,24 @@ export interface PipelineStageSlice {
   name: string
   color: string
   dealCount: number
-  totalValue: number
+  /**
+   * Deal value is meant to be single-currency per account (#218), but a
+   * legacy row or one created before the account's default currency
+   * changed can still carry a different one. Keyed by currency instead
+   * of a single blended number — summing raw values across currencies
+   * and labeling the total with one currency silently misreports it
+   * (e.g. a USD deal counted as if BRL).
+   */
+  totalValueByCurrency: Record<string, number>
 }
 
 export interface PipelineDonutData {
   stages: PipelineStageSlice[]
-  totalValue: number
+  totalValueByCurrency: Record<string, number>
+  /** True when open deals span more than one currency — the ring then
+   *  falls back to deal-count proportions since value isn't comparable
+   *  across currencies without an FX rate. */
+  hasMultipleCurrencies: boolean
 }
 
 export interface ResponseTimeBucket {

@@ -109,7 +109,7 @@ export default function DashboardPage() {
       })
       .finally(() => setSeriesLoading(false))
 
-    void loadPipelineDonut(db)
+    void loadPipelineDonut(db, defaultCurrency)
       .then((p) => {
         setPipeline(p)
         setPipelineError(false)
@@ -144,7 +144,7 @@ export default function DashboardPage() {
         setActivityError(true)
       })
       .finally(() => setActivityLoading(false))
-  }, [tActivity])
+  }, [tActivity, defaultCurrency])
 
   useEffect(() => {
     loadAll()

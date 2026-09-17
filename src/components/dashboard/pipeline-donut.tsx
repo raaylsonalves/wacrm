@@ -9,11 +9,21 @@ import { Skeleton } from './skeleton'
 interface PipelineDonutProps {
   data: PipelineDonutData | null
   loading: boolean
-  /** Account default currency for the totals. */
+  /** Account default currency — used as the fallback label while
+   *  loading and for legacy rows with no currency of their own. */
   currency: string
 }
 
 import { useTranslations } from 'next-intl'
+
+/** "$1,234 + R$567" — same join pattern the dashboard's metric cards
+ *  and pipeline-board use for a value that spans more than one
+ *  currency (issue #218 follow-ups). */
+function formatByCurrency(byCurrency: Record<string, number>, fallback: string): string {
+  const entries = Object.entries(byCurrency)
+  if (entries.length === 0) return formatCurrencyShort(0, fallback)
+  return entries.map(([cur, val]) => formatCurrencyShort(val, cur)).join(' + ')
+}
 
 export function PipelineDonut({ data, loading, currency }: PipelineDonutProps) {
   const t = useTranslations('Dashboard.pipelineDonut')
@@ -22,7 +32,7 @@ export function PipelineDonut({ data, loading, currency }: PipelineDonutProps) {
       <header className="border-b border-border px-5 py-4">
         <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          {t('description')}
+          {data?.hasMultipleCurrencies ? t('descriptionMixedCurrency') : t('description')}
         </p>
       </header>
 
@@ -50,8 +60,8 @@ export function PipelineDonut({ data, loading, currency }: PipelineDonutProps) {
                   <span className="text-muted-foreground tabular-nums">
                     {t('dealCount', { count: s.dealCount })}
                   </span>
-                  <span className="w-20 text-right text-muted-foreground tabular-nums">
-                    {formatCurrencyShort(s.totalValue, currency)}
+                  <span className="text-right text-muted-foreground tabular-nums">
+                    {formatByCurrency(s.totalValueByCurrency, currency)}
                   </span>
                 </li>
               ))}
@@ -77,12 +87,21 @@ function Donut({ data, currency }: { data: PipelineDonutData; currency: string }
   const cx = size / 2
   const cy = size / 2
 
+  // Slice proportions are only meaningful when every deal shares one
+  // currency — $100 and R$100 aren't the same size without an FX rate
+  // we don't have. When open deals span more than one currency, fall
+  // back to proportioning by deal count instead (always comparable),
+  // rather than silently mixing currencies into one blended number.
+  const rawWeights = data.hasMultipleCurrencies
+    ? data.stages.map((s) => s.dealCount)
+    : data.stages.map((s) => Object.values(s.totalValueByCurrency)[0] ?? 0)
+  const totalRaw = rawWeights.reduce((a, b) => a + b, 0) || 1
+
   // Small slices would render as slivers that disappear into stroke
   // rounding. We give each stage a floor share purely for rendering,
   // but keep the labels/legend honest with the actual totals.
-  const totalRaw = data.totalValue || 1
   const minFrac = 0.02
-  const rawShares = data.stages.map((s) => s.totalValue / totalRaw)
+  const rawShares = rawWeights.map((w) => w / totalRaw)
   const floored = rawShares.map((x) => Math.max(x, minFrac))
   const floorSum = floored.reduce((a, b) => a + b, 0)
   const shares = floored.map((x) => x / floorSum)
@@ -126,9 +145,13 @@ function Donut({ data, currency }: { data: PipelineDonutData; currency: string }
           x={cx}
           y={cy + 14}
           textAnchor="middle"
-          className="fill-foreground text-[18px] font-semibold tabular-nums"
+          className={
+            data.hasMultipleCurrencies
+              ? 'fill-foreground text-[13px] font-semibold tabular-nums'
+              : 'fill-foreground text-[18px] font-semibold tabular-nums'
+          }
         >
-          {formatCurrencyShort(data.totalValue, currency)}
+          {formatByCurrency(data.totalValueByCurrency, currency)}
         </text>
       </svg>
     </div>
