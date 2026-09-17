@@ -85,14 +85,18 @@ export default function PipelinesPage() {
   // Guard against double-seeding (React StrictMode double-effect in dev).
   const seedAttempted = useRef(false);
 
-  const loadPipelines = useCallback(async () => {
+  // Returns null on a failed fetch (vs. [] for a genuinely empty
+  // account) so callers can tell "no pipelines yet" from "couldn't
+  // check" — conflating the two used to make a transient network
+  // error seed a bogus duplicate pipeline on every retry.
+  const loadPipelines = useCallback(async (): Promise<Pipeline[] | null> => {
     const { data, error } = await supabase
       .from("pipelines")
       .select("*")
       .order("created_at");
     if (error) {
       console.error("Failed to load pipelines:", error.message);
-      return [];
+      return null;
     }
     return data ?? [];
   }, [supabase]);
@@ -159,13 +163,22 @@ export default function PipelinesPage() {
       setLoading(true);
       let list = await loadPipelines();
 
-      if (list.length === 0 && !seedAttempted.current) {
+      // Only seed on a confirmed-empty account (list.length === 0), never
+      // on a failed fetch (list === null) — a transient network error on
+      // first load used to read as "first run" and insert a duplicate
+      // "Default Pipeline" every time it happened.
+      if (list !== null && list.length === 0 && !seedAttempted.current) {
         seedAttempted.current = true;
         const seeded = await seedDefaultPipeline();
         if (seeded) list = await loadPipelines();
       }
 
       if (cancelled) return;
+      if (list === null) {
+        toast.error(t("toastFailedLoadPipelines"));
+        setLoading(false);
+        return;
+      }
       setPipelines(list);
       if (list.length > 0) {
         setSelectedPipelineId((prev) =>
@@ -179,7 +192,7 @@ export default function PipelinesPage() {
     return () => {
       cancelled = true;
     };
-  }, [loadPipelines, seedDefaultPipeline]);
+  }, [loadPipelines, seedDefaultPipeline, t]);
 
   // Load stages + deals whenever selected pipeline changes.
   // Clearing on no-selection is a legitimate sync with URL/prop
@@ -210,11 +223,15 @@ export default function PipelinesPage() {
 
   const refreshPipelines = useCallback(async () => {
     const list = await loadPipelines();
+    if (list === null) {
+      toast.error(t("toastFailedLoadPipelines"));
+      return;
+    }
     setPipelines(list);
     if (list.length === 0) setSelectedPipelineId("");
     else if (!list.some((p) => p.id === selectedPipelineId))
       setSelectedPipelineId(list[0].id);
-  }, [loadPipelines, selectedPipelineId]);
+  }, [loadPipelines, selectedPipelineId, t]);
 
   const refreshStages = useCallback(async () => {
     if (!selectedPipelineId) return;
