@@ -302,3 +302,104 @@ export function getFlowTemplate(slug: string): FlowTemplate | null {
 export function listFlowTemplates(): FlowTemplate[] {
   return Object.values(TEMPLATES);
 }
+
+/**
+ * Resolve a template's name/description and every customer-facing
+ * string in its node graph through `t`, a lookup scoped to
+ * `Flows.templates.<slug>` (messages/*.json). Cloning a template used
+ * to seed the English copy above verbatim regardless of
+ * NEXT_PUBLIC_APP_LOCALE — the flow is created as a draft, so a user
+ * could in principle edit it before activating, but the default
+ * experience shipped an English greeting straight to a Brazilian (or
+ * Spanish/Korean) customer the first time someone just clicked
+ * "Activate". `handoff.note` is an internal note for the agent, never
+ * sent to the customer, and is left as-is.
+ */
+export function resolveFlowTemplate(
+  slug: string,
+  t: (key: string) => string,
+): FlowTemplate {
+  const template = TEMPLATES[slug];
+  if (!template) throw new Error(`unknown flow template: ${slug}`);
+  return {
+    ...template,
+    name: t("name"),
+    description: t("description"),
+    nodes: template.nodes.map((node) => ({
+      ...node,
+      config: resolveNodeConfigText(node.node_key, node.node_type, node.config, t),
+    })),
+  };
+}
+
+function resolveNodeConfigText(
+  nodeKey: string,
+  nodeType: FlowTemplateNodeType,
+  config: FlowTemplateNode["config"],
+  t: (key: string) => string,
+): FlowTemplateNode["config"] {
+  const c = config as Record<string, unknown>;
+  const nk = `nodes.${nodeKey}`;
+  switch (nodeType) {
+    case "send_message":
+      return { ...c, text: t(`${nk}.text`) };
+    case "collect_input":
+      return { ...c, prompt_text: t(`${nk}.prompt_text`) };
+    case "send_buttons": {
+      const buttons = c.buttons as Array<{ reply_id: string; title: string; next_node_key: string }>;
+      return {
+        ...c,
+        text: t(`${nk}.text`),
+        ...(c.footer_text ? { footer_text: t(`${nk}.footer_text`) } : {}),
+        buttons: buttons.map((b) => ({ ...b, title: t(`${nk}.buttons.${b.reply_id}.title`) })),
+      };
+    }
+    case "send_list": {
+      const sections = c.sections as Array<{
+        title?: string;
+        rows: Array<{ reply_id: string; title: string; next_node_key: string }>;
+      }>;
+      return {
+        ...c,
+        text: t(`${nk}.text`),
+        ...(c.button_label ? { button_label: t(`${nk}.button_label`) } : {}),
+        sections: sections.map((s, i) => ({
+          ...s,
+          ...(s.title ? { title: t(`${nk}.sections.${i}.title`) } : {}),
+          rows: s.rows.map((r) => ({ ...r, title: t(`${nk}.rows.${r.reply_id}.title`) })),
+        })),
+      };
+    }
+    default:
+      return c;
+  }
+}
+
+/**
+ * Server-side counterpart to `useTranslations` — the flows template
+ * clone (POST /api/flows with template_slug) is a server route with no
+ * client-side builder pass in between. Mirrors
+ * src/i18n/request.ts's own locale-file resolution (same env var, same
+ * fallback-to-en).
+ */
+export async function loadServerFlowTemplateTranslator(
+  slug: string,
+): Promise<(key: string) => string> {
+  const locale = process.env.NEXT_PUBLIC_APP_LOCALE || "en";
+  let messages: Record<string, unknown>;
+  try {
+    messages = (await import(`../../../messages/${locale}.json`)).default;
+  } catch {
+    messages = (await import(`../../../messages/en.json`)).default;
+  }
+  const scoped =
+    ((messages.Flows as Record<string, unknown> | undefined)?.templates as
+      | Record<string, Record<string, unknown>>
+      | undefined)?.[slug] ?? {};
+  return (key: string) => {
+    const value = key
+      .split(".")
+      .reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], scoped);
+    return typeof value === "string" ? value : key;
+  };
+}

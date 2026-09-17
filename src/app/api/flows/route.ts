@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { supabaseAdmin } from '@/lib/flows/admin-client'
-import { getFlowTemplate } from '@/lib/flows/templates'
+import { getFlowTemplate, loadServerFlowTemplateTranslator, resolveFlowTemplate } from '@/lib/flows/templates'
 
 /**
  * GET /api/flows — list the caller's flows.
@@ -100,13 +100,19 @@ export async function POST(request: Request) {
 
   // -------- Template clone path --------
   if (body.template_slug) {
-    const template = getFlowTemplate(body.template_slug)
-    if (!template) {
+    const rawTemplate = getFlowTemplate(body.template_slug)
+    if (!rawTemplate) {
       return NextResponse.json(
         { error: `Unknown template_slug "${body.template_slug}"` },
         { status: 400 },
       )
     }
+    // Resolved through messages/*.json, not the module's English
+    // fallback — the flow is created as a draft, but the default
+    // "just click Activate" path used to ship an English greeting to
+    // the customer regardless of NEXT_PUBLIC_APP_LOCALE.
+    const tTemplate = await loadServerFlowTemplateTranslator(body.template_slug)
+    const template = resolveFlowTemplate(body.template_slug, tTemplate)
     const { data: flow, error: flowErr } = await admin
       .from('flows')
       .insert({
