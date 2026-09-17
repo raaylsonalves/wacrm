@@ -1963,7 +1963,15 @@
       "newKeyTitle": "새 API 키",
       "newKeyDesc": "이 키를 사용할 연동 서비스의 이름을 붙이고, 필요한 권한 범위만 부여하세요.",
       "done": "완료",
-      "networkError": "서버에 연결할 수 없습니다"
+      "networkError": "서버에 연결할 수 없습니다",
+      "mcp": {
+        "title": "AI 어시스턴트 연결",
+        "description": "wacrm은 Claude Desktop이나 Cursor 같은 어시스턴트가 자연어로 CRM을 읽고 조작할 수 있도록 MCP 서버를 제공합니다. 아래에서 키를 만들고 생성된 설정을 어시스턴트에 붙여넣으세요.",
+        "createButton": "MCP 키 만들기",
+        "enableWrites": "어시스턴트가 메시지를 보내고 연락처, 자동화, 플로우를 생성하도록 허용 (끄면 읽기 전용)",
+        "hint": "이 내용을 MCP 클라이언트의 설정 파일(예: Claude Desktop 설정)에 붙여넣고 재시작하세요.",
+        "copySuccess": "MCP 설정이 복사되었습니다"
+      }
     },
     "quickReplies": {
       "title": "빠른 답장",

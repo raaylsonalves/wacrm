@@ -17,11 +17,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Copy, KeyRound, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Bot, Copy, KeyRound, Loader2, Plus, Trash2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -154,6 +154,8 @@ export function ApiKeysSettings() {
         }
       />
 
+      <McpConnectCard onCreateKey={() => setCreateOpen(true)} />
+
       {keys.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-10 text-center">
@@ -277,6 +279,51 @@ export function ApiKeysSettings() {
 }
 
 // ------------------------------------------------------------
+// "Connect an AI assistant" — one-sentence pitch for the MCP server
+// that already ships in mcp-server/ (docs/mcp.md), surfaced here so an
+// admin doesn't have to know that doc exists to find the feature.
+// ------------------------------------------------------------
+
+function McpConnectCard({ onCreateKey }: { onCreateKey: () => void }) {
+  const t = useTranslations('Settings.apiKeys.mcp');
+  return (
+    <Card className="border-primary/30 bg-primary/5">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Bot className="text-primary size-4" /> {t('title')}
+        </CardTitle>
+        <CardDescription>{t('description')}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <RequireRole min="admin">
+          <Button variant="outline" onClick={onCreateKey}>
+            <Plus className="size-4" />
+            {t('createButton')}
+          </Button>
+        </RequireRole>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** JSON config for the client's `mcpServers` block, ready to paste. */
+function buildMcpConfig(baseUrl: string, apiKey: string, enableWrites: boolean): string {
+  const env: Record<string, string> = {
+    WACRM_BASE_URL: baseUrl,
+    WACRM_API_KEY: apiKey,
+  };
+  if (enableWrites) {
+    env.WACRM_ENABLE_WRITES = 'true';
+    env.WACRM_ENABLE_BROADCASTS = 'true';
+  }
+  return JSON.stringify(
+    { mcpServers: { wacrm: { command: 'npx', args: ['-y', 'wacrm-mcp'], env } } },
+    null,
+    2
+  );
+}
+
+// ------------------------------------------------------------
 // Create dialog — form → one-time plaintext reveal.
 // ------------------------------------------------------------
 
@@ -295,12 +342,14 @@ function CreateKeyDialog({
   const [submitting, setSubmitting] = useState(false);
   // Once set, we switch from the form to the reveal view.
   const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [mcpEnableWrites, setMcpEnableWrites] = useState(false);
 
   function reset() {
     setName('');
     setScopes([]);
     setSubmitting(false);
     setCreatedKey(null);
+    setMcpEnableWrites(false);
   }
 
   function toggleScope(scope: ApiScope, checked: boolean) {
@@ -347,6 +396,19 @@ function CreateKeyDialog({
     }
   }
 
+  const mcpConfig = createdKey
+    ? buildMcpConfig(window.location.origin, createdKey, mcpEnableWrites)
+    : '';
+
+  async function copyMcpConfig() {
+    try {
+      await navigator.clipboard.writeText(mcpConfig);
+      toast.success(t('mcp.copySuccess'));
+    } catch {
+      toast.error(t('copyFailed'));
+    }
+  }
+
   return (
     <Dialog
       open={open}
@@ -381,6 +443,33 @@ function CreateKeyDialog({
                   {t('copy')}
                 </Button>
               </div>
+            </div>
+
+            <div className="border-border space-y-2 rounded-md border p-3">
+              <label className="flex cursor-pointer items-start gap-2.5">
+                <Checkbox
+                  checked={mcpEnableWrites}
+                  onCheckedChange={(checked) => setMcpEnableWrites(checked === true)}
+                  className="mt-0.5"
+                />
+                <span className="min-w-0">
+                  <span className="text-foreground block text-sm font-medium">
+                    {t('mcp.title')}
+                  </span>
+                  <span className="text-muted-foreground block text-xs">
+                    {t('mcp.enableWrites')}
+                  </span>
+                </span>
+              </label>
+              <div className="flex items-start gap-2">
+                <pre className="border-border bg-muted flex-1 overflow-x-auto rounded-md border p-2 font-mono text-[11px] text-foreground">
+                  {mcpConfig}
+                </pre>
+                <Button type="button" variant="outline" size="sm" onClick={copyMcpConfig}>
+                  <Copy className="size-4" />
+                </Button>
+              </div>
+              <p className="text-muted-foreground text-xs">{t('mcp.hint')}</p>
             </div>
 
             <DialogFooter>

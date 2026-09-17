@@ -1951,7 +1951,15 @@
       "newKeyTitle": "Nova chave de API",
       "newKeyDesc": "Nomeie-a conforme a integração que vai usá-la e conceda apenas os escopos necessários.",
       "done": "Concluído",
-      "networkError": "Não foi possível conectar ao servidor"
+      "networkError": "Não foi possível conectar ao servidor",
+      "mcp": {
+        "title": "Conectar um agente de IA",
+        "description": "O wacrm inclui um servidor MCP para que assistentes como Claude Desktop ou Cursor leiam e ajam no seu CRM em linguagem natural. Crie uma chave abaixo e cole a configuração gerada no seu assistente.",
+        "createButton": "Criar chave MCP",
+        "enableWrites": "Permitir que o assistente envie mensagens e crie contatos, automações e fluxos (desligado = somente leitura)",
+        "hint": "Cole isso no arquivo de configuração do seu cliente MCP (ex.: configuração do Claude Desktop) e reinicie-o.",
+        "copySuccess": "Configuração MCP copiada"
+      }
     },
     "quickReplies": {
       "title": "Respostas rápidas",

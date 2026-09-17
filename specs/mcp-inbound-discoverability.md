@@ -1,5 +1,16 @@
 # Spec: Surface MCP connectivity inside the app (not just docs)
 
+**Status: implemented.** `src/components/settings/api-keys-settings.tsx`
+gained a "Connect an AI assistant" card above the key list (`McpConnectCard`)
+with a one-sentence pitch and a "Create MCP key" button. The key-reveal
+dialog now also renders a ready-to-paste `mcpServers` JSON block
+(`buildMcpConfig`) using the account's real base URL and the freshly-minted
+key, with a checkbox — off by default — to add
+`WACRM_ENABLE_WRITES`/`WACRM_ENABLE_BROADCASTS`. i18n added under
+`Settings.apiKeys.mcp.*` in all four locales. Verified live: creating a key
+from the card renders the JSON block, and toggling the checkbox adds the
+write env vars.
+
 ## Problem
 
 wacrm already lets AI assistants (Claude Desktop, Claude Code, Cursor,

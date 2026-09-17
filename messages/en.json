@@ -1963,7 +1963,15 @@
       "newKeyTitle": "New API key",
       "newKeyDesc": "Name it after the integration that will use it, and grant only the scopes it needs.",
       "done": "Done",
-      "networkError": "Could not reach the server"
+      "networkError": "Could not reach the server",
+      "mcp": {
+        "title": "Connect an AI assistant",
+        "description": "wacrm ships an MCP server so assistants like Claude Desktop or Cursor can read and act on your CRM in natural language. Create a key below and paste the generated config into your assistant.",
+        "createButton": "Create MCP key",
+        "enableWrites": "Allow the assistant to send messages, create contacts, automations, and flows (off = read-only)",
+        "hint": "Paste this into your MCP client's config file (e.g. Claude Desktop's config), then restart it.",
+        "copySuccess": "MCP config copied"
+      }
     },
     "quickReplies": {
       "title": "Quick replies",
