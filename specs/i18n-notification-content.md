@@ -1,5 +1,14 @@
 # Spec: Localize notification title/body
 
+> **Status: implemented** (migration `048_notification_i18n_fields.sql`).
+> The shipped approach differs slightly from the one proposed below: it
+> adds `actor_name`/`contact_name` columns directly to `notifications`
+> (populated by the trigger) rather than joining `contacts`/`profiles`
+> client-side, and makes `title`/`body` nullable instead of dropping
+> them — same end result (the notifications page renders the sentence
+> via next-intl in the viewer's locale), simpler data path. Left this
+> file as historical context rather than deleting it.
+
 ## Problem
 
 `/notifications` always shows "New conversation assigned" and
