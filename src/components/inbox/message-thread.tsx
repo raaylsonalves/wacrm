@@ -33,6 +33,11 @@ import { useTranslations } from "next-intl";
 import { dateFnsLocale } from "@/lib/date-fns-locale";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -915,7 +920,7 @@ export function MessageThread({
       {/* Header — solid card surface sits on top of the doodle so the
           name/avatar/dropdowns stay legible. */}
       <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 sm:px-4">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           {/* Back-to-list button — mobile only. Hidden on lg+ where the
               conversation list is always visible next to the thread. */}
           {onBack && (
@@ -938,20 +943,40 @@ export function MessageThread({
             </p>
           </div>
           {/* Session timer badge — hidden on the narrowest phones so
-              the name + back arrow keep their room. */}
-          <Badge
-            variant="outline"
-            className={cn(
-              "ml-1 hidden gap-1 border-border text-[10px] sm:inline-flex sm:ml-2",
-              sessionInfo.expired ? "text-red-600 dark:text-red-400" : "text-primary"
-            )}
-          >
-            <Clock className="h-3 w-3" />
-            {sessionInfo.remaining}
-          </Badge>
+              the name + back arrow keep their room. This is Meta's own
+              24h customer-service-window rule (once the window closes,
+              only approved templates can be sent), not a wacrm setting
+              — the tooltip exists so agents don't go looking for it in
+              Settings. */}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "ml-1 hidden shrink-0 gap-1 border-border text-[10px] sm:ml-2",
+                    // The contact panel eats the width this badge would
+                    // otherwise have room in (issue: this same trio of
+                    // controls — badge, status dropdown, assign dropdown
+                    // — visually overlapped at ~1024-1280px with the
+                    // panel open). Give it a later breakpoint than the
+                    // panel-closed case instead of fighting for space.
+                    contactPanelOpen ? "xl:inline-flex" : "sm:inline-flex",
+                    sessionInfo.expired ? "text-red-600 dark:text-red-400" : "text-primary"
+                  )}
+                />
+              }
+            >
+              <Clock className="h-3 w-3" />
+              {sessionInfo.remaining}
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs text-left">
+              {tTimer("explainerTooltip")}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {/* Contact-panel toggle — desktop only. The contact sidebar
               eats a chunk of horizontal width that crowds the thread on
               smaller laptops; this lets agents reclaim it when they just
@@ -967,7 +992,7 @@ export function MessageThread({
               title={contactPanelOpen ? t("hideContact") : t("showContact")}
               aria-pressed={contactPanelOpen}
               className={cn(
-                "hidden h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted hover:text-foreground lg:inline-flex",
+                "hidden h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-muted hover:text-foreground lg:inline-flex",
                 contactPanelOpen ? "text-primary" : "text-muted-foreground",
               )}
             >
@@ -992,7 +1017,7 @@ export function MessageThread({
               aria-label={t("refreshConversation")}
               title={t("refresh")}
               className={cn(
-                "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60",
+                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60",
               )}
             >
               <RefreshCw
@@ -1004,7 +1029,7 @@ export function MessageThread({
           {/* Status dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className={cn(
-                  "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
+                  "inline-flex shrink-0 items-center justify-center h-7 gap-1 px-2 text-xs whitespace-nowrap rounded-md hover:bg-muted",
                   currentStatus?.color ?? "text-muted-foreground"
                 )}>
                 {currentStatus ? t(`status${currentStatus.label}`) : t("status")}
@@ -1030,7 +1055,7 @@ export function MessageThread({
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(
-                "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
+                "inline-flex shrink-0 items-center justify-center h-7 gap-1 px-2 text-xs whitespace-nowrap rounded-md hover:bg-muted",
                 assignedAgentId ? "text-primary" : "text-muted-foreground"
               )}
             >

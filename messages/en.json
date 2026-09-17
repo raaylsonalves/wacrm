@@ -226,7 +226,8 @@
       "expired": "Expired",
       "xhRemaining": "{hours}h remaining",
       "xmRemaining": "{minutes}m remaining",
-      "noCustomerMessages": "No customer messages"
+      "noCustomerMessages": "No customer messages",
+      "explainerTooltip": "WhatsApp only allows free-form replies for 24h after the customer's last message — this is Meta's rule, not a wacrm setting. After it expires, you can only send an approved template."
     },
     "composer": {
       "draftHint": "Tap the ✨ to draft a reply with AI — you can edit it before sending",

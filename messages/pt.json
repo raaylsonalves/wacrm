@@ -226,7 +226,8 @@
       "expired": "Expirada",
       "xhRemaining": "{hours}h restantes",
       "xmRemaining": "{minutes}min restantes",
-      "noCustomerMessages": "Nenhuma mensagem do cliente"
+      "noCustomerMessages": "Nenhuma mensagem do cliente",
+      "explainerTooltip": "O WhatsApp só permite respostas livres por 24h após a última mensagem do cliente — essa é uma regra da Meta, não uma configuração do wacrm. Depois que expira, só é possível enviar um modelo aprovado."
     },
     "composer": {
       "draftHint": "Toque em ✨ para redigir uma resposta com IA — você pode editá-la antes de enviar",
