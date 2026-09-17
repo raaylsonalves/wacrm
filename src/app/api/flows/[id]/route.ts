@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { supabaseAdmin } from '@/lib/flows/admin-client'
+import { validateFlowForActivation } from '@/lib/flows/validate'
 
 /**
  * GET   /api/flows/[id]  — fetch one flow with its nodes.
@@ -134,6 +135,68 @@ export async function PUT(
     flowPatch.entry_node_id = body.entry_node_id
   if (body.fallback_policy !== undefined)
     flowPatch.fallback_policy = body.fallback_policy
+
+  // A PUT here never changes `status` itself (only /activate does), but
+  // unlike /activate this route can rewrite the whole node graph. A
+  // flow left ACTIVE by this save used to skip validation entirely —
+  // /activate's own check only runs on the transition INTO active, so
+  // editing an already-active flow into a broken shape (dangling
+  // next_node_key, missing entry node) saved silently, and the next
+  // inbound trigger just died with node_not_found. Validate the merged
+  // state up front and refuse before writing anything, same gate
+  // /activate already applies on the transition path.
+  const { data: current } = await admin
+    .from('flows')
+    .select('status, name, trigger_type, trigger_config, entry_node_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (!current) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+  if (current.status === 'active') {
+    const mergedFlow = {
+      name: (flowPatch.name as string | undefined) ?? current.name,
+      trigger_type: (flowPatch.trigger_type as
+        | 'keyword'
+        | 'first_inbound_message'
+        | 'manual'
+        | undefined) ?? current.trigger_type,
+      trigger_config:
+        (flowPatch.trigger_config as Record<string, unknown> | undefined) ??
+        current.trigger_config,
+      entry_node_id:
+        body.entry_node_id !== undefined
+          ? body.entry_node_id
+          : current.entry_node_id,
+    }
+    type FlowNodeInput = {
+      node_key: string
+      node_type: string
+      config: Record<string, unknown>
+    }
+    let mergedNodes: FlowNodeInput[]
+    if (body.nodes) {
+      mergedNodes = body.nodes
+    } else {
+      const { data: existingNodes } = await admin
+        .from('flow_nodes')
+        .select('node_key, node_type, config')
+        .eq('flow_id', id)
+      mergedNodes = (existingNodes ?? []) as FlowNodeInput[]
+    }
+    const issues = validateFlowForActivation(mergedFlow, mergedNodes)
+    const blockers = issues.filter((i) => i.severity === 'error')
+    if (blockers.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            'This flow is active — fix the issues below before saving, or set it to draft first.',
+          issues,
+        },
+        { status: 422 },
+      )
+    }
+  }
 
   const { error: updErr } = await admin
     .from('flows')
