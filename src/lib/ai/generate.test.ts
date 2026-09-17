@@ -192,3 +192,63 @@ describe('generateReply — Anthropic', () => {
     expect(body.messages).toHaveLength(1)
   })
 })
+
+describe('generateReply — Gemini', () => {
+  it('calls the generateContent endpoint and parses candidate text', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      okResponse({
+        candidates: [{ content: { parts: [{ text: 'Hi from Gemini!' }] } }],
+        usageMetadata: {
+          promptTokenCount: 20,
+          candidatesTokenCount: 4,
+          totalTokenCount: 24,
+        },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await generateReply({
+      config: config({ provider: 'gemini', model: 'gemini-2.5-flash', apiKey: 'g-key' }),
+      systemPrompt: 'sys',
+      messages: [{ role: 'user', content: 'Hi' }],
+    })
+
+    expect(res).toEqual({
+      text: 'Hi from Gemini!',
+      handoff: false,
+      usage: { promptTokens: 20, completionTokens: 4, totalTokens: 24 },
+    })
+    const [url, opts] = fetchMock.mock.calls[0]
+    expect(url).toContain('generativelanguage.googleapis.com')
+    expect(url).toContain('gemini-2.5-flash')
+    expect(opts.headers['x-goog-api-key']).toBe('g-key')
+  })
+
+  it('maps a blocked prompt to a content_blocked AiError', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(okResponse({ promptFeedback: { blockReason: 'SAFETY' } })),
+    )
+    await expect(
+      generateReply({
+        config: config({ provider: 'gemini' }),
+        systemPrompt: 'sys',
+        messages: [{ role: 'user', content: 'Hi' }],
+      }),
+    ).rejects.toMatchObject({ code: 'content_blocked' })
+  })
+
+  it('maps a 401 to an invalid_key AiError', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(errResponse(401, { error: { message: 'API key not valid' } })),
+    )
+    await expect(
+      generateReply({
+        config: config({ provider: 'gemini' }),
+        systemPrompt: 'sys',
+        messages: [{ role: 'user', content: 'Hi' }],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid_key', status: 401 })
+  })
+})

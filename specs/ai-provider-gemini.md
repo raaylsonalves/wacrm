@@ -1,5 +1,13 @@
 # Spec: Add Gemini as a third AI provider
 
+**Status: implemented.** `src/lib/ai/providers/gemini.ts`, `AiProvider`
+widened in `types.ts`, dispatch added in `generate.ts`, Settings UI radio +
+model default, migration `050_ai_provider_gemini.sql` widening the
+`ai_configs`/`ai_usage_log` CHECK constraints (applied), i18n updated in all
+four locales. Verified live in Settings > Agentes de IA > Configuração:
+selecting "Google Gemini" swaps the model default to `gemini-2.5-flash` and
+the key placeholder to `AIza...`.
+
 ## Problem
 
 The bring-your-own-key AI assistant (`src/lib/ai/`) only supports OpenAI
