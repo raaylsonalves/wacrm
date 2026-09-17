@@ -5,6 +5,10 @@ import { useTranslations } from 'next-intl';
 
 import { cn } from '@/lib/utils';
 import {
+  ScrollEdgeFades,
+  useHorizontalScrollEdges,
+} from '@/components/ui/scroll-edges';
+import {
   RAIL_GROUPS,
   SECTION_META,
   SETTINGS_SECTIONS,
@@ -33,12 +37,19 @@ export function SettingsRail({
 }) {
   const t = useTranslations('Settings');
   const activeRef = useRef<HTMLButtonElement>(null);
+  const {
+    ref: scrollRef,
+    canLeft,
+    canRight,
+    scrollByDir,
+  } = useHorizontalScrollEdges<HTMLElement>();
 
   // When horizontal (mobile), keep the active chip in view. On desktop
   // the rail is a static column, so skip.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (window.matchMedia(`(min-width: ${RAIL_DESKTOP_MIN_PX}px)`).matches) return;
+    if (window.matchMedia(`(min-width: ${RAIL_DESKTOP_MIN_PX}px)`).matches)
+      return;
     activeRef.current?.scrollIntoView({
       inline: 'center',
       block: 'nearest',
@@ -47,65 +58,78 @@ export function SettingsRail({
   }, [active]);
 
   return (
-    <nav
-      aria-label={t('sectionsNav')}
-      className={cn(
-        'flex gap-1 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-        'border-b border-border',
-        'lg:sticky lg:top-0 lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0',
-      )}
-    >
-      {RAIL_GROUPS.map(({ label, group }) => {
-        const items = SETTINGS_SECTIONS.filter(
-          (s) => SECTION_META[s].group === group,
-        );
-        return (
-          <div
-            key={group}
-            className="flex shrink-0 gap-1 lg:flex-col lg:gap-0.5"
-          >
-            {label ? (
-              <div className="hidden px-3 pt-3.5 pb-1.5 text-[11px] font-semibold tracking-[0.09em] text-muted-foreground uppercase lg:block">
-                {t(`groups.${group}`)}
-              </div>
-            ) : null}
-            {items.map((s) => {
-              const meta = SECTION_META[s];
-              const Icon = meta.icon;
-              const isActive = s === active;
-              return (
-                <button
-                  key={s}
-                  ref={isActive ? activeRef : undefined}
-                  type="button"
-                  onClick={() => onSelect(s)}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    'flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
-                    'lg:w-full',
-                    isActive
-                      ? 'bg-primary-soft text-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                  )}
-                >
-                  <Icon className="size-4 shrink-0" />
-                  <span className="flex-1">{t(`sections.${s}`)}</span>
-                  {hints?.[s] != null ? (
-                    <span
-                      className={cn(
-                        'hidden items-center gap-1.5 text-xs lg:inline-flex',
-                        isActive ? 'text-primary' : 'text-muted-foreground',
-                      )}
-                    >
-                      {hints[s]}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        );
-      })}
-    </nav>
+    <div className="relative min-w-0 lg:sticky lg:top-0">
+      <nav
+        ref={scrollRef}
+        aria-label={t('sectionsNav')}
+        className={cn(
+          'flex [scrollbar-width:none] gap-1.5 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden',
+          'border-border border-b',
+          'lg:flex-col lg:gap-0 lg:overflow-visible lg:border-b-0 lg:pb-0'
+        )}
+      >
+        {RAIL_GROUPS.map(({ label, group }) => {
+          const items = SETTINGS_SECTIONS.filter(
+            (s) => SECTION_META[s].group === group
+          );
+          return (
+            <div
+              key={group}
+              className="flex shrink-0 gap-1 lg:flex-col lg:gap-0.5"
+            >
+              {label ? (
+                <div className="text-muted-foreground hidden px-3 pt-3.5 pb-1.5 text-[11px] font-semibold tracking-[0.09em] uppercase lg:block">
+                  {t(`groups.${group}`)}
+                </div>
+              ) : null}
+              {items.map((s) => {
+                const meta = SECTION_META[s];
+                const Icon = meta.icon;
+                const isActive = s === active;
+                return (
+                  <button
+                    key={s}
+                    ref={isActive ? activeRef : undefined}
+                    type="button"
+                    onClick={() => onSelect(s)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(
+                      // Mobile: YouTube-style solid pill chips. Desktop
+                      // (lg:) resets back to a full-width vertical menu row.
+                      'flex shrink-0 items-center gap-2.5 rounded-full px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
+                      'lg:w-full lg:rounded-lg',
+                      isActive
+                        ? 'bg-foreground text-background lg:bg-primary-soft lg:text-primary'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/70 lg:hover:bg-muted lg:hover:text-foreground lg:bg-transparent'
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" />
+                    <span className="flex-1">{t(`sections.${s}`)}</span>
+                    {hints?.[s] != null ? (
+                      <span
+                        className={cn(
+                          'hidden items-center gap-1.5 text-xs lg:inline-flex',
+                          isActive ? 'text-primary' : 'text-muted-foreground'
+                        )}
+                      >
+                        {hints[s]}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+      </nav>
+      <ScrollEdgeFades
+        canLeft={canLeft}
+        canRight={canRight}
+        onLeft={() => scrollByDir(-1)}
+        onRight={() => scrollByDir(1)}
+        fadeFrom="from-background"
+        hiddenAbove="lg"
+      />
+    </div>
   );
 }
