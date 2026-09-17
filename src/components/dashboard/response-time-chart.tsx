@@ -65,6 +65,14 @@ export function ResponseTimeChart({
     return `${(mins / 60).toFixed(1)}h`
   }
 
+  // Tremor's yAxisWidth is a fixed pixel reservation, not an
+  // auto-sizing one — a width tuned for "0.0h" clips the leading
+  // digit of "20.0h" once the chart's max value pushes into two-digit
+  // hours. Size it off the longest tick label this data will actually
+  // render instead of a constant.
+  const longestTick = formatForUnit(maxMinutes).length
+  const yAxisWidth = Math.max(40, longestTick * 8 + 16)
+
   return (
     <section className="rounded-xl border border-border bg-card">
       <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
@@ -118,7 +126,7 @@ export function ResponseTimeChart({
             colors={['violet']}
             valueFormatter={formatForUnit}
             showLegend={false}
-            yAxisWidth={48}
+            yAxisWidth={yAxisWidth}
             // Compact height so the chart sits well inside the card
             // without dominating the row alongside the donut + activity feed.
             className="h-[260px]"
