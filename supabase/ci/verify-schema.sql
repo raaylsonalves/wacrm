@@ -101,6 +101,19 @@ BEGIN
       'redeem_invitation still checks pipelines instead of deals — migration 043 did not apply';
   END IF;
 
+  -- 046 lets the cron reclaim a pending execution stuck at 'running'
+  -- (a died-mid-resume process otherwise parks it forever, since only
+  -- 'pending' rows are ever re-queried). Missing this column is a
+  -- silent no-op, not a compile error, on the cron's next deploy.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'automation_pending_executions'
+      AND column_name = 'claimed_at'
+  ) THEN
+    RAISE EXCEPTION
+      'automation_pending_executions.claimed_at is missing — migration 046 did not apply';
+  END IF;
+
   -- 045 closes the same column-level privilege hole 034 closed on
   -- profiles, but on accounts.owner_user_id — without this trigger any
   -- admin (not just the owner) can PATCH their way to ownership

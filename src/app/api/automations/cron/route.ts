@@ -16,7 +16,15 @@ import type { AutomationContext } from '@/lib/automations/engine'
  * overlapping invocations don't double-process rows. Best-effort
  * only; expensive SELECT ... FOR UPDATE is avoided in favor of a
  * two-step UPDATE-by-id.
+ *
+ * A row can get stuck at 'running' forever if the process dies between
+ * the claim and resumePendingExecution's own status update (a
+ * serverless timeout or pod recycle) — nothing else ever re-reads a
+ * 'running' row. Rows still running past STALE_RUNNING_MS are reclaimed
+ * the same way pending ones are claimed.
  */
+const STALE_RUNNING_MS = 10 * 60 * 1000
+
 export async function GET(request: Request) {
   const expected = process.env.AUTOMATION_CRON_SECRET
   if (!expected) {
@@ -37,26 +45,48 @@ export async function GET(request: Request) {
   }
 
   const admin = supabaseAdmin()
+  const nowIso = new Date().toISOString()
+  const staleBeforeIso = new Date(Date.now() - STALE_RUNNING_MS).toISOString()
+
   const { data: due, error } = await admin
     .from('automation_pending_executions')
     .select('*')
     .eq('status', 'pending')
-    .lte('run_at', new Date().toISOString())
+    .lte('run_at', nowIso)
     .order('run_at', { ascending: true })
     .limit(50)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!due || due.length === 0) return NextResponse.json({ processed: 0 })
+
+  // Stale-'running' reclaim, separate from the due-'pending' query above
+  // (different status filter, and this one is unbounded by run_at since
+  // it's about staleness of the claim, not the original schedule).
+  const { data: stale } = await admin
+    .from('automation_pending_executions')
+    .select('*')
+    .eq('status', 'running')
+    .lt('claimed_at', staleBeforeIso)
+    .order('claimed_at', { ascending: true })
+    .limit(50)
+
+  const candidates = [...(due ?? []), ...(stale ?? [])]
+  if (candidates.length === 0) return NextResponse.json({ processed: 0 })
 
   let processed = 0
-  for (const row of due) {
-    const { data: claim } = await admin
+  for (const row of candidates) {
+    // Compare-and-swap on the exact state just read: a pending row must
+    // still be pending, a stale-running row must still be running with
+    // that same stale claimed_at — so two overlapping cron invocations
+    // reclaiming the same stuck row can't both win.
+    let claimQuery = admin
       .from('automation_pending_executions')
-      .update({ status: 'running' })
+      .update({ status: 'running', claimed_at: nowIso })
       .eq('id', row.id)
-      .eq('status', 'pending')
-      .select('id')
-      .maybeSingle()
+    claimQuery =
+      row.status === 'pending'
+        ? claimQuery.eq('status', 'pending')
+        : claimQuery.eq('status', 'running').lt('claimed_at', staleBeforeIso)
+    const { data: claim } = await claimQuery.select('id').maybeSingle()
     if (!claim) continue
 
     await resumePendingExecution({
