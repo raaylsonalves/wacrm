@@ -60,6 +60,18 @@ import { useTranslations } from 'next-intl';
 
 const PAGE_SIZE = 25;
 
+/**
+ * Escape a value for PostgREST's `.or()` filter DSL. The DSL splits on
+ * top-level commas and parentheses, so a search term containing one
+ * (e.g. "Acme, Inc.") broke the whole filter string with a 400 instead
+ * of matching — wrapping the value in double quotes (and doubling any
+ * literal quote inside it, per PostgREST's own escaping rule) tells the
+ * parser to treat it as one opaque value.
+ */
+function escapePostgrestFilterValue(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
 interface ContactWithTags extends Contact {
   tags?: Tag[];
 }
@@ -161,7 +173,7 @@ export default function ContactsPage() {
         .range(from, to);
 
       if (term) {
-        const like = `%${term}%`;
+        const like = escapePostgrestFilterValue(`%${term}%`);
         query = query.or(`name.ilike.${like},phone.ilike.${like},email.ilike.${like}`);
       }
 
