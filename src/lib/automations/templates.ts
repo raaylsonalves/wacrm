@@ -21,11 +21,30 @@ export interface TemplateStepSeed {
 
 export interface AutomationTemplateDefinition {
   slug: TemplateSlug
+  /** English fallback — real display text comes from
+   *  `resolveAutomationTemplate` via `messages/*.json`'s
+   *  `Automations.templates.<slug>.name`. Kept here only so a caller
+   *  that skips resolution (there shouldn't be one) fails safe. */
   name: string
   description: string
   trigger_type: AutomationTriggerType
   trigger_config: AutomationTriggerConfig
   steps: TemplateStepSeed[]
+}
+
+/**
+ * The only `send_message` step in each template — the one whose
+ * `step_config.text` gets swapped for the locale's translated copy in
+ * `resolveAutomationTemplate`. Cloning a template used to seed an
+ * English greeting/pitch regardless of NEXT_PUBLIC_APP_LOCALE, shipping
+ * English straight to a Brazilian (or Spanish/Korean) customer the
+ * first time they messaged in.
+ */
+const TEMPLATE_TEXT_STEP_INDEX: Record<TemplateSlug, number> = {
+  welcome_message: 0,
+  out_of_office: 1,
+  lead_qualifier: 0,
+  follow_up_reminder: 1,
 }
 
 export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefinition> = {
@@ -129,4 +148,57 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
 
 export function getTemplate(slug: string): AutomationTemplateDefinition | null {
   return AUTOMATION_TEMPLATES[slug as TemplateSlug] ?? null
+}
+
+/**
+ * Resolve a template's display name/description and its one
+ * translatable message body through `t`, a lookup scoped to
+ * `Automations.templates.<slug>` (i.e. `t('name')`, not
+ * `t('welcome_message.name')`). Every caller that shows a template to
+ * a user or seeds an automation from one MUST go through this —
+ * reading `AUTOMATION_TEMPLATES[slug]` directly gets the English
+ * fallback regardless of locale.
+ */
+export function resolveAutomationTemplate(
+  slug: TemplateSlug,
+  t: (key: 'name' | 'description' | 'text') => string,
+): AutomationTemplateDefinition {
+  const def = AUTOMATION_TEMPLATES[slug]
+  const textStepIndex = TEMPLATE_TEXT_STEP_INDEX[slug]
+  return {
+    ...def,
+    name: t('name'),
+    description: t('description'),
+    steps: def.steps.map((step, i) =>
+      i === textStepIndex
+        ? { ...step, step_config: { ...step.step_config, text: t('text') } }
+        : step,
+    ),
+  }
+}
+
+/**
+ * Server-side counterpart to `useTranslations` for the one non-React
+ * caller: POST /api/automations' `template` shortcut, which seeds an
+ * automation straight from `{ template: slug }` with no client-side
+ * builder in between. Mirrors src/i18n/request.ts's own locale-file
+ * resolution (same env var, same fallback-to-en) rather than pulling in
+ * next-intl/server's request-scoped context for one lookup.
+ */
+export async function loadServerTemplateTranslator(
+  slug: TemplateSlug,
+): Promise<(key: 'name' | 'description' | 'text') => string> {
+  const locale = process.env.NEXT_PUBLIC_APP_LOCALE || 'en'
+  let messages: Record<string, unknown>
+  try {
+    messages = (await import(`../../../messages/${locale}.json`)).default
+  } catch {
+    messages = (await import(`../../../messages/en.json`)).default
+  }
+  const scoped =
+    ((messages.Automations as Record<string, unknown> | undefined)
+      ?.templates as Record<string, Record<string, string>> | undefined)?.[slug] ?? {}
+  // Defensive fallback only — en.json (loaded above when the app
+  // locale's own file is missing a key) should always carry these.
+  return (key) => scoped[key] ?? key
 }

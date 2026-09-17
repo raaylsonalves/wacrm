@@ -2,13 +2,18 @@
 
 import { Suspense, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
+import { useTranslations } from "next-intl"
 
 import {
   AutomationBuilder,
   type BuilderInitial,
   type BuilderStep,
 } from "@/components/automations/automation-builder"
-import { AUTOMATION_TEMPLATES, type TemplateSlug } from "@/lib/automations/templates"
+import {
+  AUTOMATION_TEMPLATES,
+  resolveAutomationTemplate,
+  type TemplateSlug,
+} from "@/lib/automations/templates"
 import type { AutomationStepType, AutomationTriggerType } from "@/types"
 
 // `useSearchParams` requires a Suspense boundary or the production build
@@ -25,10 +30,19 @@ export default function NewAutomationPage() {
 function NewAutomationPageInner() {
   const params = useSearchParams()
   const template = params.get("template") as TemplateSlug | null
+  // Namespace must be a valid slug unconditionally (hooks can't be
+  // called conditionally) — "welcome_message" is an inert fallback for
+  // the no-template case below, where tTemplates is never read.
+  const tTemplates = useTranslations(
+    `Automations.templates.${template && AUTOMATION_TEMPLATES[template] ? template : "welcome_message"}`,
+  )
 
   const initial: BuilderInitial = useMemo(() => {
     if (template && AUTOMATION_TEMPLATES[template]) {
-      const t = AUTOMATION_TEMPLATES[template]
+      // Resolved through messages/*.json, not the module's English
+      // fallback — cloning a template used to seed an English greeting
+      // regardless of NEXT_PUBLIC_APP_LOCALE.
+      const t = resolveAutomationTemplate(template, (key) => tTemplates(key))
       const steps = expandFromSeeds(
         t.steps.map((seed, idx) => ({
           index: idx,
@@ -55,7 +69,7 @@ function NewAutomationPageInner() {
       is_active: false,
       steps: [],
     }
-  }, [template])
+  }, [template, tTemplates])
 
   return <AutomationBuilder initial={initial} />
 }

@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
-import { getTemplate } from '@/lib/automations/templates'
+import {
+  getTemplate,
+  loadServerTemplateTranslator,
+  resolveAutomationTemplate,
+} from '@/lib/automations/templates'
 import { insertSteps, type BuilderStepInput } from '@/lib/automations/steps-tree'
 import {
   validateStepsForActivation,
@@ -67,15 +71,18 @@ export async function POST(request: Request) {
   let effectiveTriggerType = trigger_type
   let effectiveTriggerConfig = trigger_config
 
-  if (template && (!steps || steps.length === 0)) {
-    const t = getTemplate(template)
-    if (t) {
-      effectiveName = effectiveName ?? t.name
-      effectiveDescription = effectiveDescription ?? t.description
-      effectiveTriggerType = effectiveTriggerType ?? t.trigger_type
-      effectiveTriggerConfig = effectiveTriggerConfig ?? t.trigger_config
-      effectiveSteps = t.steps as unknown as BuilderStepInput[]
-    }
+  if (template && (!steps || steps.length === 0) && getTemplate(template)) {
+    // Resolved through messages/*.json, not the module's English
+    // fallback — this shortcut has no client-side builder in between
+    // to review the seeded copy before it's saved, so it must already
+    // be in the app's locale.
+    const tTemplate = await loadServerTemplateTranslator(template)
+    const t = resolveAutomationTemplate(template, tTemplate)
+    effectiveName = effectiveName ?? t.name
+    effectiveDescription = effectiveDescription ?? t.description
+    effectiveTriggerType = effectiveTriggerType ?? t.trigger_type
+    effectiveTriggerConfig = effectiveTriggerConfig ?? t.trigger_config
+    effectiveSteps = t.steps as unknown as BuilderStepInput[]
   }
 
   if (!effectiveName || !effectiveTriggerType) {
