@@ -110,8 +110,18 @@ function makeSupabaseMock() {
     })
     b.single = vi.fn(terminal)
     b.maybeSingle = vi.fn(terminal)
-    b.then = (resolve: (v: unknown) => unknown) =>
-      resolve(didInsert ? insertResult() : selectResult())
+    b.then = (resolve: (v: unknown) => unknown) => {
+      // findOrCreateConversation's find step awaits `.order().limit()`
+      // directly (no `.single()`), expecting array-shaped data — every
+      // other conversations lookup in this file terminates on
+      // `.single()`/`.maybeSingle()` instead, so this only affects that
+      // one bare-await shape.
+      if (table === 'conversations' && !didInsert) {
+        const row = createdConversation ?? existingConversation
+        return resolve({ data: row ? [row] : [], error: null })
+      }
+      return resolve(didInsert ? insertResult() : selectResult())
+    }
     return b
   }
 

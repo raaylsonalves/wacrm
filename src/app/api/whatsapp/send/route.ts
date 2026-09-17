@@ -204,14 +204,25 @@ async function findOrCreateConversation(
   userId: string,
   contactId: string,
 ): Promise<string | null> {
-  const { data: existing } = await supabase
+  // `.maybeSingle()` errors on 2+ matching rows (and the error used to
+  // be discarded, so `existing` silently read null) — a contact with a
+  // duplicate conversation would then hit the INSERT, trip the unique
+  // index, and this send would fail with a 500 every time. `.order()
+  // .limit(1)` picks the oldest deterministically instead, matching the
+  // webhook's own find-or-create in lib/whatsapp/resolve-conversation.ts.
+  const { data: existing, error: findErr } = await supabase
     .from('conversations')
     .select('id')
     .eq('account_id', accountId)
     .eq('contact_id', contactId)
-    .maybeSingle()
+    .order('created_at', { ascending: true })
+    .limit(1)
 
-  if (existing) return existing.id
+  if (findErr) {
+    console.error('Error looking up conversation for contact send:', findErr.message)
+    return null
+  }
+  if (existing && existing.length > 0) return existing[0].id
 
   const { data: created, error } = await supabase
     .from('conversations')
@@ -223,8 +234,19 @@ async function findOrCreateConversation(
     .select('id')
     .single()
 
-  if (error) {
-    console.error('Error creating conversation for contact send:', error.message)
+  if (error || !created) {
+    // Lost a race with another concurrent send/inbound creating the
+    // same (account_id, contact_id) row — re-read instead of failing.
+    const { data: raced } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('account_id', accountId)
+      .eq('contact_id', contactId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+    if (raced && raced.length > 0) return raced[0].id
+
+    console.error('Error creating conversation for contact send:', error?.message)
     return null
   }
 
