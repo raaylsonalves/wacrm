@@ -460,6 +460,7 @@
       "saveChangesBtn": "Save Changes",
       "saveCustomFieldsBtn": "Save Custom Fields",
       "toastPhoneRequired": "Phone number is required",
+      "toastLoadFailed": "Failed to load contact",
       "toastUpdateFailed": "Failed to update contact",
       "toastUpdated": "Contact updated",
       "toastNotAuthenticated": "Not authenticated",

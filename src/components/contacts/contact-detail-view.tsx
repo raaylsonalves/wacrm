@@ -101,14 +101,27 @@ export function ContactDetailView({
   const fetchContact = useCallback(async () => {
     if (!contactId) return;
     setLoading(true);
+    // Clear the previous contact's data up front. `.single()` errors on
+    // 0 rows (deleted elsewhere, or RLS), and only assigning inside
+    // `if (data)` used to leave the last contact's name/phone/email in
+    // the form — switching from contact A to a contact B whose fetch
+    // fails left A's details on screen keyed to B's id, so pressing
+    // Save would overwrite B with A's data.
+    setContact(null);
+    setEditName('');
+    setEditPhone('');
+    setEditEmail('');
+    setEditCompany('');
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('contacts')
       .select('*')
       .eq('id', contactId)
       .single();
 
-    if (data) {
+    if (error || !data) {
+      toast.error(t('toastLoadFailed'));
+    } else {
       setContact(data);
       setEditName(data.name ?? '');
       setEditPhone(data.phone);
@@ -116,7 +129,7 @@ export function ContactDetailView({
       setEditCompany(data.company ?? '');
     }
     setLoading(false);
-  }, [contactId, supabase]);
+  }, [contactId, supabase, t]);
 
   const fetchTags = useCallback(async () => {
     if (!contactId) return;
@@ -297,24 +310,38 @@ export function ContactDetailView({
     setSavingCustom(true);
 
     try {
-      // Delete existing values and re-insert
-      await supabase
-        .from('contact_custom_values')
-        .delete()
-        .eq('contact_id', contactId);
-
-      const rows = Object.entries(customValues)
+      const filledFieldIds = Object.entries(customValues)
         .filter(([, val]) => val.trim())
-        .map(([fieldId, val]) => ({
-          contact_id: contactId,
-          custom_field_id: fieldId,
-          value: val.trim(),
-        }));
+        .map(([fieldId]) => fieldId);
+      const clearedFieldIds = Object.keys(customValues).filter(
+        (fieldId) => !filledFieldIds.includes(fieldId),
+      );
 
+      const rows = filledFieldIds.map((fieldId) => ({
+        contact_id: contactId,
+        custom_field_id: fieldId,
+        value: customValues[fieldId].trim(),
+      }));
+
+      // Upsert the filled values first, THEN delete only the fields the
+      // user actually cleared — the previous delete-then-insert order
+      // meant a failed insert (network drop, or RLS for a viewer since
+      // contact_custom_values_modify requires agent+) permanently lost
+      // every custom value the contact had, not just the one being
+      // edited.
       if (rows.length > 0) {
         const { error } = await supabase
           .from('contact_custom_values')
-          .insert(rows);
+          .upsert(rows, { onConflict: 'contact_id,custom_field_id' });
+        if (error) throw error;
+      }
+
+      if (clearedFieldIds.length > 0) {
+        const { error } = await supabase
+          .from('contact_custom_values')
+          .delete()
+          .eq('contact_id', contactId)
+          .in('custom_field_id', clearedFieldIds);
         if (error) throw error;
       }
 
