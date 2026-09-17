@@ -882,6 +882,28 @@
     }
   },
   "Automations": {
+    "templates": {
+      "welcome_message": {
+        "name": "Mensaje de bienvenida",
+        "description": "Responde automáticamente a nuevos contactos con un saludo.",
+        "text": "¡Hola! 👋 Gracias por escribirnos. Te responderemos en breve."
+      },
+      "out_of_office": {
+        "name": "Fuera de horario",
+        "description": "Responde automáticamente fuera de horario para que nadie se quede esperando.",
+        "text": "¡Gracias por tu mensaje! Nuestro equipo está fuera de línea ahora mismo (9am–6pm) y responderá a primera hora de mañana."
+      },
+      "lead_qualifier": {
+        "name": "Calificador de leads",
+        "description": "Hace preguntas de calificación para filtrar leads entrantes.",
+        "text": "Genial — con gusto te ayudamos con el precio. Una pregunta rápida: ¿aproximadamente cuántos usuarios necesitas?"
+      },
+      "follow_up_reminder": {
+        "name": "Recordatorio de seguimiento",
+        "description": "Envía un recordatorio si un contacto no ha respondido en 24 horas.",
+        "text": "Pasando de nuevo por aquí — ¿te quedó alguna otra pregunta? ¡Con gusto te ayudamos!"
+      }
+    },
     "list": {
       "title": "Automatizaciones",
       "subtitle": "Crea flujos de trabajo que reaccionan automáticamente a eventos de WhatsApp®.",
@@ -1108,6 +1130,69 @@
     }
   },
   "Flows": {
+    "templates": {
+      "welcome_menu": {
+        "name": "Menú de bienvenida",
+        "description": "Saluda a los clientes que escriben una palabra clave y los dirige al agente correcto según sean nuevos o existentes.",
+        "nodes": {
+          "welcome": {
+            "text": "¡Hola! 👋 Bienvenido a soporte. ¿Ya eres cliente o eres nuevo por aquí?",
+            "footer_text": "Toca un botón abajo para continuar.",
+            "buttons": {
+              "existing": { "title": "Ya soy cliente" },
+              "new": { "title": "Soy cliente nuevo" }
+            }
+          }
+        }
+      },
+      "faq_bot": {
+        "name": "Bot de preguntas frecuentes",
+        "description": "Responde preguntas comunes automáticamente. El cliente elige un tema de una lista; el bot responde y finaliza.",
+        "nodes": {
+          "topics": {
+            "text": "¿En qué puedo ayudarte?",
+            "button_label": "Ver temas",
+            "sections": {
+              "0": { "title": "Preguntas comunes" },
+              "1": { "title": "Otros" }
+            },
+            "rows": {
+              "hours": { "title": "Horario de atención" },
+              "pricing": { "title": "Precios" },
+              "refunds": { "title": "Política de reembolsos" },
+              "human": { "title": "Hablar con una persona" }
+            }
+          },
+          "answer_hours": {
+            "text": "Atendemos de lunes a viernes, de 9am a 6pm hora local. Los fines de semana el soporte se limita a casos urgentes."
+          },
+          "answer_pricing": {
+            "text": "Nuestros precios comienzan en $9/mes. Visita https://example.com/pricing para ver todos los detalles."
+          },
+          "answer_refunds": {
+            "text": "Los reembolsos se aceptan dentro de los 30 días posteriores a la compra. Responde con tu número de pedido y lo procesamos."
+          }
+        }
+      },
+      "lead_capture": {
+        "name": "Captura de leads",
+        "description": "Saluda al primer contacto entrante, recopila nombre + correo + empresa, y deriva a ventas con las respuestas en la nota.",
+        "nodes": {
+          "intro": {
+            "text": "¡Bienvenido! 👋 Te haré unas preguntas rápidas para dirigirte con la persona correcta."
+          },
+          "ask_name": {
+            "prompt_text": "¿Cuál es tu nombre?"
+          },
+          "ask_email": {
+            "prompt_text": "¡Gracias, {{vars.name}}! ¿Cuál es tu correo de trabajo?"
+          },
+          "ask_company": {
+            "prompt_text": "Ya casi terminamos — ¿cuál es el nombre de tu empresa?"
+          }
+        }
+      }
+    },
     "list": {
       "title": "Flujos",
       "beta": "Beta",
