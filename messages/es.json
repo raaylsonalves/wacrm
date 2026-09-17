@@ -1,4 +1,19 @@
 {
+  "Common": {
+    "gatedButton": {
+      "tooltip": "Solo lectura — tu rol no puede {reason}",
+      "reasons": {
+        "addOrImportContacts": "agregar o importar contactos",
+        "createAutomations": "crear automatizaciones",
+        "createBroadcasts": "crear difusiones",
+        "createDeals": "crear negocios",
+        "createFlows": "crear flujos",
+        "createPipelines": "crear pipelines",
+        "deleteContacts": "eliminar contactos",
+        "sendMessages": "enviar mensajes"
+      }
+    }
+  },
   "LoginPage": {
     "titleAccept": "Inicia sesión para aceptar",
     "titleWelcome": "Bienvenido de nuevo",

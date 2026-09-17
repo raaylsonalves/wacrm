@@ -1,4 +1,19 @@
 {
+  "Common": {
+    "gatedButton": {
+      "tooltip": "Somente leitura — sua função não pode {reason}",
+      "reasons": {
+        "addOrImportContacts": "adicionar ou importar contatos",
+        "createAutomations": "criar automações",
+        "createBroadcasts": "criar disparos",
+        "createDeals": "criar negócios",
+        "createFlows": "criar fluxos",
+        "createPipelines": "criar pipelines",
+        "deleteContacts": "excluir contatos",
+        "sendMessages": "enviar mensagens"
+      }
+    }
+  },
   "LoginPage": {
     "titleAccept": "Entre para aceitar",
     "titleWelcome": "Bem-vindo de volta",

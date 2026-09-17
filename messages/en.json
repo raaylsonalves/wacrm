@@ -1,4 +1,19 @@
 {
+  "Common": {
+    "gatedButton": {
+      "tooltip": "Read-only — your role can't {reason}",
+      "reasons": {
+        "addOrImportContacts": "add or import contacts",
+        "createAutomations": "create automations",
+        "createBroadcasts": "create broadcasts",
+        "createDeals": "create deals",
+        "createFlows": "create flows",
+        "createPipelines": "create pipelines",
+        "deleteContacts": "delete contacts",
+        "sendMessages": "send messages"
+      }
+    }
+  },
   "LoginPage": {
     "titleAccept": "Sign in to accept",
     "titleWelcome": "Welcome back",

@@ -1,4 +1,19 @@
 {
+  "Common": {
+    "gatedButton": {
+      "tooltip": "읽기 전용 — 회원님의 역할로는 {reason} 수 없습니다",
+      "reasons": {
+        "addOrImportContacts": "연락처를 추가하거나 가져올",
+        "createAutomations": "자동화를 만들",
+        "createBroadcasts": "발송을 만들",
+        "createDeals": "딜을 만들",
+        "createFlows": "플로우를 만들",
+        "createPipelines": "파이프라인을 만들",
+        "deleteContacts": "연락처를 삭제할",
+        "sendMessages": "메시지를 보낼"
+      }
+    }
+  },
   "LoginPage": {
     "titleAccept": "로그인하여 수락하기",
     "titleWelcome": "다시 오신 것을 환영합니다",
