@@ -101,6 +101,22 @@ BEGIN
       'redeem_invitation still checks pipelines instead of deals — migration 043 did not apply';
   END IF;
 
+  -- 047 replaced 044's account-logos storage policies to stop casting
+  -- an arbitrary path segment to uuid (which throws 22P02 on any other
+  -- bucket's non-uuid-prefixed paths, e.g. flow-media's
+  -- 'account-<uuid>', if Postgres ever evaluates that qual before the
+  -- bucket_id check). A missing/reverted policy body is a silent
+  -- correctness change, not a compile error.
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects'
+      AND policyname = 'Admins can upload their account logo'
+      AND with_check LIKE '%::uuid%'
+  ) THEN
+    RAISE EXCEPTION
+      'account-logos upload policy still casts the path segment to uuid — migration 047 did not apply';
+  END IF;
+
   -- 046 lets the cron reclaim a pending execution stuck at 'running'
   -- (a died-mid-resume process otherwise parks it forever, since only
   -- 'pending' rows are ever re-queried). Missing this column is a
