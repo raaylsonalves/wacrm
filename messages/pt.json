@@ -342,7 +342,8 @@
       "deals": "Negócios",
       "noTags": "Sem tags",
       "noDeals": "Sem negócios",
-      "addNotePlaceholder": "Adicionar uma nota..."
+      "addNotePlaceholder": "Adicionar uma nota...",
+      "resizePanel": "Redimensionar painel de contato"
     },
     "aiBanner": {
       "pausedTitle": "O assistente de IA está pausado aqui",

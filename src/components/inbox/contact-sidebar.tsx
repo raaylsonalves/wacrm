@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { APP_LOCALE } from "@/lib/currency";
@@ -28,11 +28,85 @@ interface ContactSidebarProps {
   contact: Contact | null;
 }
 
+// Drag-resizable width (spec: inbox-contact-panel-sizing.md). 280px
+// (`w-70`) was the old fixed width — kept as the default so nobody's
+// layout jumps on first load after this shipped.
+const PANEL_WIDTH_KEY = "wacrm.inboxContactPanelWidth";
+const MIN_PANEL_WIDTH = 240;
+const MAX_PANEL_WIDTH = 420;
+const DEFAULT_PANEL_WIDTH = 280;
+
+function clampPanelWidth(px: number): number {
+  return Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, px));
+}
+
+function readInitialPanelWidth(): number {
+  if (typeof window === "undefined") return DEFAULT_PANEL_WIDTH;
+  try {
+    const stored = Number(localStorage.getItem(PANEL_WIDTH_KEY));
+    if (Number.isFinite(stored) && stored > 0) return clampPanelWidth(stored);
+  } catch {
+    // localStorage can throw in private-browsing / sandboxed contexts.
+  }
+  return DEFAULT_PANEL_WIDTH;
+}
+
 export function ContactSidebar({ contact }: ContactSidebarProps) {
   const tSidebar = useTranslations("Inbox.sidebar");
   const tThread = useTranslations("Inbox.messageThread");
 
   const { accountId } = useAuth();
+
+  const [panelWidth, setPanelWidth] = useState(readInitialPanelWidth);
+  const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  // Drag-to-resize — grabs the handle on the panel's left edge. Resizing
+  // shrinks the thread pane, not this one growing over it, since the
+  // handle is dragged leftward to widen (mirrors how the OS/browser
+  // itself resizes a right-docked panel).
+  const onHandlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      dragState.current = { startX: e.clientX, startWidth: panelWidth };
+      const onMove = (moveEvent: PointerEvent) => {
+        if (!dragState.current) return;
+        const delta = dragState.current.startX - moveEvent.clientX;
+        setPanelWidth(clampPanelWidth(dragState.current.startWidth + delta));
+      };
+      const onUp = () => {
+        dragState.current = null;
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        setPanelWidth((w) => {
+          try {
+            localStorage.setItem(PANEL_WIDTH_KEY, String(w));
+          } catch {
+            // Same private-browsing edge case as above — the in-memory
+            // width still applies for the rest of this session.
+          }
+          return w;
+        });
+      };
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+    },
+    [panelWidth],
+  );
+
+  const ResizeHandle = (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={tSidebar("resizePanel")}
+      onPointerDown={onHandlePointerDown}
+      // Hit area is wider than the visible line (8px vs. the 1.5px
+      // highlight) — a resize handle exactly as thin as its highlight
+      // is nearly impossible to grab precisely with a mouse.
+      className="group absolute top-0 left-0 z-10 h-full w-2 -translate-x-1/2 cursor-col-resize touch-none"
+    >
+      <div className="mx-auto h-full w-[3px] group-hover:bg-primary/30 group-active:bg-primary/40" />
+    </div>
+  );
   const [copied, setCopied] = useState(false);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [notes, setNotes] = useState<ContactNote[]>([]);
@@ -127,7 +201,11 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
 
   if (!contact) {
     return (
-      <div className="flex h-full w-70 items-center justify-center border-l border-border bg-card">
+      <div
+        className="relative flex h-full shrink-0 items-center justify-center border-l border-border bg-card"
+        style={{ width: panelWidth }}
+      >
+        {ResizeHandle}
         <p className="text-sm text-muted-foreground">{tThread("selectConversation")}</p>
       </div>
     );
@@ -137,7 +215,11 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
   const initials = displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="flex h-full w-70 flex-col border-l border-border bg-card">
+    <div
+      className="relative flex h-full shrink-0 flex-col border-l border-border bg-card"
+      style={{ width: panelWidth }}
+    >
+      {ResizeHandle}
       <ScrollArea className="flex-1">
         <div className="p-4">
           {/* Contact Info */}
@@ -202,7 +284,8 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                 tags.map((tag) => (
                   <span
                     key={tag.contact_tag_id}
-                    className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                    title={tag.name}
+                    className="inline-block max-w-[160px] truncate align-middle rounded-full px-2 py-0.5 text-[10px] font-medium"
                     style={{
                       backgroundColor: `${tag.color}20`,
                       color: tag.color,
