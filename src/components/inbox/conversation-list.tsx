@@ -506,9 +506,21 @@ function ConversationItem({
             />
           </div>
         </div>
-        {contact?.tags && contact.tags.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1">
-            {contact.tags.map((tag) => (
+        {((contact?.tags && contact.tags.length > 0) || contact?.dealStage) && (
+          <div className="mt-1 flex flex-wrap items-center gap-1">
+            {contact?.dealStage && (
+              <span
+                title={contact.dealStage.name}
+                className="inline-block max-w-[110px] truncate rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none"
+                style={{
+                  backgroundColor: `${contact.dealStage.color}20`,
+                  color: contact.dealStage.color,
+                }}
+              >
+                {contact.dealStage.name}
+              </span>
+            )}
+            {contact?.tags?.map((tag) => (
               <span
                 key={tag.id}
                 title={tag.name}
