@@ -101,6 +101,21 @@ BEGIN
       'redeem_invitation still checks pipelines instead of deals — migration 043 did not apply';
   END IF;
 
+  -- 045 closes the same column-level privilege hole 034 closed on
+  -- profiles, but on accounts.owner_user_id — without this trigger any
+  -- admin (not just the owner) can PATCH their way to ownership
+  -- directly through PostgREST, since accounts_update RLS is row-level
+  -- only. A missing trigger here is invisible until someone exploits it.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'enforce_account_owner_column'
+      AND tgrelid = 'public.accounts'::regclass
+      AND NOT tgisinternal
+  ) THEN
+    RAISE EXCEPTION
+      'enforce_account_owner_column trigger is missing on accounts — migration 045 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;
