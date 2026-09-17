@@ -205,6 +205,36 @@ describe("validateStepsForActivation", () => {
       "steps[0].subject",
     ]);
   });
+
+  it("accepts a message_content condition with a value and no operand", () => {
+    // engine.ts's evaluateCondition only reads cfg.value for
+    // message_content — it never looks at operand.
+    const issues = validateStepsForActivation([
+      {
+        step_type: "condition",
+        step_config: { subject: "message_content", value: "refund" },
+      },
+    ]);
+    expect(issues).toEqual([]);
+  });
+
+  it("flags a message_content condition with an empty value, not operand", () => {
+    const issues = validateStepsForActivation([
+      { step_type: "condition", step_config: { subject: "message_content" } },
+    ]);
+    expect(issues).toEqual([
+      { path: "steps[0].value", message: "condition value is required" },
+    ]);
+  });
+
+  it("still requires operand for tag_presence", () => {
+    const issues = validateStepsForActivation([
+      { step_type: "condition", step_config: { subject: "tag_presence" } },
+    ]);
+    expect(issues).toEqual([
+      { path: "steps[0].operand", message: "condition operand is required" },
+    ]);
+  });
 });
 
 describe("validateTriggerForActivation", () => {

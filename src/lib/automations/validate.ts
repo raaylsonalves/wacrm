@@ -122,7 +122,17 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
       if (!nonEmpty(c.subject)) {
         issues.push({ path: `${path}.subject`, message: 'condition subject is required' })
       }
-      if (!nonEmpty(c.operand)) {
+      // `message_content` (engine.ts evaluateCondition) only ever reads
+      // `cfg.value` — it never looks at `operand`. Requiring one here
+      // unconditionally rejected an otherwise-correct condition on
+      // activation and forced the builder to fill in a value the
+      // engine then silently discards. tag_presence/contact_field/
+      // time_of_day all genuinely need operand.
+      if (c.subject === 'message_content') {
+        if (!nonEmpty(c.value)) {
+          issues.push({ path: `${path}.value`, message: 'condition value is required' })
+        }
+      } else if (!nonEmpty(c.operand)) {
         issues.push({ path: `${path}.operand`, message: 'condition operand is required' })
       }
       break
