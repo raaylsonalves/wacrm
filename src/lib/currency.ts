@@ -13,6 +13,27 @@
 /** App-wide fallback when no account/deal currency is available. */
 export const DEFAULT_CURRENCY = "USD";
 
+/**
+ * `Intl.NumberFormat(undefined, ...)` resolves to the *browser's*
+ * locale, not the app's — the same gap `date-fns-locale.ts` closes for
+ * dates. On a pt-BR deployment viewed from an en-US browser this
+ * rendered "R$1,234" (comma grouping) in an otherwise Portuguese UI,
+ * and since the first render happens on the server (whose ICU default
+ * differs from the browser's), it was also a hydration-mismatch
+ * candidate on every currency string. Kept in sync with
+ * `date-fns-locale.ts` and `src/i18n/request.ts` — same env var, same
+ * locale set.
+ */
+const APP_LOCALES: Record<string, string> = {
+  en: "en-US",
+  pt: "pt-BR",
+  es: "es-ES",
+  ko: "ko-KR",
+};
+
+export const APP_LOCALE: string =
+  APP_LOCALES[process.env.NEXT_PUBLIC_APP_LOCALE || "en"] ?? "en-US";
+
 export interface CurrencyOption {
   /** ISO-4217 code, e.g. "USD". Stored verbatim in the DB. */
   code: string;
@@ -65,7 +86,7 @@ export function formatCurrency(
   const code = (currency || DEFAULT_CURRENCY).trim();
   const amount = Number(value) || 0;
   try {
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat(APP_LOCALE, {
       style: "currency",
       currency: code,
       minimumFractionDigits: 0,
@@ -74,7 +95,7 @@ export function formatCurrency(
   } catch {
     // Invalid ISO code — show the raw code + grouped number so the
     // value is still legible instead of throwing.
-    return `${code} ${new Intl.NumberFormat(undefined, {
+    return `${code} ${new Intl.NumberFormat(APP_LOCALE, {
       maximumFractionDigits: 0,
     }).format(amount)}`;
   }
