@@ -140,6 +140,40 @@ export async function GET() {
     )
   }
 
+  // A number can be genuinely live on Meta's side — phone metadata
+  // resolves AND the WABA is subscribed to our app — without
+  // `registered_at` ever being set locally. That happens whenever
+  // Meta itself performed the registration outside our /register call
+  // (e.g. WhatsApp Embedded Signup subscribes the WABA as part of
+  // onboarding), or for a row saved before this tracking column
+  // existed. Previously this endpoint only ever *read* that state, so
+  // the "Not registered" banner persisted forever for those numbers —
+  // no click of "Verificar com a Meta" could ever clear it, because
+  // nothing wrote `registered_at` back. Since both independent Meta
+  // checks already confirm the number is live, backfill the local
+  // flag here so the UI reflects reality instead of local bookkeeping.
+  const metaConfirmsLive =
+    checks.phone_metadata_ok && (checks.waba_subscribed_to_app ?? false)
+
+  if (metaConfirmsLive && !checks.locally_marked_registered) {
+    const registeredAt = new Date().toISOString()
+    const { error: updateError } = await supabase
+      .from('whatsapp_config')
+      .update({ registered_at: registeredAt, last_registration_error: null })
+      .eq('account_id', accountId)
+
+    if (!updateError) {
+      checks.locally_marked_registered = true
+      config.registered_at = registeredAt
+      config.last_registration_error = null
+    } else {
+      console.error(
+        '[verify-registration] failed to backfill registered_at:',
+        updateError,
+      )
+    }
+  }
+
   const live =
     checks.phone_metadata_ok &&
     (checks.waba_subscribed_to_app ?? false) &&
