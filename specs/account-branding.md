@@ -1,5 +1,21 @@
 # Spec: Account branding (logo, name, custom color)
 
+**Status: implemented.** Migration `044_account_branding.sql` added
+`display_name`/`logo_url`/`brand_color` to `accounts`.
+`src/components/settings/branding-settings.tsx` is the admin-only
+Settings → Branding panel (logo upload, display name, hex color
+picker). `src/components/layout/brand-color-effect.tsx` applies
+`brand_color` at runtime via `--primary`/`--primary-foreground` (and
+the derived hover/ring tokens), computing contrast with
+`getContrastForeground()` in `src/lib/color-contrast.ts` exactly as
+the "Decisions" section below specifies — no second color picker, no
+curated palette. `sidebar.tsx` reads `account?.display_name` with a
+fallback to the translated default name, and the default icon/name
+render unchanged for an account with nothing configured. The `<title>`
+question was resolved by taking the simpler option: the browser tab
+title stays the static "wacrm" from `layout.tsx`'s metadata; it is not
+overridden client-side per account.
+
 ## Problem
 
 Every visual identity element is currently hardcoded at the template

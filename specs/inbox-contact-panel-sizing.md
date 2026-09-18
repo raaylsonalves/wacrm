@@ -1,5 +1,15 @@
 # Spec: Resizable contact panel + clearer tag display in the inbox
 
+**Status: implemented.** `src/components/inbox/contact-sidebar.tsx`:
+a drag handle on the panel's left border resizes it between
+`MIN_PANEL_WIDTH`/`MAX_PANEL_WIDTH`, persisted in `localStorage` under
+`wacrm.inboxContactPanelWidth` (`readInitialPanelWidth()`, same lazy-
+read pattern as `use-theme.tsx`). Tags get `max-w-[160px] truncate`
+plus a native `title` tooltip for the full name. The show/hide toggle
+(issue #258) is untouched — resizing and toggling remain independent.
+The "+N more" tags pattern from the proposed change wasn't needed in
+practice; `flex-wrap` at the wider resizable width was sufficient.
+
 ## Problem
 
 `ContactSidebar` (the right-hand contact panel in `/inbox`) is a fixed
