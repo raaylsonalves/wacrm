@@ -180,6 +180,19 @@ BEGIN
       'accounts.response_time_target_minutes is missing — migration 049 did not apply';
   END IF;
 
+  -- 051 lets the inbox show a live per-conversation SLA indicator by
+  -- telling "still waiting on us" apart from "we already replied"
+  -- without a join. A guarded ADD COLUMN IF NOT EXISTS is a silent
+  -- no-op on a typo'd name, so verify it landed.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'conversations'
+      AND column_name = 'last_message_sender_type'
+  ) THEN
+    RAISE EXCEPTION
+      'conversations.last_message_sender_type is missing — migration 051 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

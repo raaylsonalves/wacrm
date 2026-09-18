@@ -118,8 +118,13 @@ export function validateSendMessageParams(params: {
   templateName?: string | null;
   interactivePayload?: InteractiveMessagePayload | null;
 }): void {
-  const { messageType, contentText, mediaUrl, templateName, interactivePayload } =
-    params;
+  const {
+    messageType,
+    contentText,
+    mediaUrl,
+    templateName,
+    interactivePayload,
+  } = params;
 
   if (!messageType) {
     throw new SendMessageError('bad_request', 'message_type is required', 400);
@@ -413,7 +418,9 @@ export async function sendMessageToConversation(
   try {
     // Variants only make sense for a phone number — a BSUID is opaque
     // and has exactly one correct form, so it gets a single attempt.
-    const variants = hasValidPhone ? phoneVariants(sanitizedPhone) : [sendTarget];
+    const variants = hasValidPhone
+      ? phoneVariants(sanitizedPhone)
+      : [sendTarget];
     let lastError: unknown = null;
 
     for (const variant of variants) {
@@ -510,6 +517,7 @@ export async function sendMessageToConversation(
     .update({
       last_message_text: lastMessageText,
       last_message_at: new Date().toISOString(),
+      last_message_sender_type: 'agent',
       updated_at: new Date().toISOString(),
     })
     .eq('id', conversationId);

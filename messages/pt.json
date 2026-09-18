@@ -192,7 +192,8 @@
       "noConversations": "Nenhuma conversa encontrada",
       "noMessagesYet": "Nenhuma mensagem ainda",
       "unknown": "Desconhecido",
-      "tagUpdateFailed": "Falha ao atualizar a tag"
+      "tagUpdateFailed": "Falha ao atualizar a tag",
+      "slaWaitingTitle": "Aguardando resposta — meta de {minutes}min"
     },
     "messageThread": {
       "backToConversations": "Voltar às conversas",

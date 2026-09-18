@@ -192,7 +192,8 @@
       "noConversations": "No se encontraron conversaciones",
       "noMessagesYet": "Aún no hay mensajes",
       "unknown": "Desconocido",
-      "tagUpdateFailed": "Error al actualizar la etiqueta"
+      "tagUpdateFailed": "Error al actualizar la etiqueta",
+      "slaWaitingTitle": "Esperando respuesta — objetivo de {minutes}min"
     },
     "messageThread": {
       "backToConversations": "Volver a las conversaciones",

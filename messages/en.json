@@ -192,7 +192,8 @@
       "noConversations": "No conversations found",
       "noMessagesYet": "No messages yet",
       "unknown": "Unknown",
-      "tagUpdateFailed": "Failed to update tag"
+      "tagUpdateFailed": "Failed to update tag",
+      "slaWaitingTitle": "Waiting for a reply — target is {minutes}m"
     },
     "messageThread": {
       "backToConversations": "Back to conversations",

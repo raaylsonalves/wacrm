@@ -179,6 +179,12 @@ export interface Conversation {
   assigned_agent_id?: string;
   last_message_text?: string;
   last_message_at?: string;
+  /** Who sent the most recent message (migration 051) — denormalized
+   *  the same way `last_message_text`/`last_message_at` are, so the
+   *  inbox can tell "still waiting on us" (customer) apart from "we
+   *  already replied" (agent/bot) without a join per row. Optional:
+   *  absent on a conversation with no messages yet. */
+  last_message_sender_type?: SenderType | null;
   unread_count: number;
   created_at: string;
   updated_at: string;

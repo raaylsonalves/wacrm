@@ -1,5 +1,42 @@
 # Spec: Per-conversation response-time SLA indicators in the inbox
 
+**Status: implemented — pending migration apply.** Chose the
+denormalization approach (option 2 in Proposed change) over deriving
+from the last-fetched message client-side: `conversations` already
+denormalizes `last_message_text`/`last_message_at` at every
+send/receive site, so migration `051_conversation_last_message_
+sender_type.sql` adds `last_message_sender_type` the same way,
+updated at all 5 outbound write sites
+(`send-message.ts` → `agent`, `automations/meta-send.ts` and the 3
+sites in `flows/meta-send.ts` → `bot`) plus the inbound webhook's
+`bump_conversation_on_inbound()` RPC → `customer`. This avoids the
+N+1/join risk the spec's own Risks section flagged, at the cost of
+one more column to keep in sync — judged worth it since the pattern
+already exists for the other two `last_message_*` columns.
+
+Pure logic lives in `src/lib/inbox/sla.ts` (`slaTier`,
+`formatElapsedMinutes`), unit-tested in `sla.test.ts` per this repo's
+"pure helpers" convention — `conversation-list.tsx` is the only
+caller. The badge shows only while a conversation is actually
+"waiting on us" (`status !== 'closed'` and last message from a
+customer), color-coded `ok`/`warning`/`breached` at 1x/2x the
+account's `responseTimeTargetMinutes`. A single 60s interval in
+`ConversationList` (not one per row) advances every badge's elapsed
+time together. `inbox/page.tsx`'s realtime message-insert handler
+patches `last_message_sender_type` from the new message so a reply
+clears the badge immediately, matching the second acceptance
+criterion. The third (reacting to a live target-minutes change)
+requires no extra work — `responseTimeTargetMinutes` already comes
+from `useAuth()`, the same reactive source the dashboard uses.
+
+**Pending**: migration 051 has NOT been applied to the project's
+Supabase instance — applying schema migrations is outside what this
+session's tooling permissions allow. Apply it (`supabase db push`, or
+the project's normal migration flow) before this is live; until then
+`last_message_sender_type` reads as `undefined` on every row and the
+badge silently never renders — confirmed no crash/regression via a
+local dev server run against the current (unmigrated) schema.
+
 ## Problem
 
 `accounts.response_time_target_minutes` (migration 049, Settings >
