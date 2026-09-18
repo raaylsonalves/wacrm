@@ -84,8 +84,16 @@ export async function POST(request: Request) {
       knowledge,
     })
 
-    const { text, handoff } = await generateReply({ config, systemPrompt, messages })
-    return NextResponse.json({ reply: text, handoff })
+    const { text, segments, handoff } = await generateReply({
+      config,
+      systemPrompt,
+      messages,
+    })
+    // `segments` is what actually ships to WhatsApp for a multi-part
+    // reply (see specs/ai-humanized-multi-message-replies.md) — the
+    // Playground is meant to preview exactly what the bot would do, so
+    // it gets the split, not just the raw joined text.
+    return NextResponse.json({ reply: text, segments, handoff })
   } catch (err) {
     if (err instanceof AiError) {
       return NextResponse.json(

@@ -17,6 +17,11 @@ import {
 import { sendTypingIndicator } from '@/lib/whatsapp/meta-api'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 
+/** Pause between successive bubbles of a split reply — long enough to
+ *  read as a person pausing between messages, short enough that a
+ *  3-bubble reply still fully lands in a couple of seconds. */
+const SEGMENT_DELAY_MS = 1200
+
 interface DispatchArgs {
   /** Tenancy key — drives config, contact, and whatsapp_config lookups. */
   accountId: string
@@ -226,14 +231,31 @@ export async function dispatchInboundToAiReply(
     }
     if (claimed !== true) return // lost the per-conversation cap race
 
-    await engineSendText({
-      accountId,
-      userId: configOwnerUserId,
-      conversationId,
-      contactId,
-      text,
-      aiGenerated: true,
-    })
+    // One claimed slot covers the whole reply regardless of how many
+    // bubbles it's split into — the cap bounds how many times the bot
+    // answers a thread, not how many messages it takes to say it (see
+    // specs/ai-humanized-multi-message-replies.md). Segments send in
+    // order, each persisted as its own `messages` row (matching how
+    // they actually land on WhatsApp), with a short pause + a fresh
+    // "typing…" between them so a multi-part reply reads like someone
+    // sending a few messages in a row rather than a wall of text.
+    const segments = generation.segments.length > 0 ? generation.segments : [text]
+    for (let i = 0; i < segments.length; i++) {
+      if (i > 0) {
+        await new Promise((resolve) => setTimeout(resolve, SEGMENT_DELAY_MS))
+        if (inboundMessageId) {
+          await showTypingIndicator(db, accountId, inboundMessageId)
+        }
+      }
+      await engineSendText({
+        accountId,
+        userId: configOwnerUserId,
+        conversationId,
+        contactId,
+        text: segments[i],
+        aiGenerated: true,
+      })
+    }
   } catch (err) {
     console.error('[ai auto-reply] dispatch failed:', err)
   }

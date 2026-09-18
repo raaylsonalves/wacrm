@@ -23,6 +23,22 @@ export const AI_PROVIDER_DEFAULT_MODEL: Record<AiProvider, string> = {
  */
 export const HANDOFF_SENTINEL = '[[HANDOFF]]'
 
+/**
+ * Sentinel the model is instructed to use (in auto-reply mode only) to
+ * split a longer reply into several short, natural WhatsApp-style
+ * messages instead of one long block (specs/ai-humanized-multi-
+ * message-replies.md). Parsed by `parseGeneration` into
+ * `GenerateResult.segments`. Draft mode is never taught this — a draft
+ * is reviewed and sent by a human as one editable block of text.
+ */
+export const MULTI_MESSAGE_DELIMITER = '[[NEXT]]'
+
+/** Hard cap on how many bubbles one reply can be split into — a safety
+ *  net against a model that ignores the "2-3 messages" guidance, not a
+ *  target count. Extra segments beyond this are merged into the last
+ *  one rather than dropped, so no content is lost. */
+export const MAX_REPLY_SEGMENTS = 4
+
 /** Cap on generated reply length — keeps WhatsApp replies short and
  *  bounds token spend on the caller's own key. */
 export const MAX_OUTPUT_TOKENS = 1024
@@ -70,6 +86,10 @@ export function buildSystemPrompt(args: {
   if (mode === 'auto_reply') {
     parts.push(
       `You are replying automatically with no human in the loop. If you cannot confidently and safely help — the customer explicitly asks for a human, is upset or complaining, or the request needs information you do not have — reply with exactly ${HANDOFF_SENTINEL} and nothing else. A human agent will then take over. Prefer handing off over guessing.`,
+    )
+    parts.push(
+      'Write like a real person messaging on WhatsApp, not a formal document: short sentences, a warm and natural register (adjust formality to match the business context below). ' +
+        `If your reply naturally covers more than one idea, split it into separate short messages the way a person would send them one after another — put ${MULTI_MESSAGE_DELIMITER} alone on its own line between each one. Use at most ${MAX_REPLY_SEGMENTS} messages, and only split when the reply genuinely has multiple parts; a short, single-idea reply should stay one message with no delimiter at all.`,
     )
   }
 

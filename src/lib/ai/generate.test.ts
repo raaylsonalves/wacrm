@@ -43,6 +43,7 @@ describe('parseGeneration', () => {
   it('returns text with no handoff', () => {
     expect(parseGeneration('Hello there')).toEqual({
       text: 'Hello there',
+      segments: ['Hello there'],
       handoff: false,
       usage: null,
     })
@@ -51,11 +52,13 @@ describe('parseGeneration', () => {
   it('detects + strips the handoff sentinel', () => {
     expect(parseGeneration('[[HANDOFF]]')).toEqual({
       text: '',
+      segments: [],
       handoff: true,
       usage: null,
     })
     expect(parseGeneration('Let me get a human [[HANDOFF]]')).toEqual({
       text: 'Let me get a human',
+      segments: ['Let me get a human'],
       handoff: true,
       usage: null,
     })
@@ -65,9 +68,38 @@ describe('parseGeneration', () => {
     const usage = { promptTokens: 10, completionTokens: 5, totalTokens: 15 }
     expect(parseGeneration('Hi', usage)).toEqual({
       text: 'Hi',
+      segments: ['Hi'],
       handoff: false,
       usage,
     })
+  })
+
+  it('splits on the multi-message delimiter', () => {
+    expect(parseGeneration('First part [[NEXT]] Second part')).toEqual({
+      text: 'First part [[NEXT]] Second part',
+      segments: ['First part', 'Second part'],
+      handoff: false,
+      usage: null,
+    })
+  })
+
+  it('drops empty segments from stray/leading/trailing delimiters', () => {
+    expect(parseGeneration('[[NEXT]] Only one [[NEXT]]')).toEqual({
+      text: '[[NEXT]] Only one [[NEXT]]',
+      segments: ['Only one'],
+      handoff: false,
+      usage: null,
+    })
+  })
+
+  it('caps segments, merging overflow into the last one', () => {
+    const raw = ['one', 'two', 'three', 'four', 'five'].join(' [[NEXT]] ')
+    const result = parseGeneration(raw)
+    expect(result.segments).toHaveLength(4)
+    expect(result.segments[0]).toBe('one')
+    expect(result.segments[1]).toBe('two')
+    expect(result.segments[2]).toBe('three')
+    expect(result.segments[3]).toBe('four\n\nfive')
   })
 })
 
@@ -89,6 +121,7 @@ describe('generateReply — OpenAI', () => {
 
     expect(res).toEqual({
       text: 'Sure — happy to help!',
+      segments: ['Sure — happy to help!'],
       handoff: false,
       usage: { promptTokens: 42, completionTokens: 8, totalTokens: 50 },
     })
@@ -148,6 +181,7 @@ describe('generateReply — Anthropic', () => {
     // Anthropic reports input/output only — total is summed by normalizeUsage.
     expect(res).toEqual({
       text: 'Hi there!',
+      segments: ['Hi there!'],
       handoff: false,
       usage: { promptTokens: 30, completionTokens: 6, totalTokens: 36 },
     })
@@ -216,6 +250,7 @@ describe('generateReply — Gemini', () => {
 
     expect(res).toEqual({
       text: 'Hi from Gemini!',
+      segments: ['Hi from Gemini!'],
       handoff: false,
       usage: { promptTokens: 20, completionTokens: 4, totalTokens: 24 },
     })

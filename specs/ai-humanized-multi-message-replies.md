@@ -1,5 +1,37 @@
 # Spec: Humanized, multi-message AI replies
 
+**Status: implemented.** Delimiter is `[[NEXT]]` (matches the
+`[[HANDOFF]]` sentinel's naming convention), cap is `MAX_REPLY_SEGMENTS
+= 4` with overflow merged into the last segment rather than dropped —
+see `MULTI_MESSAGE_DELIMITER`/`MAX_REPLY_SEGMENTS` in
+`src/lib/ai/defaults.ts`. `parseGeneration` (`generate.ts`) computes
+`GenerateResult.segments`; `dispatchInboundToAiReply`
+(`auto-reply.ts`) sends each segment as its own `engineSendText` call
+with a fixed 1200ms pause and a fresh typing indicator between
+segments (not before the first — that one already fires before
+generation starts). One `claim_ai_reply_slot` call still covers the
+whole reply regardless of segment count, per the spec's own
+recommendation.
+
+Found and fixed one gap not called out in the original proposal: the
+Playground (`/api/ai/playground`, `mode: 'auto_reply'`) was returning
+the raw joined `text` — which still contains literal `[[NEXT]]`
+tokens, since only `HANDOFF_SENTINEL` gets stripped from `text` — so
+without a fix the delimiter would have leaked into the Playground UI
+verbatim. Fixed by having the route return `segments` too and having
+`ai-playground.tsx` render each one as its own chat bubble (falling
+back to `[content]` when segments is empty), matching the "behaves
+exactly like the auto-reply bot" claim already made in that page's own
+copy. The conversation history sent back on the next turn also uses
+`segments.join('\n\n')` rather than the raw `reply`, so the model never
+sees its own delimiter echoed back in its prior turns.
+
+Draft mode (`/api/ai/draft`) and its `buildSystemPrompt({mode:
+'draft'})` call were deliberately left untouched — the multi-message
+instruction is only appended for `mode === 'auto_reply'`, so a draft
+stays one editable block for the human agent, per the spec's own
+non-goals.
+
 ## Problem
 
 The AI auto-reply always sends its answer as one single WhatsApp

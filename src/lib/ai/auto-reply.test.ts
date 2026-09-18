@@ -119,6 +119,7 @@ beforeEach(() => {
   h.retrieveKnowledge.mockResolvedValue([])
   h.generateReplyWithFallback.mockResolvedValue({
     text: 'Hello!',
+    segments: ['Hello!'],
     handoff: false,
     usage: null,
     provider: 'openai',
@@ -352,5 +353,80 @@ describe('dispatchInboundToAiReply — provider fallback exhaustion (#specs/ai-p
     await expect(dispatchInboundToAiReply(ARGS)).resolves.toBeUndefined()
     expect(h.state.updatePayload).toBeNull()
     errorSpy.mockRestore()
+  })
+})
+
+describe('dispatchInboundToAiReply — multi-message replies (specs/ai-humanized-multi-message-replies)', () => {
+  it('sends each segment as its own message, in order', async () => {
+    h.generateReplyWithFallback.mockResolvedValue({
+      text: 'First part\n\nSecond part',
+      segments: ['First part', 'Second part'],
+      handoff: false,
+      usage: null,
+      provider: 'openai',
+      model: 'gpt-test',
+      attempts: [],
+    })
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).toHaveBeenCalledTimes(2)
+    expect(h.engineSendText).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ text: 'First part' }),
+    )
+    expect(h.engineSendText).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ text: 'Second part' }),
+    )
+  })
+
+  it('claims exactly one reply slot regardless of segment count', async () => {
+    h.generateReplyWithFallback.mockResolvedValue({
+      text: 'a\n\nb\n\nc',
+      segments: ['a', 'b', 'c'],
+      handoff: false,
+      usage: null,
+      provider: 'openai',
+      model: 'gpt-test',
+      attempts: [],
+    })
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.state.rpcCalls).toHaveLength(1)
+    expect(h.engineSendText).toHaveBeenCalledTimes(3)
+  })
+
+  it('shows a fresh typing indicator between segments, not before the first', async () => {
+    h.generateReplyWithFallback.mockResolvedValue({
+      text: 'a\n\nb',
+      segments: ['a', 'b'],
+      handoff: false,
+      usage: null,
+      provider: 'openai',
+      model: 'gpt-test',
+      attempts: [],
+    })
+    await dispatchInboundToAiReply(ARGS)
+    // Once before generation starts (existing behaviour) + once between
+    // the two segments.
+    expect(h.sendTypingIndicator).toHaveBeenCalledTimes(2)
+  })
+
+  it('falls back to a single send when segments is empty but text is not', async () => {
+    // Defensive: a provider mock (or an older code path) that returns
+    // no segments shouldn't drop the reply — fall back to sending
+    // `text` as one message.
+    h.generateReplyWithFallback.mockResolvedValue({
+      text: 'Hello!',
+      segments: [],
+      handoff: false,
+      usage: null,
+      provider: 'openai',
+      model: 'gpt-test',
+      attempts: [],
+    })
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).toHaveBeenCalledTimes(1)
+    expect(h.engineSendText).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Hello!' }),
+    )
   })
 })

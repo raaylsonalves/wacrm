@@ -5,7 +5,12 @@ import {
   type ChatMessage,
   type GenerateResult,
 } from './types'
-import { HANDOFF_SENTINEL, aiRequestTimeoutMs } from './defaults'
+import {
+  HANDOFF_SENTINEL,
+  MULTI_MESSAGE_DELIMITER,
+  MAX_REPLY_SEGMENTS,
+  aiRequestTimeoutMs,
+} from './defaults'
 import { generateOpenAi } from './providers/openai'
 import { generateAnthropic } from './providers/anthropic'
 import { generateGemini } from './providers/gemini'
@@ -56,11 +61,18 @@ export async function generateReply(args: GenerateArgs): Promise<GenerateResult>
 }
 
 /**
- * Split the raw model output into `{ text, handoff, usage }`. The
- * sentinel can appear alone or trailing a partial reply; either way we
- * treat the turn as a handoff and strip the marker from any remaining
- * text. `usage` is passed straight through (null when the provider
- * didn't report it).
+ * Split the raw model output into `{ text, segments, handoff, usage }`.
+ * The handoff sentinel can appear alone or trailing a partial reply;
+ * either way we treat the turn as a handoff and strip the marker from
+ * any remaining text. `usage` is passed straight through (null when
+ * the provider didn't report it).
+ *
+ * After the handoff sentinel is stripped, the remaining text is split
+ * on `MULTI_MESSAGE_DELIMITER` into `segments` — auto-reply mode's
+ * system prompt is the only one that teaches the model to emit it (see
+ * `buildSystemPrompt`), so draft/playground callers just get `[text]`
+ * back. A model that ignores the segment cap has its overflow merged
+ * into the last segment rather than dropped, so no content is lost.
  */
 export function parseGeneration(
   raw: string,
@@ -68,5 +80,18 @@ export function parseGeneration(
 ): GenerateResult {
   const handoff = raw.includes(HANDOFF_SENTINEL)
   const text = raw.split(HANDOFF_SENTINEL).join('').trim()
-  return { text, handoff, usage }
+
+  const rawSegments = text
+    .split(MULTI_MESSAGE_DELIMITER)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+
+  let segments = rawSegments
+  if (rawSegments.length > MAX_REPLY_SEGMENTS) {
+    const head = rawSegments.slice(0, MAX_REPLY_SEGMENTS - 1)
+    const overflow = rawSegments.slice(MAX_REPLY_SEGMENTS - 1).join('\n\n')
+    segments = [...head, overflow]
+  }
+
+  return { text, segments, handoff, usage }
 }

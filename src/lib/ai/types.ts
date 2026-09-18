@@ -70,8 +70,18 @@ export interface ProviderResult {
 
 /** Outcome of a generation call. */
 export interface GenerateResult {
-  /** The reply text, with any handoff sentinel stripped. */
+  /** The reply text, with any handoff sentinel and multi-message
+   *  delimiters stripped — `segments.join('\n\n')`. Callers that send
+   *  one message (draft, playground) use this; auto-reply sends
+   *  `segments` instead so a multi-idea reply arrives as separate
+   *  WhatsApp bubbles. */
   text: string
+  /** The reply split on `MULTI_MESSAGE_DELIMITER` (auto-reply mode
+   *  only — draft/playground never instruct the model to emit it, so
+   *  this is almost always `[text]` there). Always has at least one
+   *  entry when `text` is non-empty; empty when the model bailed to a
+   *  handoff with no text. */
+  segments: string[]
   /** True when the model asked to hand off to a human (auto-reply mode). */
   handoff: boolean
   /** Provider token usage for this call, or null when unavailable. */

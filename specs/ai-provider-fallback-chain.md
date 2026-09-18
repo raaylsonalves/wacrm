@@ -1,6 +1,7 @@
 # Spec: AI provider/model fallback chain with automatic human handoff
 
-**Status: implemented — pending migration apply.** Shipped with one
+**Status: implemented.** Migration 052 has been applied to the live
+Supabase project — the fallback chain is live. Shipped with one
 fallback tier (not the 2 discussed as a cap) — the UI
 (`ai-config.tsx`) exposes a single "fallback provider" section, but
 the storage shape (`ai_configs.fallbacks`, a JSON array) and the chain
@@ -11,14 +12,12 @@ rather than the "1-2" range discussed — kept simple and fast-failing
 for v1; `rate_limited` and `invalid_key` skip the retry entirely and
 advance to the next tier immediately, per points 4 and the "never
 retried" acceptance criterion. Migration `052_ai_provider_fallback_
-chain.sql` adds `ai_configs.fallbacks jsonb NOT NULL DEFAULT '[]'` —
-**not yet applied to the live Supabase project**, same tooling-
-permission restriction noted on migration 051; apply it (`supabase db
-push` or the dashboard SQL editor) before this is usable. Until then,
-`fallbacks` reads as `[]` on every account and auto-reply behaves
-exactly as before this spec (single attempt, then the existing
-content-handoff path) — confirmed no crash on the current schema since
-`config.ts` defaults an absent/null column to `[]`.
+chain.sql` adds `ai_configs.fallbacks jsonb NOT NULL DEFAULT '[]'`.
+`loadAiConfig` and the `/api/ai/config` route both defensively degrade
+(catch Postgres' `42703` undefined_column) to "no fallback configured"
+if this column is ever missing again — e.g. code deployed ahead of the
+migration in some other environment — so a timing mismatch there
+doesn't take down every draft/auto-reply call.
 
 The 7th point (quota cooldown) was left as the stretch goal it was
 scoped as — not implemented in v1.

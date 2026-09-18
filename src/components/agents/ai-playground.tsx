@@ -12,6 +12,12 @@ interface Turn {
   content: string;
   /** assistant-only: the agent signalled a human handoff on this turn. */
   handoff?: boolean;
+  /** assistant-only: the reply split into separate WhatsApp-style
+   *  bubbles (specs/ai-humanized-multi-message-replies.md) — this is
+   *  what the auto-reply bot actually sends, so the Playground renders
+   *  these instead of the single joined `content` block. Falls back to
+   *  `[content]` when absent/empty so older responses still render. */
+  segments?: string[];
 }
 
 export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
@@ -54,14 +60,23 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
         setInput(text);
         return;
       }
+      const reply =
+        typeof data.reply === 'string' && data.reply.trim() ? data.reply : '';
+      const segments = Array.isArray(data.segments)
+        ? data.segments.filter((s: unknown): s is string => typeof s === 'string' && s.trim().length > 0)
+        : [];
+      // `content` feeds back into the next turn's conversation history
+      // (see the `messages` payload below) — join the segments rather
+      // than using the raw `reply`, so the model's own multi-message
+      // delimiter never shows up in its own history as if it were part
+      // of the message text.
+      const content = segments.length > 0 ? segments.join('\n\n') : reply;
       setTurns([
         ...next,
         {
           role: 'assistant',
-          content:
-            typeof data.reply === 'string' && data.reply.trim()
-              ? data.reply
-              : '',
+          content,
+          segments,
           handoff: Boolean(data.handoff),
         },
       ]);
@@ -125,43 +140,65 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
           </div>
         )}
 
-        {turns.map((turn, i) => (
-          <div
-            key={i}
-            className={cn(
-              'flex gap-2',
-              turn.role === 'user' ? 'justify-end' : 'justify-start',
-            )}
-          >
-            {turn.role === 'assistant' && (
-              <Bot className="mt-1 h-5 w-5 shrink-0 text-primary" />
-            )}
+        {turns.map((turn, i) => {
+          // An assistant reply that was split into several WhatsApp-
+          // style bubbles renders as that many separate bubbles, same
+          // as the real auto-reply bot would send — a single joined
+          // block would misrepresent what the customer actually sees.
+          const bubbles =
+            turn.role === 'assistant' && turn.segments && turn.segments.length > 0
+              ? turn.segments
+              : [turn.content];
+          return (
             <div
+              key={i}
               className={cn(
-                'max-w-[80%] rounded-2xl px-3.5 py-2 text-sm',
-                turn.role === 'user'
-                  ? 'rounded-br-sm bg-primary text-primary-foreground'
-                  : 'rounded-bl-sm bg-muted text-foreground',
+                'flex gap-2',
+                turn.role === 'user' ? 'justify-end' : 'justify-start',
               )}
             >
-              {turn.content && <p className="whitespace-pre-wrap">{turn.content}</p>}
-              {turn.role === 'assistant' && turn.handoff && (
-                <p
-                  className={cn(
-                    'flex items-center gap-1 text-xs text-amber-500',
-                    turn.content && 'mt-1.5 border-t border-border/50 pt-1.5',
-                  )}
-                >
-                  <UserCircle2 className="h-3.5 w-3.5" />
-                  {t('handoff')}
-                </p>
+              {turn.role === 'assistant' && (
+                <Bot className="mt-1 h-5 w-5 shrink-0 text-primary" />
+              )}
+              <div
+                className={cn(
+                  'flex max-w-[80%] flex-col gap-1',
+                  turn.role === 'user' ? 'items-end' : 'items-start',
+                )}
+              >
+                {bubbles.map((bubble, j) => (
+                  <div
+                    key={j}
+                    className={cn(
+                      'rounded-2xl px-3.5 py-2 text-sm',
+                      turn.role === 'user'
+                        ? 'rounded-br-sm bg-primary text-primary-foreground'
+                        : 'rounded-bl-sm bg-muted text-foreground',
+                    )}
+                  >
+                    {bubble && <p className="whitespace-pre-wrap">{bubble}</p>}
+                    {turn.role === 'assistant' &&
+                      turn.handoff &&
+                      j === bubbles.length - 1 && (
+                        <p
+                          className={cn(
+                            'flex items-center gap-1 text-xs text-amber-500',
+                            bubble && 'mt-1.5 border-t border-border/50 pt-1.5',
+                          )}
+                        >
+                          <UserCircle2 className="h-3.5 w-3.5" />
+                          {t('handoff')}
+                        </p>
+                      )}
+                  </div>
+                ))}
+              </div>
+              {turn.role === 'user' && (
+                <UserCircle2 className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
               )}
             </div>
-            {turn.role === 'user' && (
-              <UserCircle2 className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
-            )}
-          </div>
-        ))}
+          );
+        })}
 
         {sending && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
