@@ -1,6 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { decrypt } from '@/lib/whatsapp/encryption'
-import type { AiConfig } from './types'
+import type { AiConfig, AiProviderCredentials } from './types'
+
+interface RawFallbackRow {
+  provider: 'openai' | 'anthropic' | 'gemini'
+  model: string
+  api_key: string
+}
 
 interface AiConfigRow {
   provider: 'openai' | 'anthropic' | 'gemini'
@@ -12,10 +18,55 @@ interface AiConfigRow {
   auto_reply_max_per_conversation: number
   handoff_agent_id: string | null
   embeddings_api_key: string | null
+  fallbacks: RawFallbackRow[] | null
 }
 
-const CONFIG_COLUMNS =
+const CONFIG_COLUMNS_BASE =
   'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, embeddings_api_key'
+const CONFIG_COLUMNS = `${CONFIG_COLUMNS_BASE}, fallbacks`
+
+/** Postgres "undefined_column" — thrown by `fallbacks` not existing yet
+ *  when migration 052 hasn't been applied. See the fallback query below. */
+const UNDEFINED_COLUMN = '42703'
+
+/** True when a Supabase/Postgres error is specifically "column does not
+ *  exist" — used by callers (here and the `/api/ai/config` route) that
+ *  select `ai_configs.fallbacks` directly, to degrade to "no fallback
+ *  configured" instead of a hard failure when migration 052 hasn't run
+ *  yet. Exported so route handlers can apply the same defensiveness. */
+export function isUndefinedColumnError(error: unknown): boolean {
+  return Boolean(error) && (error as { code?: string }).code === UNDEFINED_COLUMN
+}
+
+/**
+ * Decrypt each configured fallback tier's key. A single corrupt tier
+ * (rotated `ENCRYPTION_KEY`, manual DB edit) is dropped with a warning
+ * rather than failing the whole config — the primary provider/model is
+ * still usable, and `generateReplyWithFallback` just has one fewer tier
+ * to fall back to.
+ */
+function decryptFallbacks(
+  accountId: string,
+  raw: RawFallbackRow[] | null,
+): AiProviderCredentials[] {
+  if (!raw || raw.length === 0) return []
+  const out: AiProviderCredentials[] = []
+  for (const tier of raw) {
+    if (!tier?.api_key) continue
+    try {
+      out.push({
+        provider: tier.provider,
+        model: tier.model,
+        apiKey: decrypt(tier.api_key),
+      })
+    } catch {
+      console.error(
+        `[ai config] fallback key for account ${accountId} (${tier.provider}) could not be decrypted — check ENCRYPTION_KEY; this fallback tier is skipped until re-entered.`,
+      )
+    }
+  }
+  return out
+}
 
 /**
  * Load and decrypt the account's AI config for *use* (draft or
@@ -34,11 +85,27 @@ export async function loadAiConfig(
   opts: { requireActive?: boolean } = {},
 ): Promise<AiConfig | null> {
   const { requireActive = true } = opts
-  const { data, error } = await db
+  let { data, error } = await db
     .from('ai_configs')
     .select(CONFIG_COLUMNS)
     .eq('account_id', accountId)
     .maybeSingle()
+
+  // Defensive: if migration 052 (adds `ai_configs.fallbacks`) hasn't
+  // been applied yet, selecting it 42703s. Rather than taking down
+  // every draft/auto-reply call on a deploy that outran its migration,
+  // retry without the column and treat fallbacks as "none configured" —
+  // exactly how a freshly-migrated account with an empty array behaves.
+  if (error && isUndefinedColumnError(error)) {
+    console.warn(
+      '[ai config] ai_configs.fallbacks does not exist yet (migration 052 not applied) — provider fallback is disabled until it is.',
+    )
+    ;({ data, error } = await db
+      .from('ai_configs')
+      .select(CONFIG_COLUMNS_BASE)
+      .eq('account_id', accountId)
+      .maybeSingle())
+  }
 
   if (error) throw error
   if (!data) return null
@@ -79,6 +146,7 @@ export async function loadAiConfig(
     autoReplyMaxPerConversation: row.auto_reply_max_per_conversation,
     handoffAgentId: row.handoff_agent_id,
     embeddingsApiKey,
+    fallbacks: decryptFallbacks(accountId, row.fallbacks),
   }
 }
 

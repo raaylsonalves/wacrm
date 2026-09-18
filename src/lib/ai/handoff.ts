@@ -45,3 +45,43 @@ function truncate(text: string, max: number): string {
   if (collapsed.length <= max) return collapsed
   return `${collapsed.slice(0, max - 1).trimEnd()}…`
 }
+
+/** Human-readable label for an `AiError.code`, used in the failure note
+ *  below — short enough to read at a glance in the inbox. */
+function describeFailureCode(code: string): string {
+  switch (code) {
+    case 'rate_limited':
+      return 'rate limited'
+    case 'timeout':
+      return 'timed out'
+    case 'invalid_key':
+      return 'invalid key'
+    case 'network_error':
+      return 'network error'
+    default:
+      return 'unavailable'
+  }
+}
+
+/**
+ * Build the internal note left when every configured AI provider/model
+ * tier failed (see `generateReplyWithFallback` in
+ * `generate-with-fallback.ts`) and auto-reply hands the conversation to
+ * a human as a result — a distinct cause from `buildHandoffSummary`'s
+ * "the model chose to hand off", so it gets its own note explaining
+ * which providers were tried and why each one failed.
+ *
+ * Reads as, e.g.:
+ *   "🤖 AI unavailable after trying 2 providers: gemini (unavailable),
+ *    anthropic (timed out) — transferred automatically."
+ */
+export function buildProviderFailureSummary(args: {
+  attempts: { provider: string; model: string; error: { code: string } }[]
+}): string {
+  const { attempts } = args
+  const tried = attempts
+    .map((a) => `${a.provider} (${describeFailureCode(a.error.code)})`)
+    .join(', ')
+  const count = attempts.length
+  return `🤖 AI unavailable after trying ${count} ${count === 1 ? 'provider' : 'providers'}: ${tried} — transferred automatically.`
+}

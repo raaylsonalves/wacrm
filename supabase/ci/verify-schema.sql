@@ -193,6 +193,17 @@ BEGIN
       'conversations.last_message_sender_type is missing — migration 051 did not apply';
   END IF;
 
+  -- 052 lets an account configure fallback provider/model tiers for AI
+  -- auto-reply, tried in order when the primary one fails.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'ai_configs'
+      AND column_name = 'fallbacks'
+  ) THEN
+    RAISE EXCEPTION
+      'ai_configs.fallbacks is missing — migration 052 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

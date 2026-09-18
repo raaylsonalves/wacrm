@@ -2,9 +2,12 @@ import { supabaseAdmin } from './admin-client'
 import { loadAiConfig } from './config'
 import { buildConversationContext } from './context'
 import { retrieveKnowledge } from './knowledge'
-import { generateReply } from './generate'
+import {
+  generateReplyWithFallback,
+  AllProvidersFailedError,
+} from './generate-with-fallback'
 import { buildSystemPrompt } from './defaults'
-import { buildHandoffSummary } from './handoff'
+import { buildHandoffSummary, buildProviderFailureSummary } from './handoff'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
 import {
@@ -136,23 +139,43 @@ export async function dispatchInboundToAiReply(
       knowledge,
     })
 
-    const { text, handoff, usage } = await generateReply({
-      config,
-      systemPrompt,
-      messages,
-    })
+    let generation
+    try {
+      generation = await generateReplyWithFallback({ config, systemPrompt, messages })
+    } catch (err) {
+      if (!(err instanceof AllProvidersFailedError)) throw err
+      // Every configured tier (primary + fallbacks) failed — same
+      // handoff mechanics as the content-handoff path below, just with
+      // a note explaining it was a provider outage, not the model
+      // choosing to bail.
+      console.error('[ai auto-reply] all AI providers failed:', err.attempts)
+      const summary = buildProviderFailureSummary({ attempts: err.attempts })
+      const update: Record<string, unknown> = {
+        ai_autoreply_disabled: true,
+        ai_handoff_summary: summary,
+      }
+      if (config.handoffAgentId && !conv.assigned_agent_id) {
+        update.assigned_agent_id = config.handoffAgentId
+      }
+      await db.from('conversations').update(update).eq('id', conversationId)
+      return
+    }
+
+    const { text, handoff, usage } = generation
 
     // Record token spend on the account's BYO key. Fire-and-forget so it
     // never adds latency to the customer-facing send: `logAiUsage`
     // swallows its own errors, so the floating promise can't reject.
     // Logged regardless of handoff — the provider call happened either
-    // way.
+    // way. Logs whichever tier actually produced this result, which may
+    // differ from `config.provider`/`config.model` when a fallback tier
+    // was used.
     void logAiUsage(db, {
       accountId,
       conversationId,
       mode: 'auto_reply',
-      provider: config.provider,
-      model: config.model,
+      provider: generation.provider,
+      model: generation.model,
       usage,
     })
 

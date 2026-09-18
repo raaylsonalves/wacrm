@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { AiConfig } from './types'
+import { AiError } from './types'
+import { AllProvidersFailedError } from './generate-with-fallback'
 
 // Shared, hoisted mock state so the module mocks can close over it.
 const h = vi.hoisted(() => ({
   loadAiConfig: vi.fn(),
   buildConversationContext: vi.fn(),
   retrieveKnowledge: vi.fn(),
-  generateReply: vi.fn(),
+  generateReplyWithFallback: vi.fn(),
   engineSendText: vi.fn(),
   loadAccountMetaCredentials: vi.fn(),
   sendTypingIndicator: vi.fn(),
@@ -22,7 +24,18 @@ const h = vi.hoisted(() => ({
 vi.mock('./config', () => ({ loadAiConfig: h.loadAiConfig }))
 vi.mock('./context', () => ({ buildConversationContext: h.buildConversationContext }))
 vi.mock('./knowledge', () => ({ retrieveKnowledge: h.retrieveKnowledge }))
-vi.mock('./generate', () => ({ generateReply: h.generateReply }))
+// `AllProvidersFailedError` is imported by auto-reply.ts alongside the
+// mocked function — re-export the real class so `instanceof` checks in
+// the code under test still work against errors the mock throws.
+vi.mock('./generate-with-fallback', async () => {
+  const actual = await vi.importActual<typeof import('./generate-with-fallback')>(
+    './generate-with-fallback',
+  )
+  return {
+    ...actual,
+    generateReplyWithFallback: h.generateReplyWithFallback,
+  }
+})
 vi.mock('@/lib/flows/meta-send', () => ({
   engineSendText: h.engineSendText,
   loadAccountMetaCredentials: h.loadAccountMetaCredentials,
@@ -86,6 +99,7 @@ function aiConfig(overrides: Partial<AiConfig> = {}): AiConfig {
     autoReplyMaxPerConversation: 3,
     handoffAgentId: null,
     embeddingsApiKey: null,
+    fallbacks: [],
     ...overrides,
   }
 }
@@ -103,7 +117,14 @@ beforeEach(() => {
   h.loadAiConfig.mockResolvedValue(aiConfig())
   h.buildConversationContext.mockResolvedValue([{ role: 'user', content: 'hi' }])
   h.retrieveKnowledge.mockResolvedValue([])
-  h.generateReply.mockResolvedValue({ text: 'Hello!', handoff: false })
+  h.generateReplyWithFallback.mockResolvedValue({
+    text: 'Hello!',
+    handoff: false,
+    usage: null,
+    provider: 'openai',
+    model: 'gpt-test',
+    attempts: [],
+  })
   h.engineSendText.mockResolvedValue({ whatsapp_message_id: 'm1' })
   h.loadAccountMetaCredentials.mockResolvedValue({
     phoneNumberId: 'pn-1',
@@ -130,14 +151,14 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     h.retrieveKnowledge.mockResolvedValue(['Returns accepted within 30 days.'])
     await dispatchInboundToAiReply(ARGS)
     expect(h.retrieveKnowledge).toHaveBeenCalled()
-    const systemPrompt = h.generateReply.mock.calls[0][0].systemPrompt as string
+    const systemPrompt = h.generateReplyWithFallback.mock.calls[0][0].systemPrompt as string
     expect(systemPrompt).toContain('Returns accepted within 30 days.')
   })
 
   it('stands down when an active message-level automation exists', async () => {
     h.state.autoResponders = [{ id: 'auto-1' }]
     await dispatchInboundToAiReply(ARGS)
-    expect(h.generateReply).not.toHaveBeenCalled()
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
     expect(h.engineSendText).not.toHaveBeenCalled()
     expect(h.sendTypingIndicator).not.toHaveBeenCalled()
   })
@@ -153,7 +174,7 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
   it('skips when AI is off / not configured', async () => {
     h.loadAiConfig.mockResolvedValue(null)
     await dispatchInboundToAiReply(ARGS)
-    expect(h.generateReply).not.toHaveBeenCalled()
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
     expect(h.engineSendText).not.toHaveBeenCalled()
   })
 
@@ -197,7 +218,7 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
   it('skips when there is nothing to reply to', async () => {
     h.buildConversationContext.mockResolvedValue([])
     await dispatchInboundToAiReply(ARGS)
-    expect(h.generateReply).not.toHaveBeenCalled()
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
     expect(h.engineSendText).not.toHaveBeenCalled()
     expect(h.sendTypingIndicator).not.toHaveBeenCalled()
   })
@@ -219,7 +240,7 @@ describe('dispatchInboundToAiReply — typing indicator (#527)', () => {
     // Ordering: the indicator goes out while the customer waits on the
     // model, not after the reply is already generated.
     const typingOrder = h.sendTypingIndicator.mock.invocationCallOrder[0]
-    const llmOrder = h.generateReply.mock.invocationCallOrder[0]
+    const llmOrder = h.generateReplyWithFallback.mock.invocationCallOrder[0]
     expect(typingOrder).toBeLessThan(llmOrder)
     expect(h.engineSendText).toHaveBeenCalledTimes(1)
   })
@@ -228,7 +249,7 @@ describe('dispatchInboundToAiReply — typing indicator (#527)', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     h.sendTypingIndicator.mockRejectedValue(new Error('Meta API error: 400'))
     await dispatchInboundToAiReply(ARGS)
-    expect(h.generateReply).toHaveBeenCalledTimes(1)
+    expect(h.generateReplyWithFallback).toHaveBeenCalledTimes(1)
     expect(h.engineSendText).toHaveBeenCalledWith(
       expect.objectContaining({ conversationId: 'conv-1', text: 'Hello!' }),
     )
@@ -269,7 +290,7 @@ describe('dispatchInboundToAiReply — typing indicator (#527)', () => {
 
 describe('dispatchInboundToAiReply — handoff', () => {
   it('disables auto-reply, writes a summary, and does not send on handoff', async () => {
-    h.generateReply.mockResolvedValue({ text: '', handoff: true })
+    h.generateReplyWithFallback.mockResolvedValue({ text: '', handoff: true })
     await dispatchInboundToAiReply(ARGS)
     expect(h.engineSendText).not.toHaveBeenCalled()
     expect(h.state.rpcCalls).toHaveLength(0)
@@ -283,11 +304,53 @@ describe('dispatchInboundToAiReply — handoff', () => {
 
   it('routes to the configured handoff agent on handoff', async () => {
     h.loadAiConfig.mockResolvedValue(aiConfig({ handoffAgentId: 'agent-7' }))
-    h.generateReply.mockResolvedValue({ text: '', handoff: true })
+    h.generateReplyWithFallback.mockResolvedValue({ text: '', handoff: true })
     await dispatchInboundToAiReply(ARGS)
     expect(h.state.updatePayload).toMatchObject({
       ai_autoreply_disabled: true,
       assigned_agent_id: 'agent-7',
     })
+  })
+})
+
+describe('dispatchInboundToAiReply — provider fallback exhaustion (#specs/ai-provider-fallback-chain)', () => {
+  it('hands off to a human when every configured provider tier fails', async () => {
+    const attempts = [
+      { provider: 'openai', model: 'gpt-test', error: new AiError('boom', { code: 'provider_error' }) },
+    ]
+    h.generateReplyWithFallback.mockRejectedValue(new AllProvidersFailedError(attempts))
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).not.toHaveBeenCalled()
+    expect(h.state.updatePayload).toMatchObject({ ai_autoreply_disabled: true })
+    expect(h.state.updatePayload?.ai_handoff_summary).toContain('AI unavailable')
+    expect(h.state.updatePayload?.ai_handoff_summary).toContain('openai')
+    // No handoff target configured → conversation left unassigned.
+    expect(h.state.updatePayload).not.toHaveProperty('assigned_agent_id')
+  })
+
+  it('routes the provider-failure handoff to the configured agent', async () => {
+    h.loadAiConfig.mockResolvedValue(aiConfig({ handoffAgentId: 'agent-7' }))
+    h.generateReplyWithFallback.mockRejectedValue(
+      new AllProvidersFailedError([
+        { provider: 'openai', model: 'gpt-test', error: new AiError('boom', { code: 'timeout' }) },
+      ]),
+    )
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.state.updatePayload).toMatchObject({
+      ai_autoreply_disabled: true,
+      assigned_agent_id: 'agent-7',
+    })
+  })
+
+  it('does not swallow an unexpected (non-fallback) error', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    h.generateReplyWithFallback.mockRejectedValue(new Error('unexpected'))
+    // The outer try/catch in dispatchInboundToAiReply still catches this
+    // — it must never throw into the webhook handler — but it should
+    // NOT take the provider-failure handoff path for an error that
+    // isn't AllProvidersFailedError.
+    await expect(dispatchInboundToAiReply(ARGS)).resolves.toBeUndefined()
+    expect(h.state.updatePayload).toBeNull()
+    errorSpy.mockRestore()
   })
 })

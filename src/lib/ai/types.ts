@@ -8,6 +8,14 @@
 
 export type AiProvider = 'openai' | 'anthropic' | 'gemini'
 
+/** A provider/model/key triple — the primary config and each fallback
+ *  tier share this shape (see `AiConfig.fallbacks`). */
+export interface AiProviderCredentials {
+  provider: AiProvider
+  model: string
+  apiKey: string
+}
+
 /**
  * Account AI setup, decrypted and ready to use. Produced by
  * `loadAiConfig` — `apiKey` is the plaintext BYO provider key
@@ -29,6 +37,12 @@ export interface AiConfig {
    *  knowledge base is embedded and semantic retrieval turns on; when
    *  null, retrieval falls back to lexical full-text search. */
   embeddingsApiKey: string | null
+  /** Ordered fallback tiers tried, in order, when the primary
+   *  provider/model fails (see `generateReplyWithFallback`). Empty
+   *  when the account hasn't configured any — the auto-reply bot then
+   *  behaves exactly as it did before fallbacks existed: one attempt,
+   *  then a handoff on failure. */
+  fallbacks: AiProviderCredentials[]
 }
 
 /** A single conversation turn in the shape both providers accept. */

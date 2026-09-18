@@ -78,6 +78,20 @@ export function AiConfig() {
   const [handoffAgentId, setHandoffAgentId] = useState('');
   const [members, setMembers] = useState<AccountMember[]>([]);
 
+  // Fallback tier (specs/ai-provider-fallback-chain.md): tried when the
+  // primary provider/model fails. v1 supports exactly one tier — the
+  // backend (`ai_configs.fallbacks`) is an array so a second tier could
+  // be added later without a schema change, but one already covers the
+  // reported failure mode (a single provider's outage/quota).
+  const [fallbackEnabled, setFallbackEnabled] = useState(false);
+  const [fallbackProvider, setFallbackProvider] = useState<AiProvider>('anthropic');
+  const [fallbackModel, setFallbackModel] = useState(
+    AI_PROVIDER_DEFAULT_MODEL.anthropic,
+  );
+  const [fallbackApiKey, setFallbackApiKey] = useState('');
+  const [fallbackKeyEdited, setFallbackKeyEdited] = useState(false);
+  const [hasStoredFallbackKey, setHasStoredFallbackKey] = useState(false);
+
   // Guard keyed on the account (not a bare boolean) so an in-place
   // account switch — ownership transfer, multi-account membership —
   // refetches instead of showing the previous account's config. Mirrors
@@ -108,6 +122,16 @@ export function AiConfig() {
         setHasStoredEmbeddingsKey(Boolean(data.has_embeddings_key));
         setEmbeddingsKey(data.has_embeddings_key ? MASKED_KEY : '');
         setEmbeddingsKeyEdited(false);
+
+        const fallback = data.fallbacks?.[0] as
+          | { provider: AiProvider; model: string; has_key: boolean }
+          | undefined;
+        setFallbackEnabled(Boolean(fallback));
+        setFallbackProvider(fallback?.provider ?? 'anthropic');
+        setFallbackModel(fallback?.model ?? AI_PROVIDER_DEFAULT_MODEL.anthropic);
+        setHasStoredFallbackKey(Boolean(fallback?.has_key));
+        setFallbackApiKey(fallback?.has_key ? MASKED_KEY : '');
+        setFallbackKeyEdited(false);
       }
     } catch {
       toast.error(t('loadFailed'));
@@ -154,6 +178,15 @@ export function AiConfig() {
     auto_reply_enabled: autoReplyEnabled,
     auto_reply_max_per_conversation: maxPerConversation,
     handoff_agent_id: handoffAgentId || null,
+    fallbacks: fallbackEnabled
+      ? [
+          {
+            provider: fallbackProvider,
+            model: fallbackModel.trim(),
+            api_key: fallbackKeyEdited ? fallbackApiKey.trim() : undefined,
+          },
+        ]
+      : [],
   });
 
   const handleTest = async () => {
@@ -186,6 +219,16 @@ export function AiConfig() {
     if (!configured && !keyEdited) {
       toast.error(t('missingApiKey'));
       return;
+    }
+    if (fallbackEnabled) {
+      if (!fallbackModel.trim()) {
+        toast.error(t('missingModel'));
+        return;
+      }
+      if (!hasStoredFallbackKey && !fallbackKeyEdited) {
+        toast.error(t('missingApiKey'));
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -222,6 +265,10 @@ export function AiConfig() {
         setAutoReplyEnabled(false);
         setSystemPrompt('');
         setHandoffAgentId('');
+        setFallbackEnabled(false);
+        setFallbackApiKey('');
+        setFallbackKeyEdited(false);
+        setHasStoredFallbackKey(false);
       } else {
         const data = await res.json();
         toast.error(data.error ?? t('removeFailed'));
@@ -383,6 +430,90 @@ export function AiConfig() {
                 })}
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t('fallbackTitle')}</CardTitle>
+            <CardDescription>{t('fallbackDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
+              <p className="text-sm font-medium text-foreground">
+                {t('enableFallback')}
+              </p>
+              <Switch
+                checked={fallbackEnabled}
+                onCheckedChange={setFallbackEnabled}
+                disabled={disabled}
+              />
+            </div>
+
+            {fallbackEnabled && (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>{t('fallbackProvider')}</Label>
+                    <Select
+                      value={fallbackProvider}
+                      onValueChange={(v) => {
+                        const next = v as AiProvider;
+                        setFallbackProvider(next);
+                        setFallbackModel(AI_PROVIDER_DEFAULT_MODEL[next]);
+                      }}
+                      disabled={disabled}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="openai">{PROVIDER_LABEL.openai}</SelectItem>
+                        <SelectItem value="anthropic">
+                          {PROVIDER_LABEL.anthropic}
+                        </SelectItem>
+                        <SelectItem value="gemini">
+                          {PROVIDER_LABEL.gemini}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ai-fallback-model">{t('fallbackModel')}</Label>
+                    <Input
+                      id="ai-fallback-model"
+                      value={fallbackModel}
+                      onChange={(e) => setFallbackModel(e.target.value)}
+                      placeholder={AI_PROVIDER_DEFAULT_MODEL[fallbackProvider]}
+                      disabled={disabled}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ai-fallback-key">{t('fallbackApiKey')}</Label>
+                  <Input
+                    id="ai-fallback-key"
+                    type="password"
+                    value={fallbackApiKey}
+                    onChange={(e) => {
+                      setFallbackApiKey(e.target.value);
+                      setFallbackKeyEdited(true);
+                    }}
+                    onFocus={() => {
+                      if (!fallbackKeyEdited && hasStoredFallbackKey) {
+                        setFallbackApiKey('');
+                        setFallbackKeyEdited(true);
+                      }
+                    }}
+                    placeholder={KEY_PLACEHOLDER[fallbackProvider]}
+                    disabled={disabled}
+                    autoComplete="off"
+                  />
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
