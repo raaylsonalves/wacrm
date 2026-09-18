@@ -126,7 +126,7 @@
       "defaultAutomationName": "Automação",
       "itemMessage": "Nova mensagem de {who}",
       "itemNewContact": "Novo contato: {who}",
-      "itemDealInStage": "Negócio \"{title}\" em {stage}",
+      "itemDealInStage": "Negócio \"{title}\" movido para {stage}",
       "itemDealUpdated": "Negócio \"{title}\" atualizado",
       "itemBroadcastSent": "Disparo \"{name}\" enviado para {count} contatos",
       "itemBroadcastStatus": "Disparo \"{name}\" {status} ({count} destinatários)",

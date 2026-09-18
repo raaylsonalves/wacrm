@@ -126,7 +126,7 @@
       "defaultAutomationName": "Automation",
       "itemMessage": "New message from {who}",
       "itemNewContact": "New contact: {who}",
-      "itemDealInStage": "Deal \"{title}\" in {stage}",
+      "itemDealInStage": "Deal \"{title}\" moved to {stage}",
       "itemDealUpdated": "Deal \"{title}\" updated",
       "itemBroadcastSent": "Broadcast \"{name}\" sent to {count} contacts",
       "itemBroadcastStatus": "Broadcast \"{name}\" {status} ({count} recipients)",

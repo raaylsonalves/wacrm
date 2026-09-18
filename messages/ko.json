@@ -126,7 +126,7 @@
       "defaultAutomationName": "자동화",
       "itemMessage": "{who}님의 새 메시지",
       "itemNewContact": "새 연락처: {who}",
-      "itemDealInStage": "딜 \"{title}\" — {stage}",
+      "itemDealInStage": "딜 \"{title}\" {stage}(으)로 이동됨",
       "itemDealUpdated": "딜 \"{title}\" 업데이트됨",
       "itemBroadcastSent": "브로드캐스트 \"{name}\" — {count}명에게 발송됨",
       "itemBroadcastStatus": "브로드캐스트 \"{name}\" {status} (수신자 {count}명)",
