@@ -1,5 +1,31 @@
 # Spec: Localize automation step-result detail strings
 
+**Status: implemented — Option A, and widened beyond the two
+originally-named cases.** A repo-wide grep of `engine.ts` (the
+Non-goals section flagged this as a possibility) turned up 20
+hardcoded-English `detail` sites across `runStep`'s switch, not just
+`wait`/`condition` — every send/tag/assign/field/deal/webhook/close
+step returned its own interpolated string. All 20 were converted.
+
+`AutomationLogStepDetail` (`src/types/index.ts`) is `{ key: string;
+params?: Record<string, string | number> }`; `AutomationLogStepResult
+.detail` is now `string | AutomationLogStepDetail` — the `string` arm
+is the legacy shape, rendered verbatim for old rows exactly as this
+spec's acceptance criteria required. `StepRow` in
+`src/app/(dashboard)/automations/[id]/logs/page.tsx` translates known
+keys via the new `Automations.logs.stepDetail.*` namespace (all four
+locales); the `wait` step's `unit` param is itself resolved through
+`Automations.builder.config.units.*` (the same catalogue the step
+config form already uses) rather than being a second translation
+layer. `src/lib/automations/engine.test.ts` covers `wait`, `condition`,
+and one `update_contact_field` case end-to-end through
+`runAutomationsForTrigger` — doing so required teaching the file's
+`automation_steps` mock to actually respect `parent_step_id`/`branch`
+filters (it previously echoed every step back unfiltered, which is
+harmless for a root-only step but would have made the condition
+test's branch recursion loop forever matching itself as its own
+child).
+
 ## Problem
 
 The automation execution log (`/automations/<id>/logs`, expanded row)

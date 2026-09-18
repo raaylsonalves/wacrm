@@ -581,7 +581,13 @@
       "pipelineName": "Nombre del pipeline",
       "pipelineNamePlaceholder": "p. ej. Ventas corporativas",
       "defaultStagesDesc": "Las etapas predeterminadas (Nuevo lead → Ganado) se crearán automáticamente.",
-      "defaultStageNames": ["Nuevo lead", "Calificado", "Propuesta enviada", "Negociación", "Ganado"],
+      "defaultStageNames": [
+        "Nuevo lead",
+        "Calificado",
+        "Propuesta enviada",
+        "Negociación",
+        "Ganado"
+      ],
       "defaultPipelineName": "Pipeline de ventas",
       "cancel": "Cancelar",
       "creating": "Creando...",
@@ -962,7 +968,30 @@
         "failed": "fallida"
       },
       "back": "Atrás",
-      "backAria": "Atrás"
+      "backAria": "Atrás",
+      "stepDetail": {
+        "wait": "Esperando {amount} {unit}",
+        "conditionBranchYes": "Rama: sí",
+        "conditionBranchNo": "Rama: no",
+        "sentViaMeta": "Enviado vía Meta ({messageId})",
+        "interactiveSentViaMeta": "Mensaje interactivo enviado vía Meta ({messageId})",
+        "templateSentViaMeta": "Plantilla enviada vía Meta ({messageId})",
+        "tagAlreadyPresent": "La etiqueta {tagId} ya está presente",
+        "tagAddedDispatchSkipped": "Etiqueta {tagId} añadida; se omitió el disparo de tag_added en la profundidad {depth}",
+        "tagAddedDispatched": "Etiqueta {tagId} añadida y tag_added disparado",
+        "tagRemoved": "Etiqueta {tagId} eliminada",
+        "agentNotMember": "El agente {agentId} no es miembro de esta cuenta",
+        "noAgentResolved": "Ningún agente resuelto",
+        "assignedTo": "Asignado a {agentId}",
+        "fieldNotWritable": "El campo {field} no se puede escribir desde automatizaciones",
+        "customFieldUpdated": "Campo personalizado actualizado",
+        "fieldUpdated": "{field} actualizado",
+        "stageNotInPipeline": "La etapa {stageId} no está en el pipeline {pipelineId} de esta cuenta",
+        "dealCreated": "Negocio creado",
+        "webhookStatus": "El webhook respondió {status}",
+        "conversationClosed": "Conversación cerrada",
+        "unknownStepType": "Paso desconocido: {stepType}"
+      }
     },
     "relative": {
       "never": "nunca",

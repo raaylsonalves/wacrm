@@ -1,5 +1,5 @@
-import type { AccountRole } from "@/lib/auth/roles";
-import type { InteractiveMessagePayload } from "@/lib/whatsapp/interactive";
+import type { AccountRole } from '@/lib/auth/roles';
+import type { InteractiveMessagePayload } from '@/lib/whatsapp/interactive';
 
 export type {
   InteractiveMessagePayload,
@@ -8,7 +8,7 @@ export type {
   InteractiveButton,
   InteractiveListRow,
   InteractiveListSection,
-} from "@/lib/whatsapp/interactive";
+} from '@/lib/whatsapp/interactive';
 
 export interface Profile {
   id: string;
@@ -87,7 +87,7 @@ export interface AccountInvitation {
   id: string;
   account_id: string;
   /** Roles offered via invite — owner is never offered. */
-  role: Exclude<AccountRole, "owner">;
+  role: Exclude<AccountRole, 'owner'>;
   created_by_user_id: string | null;
   label: string | null;
   created_at: string;
@@ -237,7 +237,8 @@ export type ContentType =
   | 'template'
   /** Customer tapped a reply button or list row on a message we sent. */
   | 'interactive';
-export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
+export type MessageStatus =
+  'sending' | 'sent' | 'delivered' | 'read' | 'failed';
 
 export interface Message {
   id: string;
@@ -420,8 +421,10 @@ export interface Deal {
   assignee?: Profile;
 }
 
-export type BroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
-export type RecipientStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'replied' | 'failed';
+export type BroadcastStatus =
+  'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
+export type RecipientStatus =
+  'pending' | 'sent' | 'delivered' | 'read' | 'replied' | 'failed';
 
 export interface Broadcast {
   id: string;
@@ -603,10 +606,7 @@ export interface WaitStepConfig {
 }
 
 export type ConditionSubject =
-  | 'contact_field'
-  | 'tag_presence'
-  | 'message_content'
-  | 'time_of_day';
+  'contact_field' | 'tag_presence' | 'message_content' | 'time_of_day';
 
 export interface ConditionStepConfig {
   subject: ConditionSubject;
@@ -668,11 +668,25 @@ export interface AutomationStep {
   created_at: string;
 }
 
+// Structured, translatable step-result detail (specs/i18n-automation-step-detail.md).
+// `key` indexes `Automations.logs.stepDetail.*`; `params` are interpolated
+// into that message (message ids, tag/agent/field ids — never pre-
+// translated text). Kept as a plain object rather than a string so a
+// single-locale build-time app can translate historical log rows at
+// render time in whatever locale is active, instead of freezing
+// yesterday's locale into the row forever.
+export interface AutomationLogStepDetail {
+  key: string;
+  params?: Record<string, string | number>;
+}
+
 export interface AutomationLogStepResult {
   step_id: string;
   step_type: AutomationStepType;
   status: 'success' | 'skipped' | 'failed';
-  detail?: string;
+  // String is the legacy shape (rows written before this change) —
+  // still rendered verbatim, just not translated.
+  detail?: string | AutomationLogStepDetail;
 }
 
 export interface AutomationLog {

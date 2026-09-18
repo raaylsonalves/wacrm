@@ -581,7 +581,13 @@
       "pipelineName": "Nome do pipeline",
       "pipelineNamePlaceholder": "ex.: Vendas corporativas",
       "defaultStagesDesc": "As etapas padrão (Novo lead → Ganho) serão criadas automaticamente.",
-      "defaultStageNames": ["Novo lead", "Qualificado", "Proposta enviada", "Negociação", "Ganho"],
+      "defaultStageNames": [
+        "Novo lead",
+        "Qualificado",
+        "Proposta enviada",
+        "Negociação",
+        "Ganho"
+      ],
       "defaultPipelineName": "Pipeline de vendas",
       "cancel": "Cancelar",
       "creating": "Criando...",
@@ -962,7 +968,30 @@
         "failed": "falhou"
       },
       "back": "Voltar",
-      "backAria": "Voltar"
+      "backAria": "Voltar",
+      "stepDetail": {
+        "wait": "Aguardando {amount} {unit}",
+        "conditionBranchYes": "Ramo: sim",
+        "conditionBranchNo": "Ramo: não",
+        "sentViaMeta": "Enviado via Meta ({messageId})",
+        "interactiveSentViaMeta": "Mensagem interativa enviada via Meta ({messageId})",
+        "templateSentViaMeta": "Modelo enviado via Meta ({messageId})",
+        "tagAlreadyPresent": "Tag {tagId} já presente",
+        "tagAddedDispatchSkipped": "Tag {tagId} adicionada; disparo de tag_added ignorado na profundidade {depth}",
+        "tagAddedDispatched": "Tag {tagId} adicionada e tag_added disparado",
+        "tagRemoved": "Tag {tagId} removida",
+        "agentNotMember": "Agente {agentId} não é membro desta conta",
+        "noAgentResolved": "Nenhum agente resolvido",
+        "assignedTo": "Atribuído a {agentId}",
+        "fieldNotWritable": "Campo {field} não é gravável por automações",
+        "customFieldUpdated": "Campo personalizado atualizado",
+        "fieldUpdated": "{field} atualizado",
+        "stageNotInPipeline": "Etapa {stageId} não está no funil {pipelineId} desta conta",
+        "dealCreated": "Negócio criado",
+        "webhookStatus": "Webhook respondeu {status}",
+        "conversationClosed": "Conversa fechada",
+        "unknownStepType": "Etapa desconhecida: {stepType}"
+      }
     },
     "relative": {
       "never": "nunca",
