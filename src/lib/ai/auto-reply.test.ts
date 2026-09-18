@@ -164,12 +164,16 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     expect(h.sendTypingIndicator).not.toHaveBeenCalled()
   })
 
-  it('does not send when the atomic slot claim loses the race', async () => {
+  it('hands off to a human when the atomic slot claim loses the race', async () => {
     h.state.claim = false
     await dispatchInboundToAiReply(ARGS)
-    // It still attempts the claim, but the send is skipped.
+    // It still attempts the claim, but the send is skipped and the
+    // conversation is handed off rather than silently dropped — the
+    // reply was already generated (and paid for) at this point.
     expect(h.state.rpcCalls).toHaveLength(1)
     expect(h.engineSendText).not.toHaveBeenCalled()
+    expect(h.state.updatePayload).toMatchObject({ ai_autoreply_disabled: true })
+    expect(h.state.updatePayload?.ai_handoff_summary).toContain('limit reached')
   })
 
   it('skips when AI is off / not configured', async () => {
@@ -206,14 +210,34 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     expect(h.engineSendText).not.toHaveBeenCalled()
   })
 
-  it('skips when the per-conversation cap is reached', async () => {
+  it('hands off to a human when the per-conversation cap is reached (#reply-cap-handoff)', async () => {
     h.state.conv = {
       assigned_agent_id: null,
       ai_autoreply_disabled: false,
       ai_reply_count: 3,
     }
     await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
     expect(h.engineSendText).not.toHaveBeenCalled()
+    // Reaching the cap must not go silent — the settings copy promises
+    // a handoff here, and previously this path just returned with no
+    // notification, silently stranding the conversation.
+    expect(h.state.updatePayload).toMatchObject({ ai_autoreply_disabled: true })
+    expect(h.state.updatePayload?.ai_handoff_summary).toContain('limit reached')
+  })
+
+  it('routes the reply-cap handoff to the configured agent', async () => {
+    h.loadAiConfig.mockResolvedValue(aiConfig({ handoffAgentId: 'agent-7' }))
+    h.state.conv = {
+      assigned_agent_id: null,
+      ai_autoreply_disabled: false,
+      ai_reply_count: 3,
+    }
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.state.updatePayload).toMatchObject({
+      ai_autoreply_disabled: true,
+      assigned_agent_id: 'agent-7',
+    })
   })
 
   it('skips when there is nothing to reply to', async () => {

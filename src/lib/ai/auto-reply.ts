@@ -7,7 +7,12 @@ import {
   AllProvidersFailedError,
 } from './generate-with-fallback'
 import { buildSystemPrompt } from './defaults'
-import { buildHandoffSummary, buildProviderFailureSummary } from './handoff'
+import {
+  buildHandoffSummary,
+  buildProviderFailureSummary,
+  buildCapReachedSummary,
+} from './handoff'
+import type { AiConfig } from './types'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
 import {
@@ -21,6 +26,36 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
  *  read as a person pausing between messages, short enough that a
  *  3-bubble reply still fully lands in a couple of seconds. */
 const SEGMENT_DELAY_MS = 1200
+
+/**
+ * Stop the bot on this thread and route it to a human — the single
+ * mechanism behind all three ways auto-reply gives up: the model
+ * itself asking to hand off, every configured provider failing, or the
+ * per-conversation reply cap being reached. (a) pauses the bot here
+ * (sticky until re-enabled from the inbox), (b) routes to the
+ * configured handoff agent — null leaves it in the shared queue —
+ * without stomping an existing human assignment, and (c) leaves a
+ * short internal note. Assigning fires the `on_conversation_assigned`
+ * trigger, which notifies the agent — this is the only "someone should
+ * look at this" signal in every one of these paths, so skipping it
+ * (as the reply-cap path used to) silently strands the conversation.
+ */
+async function handOffToHuman(
+  db: ReturnType<typeof supabaseAdmin>,
+  conversationId: string,
+  config: Pick<AiConfig, 'handoffAgentId'>,
+  currentAssignedAgentId: string | null,
+  summary: string,
+): Promise<void> {
+  const update: Record<string, unknown> = {
+    ai_autoreply_disabled: true,
+    ai_handoff_summary: summary,
+  }
+  if (config.handoffAgentId && !currentAssignedAgentId) {
+    update.assigned_agent_id = config.handoffAgentId
+  }
+  await db.from('conversations').update(update).eq('id', conversationId)
+}
 
 interface DispatchArgs {
   /** Tenancy key — drives config, contact, and whatsapp_config lookups. */
@@ -98,8 +133,16 @@ export async function dispatchInboundToAiReply(
     if (conv.assigned_agent_id) return // a human owns this thread
     if (conv.ai_autoreply_disabled) return // handed off / turned off here
     // Cheap early-out; the authoritative cap check is the atomic claim
-    // below (this read can race a concurrent inbound).
-    if (conv.ai_reply_count >= config.autoReplyMaxPerConversation) return
+    // below (this read can race a concurrent inbound). Reaching the cap
+    // hands off to a human here — the settings copy already promises
+    // this ("...ou atinge o limite de respostas — ele pausa e
+    // encaminha a conversa"), so silently going quiet instead would be
+    // a customer message nobody is ever notified about.
+    if (conv.ai_reply_count >= config.autoReplyMaxPerConversation) {
+      const summary = buildCapReachedSummary({ max: config.autoReplyMaxPerConversation })
+      await handOffToHuman(db, conversationId, config, conv.assigned_agent_id, summary)
+      return
+    }
 
     const messages = await buildConversationContext(db, conversationId)
     if (messages.length === 0) return
@@ -155,14 +198,7 @@ export async function dispatchInboundToAiReply(
       // choosing to bail.
       console.error('[ai auto-reply] all AI providers failed:', err.attempts)
       const summary = buildProviderFailureSummary({ attempts: err.attempts })
-      const update: Record<string, unknown> = {
-        ai_autoreply_disabled: true,
-        ai_handoff_summary: summary,
-      }
-      if (config.handoffAgentId && !conv.assigned_agent_id) {
-        update.assigned_agent_id = config.handoffAgentId
-      }
-      await db.from('conversations').update(update).eq('id', conversationId)
+      await handOffToHuman(db, conversationId, config, conv.assigned_agent_id, summary)
       return
     }
 
@@ -186,26 +222,12 @@ export async function dispatchInboundToAiReply(
 
     if (handoff || !text) {
       // The model can't (or shouldn't) answer — stop auto-replying on
-      // this thread and hand it to a human. We (a) pause the bot here
-      // (sticky until re-enabled), (b) route the conversation to the
-      // configured handoff agent — null leaves it in the shared queue —
-      // and (c) leave a short internal note so whoever picks it up has
-      // context. Assigning fires the `on_conversation_assigned` trigger,
-      // which notifies the agent.
+      // this thread and hand it to a human.
       const summary = buildHandoffSummary({
         messages,
         replyCount: conv.ai_reply_count ?? 0,
       })
-      const update: Record<string, unknown> = {
-        ai_autoreply_disabled: true,
-        ai_handoff_summary: summary,
-      }
-      // Only set the assignee when a target is configured AND the thread
-      // isn't already owned — never stomp an existing human assignment.
-      if (config.handoffAgentId && !conv.assigned_agent_id) {
-        update.assigned_agent_id = config.handoffAgentId
-      }
-      await db.from('conversations').update(update).eq('id', conversationId)
+      await handOffToHuman(db, conversationId, config, conv.assigned_agent_id, summary)
       return
     }
 
@@ -229,7 +251,16 @@ export async function dispatchInboundToAiReply(
       console.error('[ai auto-reply] claim_ai_reply_slot failed:', claimErr)
       return
     }
-    if (claimed !== true) return // lost the per-conversation cap race
+    if (claimed !== true) {
+      // Lost the per-conversation cap race: a concurrent inbound
+      // claimed the last slot between our early-out read and this
+      // atomic claim. Rare, but the outcome is identical to hitting
+      // the cap outright — hand off rather than silently dropping the
+      // reply we already generated (and already spent tokens on).
+      const summary = buildCapReachedSummary({ max: config.autoReplyMaxPerConversation })
+      await handOffToHuman(db, conversationId, config, conv.assigned_agent_id, summary)
+      return
+    }
 
     // One claimed slot covers the whole reply regardless of how many
     // bubbles it's split into — the cap bounds how many times the bot

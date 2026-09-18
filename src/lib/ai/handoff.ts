@@ -85,3 +85,14 @@ export function buildProviderFailureSummary(args: {
   const count = attempts.length
   return `🤖 AI unavailable after trying ${count} ${count === 1 ? 'provider' : 'providers'}: ${tried} — transferred automatically.`
 }
+
+/**
+ * Build the internal note left when the per-conversation auto-reply
+ * cap (`auto_reply_max_per_conversation`) is reached and auto-reply
+ * hands the conversation to a human as a result — the third distinct
+ * cause alongside `buildHandoffSummary` (model-initiated) and
+ * `buildProviderFailureSummary` (every provider failed).
+ */
+export function buildCapReachedSummary(args: { max: number }): string {
+  return `🤖 AI reply limit reached (${args.max} replies in this conversation) — transferred automatically.`
+}
