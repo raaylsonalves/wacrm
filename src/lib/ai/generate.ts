@@ -68,20 +68,25 @@ export async function generateReply(args: GenerateArgs): Promise<GenerateResult>
  * the provider didn't report it).
  *
  * After the handoff sentinel is stripped, the remaining text is split
- * on `MULTI_MESSAGE_DELIMITER` into `segments` — auto-reply mode's
- * system prompt is the only one that teaches the model to emit it (see
- * `buildSystemPrompt`), so draft/playground callers just get `[text]`
- * back. A model that ignores the segment cap has its overflow merged
- * into the last segment rather than dropped, so no content is lost.
+ * on `MULTI_MESSAGE_DELIMITER` into `segments`. `text` is then rebuilt
+ * as `segments.join('\n\n')` rather than kept as the raw stripped
+ * string — the account's own business-context prompt is appended in
+ * EVERY mode (not just auto-reply), so a custom prompt that mentions
+ * the delimiter (to match the auto-reply persona) can make the model
+ * emit it even in draft/playground calls that never split on it. A
+ * `text` that still contained the literal token would leak straight
+ * into a draft reply's compose box. Rebuilding it from `segments`
+ * means every caller gets a clean, delimiter-free string by
+ * construction, whether or not it uses `segments` itself.
  */
 export function parseGeneration(
   raw: string,
   usage: AiUsage | null = null,
 ): GenerateResult {
   const handoff = raw.includes(HANDOFF_SENTINEL)
-  const text = raw.split(HANDOFF_SENTINEL).join('').trim()
+  const stripped = raw.split(HANDOFF_SENTINEL).join('').trim()
 
-  const rawSegments = text
+  const rawSegments = stripped
     .split(MULTI_MESSAGE_DELIMITER)
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
@@ -92,6 +97,8 @@ export function parseGeneration(
     const overflow = rawSegments.slice(MAX_REPLY_SEGMENTS - 1).join('\n\n')
     segments = [...head, overflow]
   }
+
+  const text = segments.length > 0 ? segments.join('\n\n') : stripped
 
   return { text, segments, handoff, usage }
 }

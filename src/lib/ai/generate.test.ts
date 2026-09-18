@@ -76,7 +76,7 @@ describe('parseGeneration', () => {
 
   it('splits on the multi-message delimiter', () => {
     expect(parseGeneration('First part [[NEXT]] Second part')).toEqual({
-      text: 'First part [[NEXT]] Second part',
+      text: 'First part\n\nSecond part',
       segments: ['First part', 'Second part'],
       handoff: false,
       usage: null,
@@ -85,11 +85,21 @@ describe('parseGeneration', () => {
 
   it('drops empty segments from stray/leading/trailing delimiters', () => {
     expect(parseGeneration('[[NEXT]] Only one [[NEXT]]')).toEqual({
-      text: '[[NEXT]] Only one [[NEXT]]',
+      text: 'Only one',
       segments: ['Only one'],
       handoff: false,
       usage: null,
     })
+  })
+
+  it('never leaves the literal delimiter in `text` — regression for the draft-mode leak', () => {
+    // A custom business-context prompt (appended in every mode, not
+    // just auto-reply) can teach the model the delimiter even for a
+    // draft call that never reads `segments` — `text` must be safe on
+    // its own regardless of who's asking.
+    const result = parseGeneration('Parte um [[NEXT]] Parte dois [[NEXT]] Parte três')
+    expect(result.text).not.toContain('[[NEXT]]')
+    expect(result.text).toBe('Parte um\n\nParte dois\n\nParte três')
   })
 
   it('caps segments, merging overflow into the last one', () => {

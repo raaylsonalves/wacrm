@@ -58,6 +58,7 @@ export function AiConfig() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [testingFallback, setTestingFallback] = useState(false);
   const [removing, setRemoving] = useState(false);
 
   const [configured, setConfigured] = useState(false);
@@ -208,6 +209,32 @@ export function AiConfig() {
       toast.error(t('testNetworkError'));
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleTestFallback = async () => {
+    setTestingFallback(true);
+    try {
+      const res = await fetch('/api/ai/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: fallbackProvider,
+          model: fallbackModel.trim(),
+          // Omitted when unedited so the route reuses the stored
+          // fallback key — `fallback_index: 0` tells it to look at
+          // ai_configs.fallbacks[0] rather than the primary api_key.
+          api_key: fallbackKeyEdited ? fallbackApiKey.trim() : undefined,
+          fallback_index: 0,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) toast.success(t('testSuccess'));
+      else toast.error(data.error ?? t('testRejected'));
+    } catch {
+      toast.error(t('testNetworkError'));
+    } finally {
+      setTestingFallback(false);
     }
   };
 
@@ -493,24 +520,43 @@ export function AiConfig() {
 
                 <div className="space-y-2">
                   <Label htmlFor="ai-fallback-key">{t('fallbackApiKey')}</Label>
-                  <Input
-                    id="ai-fallback-key"
-                    type="password"
-                    value={fallbackApiKey}
-                    onChange={(e) => {
-                      setFallbackApiKey(e.target.value);
-                      setFallbackKeyEdited(true);
-                    }}
-                    onFocus={() => {
-                      if (!fallbackKeyEdited && hasStoredFallbackKey) {
-                        setFallbackApiKey('');
+                  <div className="flex gap-2">
+                    <Input
+                      id="ai-fallback-key"
+                      type="password"
+                      value={fallbackApiKey}
+                      onChange={(e) => {
+                        setFallbackApiKey(e.target.value);
                         setFallbackKeyEdited(true);
+                      }}
+                      onFocus={() => {
+                        if (!fallbackKeyEdited && hasStoredFallbackKey) {
+                          setFallbackApiKey('');
+                          setFallbackKeyEdited(true);
+                        }
+                      }}
+                      placeholder={KEY_PLACEHOLDER[fallbackProvider]}
+                      disabled={disabled}
+                      autoComplete="off"
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={handleTestFallback}
+                      disabled={
+                        disabled ||
+                        testingFallback ||
+                        (!hasStoredFallbackKey && !fallbackKeyEdited)
                       }
-                    }}
-                    placeholder={KEY_PLACEHOLDER[fallbackProvider]}
-                    disabled={disabled}
-                    autoComplete="off"
-                  />
+                    >
+                      {testingFallback ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                      )}
+                      {t('testKey')}
+                    </Button>
+                  </div>
                 </div>
               </>
             )}

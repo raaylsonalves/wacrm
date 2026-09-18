@@ -38,22 +38,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'model is required' }, { status: 400 })
     }
 
+    // Which stored key to fall back to when `api_key` is blank: the
+    // primary key by default, or a fallback tier's own key when
+    // `fallback_index` is set — the settings UI's "Test key" button for
+    // the fallback provider section sends this so re-testing an
+    // already-saved fallback tier doesn't silently test the PRIMARY
+    // key instead (they're stored/encrypted independently).
+    const fallbackIndex =
+      typeof body.fallback_index === 'number' && Number.isInteger(body.fallback_index)
+        ? body.fallback_index
+        : null
+
     const rawKey = typeof body.api_key === 'string' ? body.api_key.trim() : ''
     let apiKeyPlain = rawKey
     if (!apiKeyPlain) {
       const { data: existing } = await supabase
         .from('ai_configs')
-        .select('api_key')
+        .select(fallbackIndex !== null ? 'fallbacks' : 'api_key')
         .eq('account_id', accountId)
         .maybeSingle()
-      if (!existing?.api_key) {
+
+      const storedEncrypted =
+        fallbackIndex !== null
+          ? ((existing as { fallbacks?: { api_key: string }[] } | null)?.fallbacks?.[
+              fallbackIndex
+            ]?.api_key ?? null)
+          : ((existing as { api_key?: string } | null)?.api_key ?? null)
+
+      if (!storedEncrypted) {
         return NextResponse.json(
           { error: 'Enter an API key to test.' },
           { status: 400 },
         )
       }
       try {
-        apiKeyPlain = decrypt(existing.api_key)
+        apiKeyPlain = decrypt(storedEncrypted)
       } catch {
         return NextResponse.json(
           { error: 'Stored API key could not be decrypted — re-enter your key.' },
