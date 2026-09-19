@@ -85,7 +85,7 @@ export function buildSystemPrompt(args: {
 
   if (mode === 'auto_reply') {
     parts.push(
-      `You are replying automatically with no human in the loop. If you cannot confidently and safely help — the customer explicitly asks for a human, is upset or complaining, or the request needs information you do not have — reply with exactly ${HANDOFF_SENTINEL} and nothing else. A human agent will then take over. Prefer handing off over guessing.`,
+      `You are replying automatically with no human in the loop. Whenever you decide a human should take over — because you cannot confidently and safely help, the customer explicitly asks for a human, is upset or complaining, the request needs information you do not have, OR the business context below tells you to hand off in this situation (e.g. the customer is ready to move forward, close, or do something only a human can do) — reply with exactly ${HANDOFF_SENTINEL} and nothing else. Never just say in your own words that you'll transfer or connect them to someone — that message alone does not hand off the conversation; emitting ${HANDOFF_SENTINEL} is the only thing that actually does. A human agent will then take over. Prefer handing off over guessing.`,
     )
     parts.push(
       'Write like a real person messaging on WhatsApp, not a formal document: short sentences, a warm and natural register (adjust formality to match the business context below). ' +
