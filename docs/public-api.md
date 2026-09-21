@@ -315,6 +315,22 @@ enforces before publishing runs first — an incomplete trigger/step
 configuration is rejected with `400 bad_request` rather than silently
 saved broken.
 
+### `PATCH /api/v1/automations/:id`
+
+Update an automation's `name`, `description`, `trigger_type`,
+`trigger_config`, or `is_active`. Scope: `automations:write`. Narrower
+than the dashboard's own edit route — `steps` can't be changed here;
+edit the step list in the dashboard builder. Activating, or editing an
+already-active automation, re-runs the same validation `POST` does and
+is rejected with `422` if the result would be invalid.
+
+```bash
+curl -X PATCH https://your-crm.example.com/api/v1/automations/<id> \
+  -H "Authorization: Bearer wacrm_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{ "is_active": true }'
+```
+
 ### `GET /api/v1/flows`
 
 List the account's flows, newest first. Scope: `flows:read`. Not

@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Bot, Copy, KeyRound, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Bot, Copy, KeyRound, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -77,6 +77,7 @@ export function ApiKeysSettings() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -245,20 +246,30 @@ export function ApiKeysSettings() {
 
                     {status === 'active' && (
                       <RequireRole min="admin">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRevoke(k)}
-                          disabled={revoking === k.id}
-                          className="self-start border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200 sm:self-auto"
-                        >
-                          {revoking === k.id ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-4" />
-                          )}
-                          {t('revoke')}
-                        </Button>
+                        <div className="flex gap-2 self-start sm:self-auto">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingKey(k)}
+                          >
+                            <Pencil className="size-4" />
+                            {t('edit')}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRevoke(k)}
+                            disabled={revoking === k.id}
+                            className="border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
+                          >
+                            {revoking === k.id ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-4" />
+                            )}
+                            {t('revoke')}
+                          </Button>
+                        </div>
                       </RequireRole>
                     )}
                   </li>
@@ -273,6 +284,14 @@ export function ApiKeysSettings() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreated={load}
+      />
+
+      <EditKeyDialog
+        apiKey={editingKey}
+        onOpenChange={(open) => {
+          if (!open) setEditingKey(null);
+        }}
+        onUpdated={load}
       />
     </section>
   );
@@ -568,6 +587,147 @@ function CreateKeyDialog({
             </DialogFooter>
           </>
         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ------------------------------------------------------------
+// Edit dialog — rename an existing key and/or change its scopes.
+// The plaintext key never re-appears here; only name and scopes are
+// mutable (see the PATCH route's comment for why key_hash isn't).
+// ------------------------------------------------------------
+
+function EditKeyDialog({
+  apiKey,
+  onOpenChange,
+  onUpdated,
+}: {
+  apiKey: ApiKey | null;
+  onOpenChange: (open: boolean) => void;
+  onUpdated: () => void;
+}) {
+  const t = useTranslations('Settings.apiKeys');
+  const [name, setName] = useState('');
+  const [scopes, setScopes] = useState<ApiScope[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (apiKey) {
+      setName(apiKey.name);
+      setScopes(apiKey.scopes.filter((s): s is ApiScope => API_SCOPES.includes(s as ApiScope)));
+    }
+  }, [apiKey]);
+
+  function toggleScope(scope: ApiScope, checked: boolean) {
+    setScopes((prev) =>
+      checked ? [...prev, scope] : prev.filter((s) => s !== scope)
+    );
+  }
+
+  async function handleSave() {
+    if (!apiKey) return;
+    const trimmed = name.trim();
+    if (!trimmed) {
+      toast.error(t('nameRequired'));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/account/api-keys/${apiKey.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed, scopes }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(payload.error || t('editError'));
+        return;
+      }
+      toast.success(t('editSuccess', { name: trimmed }));
+      onUpdated();
+      onOpenChange(false);
+    } catch (err) {
+      console.error('[EditKeyDialog] update error:', err);
+      toast.error(t('networkError'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Dialog open={apiKey !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="border-border bg-popover sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-popover-foreground">
+            {t('editTitle')}
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            {t('editDesc')}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="api-key-edit-name" className="text-muted-foreground">
+              {t('nameLabel')}
+            </Label>
+            <Input
+              id="api-key-edit-name"
+              value={name}
+              maxLength={80}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-muted-foreground">{t('scopesLabel')}</Label>
+            <div className="border-border space-y-2 rounded-md border p-3">
+              {API_SCOPES.map((scope) => (
+                <label
+                  key={scope}
+                  className="flex cursor-pointer items-start gap-2.5"
+                >
+                  <Checkbox
+                    checked={scopes.includes(scope)}
+                    onCheckedChange={(checked) =>
+                      toggleScope(scope, checked === true)
+                    }
+                    className="mt-0.5"
+                  />
+                  <span className="min-w-0">
+                    <span className="text-foreground block font-mono text-xs">
+                      {scope}
+                    </span>
+                    <span className="text-muted-foreground block text-xs">
+                      {SCOPE_DESCRIPTIONS[scope]}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="border-border text-muted-foreground hover:bg-muted"
+          >
+            {t('cancel')}
+          </Button>
+          <Button onClick={handleSave} disabled={submitting}>
+            {submitting ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                {t('saving')}
+              </>
+            ) : (
+              t('save')
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

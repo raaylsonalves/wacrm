@@ -85,7 +85,9 @@ when their guard is set.
 | `create_contact`     | write     | `contacts:write`     | Create (find-or-create) a contact               |
 | `update_contact`     | write     | `contacts:write`     | Update a contact / replace its tags             |
 | `create_automation`  | write     | `automations:write`  | Create an automation (from a template or custom)|
+| `update_automation`  | write     | `automations:write`  | Update an automation's name/trigger/active state|
 | `create_flow`        | write     | `flows:write`        | Create a flow (from a template, or an empty draft)|
+| `update_flow`        | write     | `flows:write`        | Update a flow's name/trigger (not its nodes)    |
 | `send_broadcast`     | broadcast | `broadcasts:send`    | Launch a template broadcast (requires `confirm`)|
 
 ## Safety model

@@ -137,6 +137,39 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
   );
 
   server.registerTool(
+    'update_automation',
+    {
+      title: 'Update automation',
+      description:
+        'Update an existing automation\'s name, description, trigger, or active state. Does not touch its step list — edit steps in the dashboard builder. Activating (`is_active: true`) or editing an already-active automation is rejected if the resulting trigger/steps would be invalid, same validation as the dashboard builder. Requires the automation id from list_automations.',
+      inputSchema: {
+        id: z.string().describe('Automation id.'),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        trigger_type: z
+          .enum([
+            'new_message_received',
+            'first_inbound_message',
+            'keyword_match',
+            'new_contact_created',
+            'conversation_assigned',
+            'tag_added',
+            'time_based',
+            'interactive_reply',
+          ])
+          .optional(),
+        trigger_config: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe('Shape depends on trigger_type — see docs/public-api.md.'),
+        is_active: z.boolean().optional().describe('Activate or deactivate the automation.'),
+      },
+      annotations: { title: 'Update automation', readOnlyHint: false, openWorldHint: false },
+    },
+    handle(async ({ id, ...body }) => jsonResult(await client.updateAutomation(id, body))),
+  );
+
+  server.registerTool(
     'create_flow',
     {
       title: 'Create flow',

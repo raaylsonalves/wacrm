@@ -191,6 +191,10 @@ export class WacrmClient {
     return this.request('POST', '/automations', { body });
   }
 
+  updateAutomation(id: string, body: unknown): Promise<{ data: unknown }> {
+    return this.request('PATCH', `/automations/${encodeURIComponent(id)}`, { body });
+  }
+
   // --- Flows ------------------------------------------------------------
 
   listFlows(): Promise<{ data: unknown[] }> {
