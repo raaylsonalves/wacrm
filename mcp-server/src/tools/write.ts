@@ -157,4 +157,24 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
     },
     handle(async (args) => jsonResult(await client.createFlow(args))),
   );
+
+  server.registerTool(
+    'update_flow',
+    {
+      title: 'Update flow trigger',
+      description:
+        'Update an existing flow name and/or entry trigger without changing its conversation nodes. Use trigger_type "keyword" with trigger_config.keywords to make an active flow start when a customer sends one of those phrases. Requires the flow id from list_flows.',
+      inputSchema: {
+        id: z.string().describe('Flow id.'),
+        name: z.string().optional(),
+        trigger_type: z.enum(['keyword', 'first_inbound_message', 'manual']).optional(),
+        trigger_config: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe('For keyword triggers, use {"keywords":["simular empréstimo"],"match_type":"contains"}.'),
+      },
+      annotations: { title: 'Update flow trigger', readOnlyHint: false, openWorldHint: false },
+    },
+    handle(async ({ id, ...body }) => jsonResult(await client.updateFlow(id, body))),
+  );
 }

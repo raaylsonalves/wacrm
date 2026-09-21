@@ -204,4 +204,8 @@ export class WacrmClient {
   createFlow(body: unknown): Promise<{ data: unknown }> {
     return this.request('POST', '/flows', { body });
   }
+
+  updateFlow(id: string, body: unknown): Promise<{ data: unknown }> {
+    return this.request('PATCH', `/flows/${encodeURIComponent(id)}`, { body });
+  }
 }
