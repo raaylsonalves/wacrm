@@ -499,7 +499,15 @@
       "toastCustomFieldsSaved": "Campos personalizados guardados",
       "toastCustomFieldsFailed": "Error al guardar los campos personalizados",
       "toastTemplateSent": "Plantilla \"{name}\" enviada",
-      "toastTemplateFailed": "Error al enviar la plantilla: {reason}"
+      "toastTemplateFailed": "Error al enviar la plantilla: {reason}",
+      "lgpd": {
+        "title": "LGPD",
+        "anonymizeBtn": "Anonimizar contacto",
+        "anonymizeConfirm": "¿Eliminar permanentemente el nombre, teléfono, correo, empresa y cualquier medio de mensajes de este contacto? Las conversaciones y negocios permanecen, pero los datos personales desaparecen. Esto no se puede deshacer.",
+        "anonymizedBadge": "Anonimizado",
+        "toastAnonymized": "Contacto anonimizado",
+        "toastAnonymizeFailed": "Error al anonimizar el contacto"
+      }
     },
     "importModal": {
       "title": "Importar contactos",

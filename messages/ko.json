@@ -499,7 +499,15 @@
       "toastCustomFieldsSaved": "커스텀 필드가 저장되었습니다",
       "toastCustomFieldsFailed": "커스텀 필드를 저장하지 못했습니다",
       "toastTemplateSent": "\"{name}\" 템플릿을 보냈습니다",
-      "toastTemplateFailed": "템플릿을 보내지 못했습니다: {reason}"
+      "toastTemplateFailed": "템플릿을 보내지 못했습니다: {reason}",
+      "lgpd": {
+        "title": "LGPD",
+        "anonymizeBtn": "연락처 익명화",
+        "anonymizeConfirm": "이 연락처의 이름, 전화번호, 이메일, 회사 및 메시지 미디어를 영구적으로 삭제할까요? 대화와 딜은 유지되지만 개인 정보는 사라집니다. 되돌릴 수 없습니다.",
+        "anonymizedBadge": "익명화됨",
+        "toastAnonymized": "연락처가 익명화되었습니다",
+        "toastAnonymizeFailed": "연락처를 익명화하지 못했습니다"
+      }
     },
     "importModal": {
       "title": "연락처 가져오기",

@@ -499,7 +499,15 @@
       "toastCustomFieldsSaved": "Custom fields saved",
       "toastCustomFieldsFailed": "Failed to save custom fields",
       "toastTemplateSent": "Template \"{name}\" sent",
-      "toastTemplateFailed": "Failed to send template: {reason}"
+      "toastTemplateFailed": "Failed to send template: {reason}",
+      "lgpd": {
+        "title": "LGPD",
+        "anonymizeBtn": "Anonymize contact",
+        "anonymizeConfirm": "Permanently remove this contact's name, phone, email, company and any message media? Conversations and deals stay, but personal data is gone. This can't be undone.",
+        "anonymizedBadge": "Anonymized",
+        "toastAnonymized": "Contact anonymized",
+        "toastAnonymizeFailed": "Failed to anonymize contact"
+      }
     },
     "importModal": {
       "title": "Import Contacts",

@@ -50,6 +50,29 @@ BEGIN
       'idx_contacts_account_wa_user_id is missing — migration 040 did not apply';
   END IF;
 
+  -- Opt-out flag (053) — broadcasts and automations both depend on
+  -- this column existing to skip contacts who asked to stop.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'contacts'
+      AND column_name = 'opted_out_at'
+  ) THEN
+    RAISE EXCEPTION 'contacts.opted_out_at is missing — migration 053 did not apply';
+  END IF;
+
+  -- Deal card ordering (055) — the trigger is what makes every insert
+  -- path (deal form, automations' create_deal step) get a sane default
+  -- position without each of them having to compute one.
+  IF to_regclass('public.idx_deals_stage_position') IS NULL THEN
+    RAISE EXCEPTION 'idx_deals_stage_position is missing — migration 055 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'trg_deal_default_position_in_stage'
+  ) THEN
+    RAISE EXCEPTION
+      'trg_deal_default_position_in_stage is missing — migration 055 did not apply';
+  END IF;
+
   -- 041 repairs create_broadcast_with_recipients, which 037/038 shipped
   -- with an ambiguous bare `RETURNING id, contact_id` (SQLSTATE 42702 on
   -- first call — plpgsql resolves names at execution, not CREATE, so a

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { addContactTag, deleteContactTag } from '@/lib/contacts/tag-api';
 import { useAuth } from '@/hooks/use-auth';
+import { useCan } from '@/hooks/use-can';
 import { formatCurrency, APP_LOCALE } from '@/lib/currency';
 import { toast } from 'sonner';
 import type {
@@ -52,6 +53,7 @@ import {
   X,
   DollarSign,
   LayoutTemplate,
+  ShieldOff,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { contactHandle } from '@/lib/whatsapp/wa-identity';
@@ -72,6 +74,7 @@ export function ContactDetailView({
   const t = useTranslations('Contacts.detailView');
   const supabase = createClient();
   const { accountId, defaultCurrency } = useAuth();
+  const canManageLgpd = useCan('manage-lgpd');
 
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(false);
@@ -109,6 +112,7 @@ export function ContactDetailView({
   const [editEmail, setEditEmail] = useState('');
   const [editCompany, setEditCompany] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
+  const [anonymizing, setAnonymizing] = useState(false);
 
   // Tags tab
   const [allTags, setAllTags] = useState<Tag[]>([]);
@@ -281,6 +285,30 @@ export function ContactDetailView({
       onUpdated();
     }
     setSavingDetails(false);
+  }
+
+  async function anonymizeContact() {
+    if (!contactId) return;
+    if (!window.confirm(t('lgpd.anonymizeConfirm'))) return;
+
+    setAnonymizing(true);
+    try {
+      const res = await fetch(`/api/contacts/${contactId}/anonymize`, {
+        method: 'POST',
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(payload?.error || t('lgpd.toastAnonymizeFailed'));
+        return;
+      }
+      toast.success(t('lgpd.toastAnonymized'));
+      fetchContact();
+      onUpdated();
+    } catch {
+      toast.error(t('lgpd.toastAnonymizeFailed'));
+    } finally {
+      setAnonymizing(false);
+    }
   }
 
   async function toggleTag(tagId: string) {
@@ -621,6 +649,37 @@ export function ContactDetailView({
                       )}
                       {t('saveChangesBtn')}
                     </Button>
+
+                    {canManageLgpd && (
+                      <div className="border-border/50 mt-2 space-y-1.5 border-t pt-3">
+                        <Label className="text-muted-foreground text-xs">
+                          {t('lgpd.title')}
+                        </Label>
+                        {contact.anonymized_at ? (
+                          <Badge
+                            variant="outline"
+                            className="text-muted-foreground"
+                          >
+                            {t('lgpd.anonymizedBadge')}
+                          </Badge>
+                        ) : (
+                          <Button
+                            onClick={anonymizeContact}
+                            disabled={anonymizing}
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-red-600/40 text-red-600 hover:bg-red-600/10 hover:text-red-600 dark:border-red-400/40 dark:text-red-400"
+                          >
+                            {anonymizing ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <ShieldOff className="size-3.5" />
+                            )}
+                            {t('lgpd.anonymizeBtn')}
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
 

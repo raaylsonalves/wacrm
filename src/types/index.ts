@@ -119,6 +119,13 @@ export interface Contact {
   email?: string;
   company?: string;
   avatar_url?: string;
+  /** Set once a STOP-style reply is detected (migration 053); never
+   *  cleared automatically. `null`/absent means still subscribed. */
+  opted_out_at?: string | null;
+  /** Set by `POST /api/contacts/[id]/anonymize` (migration 054), the
+   *  LGPD "right to be forgotten" action. `null`/absent means the
+   *  contact's PII is intact. */
+  anonymized_at?: string | null;
   created_at: string;
   updated_at: string;
   /** Hydrated by queries that embed `contact_tags(tags(*))` (e.g. the
@@ -420,6 +427,11 @@ export interface Deal {
   notes?: string;
   expected_close_date?: string;
   status?: DealStatus;
+  /** Manual card order within `stage_id` (migration 055). A DB trigger
+   *  fills this in on insert / cross-stage move when omitted — most
+   *  callers never need to set it themselves. See
+   *  `lib/pipelines/reorder.ts` for the board's drag-and-drop math. */
+  position_in_stage?: number | null;
   created_at: string;
   updated_at?: string;
   contact?: Contact;

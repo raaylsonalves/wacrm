@@ -88,7 +88,7 @@ export async function runAutomationsForTrigger(
     if (input.contactId) {
       const { data: owned, error: ownErr } = await db
         .from('contacts')
-        .select('id')
+        .select('id, opted_out_at')
         .eq('id', input.contactId)
         .eq('account_id', input.accountId)
         .maybeSingle();
@@ -103,6 +103,10 @@ export async function runAutomationsForTrigger(
         );
         return;
       }
+      // Opted-out contacts never re-enter automations, including the
+      // very STOP message that flagged them — no send_message step
+      // gets a chance to text someone who just asked to stop.
+      if (owned.opted_out_at) return;
     }
 
     const { data: automations, error } = await db
@@ -602,16 +606,14 @@ async function runStep(
         // Upsert on the table's UNIQUE(contact_id, custom_field_id) so repeated
         // runs overwrite rather than duplicate. Tenancy is enforced above and,
         // for the contact side, by the entry-point ownership guard.
-        await db
-          .from('contact_custom_values')
-          .upsert(
-            {
-              contact_id: args.contactId,
-              custom_field_id: customFieldId,
-              value,
-            },
-            { onConflict: 'contact_id,custom_field_id' }
-          );
+        await db.from('contact_custom_values').upsert(
+          {
+            contact_id: args.contactId,
+            custom_field_id: customFieldId,
+            value,
+          },
+          { onConflict: 'contact_id,custom_field_id' }
+        );
         return { key: 'customFieldUpdated' };
       }
 
