@@ -39,9 +39,9 @@ export const SCOPE_DESCRIPTIONS: Record<ApiScope, string> = {
   'broadcasts:send': 'Launch broadcast campaigns',
   'webhooks:manage': 'Register and manage outbound event webhooks',
   'automations:read': 'List automations and their quick-start templates',
-  'automations:write': 'Create automations (from a template or a custom step list)',
+  'automations:write': 'Create and update automations (from a template or a custom step list)',
   'flows:read': 'List flows and their quick-start templates',
-  'flows:write': 'Create flows (from a template)',
+  'flows:write': 'Create and update flows (from a template)',
 };
 
 /** Type-narrow an unknown value into a valid `ApiScope`. */

@@ -51,9 +51,9 @@ it. Grant the minimum.
 | `broadcasts:send`    | Launch broadcast campaigns               |
 | `webhooks:manage`    | Register and manage outbound webhooks    |
 | `automations:read`   | List automations and their templates     |
-| `automations:write`  | Create automations (template or custom)  |
+| `automations:write`  | Create and update automations            |
 | `flows:read`         | List flows and their templates           |
-| `flows:write`        | Create flows (from a template)           |
+| `flows:write`        | Create and update flows (from a template)|
 
 A key with **no scopes** still authenticates and can call
 `GET /api/v1/me` — useful for verifying a key works.
