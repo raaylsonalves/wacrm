@@ -448,13 +448,13 @@ function CreateKeyDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-1.5">
+            <div className="min-w-0 space-y-1.5">
               <Label className="text-muted-foreground">{t('apiKeyLabel')}</Label>
-              <div className="flex gap-2">
+              <div className="flex min-w-0 gap-2">
                 <Input
                   readOnly
                   value={createdKey}
-                  className="font-mono text-xs"
+                  className="min-w-0 font-mono text-xs"
                   onFocus={(e) => e.currentTarget.select()}
                 />
                 <Button type="button" variant="outline" onClick={copyKey}>
@@ -464,7 +464,7 @@ function CreateKeyDialog({
               </div>
             </div>
 
-            <div className="border-border space-y-2 rounded-md border p-3">
+            <div className="border-border min-w-0 space-y-2 rounded-md border p-3">
               <label className="flex cursor-pointer items-start gap-2.5">
                 <Checkbox
                   checked={mcpEnableWrites}
@@ -480,8 +480,8 @@ function CreateKeyDialog({
                   </span>
                 </span>
               </label>
-              <div className="flex items-start gap-2">
-                <pre className="border-border bg-muted flex-1 overflow-x-auto rounded-md border p-2 font-mono text-[11px] text-foreground">
+              <div className="flex min-w-0 items-start gap-2">
+                <pre className="border-border bg-muted min-w-0 flex-1 overflow-x-auto rounded-md border p-2 font-mono text-[11px] whitespace-pre-wrap break-all text-foreground">
                   {mcpConfig}
                 </pre>
                 <Button type="button" variant="outline" size="sm" onClick={copyMcpConfig}>
