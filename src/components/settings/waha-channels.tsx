@@ -73,13 +73,16 @@ export function WahaChannels() {
   const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [creating, setCreating] = useState(false);
-  // Once an instance is already connected, reuse its base URL/API key
-  // by default (mirrors deskcomm's single-shared-instance flow: only
-  // ask for a label, go straight to the QR) — the fields only reappear
-  // if the user explicitly wants to point this channel at a different
+  // Once an instance is resolvable without asking — either the host
+  // configured a shared WAHA_API_BASE_URL/WAHA_API_KEY (deskcomm's
+  // model: true from the very first channel, no per-account state
+  // needed) or this account already connected one itself — reuse it
+  // by default and only ask for a label. The fields only reappear if
+  // the user explicitly wants to point this channel at a different
   // WAHA server.
   const [useOtherInstance, setUseOtherInstance] = useState(false);
-  const hasExistingInstance = channels.length > 0;
+  const [hasGlobalInstance, setHasGlobalInstance] = useState(false);
+  const hasExistingInstance = hasGlobalInstance || channels.length > 0;
 
   const [qrChannelId, setQrChannelId] = useState<string | null>(null);
   const [qrDataUri, setQrDataUri] = useState<string | null>(null);
@@ -104,6 +107,7 @@ export function WahaChannels() {
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error || 'failed');
       setChannels(payload.channels ?? []);
+      setHasGlobalInstance(Boolean(payload.hasGlobalInstance));
     } catch {
       toast.error(t('toastLoadFailed'));
     } finally {
