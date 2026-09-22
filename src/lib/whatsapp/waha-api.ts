@@ -66,12 +66,20 @@ async function wahaFetch<T>(
     );
   }
   if (res.status === 204) return undefined as T;
+  // A handful of WAHA's action endpoints (observed: POST .../stop, 201)
+  // answer 2xx with an EMPTY body rather than 204 — not a proxy error,
+  // just that endpoint's own contract. An empty body on a 2xx is a
+  // no-op success, not a parse failure: treat it the same as 204 rather
+  // than throwing, which would make every stop/logout call fail even
+  // though the action itself succeeded.
+  const text = await res.text();
+  if (text === '') return undefined as T;
   try {
-    return (await res.json()) as T;
+    return JSON.parse(text) as T;
   } catch {
-    // A 2xx with a non-JSON body — e.g. a reverse proxy in front of
-    // the WAHA instance answering with an HTML error page instead of
-    // proxying through. Same normalization as above.
+    // A 2xx with a non-empty, non-JSON body — e.g. a reverse proxy in
+    // front of the WAHA instance answering with an HTML error page
+    // instead of proxying through. Same normalization as above.
     throw new WahaApiError(
       `WAHA returned a non-JSON response (status ${res.status})`,
       res.status
@@ -151,9 +159,18 @@ export async function startWahaSession(
 
 /**
  * Returns a data: URI (base64 PNG) ready to drop into an <img> tag.
- * WAHA's `/auth/qr` endpoint answers with `{ mimetype, data }` where
- * `data` is already base64. Only valid while the session is in
- * SCAN_QR_CODE.
+ *
+ * WAHA's `/auth/qr` endpoint answers with the raw PNG bytes
+ * (`Content-Type: image/png`) — NOT the `{ mimetype, data }` JSON
+ * envelope some WAHA docs/versions describe. deskcomm's own QR route
+ * (`app/api/v1/channel-sessions/[id]/qr/route.ts`) already treats it
+ * this way, proxying the bytes straight through; this used to go
+ * through `wahaFetch`, which unconditionally called `res.json()` and
+ * threw "non-JSON response" on every single QR fetch, healthy session
+ * or not — this was failing even right after a fresh, successful
+ * session create, nothing to do with the FAILED-session race below.
+ *
+ * Only valid while the session is in SCAN_QR_CODE.
  *
  * A 422 here has two different causes with different fixes — conflating
  * them is what used to make this 502 for good after the QR expired:
@@ -170,21 +187,44 @@ export async function startWahaSession(
  *    applies (`stop` → `logout` → `start`) for the analogous case of a
  *    revoked credential.
  */
+async function fetchQrImage(
+  baseUrl: string,
+  apiKey: string,
+  sessionName: string
+): Promise<string> {
+  const url = new URL(
+    `/api/${encodeURIComponent(sessionName)}/auth/qr`,
+    baseUrl
+  ).toString();
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { 'X-Api-Key': apiKey },
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new WahaApiError(`Could not reach WAHA: ${message}`, 0);
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new WahaApiError(
+      `WAHA request failed (${res.status}): ${text.slice(0, 500)}`,
+      res.status
+    );
+  }
+  const mimetype = res.headers.get('content-type') ?? 'image/png';
+  const bytes = Buffer.from(await res.arrayBuffer());
+  return `data:${mimetype};base64,${bytes.toString('base64')}`;
+}
+
 export async function getWahaQrCode(
   baseUrl: string,
   apiKey: string,
   sessionName: string
 ): Promise<string> {
-  const fetchQr = () =>
-    wahaFetch<{ mimetype: string; data: string }>(
-      baseUrl,
-      apiKey,
-      `/api/${encodeURIComponent(sessionName)}/auth/qr`
-    );
-
   try {
-    const result = await fetchQr();
-    return `data:${result.mimetype};base64,${result.data}`;
+    return await fetchQrImage(baseUrl, apiKey, sessionName);
   } catch (err) {
     if (!(err instanceof WahaApiError) || err.status !== 422) throw err;
 
@@ -199,8 +239,7 @@ export async function getWahaQrCode(
       await logoutWahaSession(baseUrl, apiKey, sessionName).catch(() => {});
     }
     await startWahaSession(baseUrl, apiKey, sessionName);
-    const result = await fetchQr();
-    return `data:${result.mimetype};base64,${result.data}`;
+    return fetchQrImage(baseUrl, apiKey, sessionName);
   }
 }
 
