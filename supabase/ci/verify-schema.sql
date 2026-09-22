@@ -60,6 +60,16 @@ BEGIN
     RAISE EXCEPTION 'contacts.opted_out_at is missing — migration 053 did not apply';
   END IF;
 
+  -- LGPD anonymization flag (054) — the anonymize endpoint depends on
+  -- this column existing to mark a contact as scrubbed.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'contacts'
+      AND column_name = 'anonymized_at'
+  ) THEN
+    RAISE EXCEPTION 'contacts.anonymized_at is missing — migration 054 did not apply';
+  END IF;
+
   -- Deal card ordering (055) — the trigger is what makes every insert
   -- path (deal form, automations' create_deal step) get a sane default
   -- position without each of them having to compute one.
@@ -71,6 +81,33 @@ BEGIN
   ) THEN
     RAISE EXCEPTION
       'trg_deal_default_position_in_stage is missing — migration 055 did not apply';
+  END IF;
+
+  -- WAHA channels (056) — a typo'd table/column name here would apply
+  -- cleanly and leave the connect flow silently unable to save a channel.
+  IF to_regclass('public.whatsapp_waha_channels') IS NULL THEN
+    RAISE EXCEPTION 'public.whatsapp_waha_channels is missing — migration 056 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'conversations'
+      AND column_name = 'whatsapp_channel_id'
+  ) THEN
+    RAISE EXCEPTION
+      'conversations.whatsapp_channel_id is missing — migration 056 did not apply';
+  END IF;
+
+  -- Deal trigger search_path pin (057) — closes the
+  -- function_search_path_mutable lint; a no-op ALTER FUNCTION that
+  -- silently didn't apply would leave the function resolvable against
+  -- a caller-controlled search_path again.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc
+    WHERE proname = 'fn_deal_default_position_in_stage'
+      AND 'search_path=public' = ANY(proconfig)
+  ) THEN
+    RAISE EXCEPTION
+      'fn_deal_default_position_in_stage search_path is not pinned — migration 057 did not apply';
   END IF;
 
   -- 041 repairs create_broadcast_with_recipients, which 037/038 shipped
