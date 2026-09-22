@@ -96,6 +96,18 @@ BEGIN
     RAISE EXCEPTION
       'conversations.whatsapp_channel_id is missing — migration 056 did not apply';
   END IF;
+  IF to_regclass('public.idx_waha_channels_session') IS NULL THEN
+    RAISE EXCEPTION
+      'idx_waha_channels_session is missing — migration 056 did not apply, WAHA channel creation is unprotected against duplicate session names';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'whatsapp_waha_channels'
+      AND policyname = 'waha_channels_select'
+  ) THEN
+    RAISE EXCEPTION
+      'waha_channels_select RLS policy is missing — migration 056 did not apply';
+  END IF;
 
   -- Deal trigger search_path pin (057) — closes the
   -- function_search_path_mutable lint; a no-op ALTER FUNCTION that

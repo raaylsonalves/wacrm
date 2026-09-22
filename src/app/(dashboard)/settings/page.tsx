@@ -12,6 +12,9 @@ import { ProfileForm } from '@/components/settings/profile-form';
 import { SecurityPanel } from '@/components/settings/security-panel';
 import { AppearancePanel } from '@/components/settings/appearance-panel';
 import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
+import { WahaChannels } from '@/components/settings/waha-channels';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertTriangle } from 'lucide-react';
 import { TemplateManager } from '@/components/settings/template-manager';
 import { QuickRepliesManager } from '@/components/settings/quick-replies-manager';
 import { FieldsAndTagsPanel } from '@/components/settings/fields-and-tags-panel';
@@ -68,7 +71,7 @@ function SettingsPageInner() {
       appearance: mode.charAt(0).toUpperCase() + mode.slice(1),
       deals: defaultCurrency,
     }),
-    [mode, defaultCurrency],
+    [mode, defaultCurrency]
   );
 
   const panel: Record<SettingsSection, ReactNode> = {
@@ -76,7 +79,28 @@ function SettingsPageInner() {
     profile: <ProfileForm />,
     security: <SecurityPanel />,
     appearance: <AppearancePanel />,
-    whatsapp: <WhatsAppConfig />,
+    whatsapp: (
+      <div className="space-y-4">
+        <div className="border-border bg-muted/30 text-muted-foreground flex items-start gap-2 rounded-lg border p-3 text-sm">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <p>{t('whatsappTabs.conflictWarning')}</p>
+        </div>
+        <Tabs defaultValue="cloud-api">
+          <TabsList>
+            <TabsTrigger value="cloud-api">
+              {t('whatsappTabs.cloudApi')}
+            </TabsTrigger>
+            <TabsTrigger value="qr">{t('whatsappTabs.qr')}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="cloud-api">
+            <WhatsAppConfig />
+          </TabsContent>
+          <TabsContent value="qr">
+            <WahaChannels />
+          </TabsContent>
+        </Tabs>
+      </div>
+    ),
     templates: <TemplateManager />,
     'quick-replies': <QuickRepliesManager />,
     fields: <FieldsAndTagsPanel />,
@@ -90,12 +114,10 @@ function SettingsPageInner() {
   return (
     <div>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="text-foreground text-2xl font-bold tracking-tight">
           {t('pageTitle')}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('pageDesc')}
-        </p>
+        <p className="text-muted-foreground mt-1 text-sm">{t('pageDesc')}</p>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[236px_minmax(0,1fr)] lg:items-start">

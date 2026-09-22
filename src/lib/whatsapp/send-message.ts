@@ -35,6 +35,11 @@ import {
   type InteractiveMessagePayload,
 } from '@/lib/whatsapp/interactive';
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption';
+import {
+  sendWahaText,
+  toWahaChatId,
+  WahaApiError,
+} from '@/lib/whatsapp/waha-api';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
 import {
   phoneVariants,
@@ -259,205 +264,293 @@ export async function sendMessageToConversation(
   const hasValidPhone = resolvedTarget.isPhone;
   const sanitizedPhone = hasValidPhone ? sendTarget : '';
 
-  // WhatsApp config, account-scoped.
-  const { data: config, error: configError } = await db
-    .from('whatsapp_config')
-    .select('*')
-    .eq('account_id', accountId)
-    .single();
+  // A conversation started on a WAHA channel (migration 056) sends
+  // back out over that same channel instead of the account's Cloud
+  // API number — see specs/waha-channel-connection.md. Scoped to text
+  // only for now (WAHA has no template/interactive concept, and this
+  // slice doesn't cover WAHA media send yet); everything else below
+  // this block (persisting the message, updating the conversation,
+  // pausing an active Flow run) is provider-agnostic and unchanged.
+  let waMessageId = '';
+  let workingPhone = sendTarget;
+  // Needed by the persist step below regardless of which branch ran —
+  // stays null for WAHA (no template concept there).
+  let templateRow: MessageTemplate | null = null;
 
-  if (configError || !config) {
-    throw new SendMessageError(
-      'whatsapp_not_configured',
-      'WhatsApp not configured. Please set up your WhatsApp integration first.',
-      400
-    );
-  }
-
-  const accessToken = decrypt(config.access_token);
-
-  // Self-heal legacy CBC ciphertexts. Fire-and-forget; idempotent.
-  if (isLegacyFormat(config.access_token)) {
-    void db
-      .from('whatsapp_config')
-      .update({ access_token: encrypt(accessToken) })
-      .eq('id', config.id)
-      .then(({ error }: { error: { message: string } | null }) => {
-        if (error) {
-          console.warn(
-            '[send-message] access_token GCM upgrade failed:',
-            error.message
-          );
-        }
-      });
-  }
-
-  // Resolve the reply target to its Meta message_id. The parent must
-  // belong to this same conversation — otherwise a caller could quote
-  // messages they can't see by guessing UUIDs.
-  let contextMessageId: string | undefined;
-  if (replyToMessageId) {
-    const { data: parent, error: parentError } = await db
-      .from('messages')
-      .select('message_id, conversation_id')
-      .eq('id', replyToMessageId)
-      .eq('conversation_id', conversationId)
-      .maybeSingle();
-
-    if (parentError || !parent) {
+  if (conversation.whatsapp_channel_id) {
+    if (messageType !== 'text') {
       throw new SendMessageError(
         'bad_request',
-        'reply_to_message_id not found in this conversation',
+        'This conversation is on a WAHA channel, which only supports text messages in this version.',
         400
       );
     }
-    if (!parent.message_id) {
-      console.warn(
-        '[send-message] reply target has no Meta message_id; sending without context'
-      );
-    } else {
-      contextMessageId = parent.message_id;
-    }
-  }
-
-  // Template row — needed for the send-builder's header + button
-  // components AND for the body we persist. The lookup tolerates the
-  // en / en_US split so a caller that omits the language still resolves
-  // a row (see resolveTemplateRow).
-  let templateRow: MessageTemplate | null = null;
-  let sendLanguage = templateLanguage || 'en_US';
-  if (messageType === 'template' && templateName) {
-    const resolved = await resolveTemplateRow(
-      db,
-      accountId,
-      templateName,
-      templateLanguage
-    );
-    if (resolved.malformed) {
+    if (!hasValidPhone) {
       throw new SendMessageError(
-        'template_malformed',
-        'Template row is malformed locally — run "Sync from Meta" in Settings to repair it.',
-        500
+        'bad_request',
+        'Contact has no phone number',
+        400
       );
     }
-    templateRow = resolved.row;
-    sendLanguage = resolved.language;
+
+    const { data: wahaChannel, error: wahaError } = await db
+      .from('whatsapp_waha_channels')
+      .select('*')
+      .eq('id', conversation.whatsapp_channel_id)
+      .eq('account_id', accountId)
+      .single();
+
+    if (wahaError || !wahaChannel) {
+      throw new SendMessageError(
+        'waha_channel_not_found',
+        "This conversation's WAHA channel no longer exists.",
+        400
+      );
+    }
+
+    try {
+      const result = await sendWahaText(
+        wahaChannel.waha_base_url,
+        decrypt(wahaChannel.waha_api_key),
+        wahaChannel.waha_session_name,
+        toWahaChatId(sanitizedPhone),
+        contentText!
+      );
+      waMessageId = result.id;
+    } catch (err) {
+      const message =
+        err instanceof WahaApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : String(err);
+      throw new SendMessageError(
+        'meta_error',
+        `WAHA send failed: ${message}`,
+        502
+      );
+    }
+
+    if (hasValidPhone && workingPhone !== sanitizedPhone) {
+      console.log(
+        `[send-message] Auto-corrected contact phone: ${sanitizedPhone} → ${workingPhone}`
+      );
+      await db
+        .from('contacts')
+        .update({ phone: workingPhone })
+        .eq('id', contact.id);
+    }
+  } else {
+    await sendViaCloudApi();
   }
 
-  const attempt = async (phone: string): Promise<string> => {
-    if (messageType === 'template') {
-      const result = await sendTemplateMessage({
-        phoneNumberId: config.phone_number_id,
-        accessToken,
-        to: phone,
-        templateName: templateName!,
-        language: sendLanguage,
-        template: templateRow ?? undefined,
-        messageParams: templateMessageParams ?? undefined,
-        params: templateParams || [],
-        contextMessageId,
-      });
-      return result.messageId;
+  async function sendViaCloudApi(): Promise<void> {
+    // WhatsApp config, account-scoped.
+    const { data: config, error: configError } = await db
+      .from('whatsapp_config')
+      .select('*')
+      .eq('account_id', accountId)
+      .single();
+
+    if (configError || !config) {
+      throw new SendMessageError(
+        'whatsapp_not_configured',
+        'WhatsApp not configured. Please set up your WhatsApp integration first.',
+        400
+      );
     }
-    if (isMediaKind) {
-      const result = await sendMediaMessage({
-        phoneNumberId: config.phone_number_id,
-        accessToken,
-        to: phone,
-        kind: messageType as MediaKind,
-        link: mediaUrl!,
-        caption: contentText || undefined,
-        filename: filename || undefined,
-        contextMessageId,
-      });
-      return result.messageId;
+
+    const accessToken = decrypt(config.access_token);
+
+    // Self-heal legacy CBC ciphertexts. Fire-and-forget; idempotent.
+    if (isLegacyFormat(config.access_token)) {
+      void db
+        .from('whatsapp_config')
+        .update({ access_token: encrypt(accessToken) })
+        .eq('id', config.id)
+        .then(({ error }: { error: { message: string } | null }) => {
+          if (error) {
+            console.warn(
+              '[send-message] access_token GCM upgrade failed:',
+              error.message
+            );
+          }
+        });
     }
-    if (messageType === 'interactive') {
-      const p = interactivePayload!;
-      if (p.kind === 'buttons') {
-        const result = await sendInteractiveButtons({
+
+    // Resolve the reply target to its Meta message_id. The parent must
+    // belong to this same conversation — otherwise a caller could quote
+    // messages they can't see by guessing UUIDs.
+    let contextMessageId: string | undefined;
+    if (replyToMessageId) {
+      const { data: parent, error: parentError } = await db
+        .from('messages')
+        .select('message_id, conversation_id')
+        .eq('id', replyToMessageId)
+        .eq('conversation_id', conversationId)
+        .maybeSingle();
+
+      if (parentError || !parent) {
+        throw new SendMessageError(
+          'bad_request',
+          'reply_to_message_id not found in this conversation',
+          400
+        );
+      }
+      if (!parent.message_id) {
+        console.warn(
+          '[send-message] reply target has no Meta message_id; sending without context'
+        );
+      } else {
+        contextMessageId = parent.message_id;
+      }
+    }
+
+    // Template row — needed for the send-builder's header + button
+    // components AND for the body we persist. The lookup tolerates the
+    // en / en_US split so a caller that omits the language still resolves
+    // a row (see resolveTemplateRow).
+    let sendLanguage = templateLanguage || 'en_US';
+    if (messageType === 'template' && templateName) {
+      const resolved = await resolveTemplateRow(
+        db,
+        accountId,
+        templateName,
+        templateLanguage
+      );
+      if (resolved.malformed) {
+        throw new SendMessageError(
+          'template_malformed',
+          'Template row is malformed locally — run "Sync from Meta" in Settings to repair it.',
+          500
+        );
+      }
+      templateRow = resolved.row;
+      sendLanguage = resolved.language;
+    }
+
+    const attempt = async (phone: string): Promise<string> => {
+      if (messageType === 'template') {
+        const result = await sendTemplateMessage({
           phoneNumberId: config.phone_number_id,
           accessToken,
           to: phone,
-          bodyText: p.body,
-          headerText: p.header || undefined,
-          footerText: p.footer || undefined,
-          buttons: p.buttons,
+          templateName: templateName!,
+          language: sendLanguage,
+          template: templateRow ?? undefined,
+          messageParams: templateMessageParams ?? undefined,
+          params: templateParams || [],
           contextMessageId,
         });
         return result.messageId;
       }
-      const result = await sendInteractiveList({
+      if (isMediaKind) {
+        const result = await sendMediaMessage({
+          phoneNumberId: config.phone_number_id,
+          accessToken,
+          to: phone,
+          kind: messageType as MediaKind,
+          link: mediaUrl!,
+          caption: contentText || undefined,
+          filename: filename || undefined,
+          contextMessageId,
+        });
+        return result.messageId;
+      }
+      if (messageType === 'interactive') {
+        const p = interactivePayload!;
+        if (p.kind === 'buttons') {
+          const result = await sendInteractiveButtons({
+            phoneNumberId: config.phone_number_id,
+            accessToken,
+            to: phone,
+            bodyText: p.body,
+            headerText: p.header || undefined,
+            footerText: p.footer || undefined,
+            buttons: p.buttons,
+            contextMessageId,
+          });
+          return result.messageId;
+        }
+        const result = await sendInteractiveList({
+          phoneNumberId: config.phone_number_id,
+          accessToken,
+          to: phone,
+          bodyText: p.body,
+          buttonLabel: p.button_label,
+          headerText: p.header || undefined,
+          footerText: p.footer || undefined,
+          sections: p.sections,
+          contextMessageId,
+        });
+        return result.messageId;
+      }
+      const result = await sendTextMessage({
         phoneNumberId: config.phone_number_id,
         accessToken,
         to: phone,
-        bodyText: p.body,
-        buttonLabel: p.button_label,
-        headerText: p.header || undefined,
-        footerText: p.footer || undefined,
-        sections: p.sections,
+        text: contentText!,
         contextMessageId,
       });
       return result.messageId;
-    }
-    const result = await sendTextMessage({
-      phoneNumberId: config.phone_number_id,
-      accessToken,
-      to: phone,
-      text: contentText!,
-      contextMessageId,
-    });
-    return result.messageId;
-  };
+    };
 
-  // Send via Meta — retry across phone-number variants if Meta rejects
-  // with "recipient not in allowed list"; persist a working variant
-  // back to the contact so the next send goes straight through.
-  let waMessageId = '';
-  let workingPhone = sendTarget;
-  try {
-    // Variants only make sense for a phone number — a BSUID is opaque
-    // and has exactly one correct form, so it gets a single attempt.
-    const variants = hasValidPhone
-      ? phoneVariants(sanitizedPhone)
-      : [sendTarget];
-    let lastError: unknown = null;
+    // Send via Meta — retry across phone-number variants if Meta rejects
+    // with "recipient not in allowed list"; persist a working variant
+    // back to the contact so the next send goes straight through.
+    // (waMessageId / workingPhone are the outer function's — declared
+    // before the WAHA/Cloud API branch above.)
+    try {
+      // Variants only make sense for a phone number — a BSUID is opaque
+      // and has exactly one correct form, so it gets a single attempt.
+      const variants = hasValidPhone
+        ? phoneVariants(sanitizedPhone)
+        : [sendTarget];
+      let lastError: unknown = null;
 
-    for (const variant of variants) {
-      try {
-        waMessageId = await attempt(variant);
-        workingPhone = variant;
-        lastError = null;
-        break;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        if (!isRecipientNotAllowedError(message)) {
-          throw err;
+      for (const variant of variants) {
+        try {
+          waMessageId = await attempt(variant);
+          workingPhone = variant;
+          lastError = null;
+          break;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          if (!isRecipientNotAllowedError(message)) {
+            throw err;
+          }
+          lastError = err;
+          console.warn(
+            `[send-message] variant "${variant}" rejected by Meta, trying next…`
+          );
         }
-        lastError = err;
-        console.warn(
-          `[send-message] variant "${variant}" rejected by Meta, trying next…`
-        );
       }
+
+      if (lastError) throw lastError;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Unknown Meta API error';
+      console.error(
+        '[send-message] Meta send failed for all variants:',
+        message
+      );
+      throw new SendMessageError(
+        'meta_error',
+        `Meta API error: ${message}`,
+        502
+      );
     }
 
-    if (lastError) throw lastError;
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : 'Unknown Meta API error';
-    console.error('[send-message] Meta send failed for all variants:', message);
-    throw new SendMessageError('meta_error', `Meta API error: ${message}`, 502);
-  }
-
-  if (hasValidPhone && workingPhone !== sanitizedPhone) {
-    console.log(
-      `[send-message] Auto-corrected contact phone: ${sanitizedPhone} → ${workingPhone}`
-    );
-    await db
-      .from('contacts')
-      .update({ phone: workingPhone })
-      .eq('id', contact.id);
-  }
+    if (hasValidPhone && workingPhone !== sanitizedPhone) {
+      console.log(
+        `[send-message] Auto-corrected contact phone: ${sanitizedPhone} → ${workingPhone}`
+      );
+      await db
+        .from('contacts')
+        .update({ phone: workingPhone })
+        .eq('id', contact.id);
+    }
+  } // end sendViaCloudApi
 
   // Persist the sent message. Field names MUST match the messages
   // schema (see 001_initial_schema.sql).
