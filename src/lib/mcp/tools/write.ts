@@ -194,9 +194,19 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
   server.registerTool(
     'update_flow',
     {
-      title: 'Update flow trigger',
+      title: 'Update flow',
       description:
-        'Update an existing flow name and/or entry trigger without changing its conversation nodes. Use trigger_type "keyword" with trigger_config.keywords to make an active flow start when a customer sends one of those phrases. Requires the flow id from list_flows.',
+        'Update an existing flow\'s name, entry trigger, and/or its conversation node graph. Use trigger_type "keyword" with trigger_config.keywords to make an active flow start when a customer sends one of those phrases. Requires the flow id from list_flows.\n\n' +
+        'IMPORTANT about `nodes`: when passed, it REPLACES the flow\'s entire node graph (delete-then-insert), not a partial patch — always send the complete set of nodes you want the flow to end up with. There is no visual builder here to catch mistakes as you go, so the graph is validated as a whole before saving (entry node exists, every next_node_key resolves, no unreachable nodes, WhatsApp interactive limits) and the call is rejected with the specific issues if it would be invalid — fix and resend rather than iterating node-by-node. Each node needs a unique `node_key` (a stable string you choose, referenced by other nodes\' `next_node_key`) and a `node_type` — see docs/public-api.md for the full catalog and each one\'s `config` shape:\n' +
+        '- "start" — config: { next_node_key }\n' +
+        '- "send_message" — config: { text, next_node_key }\n' +
+        '- "send_media" — config: { media_type: "image"|"video"|"document", media_url, caption?, next_node_key }\n' +
+        '- "send_buttons" — config: { text, buttons: [{ reply_id, title, next_node_key }] } (1–3 buttons, title ≤20 chars, each button branches independently)\n' +
+        '- "send_list" — config: { text, button_label, sections: [{ title?, rows: [{ reply_id, title, description?, next_node_key }] }] } (≤10 rows total)\n' +
+        '- "collect_input" — config: { prompt_text, var_key, next_node_key } (waits for the customer\'s next text reply, stores it under var_key)\n' +
+        '- "condition" — config: { subject: "var"|"tag"|"contact_field", subject_key, operator: "equals"|"contains"|"present"|"absent", value?, true_next, false_next }\n' +
+        '- "set_tag" — config: { mode: "add"|"remove", tag_id, next_node_key }\n' +
+        '- "handoff" / "end" — terminal nodes, config: {} (no outgoing edge)',
       inputSchema: {
         id: z.string().describe('Flow id.'),
         name: z.string().optional(),
@@ -205,8 +215,26 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
           .record(z.string(), z.unknown())
           .optional()
           .describe('For keyword triggers, use {"keywords":["simular empréstimo"],"match_type":"contains"}.'),
+        entry_node_id: z
+          .string()
+          .optional()
+          .describe('node_key of the node where the conversation starts. Required for the graph to validate once nodes are set.'),
+        nodes: z
+          .array(
+            z.object({
+              node_key: z.string().describe('Stable, unique id for this node, referenced by other nodes\' next_node_key.'),
+              node_type: z.string().describe('e.g. send_message, send_buttons, send_list, question, condition, assign_conversation, add_tag, handoff.'),
+              config: z
+                .record(z.string(), z.unknown())
+                .describe('Shape depends on node_type — see docs/public-api.md.'),
+              position_x: z.number().optional().describe('Builder canvas X position (cosmetic only). Defaults to 0.'),
+              position_y: z.number().optional().describe('Builder canvas Y position (cosmetic only). Defaults to 0.'),
+            }),
+          )
+          .optional()
+          .describe('REPLACES the entire node graph when passed — send the complete set, not a diff.'),
       },
-      annotations: { title: 'Update flow trigger', readOnlyHint: false, openWorldHint: false },
+      annotations: { title: 'Update flow', readOnlyHint: false, openWorldHint: false },
     },
     handle(async ({ id, ...body }) => jsonResult(await client.updateFlow(id, body))),
   );

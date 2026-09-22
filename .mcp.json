@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "wacrm": {
+      "command": "npx",
+      "args": ["-y", "wacrm-mcp"],
+      "env": {
+        "WACRM_BASE_URL": "https://wacrm-seven-kappa.vercel.app",
+        "WACRM_API_KEY": "${WACRM_API_KEY}",
+        "WACRM_ENABLE_WRITES": "true",
+        "WACRM_ENABLE_BROADCASTS": "true"
+      }
+    }
+  }
+}

@@ -357,10 +357,60 @@ curl -X POST https://your-crm.example.com/api/v1/flows \
 Pass `template_slug` (recommended — clones the template's full node
 graph as an immediately-activatable draft) or just `name` (and
 optionally `trigger_type`) for an empty draft with no nodes yet.
-Building a custom node graph isn't supported over this endpoint —
-flows are a stateful per-contact conversation graph (see `CLAUDE.md`'s
-"Automations vs Flows" section); add nodes in the dashboard's flow
-builder after creating from a template or an empty draft.
+Building a custom node graph isn't supported on **create** — flows are
+a stateful per-contact conversation graph (see `CLAUDE.md`'s
+"Automations vs Flows" section) — but `PATCH /api/v1/flows/:id` below
+can set the full node graph on an existing flow.
+
+### `PATCH /api/v1/flows/:id`
+
+Update a flow's `name`, entry trigger (`trigger_type`/`trigger_config`),
+`entry_node_id`, and/or its full conversation node graph (`nodes`).
+Scope: `flows:write`.
+
+```bash
+curl -X PATCH https://your-crm.example.com/api/v1/flows/<id> \
+  -H "Authorization: Bearer wacrm_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "entry_node_id": "start",
+        "nodes": [
+          { "node_key": "start", "node_type": "start",
+            "config": { "next_node_key": "menu" } },
+          { "node_key": "menu", "node_type": "send_buttons",
+            "config": { "text": "Escolha uma opção:", "buttons": [
+              { "reply_id": "a", "title": "Opção A", "next_node_key": "end" },
+              { "reply_id": "b", "title": "Opção B", "next_node_key": "end" }
+            ] } },
+          { "node_key": "end", "node_type": "end", "config": {} }
+        ]
+      }'
+```
+
+`nodes`, when passed, **replaces the entire graph** (delete-then-insert
+— send the complete set, not a diff you want merged). Unlike the
+dashboard builder, there's no live UI catching mistakes as you go, so
+the graph is always validated as a whole before saving — entry node
+exists, every `next_node_key` resolves, no unreachable nodes, WhatsApp
+interactive limits (`send_buttons` ≤3 buttons/≤20-char titles,
+`send_list` ≤10 rows) — and the call is rejected with `422` and the
+specific issues if the result would be invalid. This applies
+regardless of the flow's `status`, not just to already-active flows.
+
+Node types and their `config` shape (`node_key` is a stable id you
+choose, referenced by other nodes' `next_node_key`):
+
+| `node_type` | `config` |
+| --- | --- |
+| `start` | `{ next_node_key }` |
+| `send_message` | `{ text, next_node_key }` |
+| `send_media` | `{ media_type: "image"\|"video"\|"document", media_url, caption?, next_node_key }` |
+| `send_buttons` | `{ text, buttons: [{ reply_id, title, next_node_key }] }` (1–3 buttons) |
+| `send_list` | `{ text, button_label, sections: [{ title?, rows: [{ reply_id, title, description?, next_node_key }] }] }` |
+| `collect_input` | `{ prompt_text, var_key, next_node_key }` — waits for the customer's next text reply, stores it under `var_key` |
+| `condition` | `{ subject: "var"\|"tag"\|"contact_field", subject_key, operator: "equals"\|"contains"\|"present"\|"absent", value?, true_next, false_next }` |
+| `set_tag` | `{ mode: "add"\|"remove", tag_id, next_node_key }` |
+| `handoff` / `end` | `{}` — terminal, no outgoing edge |
 
 ## Pagination
 
