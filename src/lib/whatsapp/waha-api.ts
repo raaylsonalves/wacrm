@@ -110,21 +110,54 @@ export async function getWahaSessionStatus(
 }
 
 /**
+ * WAHA creates a session STOPPED — it does not auto-start it (some
+ * versions/configs do, but not reliably enough to assume). Every
+ * caller that wants a scannable session must start it explicitly
+ * afterwards; a session already starting/started answers 422/409,
+ * which the caller can treat as a no-op.
+ */
+export async function startWahaSession(
+  baseUrl: string,
+  apiKey: string,
+  sessionName: string
+): Promise<WahaSession> {
+  return wahaFetch<WahaSession>(
+    baseUrl,
+    apiKey,
+    `/api/sessions/${encodeURIComponent(sessionName)}/start`,
+    { method: 'POST' }
+  );
+}
+
+/**
  * Returns a data: URI (base64 PNG) ready to drop into an <img> tag.
  * WAHA's `/auth/qr` endpoint answers with `{ mimetype, data }` where
- * `data` is already base64.
+ * `data` is already base64. Only valid while the session is in
+ * SCAN_QR_CODE — a STOPPED session (never started, or WAHA restarted
+ * and dropped it) 422s here, so the caller starts it first and
+ * retries once rather than surfacing that as a hard failure.
  */
 export async function getWahaQrCode(
   baseUrl: string,
   apiKey: string,
   sessionName: string
 ): Promise<string> {
-  const result = await wahaFetch<{ mimetype: string; data: string }>(
-    baseUrl,
-    apiKey,
-    `/api/${encodeURIComponent(sessionName)}/auth/qr`
-  );
-  return `data:${result.mimetype};base64,${result.data}`;
+  const fetchQr = () =>
+    wahaFetch<{ mimetype: string; data: string }>(
+      baseUrl,
+      apiKey,
+      `/api/${encodeURIComponent(sessionName)}/auth/qr`
+    );
+
+  try {
+    const result = await fetchQr();
+    return `data:${result.mimetype};base64,${result.data}`;
+  } catch (err) {
+    if (!(err instanceof WahaApiError) || err.status !== 422) throw err;
+    await startWahaSession(baseUrl, apiKey, sessionName);
+    const result = await fetchQr();
+    return `data:${result.mimetype};base64,${result.data}`;
+  }
 }
 
 /**

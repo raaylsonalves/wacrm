@@ -22,7 +22,11 @@ import {
 } from '@/lib/rate-limit';
 import { decrypt, encrypt } from '@/lib/whatsapp/encryption';
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf';
-import { createWahaSession, WahaApiError } from '@/lib/whatsapp/waha-api';
+import {
+  createWahaSession,
+  startWahaSession,
+  WahaApiError,
+} from '@/lib/whatsapp/waha-api';
 
 /**
  * Resolve the URL our webhook is reachable at, for WAHA to call back.
@@ -196,6 +200,12 @@ export async function POST(request: Request) {
         webhookUrl,
         webhookSecret
       );
+      // WAHA creates the session STOPPED — it doesn't auto-start it.
+      // Without this, the channel sits unusable until the QR endpoint's
+      // own start-and-retry kicks in (getWahaQrCode), which works but
+      // wastes the first QR fetch. Starting here means the channel is
+      // already in SCAN_QR_CODE by the time the frontend asks for one.
+      await startWahaSession(baseUrl, apiKey, sessionName);
     } catch (err) {
       const message =
         err instanceof WahaApiError
