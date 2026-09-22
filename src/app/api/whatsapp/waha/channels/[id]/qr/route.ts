@@ -46,8 +46,18 @@ export async function GET(
       );
       return NextResponse.json({ qr: qrDataUri });
     } catch (err) {
+      // Not just a WahaApiError → likely a network/timeout error or a
+      // non-JSON response (e.g. a reverse proxy in front of the WAHA
+      // VPS returning an HTML error page). Log the real cause and
+      // surface its message too, rather than a message-less generic
+      // string — this was previously silent and hard to diagnose.
       const message =
-        err instanceof WahaApiError ? err.message : 'Could not fetch QR code';
+        err instanceof WahaApiError
+          ? err.message
+          : err instanceof Error
+            ? `Could not fetch QR code: ${err.message}`
+            : 'Could not fetch QR code';
+      console.error('[GET .../waha/channels/[id]/qr] failed:', err);
       return NextResponse.json({ error: message }, { status: 502 });
     }
   } catch (err) {

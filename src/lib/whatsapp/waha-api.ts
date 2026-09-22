@@ -35,18 +35,28 @@ async function wahaFetch<T>(
   { method = 'GET', body }: WahaRequestOptions = {}
 ): Promise<T> {
   const url = new URL(path, baseUrl).toString();
-  const res = await fetch(url, {
-    method,
-    headers: {
-      'X-Api-Key': apiKey,
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    // WAHA runs on infrastructure the caller controls, but a hung
-    // connect-flow request (bad URL, firewalled port) shouldn't hang
-    // the API route indefinitely.
-    signal: AbortSignal.timeout(15_000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: {
+        'X-Api-Key': apiKey,
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      // WAHA runs on infrastructure the caller controls, but a hung
+      // connect-flow request (bad URL, firewalled port) shouldn't hang
+      // the API route indefinitely.
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (err) {
+    // DNS failure, connection refused, or the 15s timeout above
+    // (AbortError) — normalized to WahaApiError so every caller's
+    // `err instanceof WahaApiError` check catches it, instead of
+    // silently falling through to a message-less generic string.
+    const message = err instanceof Error ? err.message : String(err);
+    throw new WahaApiError(`Could not reach WAHA: ${message}`, 0);
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -56,7 +66,17 @@ async function wahaFetch<T>(
     );
   }
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  try {
+    return (await res.json()) as T;
+  } catch {
+    // A 2xx with a non-JSON body — e.g. a reverse proxy in front of
+    // the WAHA instance answering with an HTML error page instead of
+    // proxying through. Same normalization as above.
+    throw new WahaApiError(
+      `WAHA returned a non-JSON response (status ${res.status})`,
+      res.status
+    );
+  }
 }
 
 export type WahaSessionStatus =
@@ -133,9 +153,22 @@ export async function startWahaSession(
  * Returns a data: URI (base64 PNG) ready to drop into an <img> tag.
  * WAHA's `/auth/qr` endpoint answers with `{ mimetype, data }` where
  * `data` is already base64. Only valid while the session is in
- * SCAN_QR_CODE — a STOPPED session (never started, or WAHA restarted
- * and dropped it) 422s here, so the caller starts it first and
- * retries once rather than surfacing that as a hard failure.
+ * SCAN_QR_CODE.
+ *
+ * A 422 here has two different causes with different fixes — conflating
+ * them is what used to make this 502 for good after the QR expired:
+ *
+ *  - STOPPED (never started, or WAHA restarted and dropped it): a plain
+ *    `start` is enough, the paired-device credential (if any) is still
+ *    good.
+ *  - FAILED (WAHA's own NOWEB/Baileys engine gives up generating the QR
+ *    after ~60s unscanned and force-stops the session — see WAHA's logs
+ *    for "QR refs attempts ended"): `start` alone reuses the now-dead
+ *    QR-pairing state and goes straight back to FAILED without ever
+ *    passing through SCAN_QR_CODE again. It needs `logout` first, to
+ *    discard that state — same fix deskcomm's own reconnect route
+ *    applies (`stop` → `logout` → `start`) for the analogous case of a
+ *    revoked credential.
  */
 export async function getWahaQrCode(
   baseUrl: string,
@@ -154,6 +187,17 @@ export async function getWahaQrCode(
     return `data:${result.mimetype};base64,${result.data}`;
   } catch (err) {
     if (!(err instanceof WahaApiError) || err.status !== 422) throw err;
+
+    const session = await wahaFetch<WahaSession>(
+      baseUrl,
+      apiKey,
+      `/api/sessions/${encodeURIComponent(sessionName)}`
+    ).catch(() => null);
+
+    if (session?.status === 'FAILED') {
+      await stopWahaSession(baseUrl, apiKey, sessionName).catch(() => {});
+      await logoutWahaSession(baseUrl, apiKey, sessionName).catch(() => {});
+    }
     await startWahaSession(baseUrl, apiKey, sessionName);
     const result = await fetchQr();
     return `data:${result.mimetype};base64,${result.data}`;
@@ -191,6 +235,40 @@ export async function deleteWahaSession(
     apiKey,
     `/api/sessions/${encodeURIComponent(sessionName)}`,
     { method: 'DELETE' }
+  );
+}
+
+export async function stopWahaSession(
+  baseUrl: string,
+  apiKey: string,
+  sessionName: string
+): Promise<void> {
+  await wahaFetch<void>(
+    baseUrl,
+    apiKey,
+    `/api/sessions/${encodeURIComponent(sessionName)}/stop`,
+    { method: 'POST' }
+  );
+}
+
+/**
+ * Discards the paired device's credential without touching the
+ * session's config (webhook, HMAC secret, ignore filters) — unlike
+ * `deleteWahaSession`, which would also require recreating those.
+ * Needed because a plain `startWahaSession` on a FAILED session
+ * reuses the dead credential and goes straight back to FAILED
+ * without ever passing through SCAN_QR_CODE again.
+ */
+export async function logoutWahaSession(
+  baseUrl: string,
+  apiKey: string,
+  sessionName: string
+): Promise<void> {
+  await wahaFetch<void>(
+    baseUrl,
+    apiKey,
+    `/api/sessions/${encodeURIComponent(sessionName)}/logout`,
+    { method: 'POST' }
   );
 }
 
