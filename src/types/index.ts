@@ -208,6 +208,13 @@ export interface Conversation {
   ai_autoreply_disabled?: boolean;
   ai_reply_count?: number;
   ai_handoff_summary?: string | null;
+  /**
+   * WAHA channel this conversation is pinned to (migration 056). `null`
+   * (the default, and the only value that existed before this column)
+   * means the account's Cloud API number — outbound sends and the Inbox
+   * channel filter/badge both key off this.
+   */
+  whatsapp_channel_id?: string | null;
 }
 
 // ============================================================

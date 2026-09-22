@@ -127,6 +127,27 @@ export async function getWahaQrCode(
   return `data:${result.mimetype};base64,${result.data}`;
 }
 
+/**
+ * Requests a pairing code (WAHA's alternative to scanning a QR — the
+ * user types this into WhatsApp on their phone instead) for the given
+ * phone number. WAHA expects the number in international format
+ * without a leading `+` or spaces; the caller normalizes.
+ */
+export async function requestWahaPairingCode(
+  baseUrl: string,
+  apiKey: string,
+  sessionName: string,
+  phoneNumber: string
+): Promise<string> {
+  const result = await wahaFetch<{ code: string }>(
+    baseUrl,
+    apiKey,
+    `/api/${encodeURIComponent(sessionName)}/auth/request-code`,
+    { method: 'POST', body: { phoneNumber } }
+  );
+  return result.code;
+}
+
 export async function deleteWahaSession(
   baseUrl: string,
   apiKey: string,

@@ -182,6 +182,32 @@ export function MessageThread({
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
+  // Label of the WAHA channel this conversation is pinned to, for the
+  // header badge — mirrors ConversationList's row badge (same reason:
+  // with multiple connected numbers, "which number is this on" isn't
+  // otherwise visible anywhere in the thread). `null` for a Cloud API
+  // conversation (whatsapp_channel_id is null) or while it's loading.
+  const [channelLabel, setChannelLabel] = useState<string | null>(null);
+  useEffect(() => {
+    const channelId = conversation?.whatsapp_channel_id;
+    if (!channelId) {
+      setChannelLabel(null);
+      return;
+    }
+    const supabase = createClient();
+    let cancelled = false;
+    supabase
+      .from("whatsapp_waha_channels")
+      .select("label")
+      .eq("id", channelId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setChannelLabel(data?.label ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [conversation?.whatsapp_channel_id]);
   // Purely visual spin state for the manual-refresh button. The actual
   // refetch is fire-and-forget through `onRefresh` (which bumps the
   // parent's resyncToken); the 700ms spin is just feedback so the click
@@ -937,7 +963,17 @@ export function MessageThread({
             {displayName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
+              {channelLabel && (
+                <span
+                  title={channelLabel}
+                  className="bg-muted text-muted-foreground shrink-0 truncate rounded-full px-1.5 py-0.5 text-[10px] leading-none font-medium"
+                >
+                  {channelLabel}
+                </span>
+              )}
+            </div>
             <p className="truncate text-xs text-muted-foreground">
               {contactHandle(contact)}
             </p>

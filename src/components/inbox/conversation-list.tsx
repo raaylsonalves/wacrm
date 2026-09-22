@@ -77,6 +77,11 @@ const STATUS_COLORS: Record<ConversationStatus, string> = {
 
 type InboxFilter = ConversationStatus | 'all' | 'unread';
 
+interface WahaChannelOption {
+  id: string;
+  label: string;
+}
+
 export function ConversationList({
   activeConversationId,
   onSelect,
@@ -123,6 +128,12 @@ export function ConversationList({
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  // Channel filter (specs/waha-channel-connection.md) — 'all' is the
+  // no-op default, 'cloud_api' matches conversations whose
+  // whatsapp_channel_id is null (the account's Meta number), and any
+  // other value is a whatsapp_waha_channels id.
+  const [wahaChannels, setWahaChannels] = useState<WahaChannelOption[]>([]);
+  const [selectedChannel, setSelectedChannel] = useState<string>('all');
 
   // Keep the latest callback in a ref so the fetch effect below can
   // have a stable, empty-dep identity. Previously the fetch useCallback
@@ -191,6 +202,25 @@ export function ConversationList({
     (async () => {
       const { data } = await supabase.from('tags').select('*').order('name');
       if (!cancelled && data) setTags(data as Tag[]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Channel labels for the filter picker and per-row badge — only
+  // fetched to know whether the account has any WAHA channels at all;
+  // both UI pieces stay hidden when it's Cloud-API-only (nothing to
+  // disambiguate).
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('whatsapp_waha_channels')
+        .select('id, label')
+        .order('label');
+      if (!cancelled && data) setWahaChannels(data as WahaChannelOption[]);
     })();
     return () => {
       cancelled = true;
@@ -294,6 +324,12 @@ export function ConversationList({
     return m;
   }, [tags]);
 
+  const wahaChannelsById = useMemo(() => {
+    const m = new Map<string, WahaChannelOption>();
+    for (const c of wahaChannels) m.set(c.id, c);
+    return m;
+  }, [wahaChannels]);
+
   const filtered = useMemo(() => {
     let result = conversations;
 
@@ -313,6 +349,14 @@ export function ConversationList({
       );
     }
 
+    if (selectedChannel !== 'all') {
+      result = result.filter((c) =>
+        selectedChannel === 'cloud_api'
+          ? !c.whatsapp_channel_id
+          : c.whatsapp_channel_id === selectedChannel
+      );
+    }
+
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter((c) => {
@@ -324,7 +368,14 @@ export function ConversationList({
     }
 
     return result;
-  }, [conversations, filter, search, selectedTagIds, selectedCompany]);
+  }, [
+    conversations,
+    filter,
+    search,
+    selectedTagIds,
+    selectedCompany,
+    selectedChannel,
+  ]);
 
   const toggleTag = useCallback((id: string) => {
     setSelectedTagIds((prev) =>
@@ -489,6 +540,69 @@ export function ConversationList({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          {wahaChannels.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(
+                  'hover:bg-muted inline-flex h-7 max-w-40 items-center justify-center gap-1 rounded-md px-2 text-xs',
+                  selectedChannel !== 'all'
+                    ? 'text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <span className="truncate">
+                  {selectedChannel === 'all'
+                    ? t('channel')
+                    : selectedChannel === 'cloud_api'
+                      ? t('officialApi')
+                      : (wahaChannelsById.get(selectedChannel)?.label ??
+                        t('channel'))}
+                </span>
+                <ChevronDown className="h-3 w-3 shrink-0" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="border-border bg-popover max-h-64 w-56"
+              >
+                <DropdownMenuItem
+                  onClick={() => setSelectedChannel('all')}
+                  className={cn(
+                    'text-sm',
+                    selectedChannel === 'all'
+                      ? 'text-primary'
+                      : 'text-popover-foreground'
+                  )}
+                >
+                  {t('allChannels')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setSelectedChannel('cloud_api')}
+                  className={cn(
+                    'text-sm',
+                    selectedChannel === 'cloud_api'
+                      ? 'text-primary'
+                      : 'text-popover-foreground'
+                  )}
+                >
+                  {t('officialApi')}
+                </DropdownMenuItem>
+                {wahaChannels.map((c) => (
+                  <DropdownMenuItem
+                    key={c.id}
+                    onClick={() => setSelectedChannel(c.id)}
+                    className={cn(
+                      'text-sm',
+                      selectedChannel === c.id
+                        ? 'text-primary'
+                        : 'text-popover-foreground'
+                    )}
+                  >
+                    <span className="truncate">{c.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {hasContactFilters && (
@@ -567,6 +681,14 @@ export function ConversationList({
                 onToggleTag={handleRowToggleTag}
                 now={nowTick}
                 responseTimeTargetMinutes={responseTimeTargetMinutes}
+                channelLabel={
+                  wahaChannels.length === 0
+                    ? null
+                    : conv.whatsapp_channel_id
+                      ? (wahaChannelsById.get(conv.whatsapp_channel_id)
+                          ?.label ?? null)
+                      : t('officialApi')
+                }
               />
             ))}
           </div>
@@ -603,6 +725,13 @@ interface ConversationItemProps {
    *  this row changes. */
   now: number;
   responseTimeTargetMinutes: number;
+  /**
+   * Which WhatsApp number this conversation is on — `null` when the
+   * account has no WAHA channels configured (nothing to disambiguate,
+   * so the badge stays hidden entirely rather than always saying
+   * "Official API").
+   */
+  channelLabel: string | null;
 }
 
 const SLA_TIER_CLASSES: Record<SlaTier, string> = {
@@ -624,6 +753,7 @@ function ConversationItem({
   onToggleTag,
   now,
   responseTimeTargetMinutes,
+  channelLabel,
 }: ConversationItemProps) {
   const contact = conversation.contact;
   const displayName = contact?.name || contact?.phone || t('unknown');
@@ -686,8 +816,18 @@ function ConversationItem({
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-foreground truncate text-sm font-medium">
-            {displayName}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="text-foreground truncate text-sm font-medium">
+              {displayName}
+            </span>
+            {channelLabel && (
+              <span
+                title={channelLabel}
+                className="bg-muted text-muted-foreground shrink-0 truncate rounded-full px-1.5 py-0.5 text-[9px] leading-none font-medium"
+              >
+                {channelLabel}
+              </span>
+            )}
           </span>
           <span className="text-muted-foreground shrink-0 text-[10px]">
             {timeAgo}

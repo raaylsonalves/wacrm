@@ -20,7 +20,7 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from '@/lib/rate-limit';
-import { encrypt } from '@/lib/whatsapp/encryption';
+import { decrypt, encrypt } from '@/lib/whatsapp/encryption';
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf';
 import { createWahaSession, WahaApiError } from '@/lib/whatsapp/waha-api';
 
@@ -91,14 +91,37 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const label = typeof body.label === 'string' ? body.label.trim() : '';
-    const baseUrl =
+    let baseUrl =
       typeof body.waha_base_url === 'string' ? body.waha_base_url.trim() : '';
-    const apiKey =
+    let apiKey =
       typeof body.waha_api_key === 'string' ? body.waha_api_key.trim() : '';
 
     if (!label) {
       return NextResponse.json({ error: 'label is required' }, { status: 400 });
     }
+
+    // Both omitted → reuse the account's most recently connected WAHA
+    // instance instead of asking again (mirrors deskcomm's single
+    // shared-instance flow, where connecting a new number is a
+    // one-click "+ Connect" straight to the QR). Same UX for the
+    // common case — one WAHA server, several numbers — while still
+    // letting an explicit baseUrl/apiKey pair point at a different
+    // instance for the rarer multi-instance case.
+    if (!baseUrl && !apiKey) {
+      const { data: lastChannel } = await ctx.supabase
+        .from('whatsapp_waha_channels')
+        .select('waha_base_url, waha_api_key')
+        .eq('account_id', ctx.accountId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastChannel) {
+        baseUrl = lastChannel.waha_base_url;
+        apiKey = decrypt(lastChannel.waha_api_key);
+      }
+    }
+
     if (!baseUrl) {
       return NextResponse.json(
         { error: 'waha_base_url is required' },

@@ -27,6 +27,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { SettingsPanelHead } from './settings-panel-head';
+import { cn } from '@/lib/utils';
 
 type ChannelStatus = 'connecting' | 'connected' | 'disconnected';
 
@@ -72,10 +73,26 @@ export function WahaChannels() {
   const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [creating, setCreating] = useState(false);
+  // Once an instance is already connected, reuse its base URL/API key
+  // by default (mirrors deskcomm's single-shared-instance flow: only
+  // ask for a label, go straight to the QR) — the fields only reappear
+  // if the user explicitly wants to point this channel at a different
+  // WAHA server.
+  const [useOtherInstance, setUseOtherInstance] = useState(false);
+  const hasExistingInstance = channels.length > 0;
 
   const [qrChannelId, setQrChannelId] = useState<string | null>(null);
   const [qrDataUri, setQrDataUri] = useState<string | null>(null);
   const [qrError, setQrError] = useState<string | null>(null);
+  // Connect dialog offers two ways in, mirroring deskcomm: scan a QR
+  // (default) or type a pairing code into WhatsApp — useful when the
+  // camera on the connecting device can't reach the QR (e.g. desktop
+  // WAHA VPS, phone in another room).
+  const [connectMode, setConnectMode] = useState<'qr' | 'code'>('qr');
+  const [pairingPhone, setPairingPhone] = useState('');
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [pairingError, setPairingError] = useState<string | null>(null);
+  const [pairingRequesting, setPairingRequesting] = useState(false);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -140,8 +157,16 @@ export function WahaChannels() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channels, t]);
 
+  // Whether this connect needs the base URL/API key fields at all —
+  // only for the very first channel, or when the user opted into a
+  // different instance for this one.
+  const needsInstanceFields = !hasExistingInstance || useOtherInstance;
+
   async function handleCreate() {
-    if (!label.trim() || !baseUrl.trim() || !apiKey.trim()) {
+    if (
+      !label.trim() ||
+      (needsInstanceFields && (!baseUrl.trim() || !apiKey.trim()))
+    ) {
       toast.error(t('toastFieldsRequired'));
       return;
     }
@@ -152,8 +177,11 @@ export function WahaChannels() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           label: label.trim(),
-          waha_base_url: baseUrl.trim(),
-          waha_api_key: apiKey.trim(),
+          // Omitted (empty string) when reusing the existing instance —
+          // the API falls back to the account's last-connected WAHA
+          // base URL/API key in that case.
+          waha_base_url: needsInstanceFields ? baseUrl.trim() : '',
+          waha_api_key: needsInstanceFields ? apiKey.trim() : '',
         }),
       });
       const payload = await res.json();
@@ -164,6 +192,7 @@ export function WahaChannels() {
       setLabel('');
       setBaseUrl('');
       setApiKey('');
+      setUseOtherInstance(false);
       toast.success(t('toastCreated'));
       openQr(payload.channel.id);
     } catch (err) {
@@ -177,6 +206,10 @@ export function WahaChannels() {
     setQrChannelId(channelId);
     setQrDataUri(null);
     setQrError(null);
+    setConnectMode('qr');
+    setPairingPhone('');
+    setPairingCode(null);
+    setPairingError(null);
     try {
       const res = await fetch(`/api/whatsapp/waha/channels/${channelId}/qr`);
       const payload = await res.json();
@@ -184,6 +217,32 @@ export function WahaChannels() {
       setQrDataUri(payload.qr);
     } catch (err) {
       setQrError(err instanceof Error ? err.message : t('toastQrFailed'));
+    }
+  }
+
+  async function handleRequestPairingCode() {
+    if (!qrChannelId || !pairingPhone.trim()) return;
+    setPairingRequesting(true);
+    setPairingError(null);
+    setPairingCode(null);
+    try {
+      const res = await fetch(
+        `/api/whatsapp/waha/channels/${qrChannelId}/pairing-code`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: pairingPhone.trim() }),
+        }
+      );
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload?.error || 'failed');
+      setPairingCode(payload.code);
+    } catch (err) {
+      setPairingError(
+        err instanceof Error ? err.message : t('toastPairingCodeFailed')
+      );
+    } finally {
+      setPairingRequesting(false);
     }
   }
 
@@ -303,26 +362,61 @@ export function WahaChannels() {
                 placeholder={t('labelPlaceholder')}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label>{t('baseUrlField')}</Label>
-              <Input
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://waha.example.com"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t('apiKeyField')}</Label>
-              <Input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-              <p className="text-muted-foreground text-xs">{t('apiKeyHint')}</p>
-            </div>
+            {hasExistingInstance && !useOtherInstance ? (
+              <button
+                type="button"
+                onClick={() => setUseOtherInstance(true)}
+                className="text-muted-foreground hover:text-foreground text-left text-xs underline"
+              >
+                {t('useOtherInstanceBtn')}
+              </button>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Label>{t('baseUrlField')}</Label>
+                  <Input
+                    value={baseUrl}
+                    onChange={(e) => setBaseUrl(e.target.value)}
+                    placeholder="https://waha.example.com"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t('apiKeyField')}</Label>
+                  <Input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    {t('apiKeyHint')}
+                  </p>
+                </div>
+                {hasExistingInstance && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUseOtherInstance(false);
+                      setBaseUrl('');
+                      setApiKey('');
+                    }}
+                    className="text-muted-foreground hover:text-foreground text-left text-xs underline"
+                  >
+                    {t('useSameInstanceBtn')}
+                  </button>
+                )}
+              </>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAddOpen(false);
+                setUseOtherInstance(false);
+                setBaseUrl('');
+                setApiKey('');
+              }}
+            >
               {t('cancelBtn')}
             </Button>
             <Button onClick={handleCreate} disabled={creating}>
@@ -346,25 +440,104 @@ export function WahaChannels() {
           <DialogHeader>
             <DialogTitle>{t('qrDialogTitle')}</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col items-center gap-3 py-4">
-            {qrError ? (
-              <Badge variant="outline" className="text-red-600">
-                {qrError}
-              </Badge>
-            ) : qrDataUri ? (
-              // eslint-disable-next-line @next/next/no-img-element -- data: URI from WAHA, not a local asset next/image can optimize
-              <img
-                src={qrDataUri}
-                alt={t('qrAlt')}
-                className="size-56 rounded-lg"
-              />
-            ) : (
-              <Loader2 className="text-muted-foreground size-8 animate-spin" />
-            )}
-            <p className="text-muted-foreground text-center text-sm">
-              {t('qrInstructions')}
-            </p>
+
+          <div className="bg-muted flex rounded-md p-0.5 text-sm">
+            <button
+              type="button"
+              onClick={() => setConnectMode('qr')}
+              className={cn(
+                'flex-1 rounded-[5px] py-1.5 font-medium transition-colors',
+                connectMode === 'qr'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground'
+              )}
+            >
+              {t('connectModeQr')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConnectMode('code')}
+              className={cn(
+                'flex-1 rounded-[5px] py-1.5 font-medium transition-colors',
+                connectMode === 'code'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground'
+              )}
+            >
+              {t('connectModeCode')}
+            </button>
           </div>
+
+          {connectMode === 'qr' ? (
+            <div className="flex flex-col items-center gap-3 py-4">
+              {qrError ? (
+                <Badge variant="outline" className="text-red-600">
+                  {qrError}
+                </Badge>
+              ) : qrDataUri ? (
+                // eslint-disable-next-line @next/next/no-img-element -- data: URI from WAHA, not a local asset next/image can optimize
+                <img
+                  src={qrDataUri}
+                  alt={t('qrAlt')}
+                  className="size-56 rounded-lg"
+                />
+              ) : (
+                <Loader2 className="text-muted-foreground size-8 animate-spin" />
+              )}
+              <p className="text-muted-foreground text-center text-sm">
+                {t('qrInstructions')}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-4">
+              {pairingCode ? (
+                <>
+                  <p className="text-foreground text-3xl font-bold tracking-widest">
+                    {pairingCode}
+                  </p>
+                  <p className="text-muted-foreground text-center text-sm">
+                    {t('pairingCodeInstructions')}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRequestPairingCode}
+                    disabled={pairingRequesting}
+                  >
+                    {pairingRequesting && (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    )}
+                    {t('requestNewCodeBtn')}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="w-full space-y-1.5">
+                    <Label>{t('pairingPhoneField')}</Label>
+                    <Input
+                      value={pairingPhone}
+                      onChange={(e) => setPairingPhone(e.target.value)}
+                      placeholder={t('pairingPhonePlaceholder')}
+                    />
+                  </div>
+                  {pairingError && (
+                    <Badge variant="outline" className="text-red-600">
+                      {pairingError}
+                    </Badge>
+                  )}
+                  <Button
+                    onClick={handleRequestPairingCode}
+                    disabled={pairingRequesting || !pairingPhone.trim()}
+                  >
+                    {pairingRequesting && (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    )}
+                    {t('requestCodeBtn')}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </Card>
