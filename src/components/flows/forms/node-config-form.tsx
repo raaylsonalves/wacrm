@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import { uploadAccountMedia, MEDIA_MAX_BYTES } from "@/lib/storage/upload-media";
 import { slugify, type BuilderNode } from "../shared";
 import { NextNodeRow, NodeKeySelect, TextRow } from "./fields";
@@ -839,22 +840,26 @@ function SetTagForm({
 
 /**
  * Shared loader for both `condition` (subject=tag) and `set_tag`.
- * Falls back to raw UUID input if the endpoint is absent on older
- * deployments — the form remains authorable in that case.
+ *
+ * Queries Supabase directly instead of a REST route — this is a
+ * client component inside the (dashboard) flow builder, so RLS scopes
+ * the result to the caller's account, same pattern the automation
+ * builder's ResourcesContext already uses for its own tag picker. (A
+ * previous version of this hook called a `/api/tags` REST endpoint
+ * that was never actually built, so the dropdown here silently always
+ * fell back to a raw-UUID input — this fixes that.)
  */
 function useUserTags(): UserTag[] {
   const [tags, setTags] = useState<UserTag[]>([]);
   useEffect(() => {
     let cancelled = false;
+    const supabase = createClient();
     (async () => {
-      try {
-        const res = await fetch("/api/tags").catch(() => null);
-        if (!res || !res.ok) return;
-        const json = (await res.json()) as { tags?: UserTag[] };
-        if (!cancelled) setTags(json.tags ?? []);
-      } catch {
-        // Tags endpoint absent — caller falls back to raw input.
-      }
+      const { data } = await supabase
+        .from("tags")
+        .select("id, name, color")
+        .order("name");
+      if (!cancelled) setTags((data as UserTag[] | null) ?? []);
     })();
     return () => {
       cancelled = true;
