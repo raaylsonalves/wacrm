@@ -246,18 +246,34 @@ export async function dispatchInboundToAiReply(
         executeTool,
       })
     } catch (err) {
+      if (err instanceof AllProvidersFailedError) {
+        // Log each tier's actual code/message/status as plain fields —
+        // Vercel's log viewer renders a nested Error inside an object as
+        // an opaque "[Error]" with no message, which made a real outage
+        // undiagnosable from the logs alone.
+        console.error(
+          `${tag} generation failed after ${Date.now() - startedAt}ms: every configured tier failed —`,
+          err.attempts.map((a) => ({
+            provider: a.provider,
+            model: a.model,
+            code: a.error.code,
+            status: a.error.status,
+            message: a.error.message,
+          })),
+        )
+        // Every configured tier (primary + fallbacks) failed — same
+        // handoff mechanics as the content-handoff path below, just with
+        // a note explaining it was a provider outage, not the model
+        // choosing to bail.
+        const summary = buildProviderFailureSummary({ attempts: err.attempts })
+        await handOffToHuman(db, conversationId, config, conv.assigned_agent_id, summary)
+        return
+      }
       console.error(
         `${tag} generation failed after ${Date.now() - startedAt}ms:`,
-        err,
+        err instanceof Error ? { name: err.name, message: err.message, stack: err.stack } : err,
       )
-      if (!(err instanceof AllProvidersFailedError)) throw err
-      // Every configured tier (primary + fallbacks) failed — same
-      // handoff mechanics as the content-handoff path below, just with
-      // a note explaining it was a provider outage, not the model
-      // choosing to bail.
-      const summary = buildProviderFailureSummary({ attempts: err.attempts })
-      await handOffToHuman(db, conversationId, config, conv.assigned_agent_id, summary)
-      return
+      throw err
     }
 
     const { text, handoff, usage } = generation
