@@ -14,11 +14,13 @@ export const AI_PROVIDER_DEFAULT_MODEL: Record<AiProvider, string> = {
   openai: 'gpt-5.4-mini',
   anthropic: 'claude-haiku-4-5-20251001',
   gemini: 'gemini-2.5-flash',
-  // OpenRouter's own auto-router across its free-tier catalog — picks a
-  // free model per request. Free-tier models vary in whether they
-  // support tool calling; if the agenda tools misbehave on a given
-  // free model, pin a specific `:free` model id instead.
-  openrouter: 'openrouter/auto',
+  // OpenRouter's "Free Models Router" — randomly picks a free model per
+  // request, filtered to ones supporting whatever the request needs
+  // (tool calling included). Genuinely free (no token charge), but not
+  // a fixed model: two identical requests can land on different
+  // underlying models, so pin a specific `:free` model id instead if
+  // consistent behavior matters more than zero cost.
+  openrouter: 'openrouter/free',
 }
 
 /**
