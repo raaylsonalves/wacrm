@@ -32,10 +32,15 @@ Substitui a nota `agenda-exploratory.md`. Decisões tomadas com o usuário:
 - `source`: `manual | flow`; `flow_run_id` quando veio do bot.
 - `reminder_sent_at` — marca o lembrete enviado (idempotência do cron).
 
-**Conflito**: constraint de exclusão (`btree_gist`) impede dois
-compromissos não cancelados sobrepostos para o mesmo agente (ou para a
-agenda compartilhada, quando `assigned_to` é nulo). É o que resolve a
-corrida de dois clientes tocando no mesmo horário ao mesmo tempo — o
+**Conflito**: duas constraints de exclusão (`btree_gist`, migrations 058
+e 059). A primeira impede dois compromissos não cancelados sobrepostos
+na mesma agenda (mesmo agente, ou a agenda compartilhada quando
+`assigned_to` é nulo). A segunda impede o mesmo **contato** de ficar em
+dois compromissos sobrepostos, mesmo que estejam em agendas diferentes
+— sem ela, marcar o contato com um agente específico e depois na
+agenda compartilhada no mesmo horário passava batido, já que são
+partições diferentes da primeira constraint. Juntas resolvem a corrida
+de dois clientes tocando no mesmo horário ao mesmo tempo — o
 segundo `INSERT` falha com `23P01` e o bot oferece horários de novo.
 
 RLS: leitura para qualquer membro, escrita para `agent+`; configurações

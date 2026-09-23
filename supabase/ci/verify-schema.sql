@@ -134,6 +134,13 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'appointments_no_overlap is missing — migration 058 did not apply';
   END IF;
+  -- 059 — without this, the same contact can be double-booked across
+  -- two different calendars (an agent's + the shared one) at once.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'appointments_no_contact_overlap'
+  ) THEN
+    RAISE EXCEPTION 'appointments_no_contact_overlap is missing — migration 059 did not apply';
+  END IF;
   IF pg_get_constraintdef(
        (SELECT oid FROM pg_constraint WHERE conname = 'flow_nodes_node_type_check')
      ) NOT LIKE '%offer_slots%' THEN
