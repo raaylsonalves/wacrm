@@ -2175,6 +2175,8 @@
       "enableAssistantDesc": "Interruptor general. Activa el botón “Redactar con IA” en la bandeja de entrada.",
       "autoReply": "Responder automáticamente a mensajes entrantes",
       "autoReplyDesc": "El bot responde automáticamente a los nuevos mensajes entrantes (solo cuando ningún flujo los atiende y no hay agente asignado). Deriva a una persona cuando no puede ayudar.",
+      "agenda": "Agenda",
+      "agendaDesc": "El asistente puede consultar horarios libres y reservar citas durante la conversación. Solo es útil con el horario de atención configurado en Agenda.",
       "maxAutoReplies": "Máximo de respuestas automáticas por conversación",
       "maxAutoRepliesDesc": "Después de esta cantidad de respuestas del bot en un mismo hilo, el bot guarda silencio.",
       "handoffTo": "Derivar a",

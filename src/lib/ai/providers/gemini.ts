@@ -1,17 +1,18 @@
-import { AiError, type ChatMessage, type ProviderResult } from '../types'
+import { AiError, type ChatMessage, type ProviderResult, type ToolDefinition } from '../types'
 import { MAX_OUTPUT_TOKENS } from '../defaults'
-import {
-  normalizeUsage,
-  providerHttpError,
-  toNetworkError,
-  type ProviderArgs,
-} from './shared'
+import { normalizeUsage, providerHttpError, toNetworkError, MAX_TOOL_ROUNDS, type ProviderArgs } from './shared'
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
+interface GeminiPart {
+  text?: string
+  functionCall?: { name?: string; args?: Record<string, unknown> }
+  functionResponse?: { name: string; response: { result: string } }
+}
+
 interface GeminiResponse {
   candidates?: {
-    content?: { parts?: { text?: string }[] }
+    content?: { parts?: GeminiPart[] }
     finishReason?: string
   }[]
   usageMetadata?: {
@@ -22,17 +23,19 @@ interface GeminiResponse {
   promptFeedback?: { blockReason?: string }
 }
 
+type GeminiContent = { role: 'user' | 'model'; parts: GeminiPart[] }
+
 /**
  * Gemini has no `system` role turn — `mergeConsecutive` from shared.ts
  * assumes `'user' | 'assistant'` roles, so map straight to Gemini's own
  * `user`/`model` roles here instead of reusing it.
  */
-function toGeminiContents(messages: ChatMessage[]): { role: 'user' | 'model'; parts: { text: string }[] }[] {
-  const out: { role: 'user' | 'model'; parts: { text: string }[] }[] = []
+function toGeminiContents(messages: ChatMessage[]): GeminiContent[] {
+  const out: GeminiContent[] = []
   for (const m of messages) {
     const role = m.role === 'assistant' ? 'model' : 'user'
     const last = out[out.length - 1]
-    if (last && last.role === role) {
+    if (last && last.role === role && last.parts[0]?.text !== undefined) {
       last.parts[0].text = `${last.parts[0].text}\n\n${m.content}`
     } else {
       out.push({ role, parts: [{ text: m.content }] })
@@ -45,61 +48,123 @@ function toGeminiContents(messages: ChatMessage[]): { role: 'user' | 'model'; pa
   return out
 }
 
+/** Gemini's function-declaration schema wants OpenAPI-style uppercase
+ *  type names (`STRING`, `OBJECT`, ...), not JSON Schema's lowercase —
+ *  our `ToolDefinition.parameters` is authored once, in plain JSON
+ *  Schema, and reused for OpenAI/Anthropic as-is; only Gemini needs
+ *  this recursive type-casing pass. */
+function toGeminiSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(toGeminiSchema)
+  if (!schema || typeof schema !== 'object') return schema
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(schema as Record<string, unknown>)) {
+    if (key === 'type' && typeof value === 'string') {
+      out[key] = value.toUpperCase()
+    } else {
+      out[key] = toGeminiSchema(value)
+    }
+  }
+  return out
+}
+
+function toGeminiTools(tools: ToolDefinition[]) {
+  return [
+    {
+      functionDeclarations: tools.map((t) => ({
+        name: t.name,
+        description: t.description,
+        parameters: toGeminiSchema(t.parameters),
+      })),
+    },
+  ]
+}
+
 /**
  * Call Google's Generative Language `generateContent` endpoint with the
  * caller's own Google AI Studio key. Returns the raw assistant text +
- * token usage (handoff parsing happens in `generateReply`).
+ * token usage (handoff parsing happens in `generateReply`). When
+ * `tools`/`executeTool` are supplied, runs its own bounded tool-calling
+ * loop (see `MAX_TOOL_ROUNDS`): a response whose parts include a
+ * `functionCall` is answered by executing it and re-posting the model's
+ * own turn back plus a `functionResponse` turn per call, until the
+ * model returns plain text only.
  */
 export async function generateGemini(args: ProviderArgs): Promise<ProviderResult> {
-  const { apiKey, model, systemPrompt, messages, timeoutMs } = args
+  const { apiKey, model, systemPrompt, messages, timeoutMs, tools, executeTool } = args
   const url = `${GEMINI_BASE_URL}/${encodeURIComponent(model)}:generateContent`
 
-  let res: Response
-  try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'x-goog-api-key': apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: toGeminiContents(messages),
-        generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS },
-      }),
-      signal: AbortSignal.timeout(timeoutMs),
+  const contents: GeminiContent[] = toGeminiContents(messages)
+
+  const call = async (): Promise<GeminiResponse> => {
+    let res: Response
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'x-goog-api-key': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents,
+          generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS },
+          ...(tools && tools.length > 0 ? { tools: toGeminiTools(tools) } : {}),
+        }),
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+    } catch (err) {
+      throw toNetworkError(err)
+    }
+    if (!res.ok) throw await providerHttpError('Gemini', res)
+    const data = (await res.json().catch(() => null)) as GeminiResponse | null
+    if (!data) {
+      throw new AiError('Gemini returned an unparsable response.', { code: 'empty_response' })
+    }
+    return data
+  }
+
+  let usage: ReturnType<typeof normalizeUsage> = null
+  for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
+    const data = await call()
+
+    const blockReason = data.promptFeedback?.blockReason
+    if (blockReason) {
+      throw new AiError(`Gemini blocked the response: ${blockReason}`, {
+        code: 'content_blocked',
+        status: 502,
+      })
+    }
+
+    usage = normalizeUsage({
+      prompt: data.usageMetadata?.promptTokenCount,
+      completion: data.usageMetadata?.candidatesTokenCount,
+      total: data.usageMetadata?.totalTokenCount,
     })
-  } catch (err) {
-    throw toNetworkError(err)
+
+    const parts = data.candidates?.[0]?.content?.parts ?? []
+    const calls = parts.filter((p) => p.functionCall)
+
+    if (calls.length > 0 && executeTool && round < MAX_TOOL_ROUNDS) {
+      contents.push({ role: 'model', parts: calls.map((p) => ({ functionCall: p.functionCall })) })
+      const responseParts: GeminiPart[] = []
+      for (const p of calls) {
+        const name = p.functionCall?.name ?? ''
+        const result = await executeTool(name, p.functionCall?.args ?? {})
+        responseParts.push({ functionResponse: { name, response: { result } } })
+      }
+      contents.push({ role: 'user', parts: responseParts })
+      continue
+    }
+
+    const text = parts
+      .map((p) => p.text ?? '')
+      .join('')
+      .trim()
+    if (!text) {
+      throw new AiError('Gemini returned an empty response.', { code: 'empty_response' })
+    }
+    return { text, usage }
   }
 
-  if (!res.ok) {
-    throw await providerHttpError('Gemini', res)
-  }
-
-  const data = (await res.json().catch(() => null)) as GeminiResponse | null
-
-  const blockReason = data?.promptFeedback?.blockReason
-  if (blockReason) {
-    throw new AiError(`Gemini blocked the response: ${blockReason}`, {
-      code: 'content_blocked',
-      status: 502,
-    })
-  }
-
-  const text = data?.candidates?.[0]?.content?.parts
-    ?.map((p) => p.text ?? '')
-    .join('')
-    .trim()
-  if (!text) {
-    throw new AiError('Gemini returned an empty response.', {
-      code: 'empty_response',
-    })
-  }
-  const usage = normalizeUsage({
-    prompt: data?.usageMetadata?.promptTokenCount,
-    completion: data?.usageMetadata?.candidatesTokenCount,
-    total: data?.usageMetadata?.totalTokenCount,
-  })
-  return { text, usage }
+  throw new AiError('Gemini kept calling tools without answering.', { code: 'empty_response' })
 }

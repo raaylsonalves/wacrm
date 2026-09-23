@@ -48,6 +48,10 @@ const h = vi.hoisted(() => ({
     }[],
     /** Row the status webhook's broadcast_recipients lookup resolves. */
     broadcastRecipient: null as { id: string; status: string } | null,
+    /** `messages.ai_generated` of the most recent bot message in the
+     *  conversation, for `wasLastBotMessageAiGenerated`. `null` = no
+     *  prior bot message. */
+    lastBotMessageAiGenerated: null as boolean | null,
     /** Patches applied to that broadcast_recipients row. */
     recipientUpdates: [] as Record<string, unknown>[],
   },
@@ -212,6 +216,20 @@ vi.mock('@supabase/supabase-js', () => ({
                             data: h.state.replyContextParent,
                             error: null,
                           }),
+                        // wasLastBotMessageAiGenerated:
+                        //   select('ai_generated').eq().eq().order().limit().maybeSingle()
+                        order: () => ({
+                          limit: () => ({
+                            maybeSingle: () =>
+                              Promise.resolve({
+                                data:
+                                  h.state.lastBotMessageAiGenerated === null
+                                    ? null
+                                    : { ai_generated: h.state.lastBotMessageAiGenerated },
+                                error: null,
+                              }),
+                          }),
+                        }),
                       }),
                       limit: () => ({
                         maybeSingle: () =>
@@ -408,6 +426,7 @@ beforeEach(() => {
   h.state.ownMessages = [{ id: 'msg-1', conversation_id: 'conv-1' }]
   h.state.broadcastRecipient = null
   h.state.recipientUpdates = []
+  h.state.lastBotMessageAiGenerated = null
   mockFindExistingContact.mockResolvedValue({
     id: 'contact-1',
     name: 'Ada',
@@ -524,8 +543,9 @@ describe('inbound webhook: template quick-reply buttons (#478)', () => {
       (call) => (call[0] as { triggerType: string }).triggerType,
     )
     expect(triggers).toContain('interactive_reply')
-    // The AI auto-reply must stay out of it — a button tap is not a
-    // free-text question.
+    // The AI auto-reply must stay out of it — the last bot message in
+    // this thread wasn't one the AI sent (a template broadcast, here),
+    // so this tap isn't routed back to it.
     expect(h.dispatchInboundToAiReply).not.toHaveBeenCalled()
   })
 
@@ -540,6 +560,14 @@ describe('inbound webhook: template quick-reply buttons (#478)', () => {
       content_text: 'Track my order',
       interactive_reply_id: 'Track my order',
     })
+  })
+
+  it('does route the tap to the AI when its own agenda-tool prompt was the last bot message', async () => {
+    h.state.lastBotMessageAiGenerated = true
+
+    await runWebhook(templateButtonTap)
+
+    expect(h.dispatchInboundToAiReply).toHaveBeenCalledTimes(1)
   })
 })
 

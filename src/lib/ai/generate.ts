@@ -4,6 +4,8 @@ import {
   type AiUsage,
   type ChatMessage,
   type GenerateResult,
+  type ToolDefinition,
+  type ToolExecutor,
 } from './types'
 import {
   HANDOFF_SENTINEL,
@@ -21,6 +23,12 @@ export interface GenerateArgs {
   systemPrompt: string
   /** Recent conversation turns, oldest first. */
   messages: ChatMessage[]
+  /** Agenda tools (specs/ai-agenda-tool-calling.md). Auto-reply only —
+   *  draft/playground never pass these, since a tool call is a real
+   *  side effect (a WhatsApp send, an appointment write) a human
+   *  hasn't approved yet. */
+  tools?: ToolDefinition[]
+  executeTool?: ToolExecutor
 }
 
 /**
@@ -29,7 +37,7 @@ export interface GenerateArgs {
  * of the raw text. Throws `AiError` on any provider/network failure.
  */
 export async function generateReply(args: GenerateArgs): Promise<GenerateResult> {
-  const { config, systemPrompt, messages } = args
+  const { config, systemPrompt, messages, tools, executeTool } = args
   const timeoutMs = aiRequestTimeoutMs()
   const providerArgs = {
     apiKey: config.apiKey,
@@ -37,6 +45,8 @@ export async function generateReply(args: GenerateArgs): Promise<GenerateResult>
     systemPrompt,
     messages,
     timeoutMs,
+    tools,
+    executeTool,
   }
 
   let result: { text: string; usage: AiUsage | null }

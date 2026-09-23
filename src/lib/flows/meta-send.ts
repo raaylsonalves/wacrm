@@ -305,6 +305,10 @@ interface SendInteractiveButtonsEngineArgs {
   buttons: InteractiveButton[];
   headerText?: string;
   footerText?: string;
+  /** Marks the persisted message row `ai_generated = true` — set by the
+   *  AI auto-reply agent's agenda tools so the webhook can tell an AI-
+   *  sent prompt apart from a Flow's when a later reply taps it. */
+  aiGenerated?: boolean;
 }
 
 interface SendInteractiveListEngineArgs {
@@ -317,6 +321,8 @@ interface SendInteractiveListEngineArgs {
   sections: InteractiveListSection[];
   headerText?: string;
   footerText?: string;
+  /** See `SendInteractiveButtonsEngineArgs.aiGenerated`. */
+  aiGenerated?: boolean;
 }
 
 /**
@@ -474,6 +480,7 @@ async function sendInteractiveViaMeta(
     interactive_payload: interactivePayload,
     message_id: waMessageId,
     status: 'sent',
+    ai_generated: input.aiGenerated ?? false,
   });
   if (msgErr) {
     throw new Error(`sent to Meta but DB insert failed: ${msgErr.message}`);

@@ -1,4 +1,12 @@
-import { AiError, type AiConfig, type AiProviderCredentials, type ChatMessage, type GenerateResult } from './types'
+import {
+  AiError,
+  type AiConfig,
+  type AiProviderCredentials,
+  type ChatMessage,
+  type GenerateResult,
+  type ToolDefinition,
+  type ToolExecutor,
+} from './types'
 import { generateReply } from './generate'
 
 // ============================================================
@@ -70,13 +78,17 @@ export async function generateReplyWithFallback(
     config: AiConfig
     systemPrompt: string
     messages: ChatMessage[]
+    /** Agenda tools (specs/ai-agenda-tool-calling.md) — forwarded to
+     *  every tier tried, primary and fallbacks alike. */
+    tools?: ToolDefinition[]
+    executeTool?: ToolExecutor
   },
   deps: {
     generate?: typeof generateReply
     delay?: (ms: number) => Promise<void>
   } = {},
 ): Promise<FallbackResult> {
-  const { config, systemPrompt, messages } = args
+  const { config, systemPrompt, messages, tools, executeTool } = args
   const generate = deps.generate ?? generateReply
   const delay = deps.delay ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)))
 
@@ -97,6 +109,8 @@ export async function generateReplyWithFallback(
           config: { ...config, provider: tier.provider, model: tier.model, apiKey: tier.apiKey },
           systemPrompt,
           messages,
+          tools,
+          executeTool,
         })
         return { ...result, provider: tier.provider, model: tier.model, attempts }
       } catch (err) {

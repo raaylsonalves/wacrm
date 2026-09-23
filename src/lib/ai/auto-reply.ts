@@ -15,6 +15,7 @@ import {
 import type { AiConfig } from './types'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
+import { AGENDA_TOOLS, createAgendaToolExecutor } from './tools/agenda'
 import {
   engineSendText,
   loadAccountMetaCredentials,
@@ -185,11 +186,33 @@ export async function dispatchInboundToAiReply(
       userPrompt: config.systemPrompt,
       mode: 'auto_reply',
       knowledge,
+      agendaToolsEnabled: config.agendaEnabled,
     })
+
+    // Agenda tools (specs/ai-agenda-tool-calling.md) are opt-in per
+    // account and auto-reply-only — draft/playground never build these,
+    // since a tool call is a real side effect (a WhatsApp send, an
+    // appointment write) a human hasn't approved yet.
+    const tools = config.agendaEnabled ? AGENDA_TOOLS : undefined
+    const executeTool = config.agendaEnabled
+      ? createAgendaToolExecutor({
+          db,
+          accountId,
+          conversationId,
+          contactId,
+          userId: configOwnerUserId,
+        })
+      : undefined
 
     let generation
     try {
-      generation = await generateReplyWithFallback({ config, systemPrompt, messages })
+      generation = await generateReplyWithFallback({
+        config,
+        systemPrompt,
+        messages,
+        tools,
+        executeTool,
+      })
     } catch (err) {
       if (!(err instanceof AllProvidersFailedError)) throw err
       // Every configured tier (primary + fallbacks) failed — same

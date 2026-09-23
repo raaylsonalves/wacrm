@@ -2175,6 +2175,8 @@
       "enableAssistantDesc": "Interruptor geral. Ativa o botão “Redigir com IA” na caixa de entrada.",
       "autoReply": "Responder automaticamente a mensagens recebidas",
       "autoReplyDesc": "O bot responde automaticamente a novas mensagens recebidas (apenas quando nenhum fluxo as trata e nenhum agente está atribuído). Transfere para um humano quando não consegue ajudar.",
+      "agenda": "Agenda",
+      "agendaDesc": "O assistente pode consultar horários livres e marcar compromissos durante a conversa. Só faz sentido com o horário de atendimento configurado em Agenda.",
       "maxAutoReplies": "Máximo de respostas automáticas por conversa",
       "maxAutoRepliesDesc": "Após esta quantidade de respostas do bot em uma mesma conversa, o bot fica em silêncio.",
       "handoffTo": "Transferir para",

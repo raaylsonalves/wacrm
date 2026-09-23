@@ -620,6 +620,30 @@ async function flagBroadcastReplyIfAny(accountId: string, contactId: string) {
 }
 
 /**
+ * True when the most recent bot message in this conversation was one
+ * the AI auto-reply agent itself sent (its agenda tools set
+ * `ai_generated: true` on the interactive prompt — see
+ * `engineSendInteractiveList`'s `aiGenerated` param, specs/ai-agenda-
+ * tool-calling.md). Used to decide whether a customer's tap on an
+ * interactive list/button should be routed back to the AI: a tap on a
+ * Flow's or automation's own interactive message must not be — only
+ * the AI's own prompt gets an AI-generated follow-up.
+ */
+async function wasLastBotMessageAiGenerated(
+  conversationId: string
+): Promise<boolean> {
+  const { data } = await supabaseAdmin()
+    .from('messages')
+    .select('ai_generated')
+    .eq('conversation_id', conversationId)
+    .eq('sender_type', 'bot')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return Boolean((data as { ai_generated?: boolean } | null)?.ai_generated);
+}
+
+/**
  * Resolve a Meta-side message_id into the matching internal UUID, scoped
  * to one conversation. Returns null when we never received the parent
  * (e.g. a swipe-reply to a message older than this CRM install).
@@ -1036,12 +1060,21 @@ async function processMessage(
     }).catch((err) => console.error('[automations] dispatch failed:', err));
   }
 
-  // AI auto-reply. Runs only for plain-text inbound the deterministic
-  // flow runner did NOT consume (flows win over the LLM), and only when
-  // the account has enabled it. Awaited inside `after()` (same reason as
-  // the webhook dispatch below); `dispatchInboundToAiReply` owns its
-  // eligibility gates + try/catch and never throws.
-  if (!flowConsumed && !interactiveReplyId && inboundText.trim()) {
+  // AI auto-reply. Runs for plain-text inbound the deterministic flow
+  // runner did NOT consume (flows win over the LLM), and only when the
+  // account has enabled it. Also runs for an interactive tap, but only
+  // when the most recent bot message in this thread was one the AI
+  // itself sent (its agenda tools — see `wasLastBotMessageAiGenerated`);
+  // a tap on a Flow's or automation's own interactive message is left
+  // alone, exactly as before this existed. Awaited inside `after()`
+  // (same reason as the webhook dispatch below); `dispatchInboundToAiReply`
+  // owns its eligibility gates + try/catch and never throws.
+  const aiShouldDispatch =
+    !flowConsumed &&
+    inboundText.trim().length > 0 &&
+    (!interactiveReplyId ||
+      (await wasLastBotMessageAiGenerated(conversation.id)));
+  if (aiShouldDispatch) {
     await dispatchInboundToAiReply({
       accountId,
       conversationId: conversation.id,

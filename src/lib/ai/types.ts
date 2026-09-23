@@ -43,7 +43,38 @@ export interface AiConfig {
    *  behaves exactly as it did before fallbacks existed: one attempt,
    *  then a handoff on failure. */
   fallbacks: AiProviderCredentials[]
+  /** Opt-in: let the auto-reply bot call the agenda tools
+   *  (`offer_slots` / `book_appointment`, see `lib/ai/tools/agenda.ts`).
+   *  Off by default (specs/ai-agenda-tool-calling.md) — an account with
+   *  no `appointment_settings` configured shouldn't have its bot
+   *  offering to book things. Never used by draft/playground. */
+  agendaEnabled: boolean
 }
+
+/** A JSON-schema tool definition, provider-neutral — each adapter maps
+ *  this to its own wire format (OpenAI `function`, Anthropic
+ *  `input_schema`, Gemini `functionDeclarations`). */
+export interface ToolDefinition {
+  name: string
+  description: string
+  parameters: Record<string, unknown>
+}
+
+/** One tool invocation a model asked for, already parsed out of the
+ *  provider's own response shape. */
+export interface ToolCall {
+  id: string
+  name: string
+  arguments: Record<string, unknown>
+}
+
+/** Runs a tool call and returns the string fed back to the model as
+ *  its result — plain JSON, including on failure (`{"error": "..."}"`)
+ *  so the model can react instead of the whole reply throwing. */
+export type ToolExecutor = (
+  name: string,
+  args: Record<string, unknown>,
+) => Promise<string>
 
 /** A single conversation turn in the shape both providers accept. */
 export interface ChatMessage {

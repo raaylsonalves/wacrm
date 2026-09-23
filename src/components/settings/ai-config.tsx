@@ -74,6 +74,10 @@ export function AiConfig() {
   const [systemPrompt, setSystemPrompt] = useState('');
   const [isActive, setIsActive] = useState(false);
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
+  // Agenda tools opt-in (offer_slots / book_appointment —
+  // specs/ai-agenda-tool-calling.md). Off by default; only useful once
+  // business hours are configured on the Agenda settings page.
+  const [agendaEnabled, setAgendaEnabled] = useState(false);
   const [maxPerConversation, setMaxPerConversation] = useState(3);
   // Empty string = leave unassigned (shared queue).
   const [handoffAgentId, setHandoffAgentId] = useState('');
@@ -115,6 +119,7 @@ export function AiConfig() {
         setSystemPrompt(data.system_prompt ?? '');
         setIsActive(data.is_active);
         setAutoReplyEnabled(data.auto_reply_enabled);
+        setAgendaEnabled(Boolean(data.agenda_enabled));
         setMaxPerConversation(data.auto_reply_max_per_conversation ?? 3);
         setHandoffAgentId(data.handoff_agent_id ?? '');
         setHasStoredKey(Boolean(data.has_key));
@@ -177,6 +182,7 @@ export function AiConfig() {
     system_prompt: systemPrompt.trim() || null,
     is_active: isActive,
     auto_reply_enabled: autoReplyEnabled,
+    agenda_enabled: agendaEnabled,
     auto_reply_max_per_conversation: maxPerConversation,
     handoff_agent_id: handoffAgentId || null,
     fallbacks: fallbackEnabled
@@ -290,6 +296,7 @@ export function AiConfig() {
         setKeyEdited(false);
         setIsActive(false);
         setAutoReplyEnabled(false);
+        setAgendaEnabled(false);
         setSystemPrompt('');
         setHandoffAgentId('');
         setFallbackEnabled(false);
@@ -612,6 +619,22 @@ export function AiConfig() {
                 checked={autoReplyEnabled}
                 onCheckedChange={setAutoReplyEnabled}
                 disabled={disabled || !isActive}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {t('agenda')}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t('agendaDesc')}
+                </p>
+              </div>
+              <Switch
+                checked={agendaEnabled}
+                onCheckedChange={setAgendaEnabled}
+                disabled={disabled || !autoReplyEnabled}
               />
             </div>
 

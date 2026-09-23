@@ -14,6 +14,7 @@ function config(overrides: Partial<AiConfig> = {}): AiConfig {
     handoffAgentId: null,
     embeddingsApiKey: null,
     fallbacks: [],
+    agendaEnabled: false,
     ...overrides,
   }
 }
@@ -170,6 +171,62 @@ describe('generateReply — OpenAI', () => {
       }),
     ).rejects.toBeInstanceOf(AiError)
   })
+
+  it('runs a tool call, feeds the result back, and returns the final text', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        okResponse({
+          choices: [
+            {
+              message: {
+                content: null,
+                tool_calls: [
+                  { id: 'call_1', function: { name: 'offer_slots', arguments: '{"days_ahead":7}' } },
+                ],
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        okResponse({ choices: [{ message: { content: 'Enviei as opções!' } }] }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    const executeTool = vi.fn().mockResolvedValue('{"sent":true,"count":3}')
+
+    const res = await generateReply({
+      config: config({ provider: 'openai' }),
+      systemPrompt: 'sys',
+      messages: [{ role: 'user', content: 'quero marcar' }],
+      tools: [{ name: 'offer_slots', description: 'x', parameters: { type: 'object', properties: {} } }],
+      executeTool,
+    })
+
+    expect(res.text).toBe('Enviei as opções!')
+    expect(executeTool).toHaveBeenCalledWith('offer_slots', { days_ahead: 7 })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body)
+    expect(secondBody.messages).toContainEqual(
+      expect.objectContaining({ role: 'tool', tool_call_id: 'call_1', content: '{"sent":true,"count":3}' }),
+    )
+  })
+
+  it('never sends a tools field when no tools are configured', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      okResponse({ choices: [{ message: { content: 'Hi' } }] }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await generateReply({
+      config: config({ provider: 'openai' }),
+      systemPrompt: 'sys',
+      messages: [{ role: 'user', content: 'Hi' }],
+    })
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body).not.toHaveProperty('tools')
+  })
 })
 
 describe('generateReply — Anthropic', () => {
@@ -236,6 +293,35 @@ describe('generateReply — Anthropic', () => {
     expect(body.messages[0].role).toBe('user')
     expect(body.messages).toHaveLength(1)
   })
+
+  it('runs a tool_use round trip and returns the final text', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        okResponse({
+          content: [{ type: 'tool_use', id: 'toolu_1', name: 'book_appointment', input: { slot_id: 'slot:x' } }],
+        }),
+      )
+      .mockResolvedValueOnce(okResponse({ content: [{ type: 'text', text: 'Marcado!' }] }))
+    vi.stubGlobal('fetch', fetchMock)
+    const executeTool = vi.fn().mockResolvedValue('{"booked":true}')
+
+    const res = await generateReply({
+      config: config({ provider: 'anthropic' }),
+      systemPrompt: 'sys',
+      messages: [{ role: 'user', content: 'pode marcar' }],
+      tools: [{ name: 'book_appointment', description: 'x', parameters: { type: 'object', properties: {} } }],
+      executeTool,
+    })
+
+    expect(res.text).toBe('Marcado!')
+    expect(executeTool).toHaveBeenCalledWith('book_appointment', { slot_id: 'slot:x' })
+    const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body)
+    expect(secondBody.messages).toContainEqual({
+      role: 'user',
+      content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: '{"booked":true}' }],
+    })
+  })
 })
 
 describe('generateReply — Gemini', () => {
@@ -296,5 +382,38 @@ describe('generateReply — Gemini', () => {
         messages: [{ role: 'user', content: 'Hi' }],
       }),
     ).rejects.toMatchObject({ code: 'invalid_key', status: 401 })
+  })
+
+  it('runs a functionCall round trip and returns the final text', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        okResponse({
+          candidates: [
+            { content: { parts: [{ functionCall: { name: 'offer_slots', args: { days_ahead: 3 } } }] } },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        okResponse({ candidates: [{ content: { parts: [{ text: 'Aqui estão as opções!' }] } }] }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    const executeTool = vi.fn().mockResolvedValue('{"sent":true}')
+
+    const res = await generateReply({
+      config: config({ provider: 'gemini' }),
+      systemPrompt: 'sys',
+      messages: [{ role: 'user', content: 'quero marcar' }],
+      tools: [{ name: 'offer_slots', description: 'x', parameters: { type: 'object', properties: {} } }],
+      executeTool,
+    })
+
+    expect(res.text).toBe('Aqui estão as opções!')
+    expect(executeTool).toHaveBeenCalledWith('offer_slots', { days_ahead: 3 })
+    const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body)
+    expect(secondBody.contents).toContainEqual({
+      role: 'user',
+      parts: [{ functionResponse: { name: 'offer_slots', response: { result: '{"sent":true}' } } }],
+    })
   })
 })

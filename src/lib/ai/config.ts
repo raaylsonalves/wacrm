@@ -19,11 +19,12 @@ interface AiConfigRow {
   handoff_agent_id: string | null
   embeddings_api_key: string | null
   fallbacks: RawFallbackRow[] | null
+  agenda_enabled?: boolean
 }
 
 const CONFIG_COLUMNS_BASE =
   'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, embeddings_api_key'
-const CONFIG_COLUMNS = `${CONFIG_COLUMNS_BASE}, fallbacks`
+const CONFIG_COLUMNS = `${CONFIG_COLUMNS_BASE}, fallbacks, agenda_enabled`
 
 /** Postgres "undefined_column" — thrown by `fallbacks` not existing yet
  *  when migration 052 hasn't been applied. See the fallback query below. */
@@ -91,14 +92,15 @@ export async function loadAiConfig(
     .eq('account_id', accountId)
     .maybeSingle()
 
-  // Defensive: if migration 052 (adds `ai_configs.fallbacks`) hasn't
-  // been applied yet, selecting it 42703s. Rather than taking down
-  // every draft/auto-reply call on a deploy that outran its migration,
-  // retry without the column and treat fallbacks as "none configured" —
-  // exactly how a freshly-migrated account with an empty array behaves.
+  // Defensive: if migration 052 (adds `ai_configs.fallbacks`) or 060
+  // (adds `ai_configs.agenda_enabled`) hasn't been applied yet,
+  // selecting either 42703s. Rather than taking down every draft/
+  // auto-reply call on a deploy that outran its migration, retry
+  // without the newer columns and treat them as "not configured" —
+  // exactly how a freshly-migrated account with defaults behaves.
   if (error && isUndefinedColumnError(error)) {
     console.warn(
-      '[ai config] ai_configs.fallbacks does not exist yet (migration 052 not applied) — provider fallback is disabled until it is.',
+      '[ai config] ai_configs.fallbacks / agenda_enabled do not exist yet (migration 052/060 not applied) — provider fallback and agenda tools are disabled until they are.',
     )
     ;({ data, error } = await db
       .from('ai_configs')
@@ -147,6 +149,7 @@ export async function loadAiConfig(
     handoffAgentId: row.handoff_agent_id,
     embeddingsApiKey,
     fallbacks: decryptFallbacks(accountId, row.fallbacks),
+    agendaEnabled: row.agenda_enabled ?? false,
   }
 }
 

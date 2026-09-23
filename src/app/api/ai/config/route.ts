@@ -110,7 +110,7 @@ export async function GET() {
     // out below and never returned to the client.
     let { data, error } = await supabase
       .from('ai_configs')
-      .select(`${BASE_COLUMNS}, fallbacks`)
+      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled`)
       .eq('account_id', accountId)
       .maybeSingle()
 
@@ -192,6 +192,10 @@ export async function POST(request: Request) {
         : null
     const isActive = body.is_active === true
     const autoReplyEnabled = body.auto_reply_enabled === true
+    // Opt-in for the agenda tools (offer_slots / book_appointment —
+    // specs/ai-agenda-tool-calling.md). Off by default; only meaningful
+    // once appointment_settings is configured, which the UI copy notes.
+    const agendaEnabled = body.agenda_enabled === true
 
     let maxPer = Number(body.auto_reply_max_per_conversation)
     if (!Number.isFinite(maxPer)) maxPer = 3
@@ -290,6 +294,7 @@ export async function POST(request: Request) {
           handoffAgentId: null,
           embeddingsApiKey: null,
           fallbacks: [],
+          agendaEnabled: false,
         })
       } catch (err) {
         if (err instanceof AiError) {
@@ -333,6 +338,7 @@ export async function POST(request: Request) {
           handoffAgentId: null,
           embeddingsApiKey: null,
           fallbacks: [],
+          agendaEnabled: false,
         })
       } catch (err) {
         if (err instanceof AiError) {
@@ -377,6 +383,7 @@ export async function POST(request: Request) {
       auto_reply_enabled: autoReplyEnabled,
       auto_reply_max_per_conversation: maxPer,
       fallbacks: encryptedFallbacks,
+      agenda_enabled: agendaEnabled,
     }
     // Only touch the handoff target when the form actually sent the field,
     // so a partial save (e.g. flipping a toggle) doesn't wipe it.
@@ -403,8 +410,9 @@ export async function POST(request: Request) {
             'Fallback providers require a pending database migration (052) to be applied first. Ask your administrator to run it, or save without a fallback provider for now.',
           )
         }
-        const { fallbacks: _omit, ...payloadWithoutFallbacks } = payload
+        const { fallbacks: _omit, agenda_enabled: _omit2, ...payloadWithoutFallbacks } = payload
         void _omit
+        void _omit2
         ;({ error: upErr } = await supabase
           .from('ai_configs')
           .update(payloadWithoutFallbacks)
@@ -431,9 +439,10 @@ export async function POST(request: Request) {
             'Fallback providers require a pending database migration (052) to be applied first. Ask your administrator to run it, or save without a fallback provider for now.',
           )
         }
-        const { fallbacks: _omit, ...insertWithoutFallbacks } =
+        const { fallbacks: _omit, agenda_enabled: _omit2, ...insertWithoutFallbacks } =
           insertPayload as Record<string, unknown>
         void _omit
+        void _omit2
         ;({ error: insErr } = await supabase
           .from('ai_configs')
           .insert(insertWithoutFallbacks))

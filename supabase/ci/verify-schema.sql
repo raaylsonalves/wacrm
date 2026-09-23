@@ -301,6 +301,26 @@ BEGIN
       'ai_configs.fallbacks is missing — migration 052 did not apply';
   END IF;
 
+  -- 060 gates the AI auto-reply agenda tools (offer_slots /
+  -- book_appointment) behind a per-account opt-in.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'ai_configs'
+      AND column_name = 'agenda_enabled'
+  ) THEN
+    RAISE EXCEPTION
+      'ai_configs.agenda_enabled is missing — migration 060 did not apply';
+  END IF;
+
+  -- 061 — without 'ai' in the allowed source values, the AI's
+  -- book_appointment tool can't insert a row at all.
+  IF pg_get_constraintdef(
+       (SELECT oid FROM pg_constraint WHERE conname = 'appointments_source_check')
+     ) NOT LIKE '%''ai''%' THEN
+    RAISE EXCEPTION
+      'appointments_source_check does not allow ''ai'' — migration 061 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

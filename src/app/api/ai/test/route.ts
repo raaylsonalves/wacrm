@@ -93,6 +93,7 @@ export async function POST(request: Request) {
         handoffAgentId: null,
         embeddingsApiKey: null,
         fallbacks: [],
+        agendaEnabled: false,
       })
     } catch (err) {
       if (err instanceof AiError) {

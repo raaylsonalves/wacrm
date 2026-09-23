@@ -14,6 +14,7 @@ function config(overrides: Partial<AiConfig> = {}): AiConfig {
     handoffAgentId: null,
     embeddingsApiKey: null,
     fallbacks: [],
+    agendaEnabled: false,
     ...overrides,
   }
 }

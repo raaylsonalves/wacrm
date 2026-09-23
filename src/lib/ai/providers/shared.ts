@@ -1,4 +1,4 @@
-import { AiError, type AiUsage, type ChatMessage } from '../types'
+import { AiError, type AiUsage, type ChatMessage, type ToolDefinition, type ToolExecutor } from '../types'
 
 // ============================================================
 // Bits shared by the OpenAI + Anthropic adapters.
@@ -10,7 +10,20 @@ export interface ProviderArgs {
   systemPrompt: string
   messages: ChatMessage[]
   timeoutMs: number
+  /** Agenda tools (specs/ai-agenda-tool-calling.md), or omitted for a
+   *  plain text-only call — every adapter's request body and behavior
+   *  is byte-for-byte identical to before this existed when both of
+   *  these are absent. */
+  tools?: ToolDefinition[]
+  executeTool?: ToolExecutor
 }
+
+/** Safety net against a model that keeps calling tools instead of
+ *  answering — same idea as MAX_REPLY_SEGMENTS: a hard ceiling on
+ *  agentic behavior, not a target. Hitting it surfaces as an
+ *  `empty_response`-shaped AiError, which the fallback chain already
+ *  knows how to retry/hand off on. */
+export const MAX_TOOL_ROUNDS = 3
 
 /**
  * Coerce a provider's usage block into our normalized `AiUsage`, tolerant

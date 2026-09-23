@@ -3,12 +3,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { buildConversationContext } from './context'
 
 /** Minimal fake matching the query chain in buildConversationContext:
- *  from().select().eq().eq().order().limit() → { data, error }. */
+ *  from().select().eq().in().order().limit() → { data, error }. */
 function fakeDb(rows: unknown[]): SupabaseClient {
   const chain = {
     from: () => chain,
     select: () => chain,
     eq: () => chain,
+    in: () => chain,
     order: () => chain,
     limit: () => Promise.resolve({ data: rows, error: null }),
   }
@@ -49,5 +50,29 @@ describe('buildConversationContext', () => {
       'conv-1',
     )
     expect(out).toEqual([{ role: 'user', content: 'real' }])
+  })
+
+  it('includes an interactive tap, appending its stable id', async () => {
+    const out = await buildConversationContext(
+      fakeDb([
+        {
+          sender_type: 'customer',
+          content_text: 'ter 24/09 09:30',
+          interactive_reply_id: 'slot:2026-09-24T12:30:00.000Z',
+        },
+      ]),
+      'conv-1',
+    )
+    expect(out).toEqual([
+      { role: 'user', content: 'ter 24/09 09:30 (id: slot:2026-09-24T12:30:00.000Z)' },
+    ])
+  })
+
+  it('does not append an id for a bot interactive prompt (no interactive_reply_id)', async () => {
+    const out = await buildConversationContext(
+      fakeDb([{ sender_type: 'bot', content_text: 'Encontrei esses horários livres:' }]),
+      'conv-1',
+    )
+    expect(out).toEqual([{ role: 'assistant', content: 'Encontrei esses horários livres:' }])
   })
 })
