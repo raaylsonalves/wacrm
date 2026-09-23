@@ -43,10 +43,19 @@ export const MAX_REPLY_SEGMENTS = 4
  *  bounds token spend on the caller's own key. */
 export const MAX_OUTPUT_TOKENS = 1024
 
-const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
+// Lower than a typical single-request timeout because, with agenda
+// tools enabled, one "call" can be several sequential HTTP round trips
+// (see MAX_TOOL_ROUNDS in providers/shared.ts) — each adapter treats
+// this as a TOTAL budget for the whole tool-calling exchange, not a
+// per-request timeout, so the sum can never balloon past it regardless
+// of how many rounds the model takes. Sized to leave headroom under the
+// webhook route's 60s maxDuration even if generateReplyWithFallback
+// retries once on a timeout (worst case ~2x this value).
+const DEFAULT_REQUEST_TIMEOUT_MS = 20_000
 const DEFAULT_CONTEXT_MESSAGE_LIMIT = 20
 
-/** Per-call provider timeout. Override with `AI_REQUEST_TIMEOUT_MS`. */
+/** Total per-call provider timeout (see the constant above for why it's
+ *  a budget, not a per-request value). Override with `AI_REQUEST_TIMEOUT_MS`. */
 export function aiRequestTimeoutMs(): number {
   const raw = Number(process.env.AI_REQUEST_TIMEOUT_MS)
   return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_REQUEST_TIMEOUT_MS

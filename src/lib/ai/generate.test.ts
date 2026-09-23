@@ -212,6 +212,55 @@ describe('generateReply — OpenAI', () => {
     )
   })
 
+  it('treats timeoutMs as a total budget across tool rounds, not per request', async () => {
+    // Round 1 returns a tool call; by the time round 2 would fire, the
+    // deadline (Date.now() + timeoutMs, computed once up front) must
+    // already be exhausted rather than resetting to a fresh timeoutMs —
+    // otherwise MAX_TOOL_ROUNDS worth of full-length requests could add
+    // up to several times timeoutMs (specs/ai-agenda-tool-calling.md's
+    // reported regression: the webhook's 60s maxDuration got hit with
+    // no reply ever sent).
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      okResponse({
+        choices: [
+          {
+            message: {
+              content: null,
+              tool_calls: [{ id: 'call_1', function: { name: 'offer_slots', arguments: '{}' } }],
+            },
+          },
+        ],
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const executeTool = vi.fn().mockResolvedValue('{}')
+
+    const realNow = Date.now
+    let calls = 0
+    vi.spyOn(Date, 'now').mockImplementation(() => {
+      calls++
+      // Call 1 establishes the deadline; call 2 is round 0's own
+      // `remaining` check (must still pass). Jump time far past
+      // timeoutMs starting at call 3 — round 1's `remaining` check.
+      return calls <= 2 ? realNow() : realNow() + 999_999
+    })
+
+    await expect(
+      generateReply({
+        config: config({ provider: 'openai' }),
+        systemPrompt: 'sys',
+        messages: [{ role: 'user', content: 'quero marcar' }],
+        tools: [{ name: 'offer_slots', description: 'x', parameters: { type: 'object', properties: {} } }],
+        executeTool,
+      }),
+    ).rejects.toMatchObject({ code: 'timeout' })
+
+    // Exactly one HTTP request was made — the second round was refused
+    // locally instead of firing another full-length request.
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    vi.restoreAllMocks()
+  })
+
   it('never sends a tools field when no tools are configured', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       okResponse({ choices: [{ message: { content: 'Hi' } }] }),

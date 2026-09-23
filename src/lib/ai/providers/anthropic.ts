@@ -65,7 +65,18 @@ export async function generateAnthropic(args: ProviderArgs): Promise<ProviderRes
     content: m.content,
   }))
 
+  // `timeoutMs` is a TOTAL budget for the whole exchange, not per
+  // request — see the matching comment in providers/openai.ts.
+  const deadline = Date.now() + timeoutMs
+
   const call = async (): Promise<AnthropicResponse> => {
+    const remaining = deadline - Date.now()
+    if (remaining <= 0) {
+      throw new AiError('The AI provider took too long to respond.', {
+        code: 'timeout',
+        status: 504,
+      })
+    }
     let res: Response
     try {
       res = await fetch(ANTHROPIC_URL, {
@@ -82,7 +93,7 @@ export async function generateAnthropic(args: ProviderArgs): Promise<ProviderRes
           messages: body,
           ...(tools && tools.length > 0 ? { tools: toAnthropicTools(tools) } : {}),
         }),
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.timeout(remaining),
       })
     } catch (err) {
       throw toNetworkError(err)

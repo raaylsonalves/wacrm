@@ -54,7 +54,23 @@ export async function generateOpenAi(args: ProviderArgs): Promise<ProviderResult
     ...mergeConsecutive(messages).map((m) => ({ role: m.role, content: m.content })),
   ]
 
+  // `timeoutMs` is a TOTAL budget for the whole exchange, not per
+  // request — a tool-calling round trip can mean several sequential
+  // fetches (plus tool execution time in between), and each one draws
+  // down the same deadline instead of getting its own fresh timeoutMs.
+  // Without this, MAX_TOOL_ROUNDS worth of full-length requests could
+  // add up to several times timeoutMs and blow through the webhook
+  // route's 60s maxDuration with no reply ever sent.
+  const deadline = Date.now() + timeoutMs
+
   const call = async (): Promise<OpenAiResponse> => {
+    const remaining = deadline - Date.now()
+    if (remaining <= 0) {
+      throw new AiError('The AI provider took too long to respond.', {
+        code: 'timeout',
+        status: 504,
+      })
+    }
     let res: Response
     try {
       res = await fetch(OPENAI_URL, {
@@ -69,7 +85,7 @@ export async function generateOpenAi(args: ProviderArgs): Promise<ProviderResult
           max_completion_tokens: MAX_OUTPUT_TOKENS,
           ...(tools && tools.length > 0 ? { tools: toOpenAiTools(tools) } : {}),
         }),
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.timeout(remaining),
       })
     } catch (err) {
       throw toNetworkError(err)

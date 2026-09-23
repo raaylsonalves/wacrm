@@ -95,7 +95,18 @@ export async function generateGemini(args: ProviderArgs): Promise<ProviderResult
 
   const contents: GeminiContent[] = toGeminiContents(messages)
 
+  // `timeoutMs` is a TOTAL budget for the whole exchange, not per
+  // request — see the matching comment in providers/openai.ts.
+  const deadline = Date.now() + timeoutMs
+
   const call = async (): Promise<GeminiResponse> => {
+    const remaining = deadline - Date.now()
+    if (remaining <= 0) {
+      throw new AiError('The AI provider took too long to respond.', {
+        code: 'timeout',
+        status: 504,
+      })
+    }
     let res: Response
     try {
       res = await fetch(url, {
@@ -110,7 +121,7 @@ export async function generateGemini(args: ProviderArgs): Promise<ProviderResult
           generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS },
           ...(tools && tools.length > 0 ? { tools: toGeminiTools(tools) } : {}),
         }),
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.timeout(remaining),
       })
     } catch (err) {
       throw toNetworkError(err)
