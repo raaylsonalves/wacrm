@@ -23,14 +23,22 @@ const DEFAULT_SETTINGS_ROW = {
 }
 
 /** Minimal fake matching the query chains `loadAppointmentSettings` /
- *  `loadBusyRanges` / the `book_appointment` insert issue against. */
+ *  `loadBusyRanges` / book_appointment's insert / reschedule_appointment's
+ *  lookup+update issue against. The two `appointments` SELECT shapes are
+ *  told apart by their column list, same as the real callers use
+ *  different ones (`loadBusyRanges` selects `starts_at, ends_at`;
+ *  the reschedule lookup selects `id, starts_at, ends_at`). */
 function fakeDb(opts: {
   settingsRow?: Record<string, unknown> | null
   busyRows?: { starts_at: string; ends_at: string }[]
   insertError?: { code?: string; message?: string } | null
   insertedRows?: Record<string, unknown>[]
+  existingAppointment?: { id: string; starts_at: string; ends_at: string } | null
+  updateError?: { code?: string; message?: string } | null
+  updatedRows?: { id: string; patch: Record<string, unknown> }[]
 }): SupabaseClient {
   const insertedRows = opts.insertedRows ?? []
+  const updatedRows = opts.updatedRows ?? []
   return {
     from(table: string) {
       if (table === 'appointment_settings') {
@@ -45,22 +53,54 @@ function fakeDb(opts: {
       }
       if (table === 'appointments') {
         return {
-          select: () => ({
-            eq: () => ({
-              neq: () => ({
-                lt: () => ({
-                  gt: () => ({
-                    eq: () => Promise.resolve({ data: opts.busyRows ?? [], error: null }),
-                    is: () => Promise.resolve({ data: opts.busyRows ?? [], error: null }),
+          select: (columns: string) => {
+            if (columns.includes('id')) {
+              // reschedule_appointment lookup:
+              //   select('id, starts_at, ends_at').eq().eq().neq().gt().order().limit().maybeSingle()
+              return {
+                eq: () => ({
+                  eq: () => ({
+                    neq: () => ({
+                      gt: () => ({
+                        order: () => ({
+                          limit: () => ({
+                            maybeSingle: () =>
+                              Promise.resolve({
+                                data: opts.existingAppointment ?? null,
+                                error: null,
+                              }),
+                          }),
+                        }),
+                      }),
+                    }),
+                  }),
+                }),
+              }
+            }
+            // loadBusyRanges: select('starts_at, ends_at').eq().neq().lt().gt().eq()/.is()
+            return {
+              eq: () => ({
+                neq: () => ({
+                  lt: () => ({
+                    gt: () => ({
+                      eq: () => Promise.resolve({ data: opts.busyRows ?? [], error: null }),
+                      is: () => Promise.resolve({ data: opts.busyRows ?? [], error: null }),
+                    }),
                   }),
                 }),
               }),
-            }),
-          }),
+            }
+          },
           insert: (row: Record<string, unknown>) => {
             insertedRows.push(row)
             return Promise.resolve({ error: opts.insertError ?? null })
           },
+          update: (patch: Record<string, unknown>) => ({
+            eq: (_col: string, id: string) => {
+              updatedRows.push({ id, patch })
+              return Promise.resolve({ error: opts.updateError ?? null })
+            },
+          }),
         }
       }
       throw new Error(`fakeDb: unexpected table ${table}`)
@@ -77,8 +117,12 @@ beforeEach(() => {
 const CTX = { accountId: 'acc-1', conversationId: 'conv-1', contactId: 'contact-1', userId: 'user-1' }
 
 describe('AGENDA_TOOLS', () => {
-  it('defines exactly offer_slots and book_appointment', () => {
-    expect(AGENDA_TOOLS.map((t) => t.name)).toEqual(['offer_slots', 'book_appointment'])
+  it('defines exactly offer_slots, book_appointment, and reschedule_appointment', () => {
+    expect(AGENDA_TOOLS.map((t) => t.name)).toEqual([
+      'offer_slots',
+      'book_appointment',
+      'reschedule_appointment',
+    ])
   })
 })
 
@@ -205,6 +249,87 @@ describe('book_appointment', () => {
     })
     const future = new Date(Date.now() + 3 * 86_400_000).toISOString()
     const result = JSON.parse(await executor('book_appointment', { slot_id: `slot:${future}` }))
+    expect(result).toEqual({ error: 'conflict' })
+  })
+})
+
+describe('reschedule_appointment', () => {
+  it('reports no_appointment_found when the contact has no upcoming booking', async () => {
+    const executor = createAgendaToolExecutor({
+      db: fakeDb({ existingAppointment: null }),
+      ...CTX,
+    })
+    const future = new Date(Date.now() + 3 * 86_400_000).toISOString()
+    const result = JSON.parse(
+      await executor('reschedule_appointment', { slot_id: `slot:${future}` }),
+    )
+    expect(result).toEqual({ error: 'no_appointment_found' })
+  })
+
+  it('moves the existing appointment via UPDATE, not a new insert', async () => {
+    const existing = {
+      id: 'appt-1',
+      starts_at: '2026-09-24T12:40:00.000Z',
+      ends_at: '2026-09-24T13:25:00.000Z',
+    }
+    const updatedRows: { id: string; patch: Record<string, unknown> }[] = []
+    const insertedRows: Record<string, unknown>[] = []
+    const executor = createAgendaToolExecutor({
+      db: fakeDb({ existingAppointment: existing, updatedRows, insertedRows }),
+      ...CTX,
+    })
+    const future = new Date(Date.now() + 5 * 86_400_000).toISOString()
+    const result = JSON.parse(
+      await executor('reschedule_appointment', { slot_id: `slot:${future}` }),
+    )
+    expect(result.rescheduled).toBe(true)
+    expect(updatedRows).toHaveLength(1)
+    expect(updatedRows[0].id).toBe('appt-1')
+    expect(updatedRows[0].patch.starts_at).toBe(future)
+    // The 45-minute length of the original booking carries over since
+    // no duration_minutes was passed.
+    expect(updatedRows[0].patch.ends_at).toBe(
+      new Date(new Date(future).getTime() + 45 * 60_000).toISOString(),
+    )
+    expect(insertedRows).toHaveLength(0)
+  })
+
+  it('rejects an invalid or past new time without touching the existing row', async () => {
+    const updatedRows: { id: string; patch: Record<string, unknown> }[] = []
+    const executor = createAgendaToolExecutor({
+      db: fakeDb({
+        existingAppointment: {
+          id: 'appt-1',
+          starts_at: '2026-09-24T12:40:00.000Z',
+          ends_at: '2026-09-24T13:10:00.000Z',
+        },
+        updatedRows,
+      }),
+      ...CTX,
+    })
+    const result = JSON.parse(
+      await executor('reschedule_appointment', { slot_id: 'slot:2000-01-01T12:00:00.000Z' }),
+    )
+    expect(result).toEqual({ error: 'invalid_or_past_time' })
+    expect(updatedRows).toHaveLength(0)
+  })
+
+  it('maps a 23P01 exclusion violation on the new time to a conflict result', async () => {
+    const executor = createAgendaToolExecutor({
+      db: fakeDb({
+        existingAppointment: {
+          id: 'appt-1',
+          starts_at: '2026-09-24T12:40:00.000Z',
+          ends_at: '2026-09-24T13:10:00.000Z',
+        },
+        updateError: { code: '23P01' },
+      }),
+      ...CTX,
+    })
+    const future = new Date(Date.now() + 5 * 86_400_000).toISOString()
+    const result = JSON.parse(
+      await executor('reschedule_appointment', { slot_id: `slot:${future}` }),
+    )
     expect(result).toEqual({ error: 'conflict' })
   })
 })

@@ -107,6 +107,33 @@ export const AGENDA_TOOLS: ToolDefinition[] = [
       required: [],
     },
   },
+  {
+    name: 'reschedule_appointment',
+    description:
+      "Moves the customer's existing upcoming appointment to a new time — use this instead of book_appointment whenever the customer already has one and wants to change it (\"can we move it\", \"I need another time\"). Calling book_appointment for that instead leaves BOTH appointments on the calendar. If the customer has no upcoming appointment, this returns an error instead of creating one — call book_appointment for a first-time booking.",
+    parameters: {
+      type: 'object',
+      properties: {
+        slot_id: {
+          type: 'string',
+          description: 'The new time, as an id from an offer_slots result or the customer tapping a list row.',
+        },
+        date: {
+          type: 'string',
+          description: 'New date "YYYY-MM-DD", used only when slot_id is not available.',
+        },
+        time: {
+          type: 'string',
+          description: 'New time "HH:MM" in the business local time, used only when slot_id is not available.',
+        },
+        duration_minutes: {
+          type: 'integer',
+          description: 'New appointment length in minutes. Defaults to the appointment being moved.',
+        },
+      },
+      required: [],
+    },
+  },
 ]
 
 function jsonResult(value: unknown): string {
@@ -248,26 +275,32 @@ async function executeOfferSlots(
   return jsonResult({ sent: true, count: slotInfo.length, slots: slotInfo })
 }
 
+/** Shared by book_appointment and reschedule_appointment: a `slot_id`
+ *  (verbatim from offer_slots or a customer's tap) or a `date`+`time`
+ *  pair, resolved against the account's timezone. Null when neither
+ *  parses — the caller treats that the same as a past time. */
+function resolveRequestedStart(
+  args: Record<string, unknown>,
+  settings: Awaited<ReturnType<typeof loadAppointmentSettings>>,
+): Date | null {
+  const slotId = str(args, 'slot_id')
+  if (slotId) return parseSlotReplyId(slotId)
+
+  const dateArg = str(args, 'date')
+  const timeArg = str(args, 'time')
+  const d = dateArg ? parseDateStr(dateArg) : null
+  const t = timeArg ? parseTimeStr(timeArg) : null
+  if (!d || !t) return null
+  return zonedToUtc(d.year, d.month, d.day, t.hour, t.minute, settings.timezone)
+}
+
 async function executeBookAppointment(
   ctx: AgendaToolContext,
   args: Record<string, unknown>,
 ): Promise<string> {
   const settings = await loadAppointmentSettings(ctx.db, ctx.accountId)
   const duration = positiveInt(args, 'duration_minutes') ?? settings.slot_minutes
-
-  let start: Date | null = null
-  const slotId = str(args, 'slot_id')
-  if (slotId) {
-    start = parseSlotReplyId(slotId)
-  } else {
-    const dateArg = str(args, 'date')
-    const timeArg = str(args, 'time')
-    const d = dateArg ? parseDateStr(dateArg) : null
-    const t = timeArg ? parseTimeStr(timeArg) : null
-    if (d && t) {
-      start = zonedToUtc(d.year, d.month, d.day, t.hour, t.minute, settings.timezone)
-    }
-  }
+  const start = resolveRequestedStart(args, settings)
 
   if (!start || start.getTime() <= Date.now()) {
     return jsonResult({ error: 'invalid_or_past_time' })
@@ -299,6 +332,69 @@ async function executeBookAppointment(
   return jsonResult({ booked: true, date, time, title })
 }
 
+/**
+ * Moves the contact's soonest upcoming (non-cancelled) appointment to a
+ * new time — an UPDATE on the same row, not a cancel-then-insert, so a
+ * conflict on the new time leaves the original booking untouched. Without
+ * this, the model's only tool was book_appointment, which just adds a
+ * second appointment instead of moving the first — confirmed live: a
+ * customer asked to change their time and ended up with both bookings
+ * still on the calendar.
+ */
+async function executeRescheduleAppointment(
+  ctx: AgendaToolContext,
+  args: Record<string, unknown>,
+): Promise<string> {
+  const { data: existing, error: findErr } = await ctx.db
+    .from('appointments')
+    .select('id, starts_at, ends_at')
+    .eq('account_id', ctx.accountId)
+    .eq('contact_id', ctx.contactId)
+    .neq('status', 'cancelled')
+    .gt('starts_at', new Date().toISOString())
+    .order('starts_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (findErr) {
+    console.error('[ai agenda tools] reschedule_appointment lookup failed:', findErr)
+    return jsonResult({ error: 'lookup_failed' })
+  }
+  if (!existing) {
+    return jsonResult({ error: 'no_appointment_found' })
+  }
+
+  const settings = await loadAppointmentSettings(ctx.db, ctx.accountId)
+  const existingDuration =
+    (new Date(existing.ends_at as string).getTime() -
+      new Date(existing.starts_at as string).getTime()) /
+    60_000
+  const duration = positiveInt(args, 'duration_minutes') ?? existingDuration
+  const start = resolveRequestedStart(args, settings)
+
+  if (!start || start.getTime() <= Date.now()) {
+    return jsonResult({ error: 'invalid_or_past_time' })
+  }
+
+  const end = new Date(start.getTime() + duration * 60_000)
+  const { date, time } = formatDateTime(start, settings.timezone)
+
+  const { error } = await ctx.db
+    .from('appointments')
+    .update({ starts_at: start.toISOString(), ends_at: end.toISOString() })
+    .eq('id', existing.id as string)
+
+  if (error) {
+    if ((error as { code?: string }).code === '23P01') {
+      return jsonResult({ error: 'conflict' })
+    }
+    console.error('[ai agenda tools] reschedule_appointment update failed:', error)
+    return jsonResult({ error: 'reschedule_failed' })
+  }
+
+  return jsonResult({ rescheduled: true, date, time })
+}
+
 /** Runs one of `AGENDA_TOOLS` by name. Every failure — bad args, a
  *  thrown error, an unknown tool name — resolves to a `{"error": "..."}"`
  *  string rather than rejecting, so a malformed model call degrades to
@@ -312,6 +408,8 @@ export function createAgendaToolExecutor(ctx: AgendaToolContext): ToolExecutor {
       let result: string
       if (name === 'offer_slots') result = await executeOfferSlots(ctx, args)
       else if (name === 'book_appointment') result = await executeBookAppointment(ctx, args)
+      else if (name === 'reschedule_appointment')
+        result = await executeRescheduleAppointment(ctx, args)
       else result = jsonResult({ error: `unknown_tool:${name}` })
       console.info(`${tag} done in ${Date.now() - startedAt}ms —`, result)
       return result

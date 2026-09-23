@@ -27,15 +27,16 @@ see the customer's tap today.
 ## Non-goals
 
 - Voice / audio input — separate spec, `ai-audio-message-support.md`.
-- Rescheduling or cancelling an existing appointment via the AI —
-  v1 is check + create only, same as the Flow node.
+- Cancelling an existing appointment via the AI outright (no
+  replacement time) — not requested yet; `reschedule_appointment`
+  covers the "move it" case, which is what actually came up live.
 - Booking to a specific agent's calendar — the AI books to the shared
   calendar only (`assigned_to = null`); per-agent assignment via AI is
   a later iteration if needed.
 - A general-purpose tool-calling framework for arbitrary future tools
-  — this spec ships exactly two tools (`offer_slots`, `book_appointment`)
-  and the minimum plumbing to run them. A third tool later reuses the
-  same plumbing.
+  — this spec ships three tools (`offer_slots`, `book_appointment`,
+  `reschedule_appointment`) and the minimum plumbing to run them. A
+  fourth tool later reuses the same plumbing.
 - Draft replies (`/api/ai/draft`) and the playground (`/api/ai/
   playground`) gaining tool calling — a draft is reviewed by a human
   before sending, so a tool call that sends a WhatsApp message or
@@ -139,6 +140,32 @@ see the customer's tap today.
   string is built here (unlike the Flow node's `vars.agendamento`,
   there's no fixed next message to fill).
 
+**`reschedule_appointment`** — write, added after a live gap: the
+model's only write tool was `book_appointment`, so a customer asking to
+move their time got a *second* appointment instead of the first one
+moving — confirmed live (same contact, two `scheduled` rows, the
+original never cancelled).
+- args: `{ slot_id?: string, date?: "YYYY-MM-DD", time?: "HH:MM",
+  duration_minutes?: number }` — same shape as `book_appointment`
+  minus `title` (kept from the original row).
+- Looks up the contact's soonest upcoming, non-cancelled appointment
+  (`account_id` + `contact_id`, `starts_at > now()`, earliest first) —
+  no `flow_run_id`/conversation scoping, since a customer might have
+  booked through a different thread than the one asking to move it.
+  No match → `{ error: "no_appointment_found" }` (the model should
+  offer `book_appointment` instead). `duration_minutes` defaults to
+  the existing appointment's own length when omitted.
+- Resolves the new start the same way as `book_appointment`, then a
+  single `UPDATE appointments SET starts_at, ends_at WHERE id = ...`
+  on that row — not a cancel-then-insert — so a `23P01` conflict on the
+  new time leaves the original booking exactly as it was rather than
+  losing it mid-move.
+- On success: `{ rescheduled: true, date, time }`.
+- **Known simplification**: if a contact somehow has more than one
+  upcoming appointment (shouldn't happen once this ships, but existing
+  test data can), only the soonest one is ever the reschedule target —
+  no way to pick a specific one by tool call today.
+
 ### 2. Interactive taps become visible + routable to the AI
 
 - `buildConversationContext` (`src/lib/ai/context.ts`): widen the
@@ -239,6 +266,9 @@ see the customer's tap today.
       without a human ever seeing an "interactive reply" go unanswered.
 - [ ] A tap on a Flow-sent or automation-sent interactive message is
       unaffected — no AI dispatch, exactly like today.
+- [ ] A customer with an existing upcoming appointment asking to move
+      it ends up with exactly one appointment (the moved one) — never
+      two.
 - [ ] A booking race (two customers tapping the same slot) surfaces as
       `{error:"conflict"}` to the model, which apologizes and re-offers
       rather than crashing the auto-reply.
