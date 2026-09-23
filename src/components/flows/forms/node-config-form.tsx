@@ -47,6 +47,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAccountMembers, memberLabel } from "@/lib/account/members";
+import type { AccountMember } from "@/types";
 import { uploadAccountMedia, MEDIA_MAX_BYTES } from "@/lib/storage/upload-media";
 import { slugify, type BuilderNode } from "../shared";
 import { NextNodeRow, NodeKeySelect, TextRow } from "./fields";
@@ -190,6 +192,17 @@ export function NodeConfigForm({
       return (
         <SetTagForm
           cfg={cfg as SetTagCfg}
+          allNodes={allNodes}
+          currentKey={node.node_key}
+          onUpdateConfig={onUpdateConfig}
+          t={t}
+        />
+      );
+
+    case "offer_slots":
+      return (
+        <OfferSlotsForm
+          cfg={cfg as OfferSlotsCfg}
           allNodes={allNodes}
           currentKey={node.node_key}
           onUpdateConfig={onUpdateConfig}
@@ -833,6 +846,131 @@ function SetTagForm({
         currentKey={currentKey}
         onChange={(v) => onUpdateConfig({ next_node_key: v })}
         label={t("thenAdvanceTo")}
+      />
+    </>
+  );
+}
+
+// ============================================================
+// offer_slots
+// ============================================================
+
+interface OfferSlotsCfg {
+  text?: string;
+  button_label?: string;
+  appointment_title?: string;
+  duration_minutes?: number;
+  days_ahead?: number;
+  max_options?: number;
+  assigned_to?: string;
+  next_node_key?: string;
+  no_slots_next_node_key?: string;
+}
+
+function OfferSlotsForm({
+  cfg,
+  allNodes,
+  currentKey,
+  onUpdateConfig,
+  t,
+}: {
+  cfg: OfferSlotsCfg;
+  allNodes: BuilderNode[];
+  currentKey: string;
+  onUpdateConfig: (patch: Record<string, unknown>) => void;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const [members, setMembers] = useState<AccountMember[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchAccountMembers().then((m) => {
+      if (!cancelled) setMembers(m);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const numberField = (
+    key: "duration_minutes" | "days_ahead" | "max_options",
+    label: string,
+    min: number,
+    max: number,
+  ) => (
+    <div>
+      <label className="mb-1 block text-xs text-muted-foreground">{label}</label>
+      <Input
+        type="number"
+        min={min}
+        max={max}
+        value={cfg[key] ?? ""}
+        placeholder={key === "duration_minutes" ? t("durationDefault") : undefined}
+        onChange={(e) =>
+          onUpdateConfig({ [key]: e.target.value === "" ? undefined : Number(e.target.value) })
+        }
+        className="bg-muted"
+      />
+    </div>
+  );
+
+  return (
+    <>
+      <p className="text-xs text-muted-foreground">{t("offerSlotsHelp", { var: "{{vars.agendamento}}" })}</p>
+      <TextRow
+        label={t("bodyText")}
+        value={cfg.text ?? ""}
+        onChange={(v) => onUpdateConfig({ text: v })}
+        rows={2}
+      />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <TextRow
+          label={t("buttonLabel")}
+          value={cfg.button_label ?? ""}
+          onChange={(v) => onUpdateConfig({ button_label: v })}
+        />
+        <TextRow
+          label={t("appointmentTitleLabel")}
+          value={cfg.appointment_title ?? ""}
+          onChange={(v) => onUpdateConfig({ appointment_title: v })}
+        />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {numberField("duration_minutes", t("durationLabel"), 5, 480)}
+        {numberField("days_ahead", t("daysAheadLabel"), 1, 60)}
+        {numberField("max_options", t("maxOptionsLabel"), 1, 10)}
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-muted-foreground">{t("calendarLabel")}</label>
+        <Select
+          value={cfg.assigned_to || "__shared"}
+          onValueChange={(v) => onUpdateConfig({ assigned_to: v === "__shared" ? "" : v })}
+        >
+          <SelectTrigger className="bg-muted">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__shared">{t("sharedCalendar")}</SelectItem>
+            {members.map((m) => (
+              <SelectItem key={m.user_id} value={m.user_id}>
+                {memberLabel(m)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <NextNodeRow
+        value={cfg.next_node_key ?? ""}
+        allNodes={allNodes}
+        currentKey={currentKey}
+        onChange={(v) => onUpdateConfig({ next_node_key: v })}
+        label={t("afterBooking")}
+      />
+      <NextNodeRow
+        value={cfg.no_slots_next_node_key ?? ""}
+        allNodes={allNodes}
+        currentKey={currentKey}
+        onChange={(v) => onUpdateConfig({ no_slots_next_node_key: v })}
+        label={t("whenNoSlots")}
       />
     </>
   );

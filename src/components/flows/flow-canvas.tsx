@@ -130,6 +130,10 @@ function slotColor(nodeType: NodeType, slotId: string, fallback: string) {
   if (nodeType === 'condition' && slotId === 'false') {
     return nodeColors('handoff').solid;
   }
+  if (nodeType === 'offer_slots') {
+    if (slotId === 'booked') return nodeColors('start').solid;
+    if (slotId === 'no_slots') return nodeColors('handoff').solid;
+  }
   return fallback;
 }
 
@@ -700,6 +704,7 @@ const ADD_NODE_TYPES: NodeType[] = [
   'collect_input',
   'condition',
   'set_tag',
+  'offer_slots',
   'handoff',
   'end',
 ];

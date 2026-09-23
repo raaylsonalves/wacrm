@@ -184,6 +184,34 @@ export type EndNodeConfig = Record<string, never>;
  * v1.5+ additions (collect_input, condition, set_tag, http_fetch) will
  * extend this union — out-of-scope for the v1 engine PR.
  */
+/**
+ * Offers the next free appointment slots as a WhatsApp list and books
+ * the one the customer taps. Suspends like send_list. Slots come from
+ * `appointment_settings` (business hours) minus existing appointments
+ * on the target calendar; the booking itself is guarded by the
+ * `appointments_no_overlap` constraint, so a slot taken in the
+ * meantime re-offers instead of double-booking.
+ */
+export interface OfferSlotsNodeConfig {
+  text: string;
+  /** Tap-to-expand label on the list bubble (≤ 20 chars). */
+  button_label: string;
+  /** Title stored on the created appointment; interpolates vars. */
+  appointment_title?: string;
+  /** Defaults to the account's slot_minutes. */
+  duration_minutes?: number;
+  /** How far ahead to look for slots. Default 7. */
+  days_ahead?: number;
+  /** Rows offered, 1–10 (Meta list cap). Default 10. */
+  max_options?: number;
+  /** Agent whose calendar to book; empty = the shared calendar. */
+  assigned_to?: string;
+  /** After a successful booking. */
+  next_node_key: string;
+  /** When no free slot exists in the window. */
+  no_slots_next_node_key: string;
+}
+
 export type FlowNodeConfig =
   | { node_type: "start"; config: StartNodeConfig }
   | { node_type: "send_message"; config: SendMessageNodeConfig }
@@ -193,6 +221,7 @@ export type FlowNodeConfig =
   | { node_type: "collect_input"; config: CollectInputNodeConfig }
   | { node_type: "condition"; config: ConditionNodeConfig }
   | { node_type: "set_tag"; config: SetTagNodeConfig }
+  | { node_type: "offer_slots"; config: OfferSlotsNodeConfig }
   | { node_type: "handoff"; config: HandoffNodeConfig }
   | { node_type: "end"; config: EndNodeConfig };
 

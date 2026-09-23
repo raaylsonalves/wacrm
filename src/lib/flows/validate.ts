@@ -164,10 +164,21 @@ function detectAutoAdvanceCycles(nodes: NodeInput[]): ValidationIssue[] {
 
   function visit(key: string, stack: string[]): void {
     const node = byKey.get(key);
-    if (!node || !AUTO_ADVANCE_NODE_TYPES.has(node.node_type)) return;
+    if (!node) return;
+    // offer_slots only suspends when it has slots to show; its no-slots
+    // branch advances immediately, so a loop through it is unpaced too.
+    const edges =
+      node.node_type === "offer_slots"
+        ? [(node.config as { no_slots_next_node_key?: string }).no_slots_next_node_key].filter(
+            (k): k is string => !!k,
+          )
+        : AUTO_ADVANCE_NODE_TYPES.has(node.node_type)
+          ? outgoingEdges(node)
+          : null;
+    if (!edges) return;
     color.set(key, GRAY);
     stack.push(key);
-    for (const next of outgoingEdges(node)) {
+    for (const next of edges) {
       const nextColor = color.get(next);
       if (nextColor === GRAY) {
         // Back-edge to a node still on the stack — every node from
@@ -760,6 +771,47 @@ function validateNode(
       break;
     }
 
+    case "offer_slots": {
+      const cfg = node.config as {
+        text?: string;
+        button_label?: string;
+        duration_minutes?: number;
+        days_ahead?: number;
+        max_options?: number;
+        next_node_key?: string;
+        no_slots_next_node_key?: string;
+      };
+      const err = (field: string, message: string) =>
+        issues.push({ severity: "error", scope: "node", node_key: node.node_key, field, message });
+      if (!cfg.text?.trim()) err("text", "Offer-slots needs a text body.");
+      if (!cfg.button_label?.trim()) {
+        err("button_label", "Offer-slots needs a button label (the tap-to-expand text).");
+      } else if (cfg.button_label.length > INTERACTIVE_LIMITS.buttonTitleMaxLength) {
+        err(
+          "button_label",
+          `Button label exceeds ${INTERACTIVE_LIMITS.buttonTitleMaxLength} chars (WhatsApp limit).`,
+        );
+      }
+      if (
+        cfg.max_options !== undefined &&
+        (cfg.max_options < 1 || cfg.max_options > INTERACTIVE_LIMITS.maxListRowsTotal)
+      ) {
+        err("max_options", `Offer-slots can show 1–${INTERACTIVE_LIMITS.maxListRowsTotal} options.`);
+      }
+      if (cfg.duration_minutes !== undefined && (cfg.duration_minutes < 5 || cfg.duration_minutes > 480)) {
+        err("duration_minutes", "Duration must be between 5 and 480 minutes.");
+      }
+      if (cfg.days_ahead !== undefined && (cfg.days_ahead < 1 || cfg.days_ahead > 60)) {
+        err("days_ahead", "Days ahead must be between 1 and 60.");
+      }
+      for (const field of ["next_node_key", "no_slots_next_node_key"] as const) {
+        const key = cfg[field];
+        if (!key) err(field, "Offer-slots needs a node for both the booked and no-slots outcomes.");
+        else if (!knownKeys.has(key)) err(field, `Offer-slots points to non-existent node "${key}".`);
+      }
+      break;
+    }
+
     case "handoff":
     case "end":
       // Terminal nodes have no outgoing edges; nothing to validate
@@ -813,6 +865,15 @@ function outgoingEdges(node: NodeInput): string[] {
     case "set_tag": {
       const cfg = node.config as { next_node_key?: string };
       return cfg.next_node_key ? [cfg.next_node_key] : [];
+    }
+    case "offer_slots": {
+      const cfg = node.config as {
+        next_node_key?: string;
+        no_slots_next_node_key?: string;
+      };
+      return [cfg.next_node_key, cfg.no_slots_next_node_key].filter(
+        (k): k is string => !!k,
+      );
     }
     case "condition": {
       const cfg = node.config as {

@@ -41,6 +41,7 @@
     "notifications": "Notificações",
     "contacts": "Contatos",
     "pipelines": "Pipelines",
+    "agenda": "Agenda",
     "broadcasts": "Disparos",
     "automations": "Automações",
     "flows": "Fluxos",
@@ -1367,6 +1368,16 @@
         "addTag": "Adicionar tag",
         "removeTag": "Remover tag",
         "tagUuidPlaceholder": "UUID da tag",
+        "offerSlotsHelp": "Mostra os próximos horários livres da agenda numa lista e agenda o que o cliente tocar. A data escolhida fica em {var}.",
+        "appointmentTitleLabel": "Título do agendamento",
+        "durationLabel": "Duração (min)",
+        "durationDefault": "Padrão da agenda",
+        "daysAheadLabel": "Dias à frente",
+        "maxOptionsLabel": "Máx. de opções",
+        "calendarLabel": "Agenda",
+        "sharedCalendar": "Agenda compartilhada",
+        "afterBooking": "Depois de agendar, ir para",
+        "whenNoSlots": "Sem horários livres, ir para",
         "thenAdvanceTo": "Depois avançar para",
         "mediaTypeLabel": "Tipo de mídia",
         "imageLabel": "Imagem (PNG, JPEG, WebP)",
@@ -1425,6 +1436,10 @@
         "set_tag": {
           "label": "Marcar contato",
           "blurb": "Adiciona ou remove uma tag do contato"
+        },
+        "offer_slots": {
+          "label": "Oferecer horários",
+          "blurb": "Mostra horários livres e agenda o escolhido"
         },
         "handoff": {
           "label": "Transferir para agente",
@@ -2373,5 +2388,76 @@
     "SGD": "Dólar de Singapura",
     "MXN": "Peso mexicano",
     "COP": "Peso colombiano"
+  },
+  "Agenda": {
+    "title": "Agenda",
+    "new": "Novo agendamento",
+    "today": "Hoje",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "view": {
+      "week": "Semana",
+      "month": "Mês"
+    },
+    "hoursSummary": "Horário de atendimento: {start}–{end} ({tz})",
+    "status": {
+      "scheduled": "Agendado",
+      "confirmed": "Confirmado",
+      "completed": "Concluído",
+      "cancelled": "Cancelado",
+      "no_show": "Não compareceu"
+    },
+    "dialog": {
+      "newTitle": "Novo agendamento",
+      "editTitle": "Editar agendamento",
+      "contact": "Contato",
+      "contactPlaceholder": "Buscar por nome ou telefone",
+      "title": "Título",
+      "titlePlaceholder": "ex.: Simulação de empréstimo",
+      "date": "Data",
+      "time": "Hora",
+      "duration": "Duração (min)",
+      "assignedTo": "Responsável",
+      "shared": "Agenda compartilhada",
+      "status": "Status",
+      "notes": "Observações",
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "delete": "Excluir",
+      "deleteConfirm": "Excluir este agendamento?",
+      "contactRequired": "Escolha um contato",
+      "titleRequired": "Dê um título ao agendamento",
+      "whenRequired": "Informe data, hora e duração",
+      "conflict": "Esse horário já está ocupado para este responsável",
+      "saveFailed": "Não foi possível salvar o agendamento",
+      "saved": "Agendamento salvo"
+    },
+    "settings": {
+      "button": "Horários",
+      "title": "Horário de atendimento",
+      "description": "Define os horários que o bot oferece e quando os lembretes saem.",
+      "workDays": "Dias de atendimento",
+      "dayStart": "Início",
+      "dayEnd": "Fim",
+      "slotMinutes": "Intervalo (min)",
+      "timezone": "Fuso horário (IANA)",
+      "reminderEnabled": "Enviar lembrete por WhatsApp",
+      "reminderHours": "Horas antes do agendamento",
+      "reminderText": "Mensagem do lembrete",
+      "reminderHint": "Variáveis: {vars}. Só chega se o cliente falou com você nas últimas 24h (regra da Meta).",
+      "invalidHours": "O fim precisa ser depois do início",
+      "invalidTimezone": "Fuso horário inválido — use um nome IANA, ex.: America/Sao_Paulo",
+      "saveFailed": "Não foi possível salvar",
+      "saved": "Horários salvos"
+    },
+    "weekdays": {
+      "0": "Dom",
+      "1": "Seg",
+      "2": "Ter",
+      "3": "Qua",
+      "4": "Qui",
+      "5": "Sex",
+      "6": "Sáb"
+    }
   }
 }

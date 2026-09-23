@@ -41,6 +41,7 @@
     "notifications": "알림",
     "contacts": "연락처",
     "pipelines": "파이프라인",
+    "agenda": "일정",
     "broadcasts": "브로드캐스트",
     "automations": "자동화",
     "flows": "플로우",
@@ -1367,6 +1368,16 @@
         "addTag": "태그 추가",
         "removeTag": "태그 제거",
         "tagUuidPlaceholder": "태그 UUID",
+        "offerSlotsHelp": "일정에서 다음 빈 시간대를 목록으로 보여주고 고객이 선택한 시간을 예약합니다. 선택한 시간은 {var}에 저장됩니다.",
+        "appointmentTitleLabel": "예약 제목",
+        "durationLabel": "소요 시간(분)",
+        "durationDefault": "일정 기본값",
+        "daysAheadLabel": "조회 일수",
+        "maxOptionsLabel": "최대 옵션 수",
+        "calendarLabel": "일정",
+        "sharedCalendar": "공유 일정",
+        "afterBooking": "예약 후 이동",
+        "whenNoSlots": "빈 시간이 없으면 이동",
         "thenAdvanceTo": "이후 다음 진행",
         "mediaTypeLabel": "미디어 유형",
         "imageLabel": "이미지 (PNG, JPEG, WebP)",
@@ -1425,6 +1436,10 @@
         "set_tag": {
           "label": "연락처 태그 지정",
           "blurb": "연락처 태그를 추가하거나 제거합니다"
+        },
+        "offer_slots": {
+          "label": "시간대 제안",
+          "blurb": "빈 시간대를 보여주고 선택한 시간을 예약"
         },
         "handoff": {
           "label": "상담원에게 인계",
@@ -2385,5 +2400,76 @@
     "SGD": "싱가포르 달러",
     "MXN": "멕시코 페소",
     "COP": "콜롬비아 페소"
+  },
+  "Agenda": {
+    "title": "일정",
+    "new": "새 예약",
+    "today": "오늘",
+    "previous": "이전",
+    "next": "다음",
+    "view": {
+      "week": "주",
+      "month": "월"
+    },
+    "hoursSummary": "영업 시간: {start}–{end} ({tz})",
+    "status": {
+      "scheduled": "예약됨",
+      "confirmed": "확정",
+      "completed": "완료",
+      "cancelled": "취소",
+      "no_show": "노쇼"
+    },
+    "dialog": {
+      "newTitle": "새 예약",
+      "editTitle": "예약 편집",
+      "contact": "연락처",
+      "contactPlaceholder": "이름 또는 전화번호로 검색",
+      "title": "제목",
+      "titlePlaceholder": "예: 대출 상담",
+      "date": "날짜",
+      "time": "시간",
+      "duration": "소요 시간(분)",
+      "assignedTo": "담당자",
+      "shared": "공유 일정",
+      "status": "상태",
+      "notes": "메모",
+      "save": "저장",
+      "cancel": "취소",
+      "delete": "삭제",
+      "deleteConfirm": "이 예약을 삭제할까요?",
+      "contactRequired": "연락처를 선택하세요",
+      "titleRequired": "예약 제목을 입력하세요",
+      "whenRequired": "날짜, 시간, 소요 시간을 입력하세요",
+      "conflict": "해당 담당자는 이 시간에 이미 예약이 있습니다",
+      "saveFailed": "예약을 저장하지 못했습니다",
+      "saved": "예약이 저장되었습니다"
+    },
+    "settings": {
+      "button": "영업 시간",
+      "title": "영업 시간",
+      "description": "봇이 제안하는 시간대와 알림 발송 시점을 설정합니다.",
+      "workDays": "영업일",
+      "dayStart": "시작",
+      "dayEnd": "종료",
+      "slotMinutes": "간격(분)",
+      "timezone": "시간대(IANA)",
+      "reminderEnabled": "WhatsApp 알림 보내기",
+      "reminderHours": "예약 몇 시간 전",
+      "reminderText": "알림 메시지",
+      "reminderHint": "변수: {vars}. 고객이 최근 24시간 내에 메시지를 보낸 경우에만 전달됩니다(Meta 규칙).",
+      "invalidHours": "종료 시간은 시작 시간 이후여야 합니다",
+      "invalidTimezone": "잘못된 시간대입니다 — IANA 이름을 사용하세요(예: America/Sao_Paulo)",
+      "saveFailed": "저장하지 못했습니다",
+      "saved": "영업 시간이 저장되었습니다"
+    },
+    "weekdays": {
+      "0": "일",
+      "1": "월",
+      "2": "화",
+      "3": "수",
+      "4": "목",
+      "5": "금",
+      "6": "토"
+    }
   }
 }

@@ -410,6 +410,7 @@ choose, referenced by other nodes' `next_node_key`):
 | `collect_input` | `{ prompt_text, var_key, next_node_key }` — waits for the customer's next text reply, stores it under `var_key` |
 | `condition` | `{ subject: "var"\|"tag"\|"contact_field", subject_key, operator: "equals"\|"contains"\|"present"\|"absent", value?, true_next, false_next }` |
 | `set_tag` | `{ mode: "add"\|"remove", tag_id, next_node_key }` |
+| `offer_slots` | `{ text, button_label, appointment_title?, duration_minutes?, days_ahead?, max_options?, assigned_to?, next_node_key, no_slots_next_node_key }` — lists free agenda slots (from the account's business hours) and books the one tapped; stores the time in `vars.agendamento` |
 | `handoff` / `end` | `{}` — terminal, no outgoing edge |
 
 ## Pagination

@@ -183,6 +183,17 @@ export function defaultConfigFor(type: NodeType): Record<string, unknown> {
       };
     case "set_tag":
       return { mode: "add", tag_id: "", next_node_key: "" };
+    case "offer_slots":
+      return {
+        text: "Escolha o melhor horário para você:",
+        button_label: "Ver horários",
+        appointment_title: "Agendamento",
+        days_ahead: 7,
+        max_options: 10,
+        assigned_to: "",
+        next_node_key: "",
+        no_slots_next_node_key: "",
+      };
     case "handoff":
       return { note: "" };
     case "end":

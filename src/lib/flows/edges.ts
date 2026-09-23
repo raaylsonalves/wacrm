@@ -20,6 +20,7 @@
  *   - `button:<reply_id>` for send_buttons rows
  *   - `row:<reply_id>`    for send_list rows
  *   - `true` / `false`    for condition branches
+ *   - `booked` / `no_slots` for offer_slots
  */
 
 import type { BuilderNode } from "@/components/flows/shared";
@@ -80,6 +81,29 @@ export function deriveCanvasEdges(nodes: BuilderNode[]): CanvasEdge[] {
             target: falseNext,
             sourceHandle: "false",
             label: "false",
+          });
+        }
+        break;
+      }
+
+      case "offer_slots": {
+        const c = cfg as { next_node_key?: string; no_slots_next_node_key?: string };
+        if (c.next_node_key && knownKeys.has(c.next_node_key)) {
+          edges.push({
+            id: `${node.node_key}--booked--${c.next_node_key}`,
+            source: node.node_key,
+            target: c.next_node_key,
+            sourceHandle: "booked",
+            label: "booked",
+          });
+        }
+        if (c.no_slots_next_node_key && knownKeys.has(c.no_slots_next_node_key)) {
+          edges.push({
+            id: `${node.node_key}--no_slots--${c.no_slots_next_node_key}`,
+            source: node.node_key,
+            target: c.no_slots_next_node_key,
+            sourceHandle: "no_slots",
+            label: "no slots",
           });
         }
         break;
@@ -187,6 +211,12 @@ export function outgoingSlots(node: BuilderNode): OutgoingSlot[] {
         { id: "false", label: "false" },
       ];
 
+    case "offer_slots":
+      return [
+        { id: "booked", label: "booked" },
+        { id: "no_slots", label: "no slots" },
+      ];
+
     case "send_buttons": {
       const buttons = Array.isArray((cfg as { buttons?: unknown }).buttons)
         ? ((cfg as { buttons: Array<Record<string, unknown>> }).buttons)
@@ -259,6 +289,11 @@ export function applyEdgeConnection(
     case "condition":
       if (sourceHandle === "true") return { true_next: targetKey };
       if (sourceHandle === "false") return { false_next: targetKey };
+      return null;
+
+    case "offer_slots":
+      if (sourceHandle === "booked") return { next_node_key: targetKey };
+      if (sourceHandle === "no_slots") return { no_slots_next_node_key: targetKey };
       return null;
 
     case "send_buttons": {
@@ -361,6 +396,18 @@ function patchedConfigWithoutKey(
         ...cfg,
         ...(trueMatch ? { true_next: "" } : {}),
         ...(falseMatch ? { false_next: "" } : {}),
+      };
+    }
+
+    case "offer_slots": {
+      const c = cfg as { next_node_key?: string; no_slots_next_node_key?: string };
+      const bookedMatch = c.next_node_key === deletedKey;
+      const noneMatch = c.no_slots_next_node_key === deletedKey;
+      if (!bookedMatch && !noneMatch) return null;
+      return {
+        ...cfg,
+        ...(bookedMatch ? { next_node_key: "" } : {}),
+        ...(noneMatch ? { no_slots_next_node_key: "" } : {}),
       };
     }
 

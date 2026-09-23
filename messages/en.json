@@ -41,6 +41,7 @@
     "notifications": "Notifications",
     "contacts": "Contacts",
     "pipelines": "Pipelines",
+    "agenda": "Agenda",
     "broadcasts": "Broadcasts",
     "automations": "Automations",
     "flows": "Flows",
@@ -1367,6 +1368,16 @@
         "addTag": "Add tag",
         "removeTag": "Remove tag",
         "tagUuidPlaceholder": "Tag UUID",
+        "offerSlotsHelp": "Lists the next free slots from the agenda and books the one the customer taps. The chosen time is stored in {var}.",
+        "appointmentTitleLabel": "Appointment title",
+        "durationLabel": "Duration (min)",
+        "durationDefault": "Agenda default",
+        "daysAheadLabel": "Days ahead",
+        "maxOptionsLabel": "Max options",
+        "calendarLabel": "Calendar",
+        "sharedCalendar": "Shared calendar",
+        "afterBooking": "After booking, go to",
+        "whenNoSlots": "If no slots are free, go to",
         "thenAdvanceTo": "Then advance to",
         "mediaTypeLabel": "Media type",
         "imageLabel": "Image (PNG, JPEG, WebP)",
@@ -1425,6 +1436,10 @@
         "set_tag": {
           "label": "Tag contact",
           "blurb": "Adds or removes a contact tag"
+        },
+        "offer_slots": {
+          "label": "Offer slots",
+          "blurb": "Lists free slots and books the chosen one"
         },
         "handoff": {
           "label": "Handoff to agent",
@@ -2385,5 +2400,76 @@
     "SGD": "Singapore Dollar",
     "MXN": "Mexican Peso",
     "COP": "Colombian Peso"
+  },
+  "Agenda": {
+    "title": "Agenda",
+    "new": "New appointment",
+    "today": "Today",
+    "previous": "Previous",
+    "next": "Next",
+    "view": {
+      "week": "Week",
+      "month": "Month"
+    },
+    "hoursSummary": "Business hours: {start}–{end} ({tz})",
+    "status": {
+      "scheduled": "Scheduled",
+      "confirmed": "Confirmed",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "no_show": "No-show"
+    },
+    "dialog": {
+      "newTitle": "New appointment",
+      "editTitle": "Edit appointment",
+      "contact": "Contact",
+      "contactPlaceholder": "Search by name or phone",
+      "title": "Title",
+      "titlePlaceholder": "e.g. Loan simulation",
+      "date": "Date",
+      "time": "Time",
+      "duration": "Duration (min)",
+      "assignedTo": "Owner",
+      "shared": "Shared calendar",
+      "status": "Status",
+      "notes": "Notes",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this appointment?",
+      "contactRequired": "Pick a contact",
+      "titleRequired": "Give the appointment a title",
+      "whenRequired": "Enter a date, time and duration",
+      "conflict": "That time is already booked for this owner",
+      "saveFailed": "Could not save the appointment",
+      "saved": "Appointment saved"
+    },
+    "settings": {
+      "button": "Hours",
+      "title": "Business hours",
+      "description": "Sets the slots the bot offers and when reminders go out.",
+      "workDays": "Working days",
+      "dayStart": "Start",
+      "dayEnd": "End",
+      "slotMinutes": "Slot (min)",
+      "timezone": "Timezone (IANA)",
+      "reminderEnabled": "Send a WhatsApp reminder",
+      "reminderHours": "Hours before the appointment",
+      "reminderText": "Reminder message",
+      "reminderHint": "Variables: {vars}. Only delivered if the customer messaged you in the last 24h (Meta rule).",
+      "invalidHours": "End must be after start",
+      "invalidTimezone": "Invalid timezone — use an IANA name, e.g. America/Sao_Paulo",
+      "saveFailed": "Could not save",
+      "saved": "Hours saved"
+    },
+    "weekdays": {
+      "0": "Sun",
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat"
+    }
   }
 }

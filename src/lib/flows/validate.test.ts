@@ -637,3 +637,27 @@ describe("validateFlowForActivation — auto-advance cycles", () => {
     ).toBe(false);
   });
 });
+
+describe("offer_slots no-slots loop", () => {
+  it("flags a loop back through the no-slots branch", () => {
+    const issues = validateFlowForActivation(
+      { name: "f", trigger_type: "manual", trigger_config: {}, entry_node_id: "start" },
+      [
+        { node_key: "start", node_type: "start", config: { next_node_key: "offer" } },
+        {
+          node_key: "offer",
+          node_type: "offer_slots",
+          config: {
+            text: "Pick a time",
+            button_label: "Times",
+            next_node_key: "end",
+            no_slots_next_node_key: "sorry",
+          },
+        },
+        { node_key: "sorry", node_type: "send_message", config: { text: "None", next_node_key: "offer" } },
+        { node_key: "end", node_type: "end", config: {} },
+      ],
+    );
+    expect(issues.some((i) => i.node_key === "offer" && /loop/.test(i.message))).toBe(true);
+  });
+});

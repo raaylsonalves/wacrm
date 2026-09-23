@@ -43,6 +43,18 @@ import { decideFallback, resolveFallbackPolicy } from "./fallback";
 import { addContactTagAndDispatch } from "@/lib/contacts/tag-events";
 import { removeContactTag } from "@/lib/contacts/tag-write";
 import {
+  formatDateTime,
+  formatSlotLabel,
+  generateFreeSlots,
+  parseSlotReplyId,
+  slotReplyId,
+} from "@/lib/appointments/slots";
+import {
+  loadAppointmentSettings,
+  loadBusyRanges,
+  resolveAssignee,
+} from "@/lib/appointments/store";
+import {
   type CollectInputNodeConfig,
   type ConditionNodeConfig,
   type DispatchInboundInput,
@@ -58,6 +70,7 @@ import {
   type SetTagNodeConfig,
   type StartNodeConfig,
   type KeywordTriggerConfig,
+  type OfferSlotsNodeConfig,
 } from "./types";
 
 // ============================================================
@@ -149,7 +162,8 @@ export function isSuspending(node_type: string): boolean {
   return (
     node_type === "send_buttons" ||
     node_type === "send_list" ||
-    node_type === "collect_input"
+    node_type === "collect_input" ||
+    node_type === "offer_slots"
   );
 }
 
@@ -474,6 +488,142 @@ async function sendListAndSuspend(
     })
     .eq("id", run.id);
   return { outcome: "advanced", node_key: node.node_key };
+}
+
+/**
+ * Compute free slots and send them as a list. Returns false (sending
+ * nothing) when the window has no free slot, so the caller can route to
+ * `no_slots_next_node_key` instead of suspending.
+ */
+async function offerSlotsAndSuspend(
+  db: AdminClient,
+  run: FlowRunRow,
+  node: FlowNodeRow,
+): Promise<boolean> {
+  const cfg = node.config as unknown as OfferSlotsNodeConfig;
+  const settings = await loadAppointmentSettings(db, run.account_id);
+  const daysAhead = cfg.days_ahead ?? 7;
+  const now = new Date();
+  const assignee = await resolveAssignee(db, run.account_id, cfg.assigned_to);
+  const busy = await loadBusyRanges(
+    db,
+    run.account_id,
+    assignee,
+    now,
+    new Date(now.getTime() + (daysAhead + 1) * 86_400_000),
+  );
+  const slots = generateFreeSlots({
+    now,
+    settings,
+    busy,
+    daysAhead,
+    limit: Math.min(Math.max(cfg.max_options ?? 10, 1), 10),
+    durationMinutes: cfg.duration_minutes ?? settings.slot_minutes,
+  });
+  if (slots.length === 0) return false;
+
+  const { whatsapp_message_id } = await engineSendInteractiveList({
+    accountId: run.account_id,
+    userId: run.user_id,
+    conversationId: run.conversation_id!,
+    contactId: run.contact_id!,
+    bodyText: interpolateVars(cfg.text, run.vars),
+    buttonLabel: interpolateVars(cfg.button_label, run.vars),
+    sections: [
+      {
+        rows: slots.map((start) => ({
+          id: slotReplyId(start),
+          title: formatSlotLabel(start, settings.timezone),
+        })),
+      },
+    ],
+  });
+  await logEvent(db, run.id, "message_sent", node.node_key, {
+    node_type: "offer_slots",
+    whatsapp_message_id,
+    slots_offered: slots.length,
+  });
+  const { data: msg } = await db
+    .from("messages")
+    .select("id")
+    .eq("message_id", whatsapp_message_id)
+    .maybeSingle();
+  await db
+    .from("flow_runs")
+    .update({
+      last_prompt_message_id: (msg as { id: string } | null)?.id ?? null,
+    })
+    .eq("id", run.id);
+  return true;
+}
+
+/**
+ * Book the slot a customer tapped on an offer_slots list. `taken` means
+ * the exclusion constraint rejected it (someone else booked that time
+ * after we offered it); `invalid` means the reply wasn't one of our slot
+ * ids or the time has already passed.
+ */
+async function bookOfferedSlot(
+  db: AdminClient,
+  run: FlowRunRow,
+  node: FlowNodeRow,
+  replyId: string,
+): Promise<"booked" | "taken" | "invalid" | "lost_race"> {
+  const start = parseSlotReplyId(replyId);
+  if (!start || start.getTime() <= Date.now()) return "invalid";
+  const cfg = node.config as unknown as OfferSlotsNodeConfig;
+  const settings = await loadAppointmentSettings(db, run.account_id);
+  const duration = cfg.duration_minutes ?? settings.slot_minutes;
+  const end = new Date(start.getTime() + duration * 60_000);
+  const { date, time } = formatDateTime(start, settings.timezone);
+  const title =
+    interpolateVars(cfg.appointment_title ?? "", run.vars).trim() ||
+    formatSlotLabel(start, settings.timezone);
+
+  const { data: created, error } = await db
+    .from("appointments")
+    .insert({
+      account_id: run.account_id,
+      contact_id: run.contact_id,
+      conversation_id: run.conversation_id,
+      assigned_to: await resolveAssignee(db, run.account_id, cfg.assigned_to),
+      title,
+      starts_at: start.toISOString(),
+      ends_at: end.toISOString(),
+      source: "flow",
+      flow_run_id: run.id,
+    })
+    .select("id")
+    .single();
+  if (error) {
+    if (error.code === "23P01") return "taken";
+    throw new Error(error.message);
+  }
+
+  const newVars = {
+    ...run.vars,
+    agendamento: `${date} ${time}`,
+    agendamento_data: date,
+    agendamento_hora: time,
+  };
+  // Same current_node_key guard collect_input uses: two taps arriving
+  // together must not both advance. The loser rolls its booking back.
+  const { data: claimed } = await db
+    .from("flow_runs")
+    .update({ vars: newVars, reprompt_count: 0 })
+    .eq("id", run.id)
+    .eq("current_node_key", run.current_node_key)
+    .select("id");
+  if (!claimed || claimed.length === 0) {
+    await db.from("appointments").delete().eq("id", (created as { id: string }).id);
+    return "lost_race";
+  }
+  run.vars = newVars;
+  run.reprompt_count = 0;
+  await logEvent(db, run.id, "node_entered", node.node_key, {
+    appointment_id: (created as { id: string }).id,
+  });
+  return "booked";
 }
 
 async function executeHandoff(
@@ -869,6 +1019,40 @@ async function advanceFromNodeKey(
       }
       return { outcome: "advanced" };
     }
+    if (node.node_type === "offer_slots") {
+      const cfg = node.config as unknown as OfferSlotsNodeConfig;
+      let offered: boolean;
+      try {
+        offered = await offerSlotsAndSuspend(db, run, node);
+      } catch (err) {
+        await logEvent(db, run.id, "error", node.node_key, {
+          reason: "offer_slots_failed",
+          detail: err instanceof Error ? err.message : String(err),
+        });
+        await endRun(db, run.id, "failed", "offer_slots_failed");
+        return { outcome: "completed" };
+      }
+      if (!offered) {
+        await logEvent(db, run.id, "node_entered", node.node_key, {
+          slots_offered: 0,
+          advancing_to: cfg.no_slots_next_node_key,
+        });
+        currentKey = cfg.no_slots_next_node_key;
+        continue;
+      }
+      const advanced = await advanceCurrentNodeKey(
+        db,
+        run.id,
+        run.current_node_key,
+        node.node_key,
+      );
+      if (!advanced) {
+        await logEvent(db, run.id, "error", node.node_key, {
+          reason: "lost_race_during_advance",
+        });
+      }
+      return { outcome: "advanced" };
+    }
     if (node.node_type === "handoff") {
       await executeHandoff(db, run, node);
       return { outcome: "handed_off" };
@@ -1082,6 +1266,51 @@ async function handleReplyForActiveRun(
         matched = cfg.next_node_key;
       }
     }
+  } else if (
+    message.kind === "interactive_reply" &&
+    currentNode.node_type === "offer_slots"
+  ) {
+    const cfg = currentNode.config as unknown as OfferSlotsNodeConfig;
+    let result: Awaited<ReturnType<typeof bookOfferedSlot>>;
+    try {
+      result = await bookOfferedSlot(db, run, currentNode, message.reply_id);
+    } catch (err) {
+      await logEvent(db, run.id, "error", currentNode.node_key, {
+        reason: "appointment_booking_failed",
+        detail: err instanceof Error ? err.message : String(err),
+      });
+      await endRun(db, run.id, "failed", "appointment_booking_failed");
+      return { consumed: true, flow_run_id: run.id, outcome: "completed" };
+    }
+    if (result === "booked") {
+      matched = cfg.next_node_key;
+    } else if (result === "lost_race") {
+      return { consumed: true, flow_run_id: run.id, outcome: "no_match" };
+    } else if (result === "taken") {
+      // Someone booked that time after we offered it — send the list
+      // again with what's still free, staying on this node.
+      await logEvent(db, run.id, "node_entered", currentNode.node_key, {
+        slot_taken: true,
+      });
+      try {
+        if (!(await offerSlotsAndSuspend(db, run, currentNode))) {
+          const outcome = await advanceFromNodeKey(
+            db,
+            run,
+            cfg.no_slots_next_node_key,
+            nodes,
+          );
+          return { consumed: true, flow_run_id: run.id, outcome: outcome.outcome };
+        }
+      } catch (err) {
+        await logEvent(db, run.id, "error", currentNode.node_key, {
+          reason: "offer_slots_failed",
+          detail: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return { consumed: true, flow_run_id: run.id, outcome: "fallback_fired" };
+    }
+    // "invalid" falls through to the fallback policy below.
   }
 
   if (matched) {
@@ -1137,6 +1366,14 @@ async function handleReplyForActiveRun(
         await sendButtonsAndSuspend(db, run, currentNode);
       } else if (currentNode.node_type === "send_list") {
         await sendListAndSuspend(db, run, currentNode);
+      } else if (currentNode.node_type === "offer_slots") {
+        // Re-offer with fresh availability rather than the stale list;
+        // if everything filled up meanwhile, take the no-slots branch.
+        if (!(await offerSlotsAndSuspend(db, run, currentNode))) {
+          const cfg = currentNode.config as unknown as OfferSlotsNodeConfig;
+          const outcome = await advanceFromNodeKey(db, run, cfg.no_slots_next_node_key, nodes);
+          return { consumed: true, flow_run_id: run.id, outcome: outcome.outcome };
+        }
       } else if (currentNode.node_type === "collect_input") {
         // Customer typed something we couldn't accept (empty after trim,
         // or var_key missing — rare). Re-send the prompt so they try again.

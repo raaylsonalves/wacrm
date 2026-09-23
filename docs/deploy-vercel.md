@@ -42,8 +42,10 @@ on a schedule:
 
 - `GET /api/automations/cron`
 - `GET /api/flows/cron`
+- `GET /api/appointments/cron` (agenda reminders — accepts either
+  `x-cron-secret` or `Authorization: Bearer`)
 
-Both require the shared secret `AUTOMATION_CRON_SECRET` (generate
+All require the shared secret `AUTOMATION_CRON_SECRET` (generate
 with `openssl rand -hex 32` and set it as an env var) and return 503
 until that variable is set.
 

@@ -122,6 +122,24 @@ BEGIN
       'fn_deal_default_position_in_stage search_path is not pinned — migration 057 did not apply';
   END IF;
 
+  -- Appointments (058) — the exclusion constraint is what stops the
+  -- offer_slots flow node from double-booking a slot under concurrent
+  -- taps; a silently-skipped DO block would leave that race open.
+  IF to_regclass('public.appointments') IS NULL
+     OR to_regclass('public.appointment_settings') IS NULL THEN
+    RAISE EXCEPTION 'appointments tables are missing — migration 058 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'appointments_no_overlap'
+  ) THEN
+    RAISE EXCEPTION 'appointments_no_overlap is missing — migration 058 did not apply';
+  END IF;
+  IF pg_get_constraintdef(
+       (SELECT oid FROM pg_constraint WHERE conname = 'flow_nodes_node_type_check')
+     ) NOT LIKE '%offer_slots%' THEN
+    RAISE EXCEPTION 'flow_nodes.node_type does not allow offer_slots — migration 058 did not apply';
+  END IF;
+
   -- 041 repairs create_broadcast_with_recipients, which 037/038 shipped
   -- with an ambiguous bare `RETURNING id, contact_id` (SQLSTATE 42702 on
   -- first call — plpgsql resolves names at execution, not CREATE, so a
