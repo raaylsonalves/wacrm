@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/hooks/use-auth';
 import {
+  canClearConversationHistory,
   canDeleteAccount,
   canEditSettings,
   canManageLgpd,
@@ -24,7 +25,8 @@ export type CanAction =
   | 'view-only'
   | 'delete-account'
   | 'transfer-ownership'
-  | 'manage-lgpd';
+  | 'manage-lgpd'
+  | 'clear-conversation-history';
 
 /**
  * Inline alternative to `<RequireRole>` for places that need a
@@ -58,6 +60,8 @@ export function useCan(action: CanAction): boolean {
       return canTransferOwnership(accountRole);
     case 'manage-lgpd':
       return canManageLgpd(accountRole);
+    case 'clear-conversation-history':
+      return canClearConversationHistory(accountRole);
     default: {
       // Exhaustiveness check — adding a new `CanAction` without a
       // case here fails the typecheck because TS narrows `action`

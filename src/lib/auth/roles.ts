@@ -117,3 +117,14 @@ export function canTransferOwnership(role: AccountRole): boolean {
 export function canManageLgpd(role: AccountRole): boolean {
   return hasMinRole(role, 'admin');
 }
+
+/**
+ * Owner / admin: hard-delete a conversation's message history. RLS's
+ * `messages_modify` policy alone permits DELETE down to `agent`, but a
+ * bulk, irreversible wipe belongs above that routine-write bar — same
+ * reasoning as `canManageLgpd`. The API route enforces this directly
+ * rather than relying on the UI hiding the button.
+ */
+export function canClearConversationHistory(role: AccountRole): boolean {
+  return hasMinRole(role, 'admin');
+}

@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
+import { useCan } from '@/hooks/use-can';
 import { slaTier, formatElapsedMinutes, type SlaTier } from '@/lib/inbox/sla';
 import type { Conversation, ConversationStatus, Profile, Tag } from '@/types';
 import { Search, ChevronDown, X, Check, Loader2, Clock } from 'lucide-react';
@@ -283,6 +284,25 @@ export function ConversationList({
       onAssignChange?.(conversationId, agentId);
     },
     [onAssignChange, tThread]
+  );
+
+  const handleRowClearHistory = useCallback(
+    async (conversationId: string) => {
+      const res = await fetch(
+        `/api/conversations/${conversationId}/messages`,
+        { method: 'DELETE' }
+      );
+      if (!res.ok) {
+        console.error('Failed to clear conversation history:', await res.text());
+        toast.error(t('clearHistoryFailed'));
+        return;
+      }
+      toast.success(t('clearHistorySuccess'));
+      // The delete + the conversation's own field reset both land via
+      // the existing Postgres realtime subscriptions (same as any other
+      // agent's edit) — no local state patch needed here.
+    },
+    [t]
   );
 
   const handleRowToggleTag = useCallback(
@@ -679,6 +699,7 @@ export function ConversationList({
                 onStatusChange={handleRowStatusChange}
                 onAssignChange={handleRowAssignChange}
                 onToggleTag={handleRowToggleTag}
+                onClearHistory={handleRowClearHistory}
                 now={nowTick}
                 responseTimeTargetMinutes={responseTimeTargetMinutes}
                 channelLabel={
@@ -719,6 +740,7 @@ interface ConversationItemProps {
     currentTags: Tag[],
     tag: Tag
   ) => Promise<void>;
+  onClearHistory: (conversationId: string) => Promise<void>;
   /** Current time, ticked periodically by the parent (see the interval
    *  comment above) — passed in rather than read via `Date.now()` at
    *  render time so the badge advances even when nothing else about
@@ -751,6 +773,7 @@ function ConversationItem({
   onStatusChange,
   onAssignChange,
   onToggleTag,
+  onClearHistory,
   now,
   responseTimeTargetMinutes,
   channelLabel,
@@ -766,6 +789,7 @@ function ConversationItem({
   // click even register?" — track which single menu item is in flight
   // so it can show a spinner instead of leaving the menu inert.
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const canClearHistory = useCan('clear-conversation-history');
 
   const runPending = useCallback(
     async (key: string, action: () => Promise<void>) => {
@@ -1015,6 +1039,30 @@ function ConversationItem({
                   </ContextMenuItem>
                 );
               })}
+            </ContextMenuGroup>
+          </>
+        )}
+
+        {canClearHistory && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuGroup>
+              <ContextMenuItem
+                disabled={pendingKey !== null}
+                closeOnClick={false}
+                variant="destructive"
+                onClick={() => {
+                  if (!window.confirm(t('clearHistoryConfirm'))) return;
+                  runPending('clear-history', () =>
+                    onClearHistory(conversation.id)
+                  );
+                }}
+              >
+                {pendingKey === 'clear-history' && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                )}
+                {t('clearHistory')}
+              </ContextMenuItem>
             </ContextMenuGroup>
           </>
         )}
