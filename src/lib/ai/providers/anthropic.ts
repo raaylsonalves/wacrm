@@ -116,6 +116,12 @@ export async function generateAnthropic(args: ProviderArgs): Promise<ProviderRes
 
     const content = data.content ?? []
     const toolUses = content.filter((b) => b.type === 'tool_use')
+    if (tools && tools.length > 0) {
+      console.info(
+        `[ai anthropic] round ${round}: ${toolUses.length} tool call(s)`,
+        toolUses.map((b) => b.name),
+      )
+    }
 
     if (toolUses.length > 0 && executeTool && round < MAX_TOOL_ROUNDS) {
       body.push({ role: 'assistant', content })

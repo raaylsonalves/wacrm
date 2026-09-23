@@ -102,11 +102,22 @@ export async function dispatchInboundToAiReply(
     inboundMessageId,
   } = args
 
+  // Short, greppable prefix carrying the conversation id on every line so
+  // a Vercel log stream filtered to one conversation shows the whole
+  // trail — which gate (if any) stopped the dispatch, and how long the
+  // generation itself took. Added after a live debugging session where
+  // "typing shown, no reply, no visible error" gave no way to tell a
+  // silent early-out apart from a hang without querying the DB by hand.
+  const tag = `[ai auto-reply ${conversationId}]`
+
   try {
     const db = supabaseAdmin()
 
     const config = await loadAiConfig(db, accountId)
-    if (!config || !config.autoReplyEnabled) return
+    if (!config || !config.autoReplyEnabled) {
+      console.info(`${tag} skipped: AI not configured or auto-reply disabled`)
+      return
+    }
 
     // Deterministic, user-configured responders win over the LLM — the
     // caller already excludes messages a Flow consumed. Message-level
@@ -123,16 +134,28 @@ export async function dispatchInboundToAiReply(
       .eq('is_active', true)
       .in('trigger_type', ['new_message_received', 'keyword_match'])
       .limit(1)
-    if (autoResponders && autoResponders.length > 0) return
+    if (autoResponders && autoResponders.length > 0) {
+      console.info(`${tag} skipped: an active new_message_received/keyword_match automation owns this inbound`)
+      return
+    }
 
     const { data: conv, error: convErr } = await db
       .from('conversations')
       .select('assigned_agent_id, ai_autoreply_disabled, ai_reply_count')
       .eq('id', conversationId)
       .maybeSingle()
-    if (convErr || !conv) return
-    if (conv.assigned_agent_id) return // a human owns this thread
-    if (conv.ai_autoreply_disabled) return // handed off / turned off here
+    if (convErr || !conv) {
+      console.info(`${tag} skipped: conversation lookup failed`, convErr)
+      return
+    }
+    if (conv.assigned_agent_id) {
+      console.info(`${tag} skipped: a human agent is assigned`)
+      return // a human owns this thread
+    }
+    if (conv.ai_autoreply_disabled) {
+      console.info(`${tag} skipped: auto-reply is disabled on this conversation (paused/handed off)`)
+      return // handed off / turned off here
+    }
     // Cheap early-out; the authoritative cap check is the atomic claim
     // below (this read can race a concurrent inbound). Reaching the cap
     // hands off to a human here — the settings copy already promises
@@ -140,13 +163,17 @@ export async function dispatchInboundToAiReply(
     // encaminha a conversa"), so silently going quiet instead would be
     // a customer message nobody is ever notified about.
     if (conv.ai_reply_count >= config.autoReplyMaxPerConversation) {
+      console.info(`${tag} hands off: reached the per-conversation reply cap (${config.autoReplyMaxPerConversation})`)
       const summary = buildCapReachedSummary({ max: config.autoReplyMaxPerConversation })
       await handOffToHuman(db, conversationId, config, conv.assigned_agent_id, summary)
       return
     }
 
     const messages = await buildConversationContext(db, conversationId)
-    if (messages.length === 0) return
+    if (messages.length === 0) {
+      console.info(`${tag} skipped: no text/interactive messages to build context from`)
+      return
+    }
 
     // Account-wide throttle on the shared BYO key. The per-conversation
     // cap bounds one thread; this bounds a burst across many threads (a
@@ -159,10 +186,15 @@ export async function dispatchInboundToAiReply(
     )
     if (!acctLimit.success) {
       console.warn(
-        `[ai auto-reply] account ${accountId} hit the per-account rate limit — skipping this inbound.`,
+        `${tag} skipped: account ${accountId} hit the per-account rate limit`,
       )
       return
     }
+
+    console.info(
+      `${tag} generating reply — provider=${config.provider} model=${config.model} agendaEnabled=${config.agendaEnabled} fallbackTiers=${config.fallbacks.length}`,
+    )
+    const startedAt = Date.now()
 
     // Every gate has passed — we're committed to attempting a reply, so
     // show the customer "typing…" (and mark their message read) while the
@@ -214,18 +246,24 @@ export async function dispatchInboundToAiReply(
         executeTool,
       })
     } catch (err) {
+      console.error(
+        `${tag} generation failed after ${Date.now() - startedAt}ms:`,
+        err,
+      )
       if (!(err instanceof AllProvidersFailedError)) throw err
       // Every configured tier (primary + fallbacks) failed — same
       // handoff mechanics as the content-handoff path below, just with
       // a note explaining it was a provider outage, not the model
       // choosing to bail.
-      console.error('[ai auto-reply] all AI providers failed:', err.attempts)
       const summary = buildProviderFailureSummary({ attempts: err.attempts })
       await handOffToHuman(db, conversationId, config, conv.assigned_agent_id, summary)
       return
     }
 
     const { text, handoff, usage } = generation
+    console.info(
+      `${tag} generation done in ${Date.now() - startedAt}ms — provider=${generation.provider} model=${generation.model} handoff=${handoff} textLength=${text.length} fallbackAttempts=${generation.attempts?.length ?? 0}`,
+    )
 
     // Record token spend on the account's BYO key. Fire-and-forget so it
     // never adds latency to the customer-facing send: `logAiUsage`
@@ -244,6 +282,7 @@ export async function dispatchInboundToAiReply(
     })
 
     if (handoff || !text) {
+      console.info(`${tag} hands off: ${handoff ? 'model requested handoff' : 'empty reply text'}`)
       // The model can't (or shouldn't) answer — stop auto-replying on
       // this thread and hand it to a human.
       const summary = buildHandoffSummary({
@@ -310,8 +349,9 @@ export async function dispatchInboundToAiReply(
         aiGenerated: true,
       })
     }
+    console.info(`${tag} sent ${segments.length} message(s) to the customer`)
   } catch (err) {
-    console.error('[ai auto-reply] dispatch failed:', err)
+    console.error(`[ai auto-reply ${conversationId}] dispatch failed:`, err)
   }
 }
 

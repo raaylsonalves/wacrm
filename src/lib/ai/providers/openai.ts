@@ -109,6 +109,12 @@ export async function generateOpenAi(args: ProviderArgs): Promise<ProviderResult
 
     const message = data.choices?.[0]?.message
     const toolCalls = message?.tool_calls ?? []
+    if (tools && tools.length > 0) {
+      console.info(
+        `[ai openai] round ${round}: ${toolCalls.length} tool call(s)`,
+        toolCalls.map((c) => c.function?.name),
+      )
+    }
 
     if (toolCalls.length > 0 && executeTool && round < MAX_TOOL_ROUNDS) {
       body.push({ role: 'assistant', content: message?.content ?? null, tool_calls: toolCalls })

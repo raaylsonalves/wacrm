@@ -305,12 +305,18 @@ async function executeBookAppointment(
  *  the model reacting in text instead of the whole reply crashing. */
 export function createAgendaToolExecutor(ctx: AgendaToolContext): ToolExecutor {
   return async (name, args) => {
+    const tag = `[ai agenda tools ${ctx.conversationId}] ${name}`
+    const startedAt = Date.now()
+    console.info(`${tag} called`, args)
     try {
-      if (name === 'offer_slots') return await executeOfferSlots(ctx, args)
-      if (name === 'book_appointment') return await executeBookAppointment(ctx, args)
-      return jsonResult({ error: `unknown_tool:${name}` })
+      let result: string
+      if (name === 'offer_slots') result = await executeOfferSlots(ctx, args)
+      else if (name === 'book_appointment') result = await executeBookAppointment(ctx, args)
+      else result = jsonResult({ error: `unknown_tool:${name}` })
+      console.info(`${tag} done in ${Date.now() - startedAt}ms —`, result)
+      return result
     } catch (err) {
-      console.error(`[ai agenda tools] ${name} failed:`, err)
+      console.error(`${tag} failed after ${Date.now() - startedAt}ms:`, err)
       return jsonResult({ error: 'internal_error' })
     }
   }

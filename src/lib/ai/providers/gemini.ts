@@ -154,6 +154,12 @@ export async function generateGemini(args: ProviderArgs): Promise<ProviderResult
 
     const parts = data.candidates?.[0]?.content?.parts ?? []
     const calls = parts.filter((p) => p.functionCall)
+    if (tools && tools.length > 0) {
+      console.info(
+        `[ai gemini] round ${round}: ${calls.length} tool call(s)`,
+        calls.map((p) => p.functionCall?.name),
+      )
+    }
 
     if (calls.length > 0 && executeTool && round < MAX_TOOL_ROUNDS) {
       contents.push({ role: 'model', parts: calls.map((p) => ({ functionCall: p.functionCall })) })
