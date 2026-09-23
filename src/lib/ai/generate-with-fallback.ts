@@ -108,6 +108,26 @@ export async function generateReplyWithFallback(
   const generate = deps.generate ?? generateReply
   const delay = deps.delay ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)))
 
+  // A tool call is a real side effect (a WhatsApp send, an appointment
+  // write) — NOT idempotent, unlike a plain text generation. Retrying
+  // the same tier or advancing to a fallback tier re-runs the whole
+  // exchange from scratch with the model's original messages, so if it
+  // decides to call the same tool again, that side effect fires twice.
+  // Confirmed live: a tool ran successfully, that attempt then failed on
+  // a LATER round, and the fallback tier's own fresh attempt called the
+  // same tool again — the customer got two duplicate WhatsApp slot
+  // lists before the final confirmation. Track whether any tool has
+  // fired yet and, once it has, stop the chain outright on any further
+  // failure instead of retrying/advancing — a handoff is a far better
+  // outcome than a duplicated side effect.
+  let toolSideEffectFired = false
+  const trackedExecuteTool: ToolExecutor | undefined = executeTool
+    ? async (name, toolArgs) => {
+        toolSideEffectFired = true
+        return executeTool(name, toolArgs)
+      }
+    : undefined
+
   const tiers: AiProviderCredentials[] = [
     { provider: config.provider, model: config.model, apiKey: config.apiKey },
     ...config.fallbacks,
@@ -140,7 +160,7 @@ export async function generateReplyWithFallback(
           systemPrompt,
           messages,
           tools,
-          executeTool,
+          executeTool: trackedExecuteTool,
           // Never hand an attempt more time than the chain has left —
           // a late attempt with a full fresh timeout is exactly how 2
           // tiers x 2 attempts each blew past 60s with nothing caught.
@@ -150,6 +170,10 @@ export async function generateReplyWithFallback(
       } catch (err) {
         const aiError = toAiError(err)
         lastError = aiError
+        if (toolSideEffectFired) {
+          attempts.push({ provider: tier.provider, model: tier.model, error: aiError })
+          break outer
+        }
         const retryable = RETRYABLE_CODES.has(aiError.code)
         const hasMoreAttempts = attempt < maxAttempts - 1
         const timeForRetryDelay =

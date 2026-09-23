@@ -465,4 +465,52 @@ describe('generateReply — Gemini', () => {
       parts: [{ functionResponse: { name: 'offer_slots', response: { result: '{"sent":true}' } } }],
     })
   })
+
+  it('echoes thoughtSignature back on the model turn — dropping it 400s the follow-up request', async () => {
+    // Gemini's "thinking" models require this to come back verbatim on
+    // the model's own turn when continuing a tool-calling exchange;
+    // omitting it is exactly what caused a real 400 in production
+    // ("Function call is missing a thought_signature") and, combined
+    // with the fallback chain's retry, duplicate WhatsApp sends.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        okResponse({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    functionCall: { name: 'book_appointment', args: { slot_id: 'slot:x' } },
+                    thoughtSignature: 'opaque-signature-abc',
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(okResponse({ candidates: [{ content: { parts: [{ text: 'Marcado!' }] } }] }))
+    vi.stubGlobal('fetch', fetchMock)
+    const executeTool = vi.fn().mockResolvedValue('{"booked":true}')
+
+    await generateReply({
+      config: config({ provider: 'gemini' }),
+      systemPrompt: 'sys',
+      messages: [{ role: 'user', content: 'pode marcar' }],
+      tools: [{ name: 'book_appointment', description: 'x', parameters: { type: 'object', properties: {} } }],
+      executeTool,
+    })
+
+    const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body)
+    expect(secondBody.contents).toContainEqual({
+      role: 'model',
+      parts: [
+        {
+          functionCall: { name: 'book_appointment', args: { slot_id: 'slot:x' } },
+          thoughtSignature: 'opaque-signature-abc',
+        },
+      ],
+    })
+  })
 })

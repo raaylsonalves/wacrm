@@ -187,6 +187,46 @@ describe('generateReplyWithFallback', () => {
     vi.restoreAllMocks()
   })
 
+  it('stops the chain outright once a tool has fired, even on a retryable error', async () => {
+    // Regression for a real duplicate-side-effect bug: an attempt calls
+    // a tool (a real WhatsApp send), then fails on a later round. Before
+    // this fix, a retryable error there would retry the same tier or
+    // advance to a fallback tier, which re-runs the whole exchange from
+    // scratch — and if the model decides to call the same tool again,
+    // the customer gets the same WhatsApp message twice. Once any tool
+    // has fired, no further attempt should ever be made.
+    const executeTool = vi.fn().mockResolvedValue('{"sent":true}')
+    const generate = vi.fn().mockImplementation(async ({ executeTool: et }) => {
+      await et('offer_slots', {})
+      throw new AiError('down', { code: 'provider_error' })
+    })
+
+    const promise = generateReplyWithFallback(
+      {
+        config: config({
+          fallbacks: [{ provider: 'anthropic', model: 'claude-haiku', apiKey: 'key-fallback' }],
+        }),
+        systemPrompt: 'sys',
+        messages: [],
+        tools: [{ name: 'offer_slots', description: 'x', parameters: { type: 'object', properties: {} } }],
+        executeTool,
+      },
+      { generate, delay: noDelay },
+    )
+    await expect(promise).rejects.toBeInstanceOf(AllProvidersFailedError)
+    try {
+      await promise
+    } catch (err) {
+      const failure = err as InstanceType<typeof AllProvidersFailedError>
+      // Only the primary tier's slot — no retry within it, no fallback
+      // tier attempted, despite the error being retryable.
+      expect(failure.attempts).toHaveLength(1)
+      expect(failure.attempts[0].provider).toBe('gemini')
+    }
+    expect(generate).toHaveBeenCalledTimes(1)
+    expect(executeTool).toHaveBeenCalledTimes(1)
+  })
+
   it('never retries or falls back on a non-transient error with no fallback configured', async () => {
     const generate = vi.fn().mockRejectedValue(new AiError('bad key', { code: 'invalid_key' }))
     await expect(
