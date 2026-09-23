@@ -73,6 +73,37 @@ export async function loadBusyRanges(
   }));
 }
 
+export interface UpcomingAppointment {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+}
+
+/**
+ * The contact's soonest upcoming, non-cancelled appointment — "the"
+ * appointment a reschedule request means, in the absence of any way to
+ * name a specific one. Shared by the AI agenda tool
+ * (reschedule_appointment) and the Flow engine's reschedule_slots node
+ * so both pick the same booking given the same state.
+ */
+export async function findUpcomingAppointment(
+  db: SupabaseClient,
+  accountId: string,
+  contactId: string,
+): Promise<UpcomingAppointment | null> {
+  const { data } = await db
+    .from('appointments')
+    .select('id, starts_at, ends_at')
+    .eq('account_id', accountId)
+    .eq('contact_id', contactId)
+    .neq('status', 'cancelled')
+    .gt('starts_at', new Date().toISOString())
+    .order('starts_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return (data as UpcomingAppointment | null) ?? null;
+}
+
 /** The conversation a reminder should go to: the booking's own, else the contact's latest. */
 export async function resolveConversationId(
   db: SupabaseClient,

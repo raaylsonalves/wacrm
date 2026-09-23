@@ -50,6 +50,7 @@ import {
   slotReplyId,
 } from "@/lib/appointments/slots";
 import {
+  findUpcomingAppointment,
   loadAppointmentSettings,
   loadBusyRanges,
   resolveAssignee,
@@ -501,6 +502,14 @@ async function offerSlotsAndSuspend(
   node: FlowNodeRow,
 ): Promise<boolean> {
   const cfg = node.config as unknown as OfferSlotsNodeConfig;
+  if (cfg.reschedule) {
+    // Nothing to move — same "nothing to offer" outcome as no free
+    // slots, without ever sending a list. Re-checked at tap time too
+    // (bookOfferedSlot), since the contact's upcoming appointment could
+    // still change between the offer and the tap.
+    const existing = await findUpcomingAppointment(db, run.account_id, run.contact_id!);
+    if (!existing) return false;
+  }
   const settings = await loadAppointmentSettings(db, run.account_id);
   const daysAhead = cfg.days_ahead ?? 7;
   const now = new Date();
@@ -576,28 +585,53 @@ async function bookOfferedSlot(
   const duration = cfg.duration_minutes ?? settings.slot_minutes;
   const end = new Date(start.getTime() + duration * 60_000);
   const { date, time } = formatDateTime(start, settings.timezone);
-  const title =
-    interpolateVars(cfg.appointment_title ?? "", run.vars).trim() ||
-    formatSlotLabel(start, settings.timezone);
 
-  const { data: created, error } = await db
-    .from("appointments")
-    .insert({
-      account_id: run.account_id,
-      contact_id: run.contact_id,
-      conversation_id: run.conversation_id,
-      assigned_to: await resolveAssignee(db, run.account_id, cfg.assigned_to),
-      title,
-      starts_at: start.toISOString(),
-      ends_at: end.toISOString(),
-      source: "flow",
-      flow_run_id: run.id,
-    })
-    .select("id")
-    .single();
-  if (error) {
-    if (error.code === "23P01") return "taken";
-    throw new Error(error.message);
+  let appointmentId: string;
+  // Set only in reschedule mode — lets a lost race restore the moved
+  // appointment's original time instead of deleting a row that existed
+  // before this tap (the non-reschedule rollback below).
+  let previousTimes: { starts_at: string; ends_at: string } | null = null;
+
+  if (cfg.reschedule) {
+    // Re-checked here (not just at offer time) — the contact's upcoming
+    // appointment could have been cancelled/moved elsewhere between the
+    // list being sent and this tap landing.
+    const existing = await findUpcomingAppointment(db, run.account_id, run.contact_id!);
+    if (!existing) return "taken";
+    previousTimes = { starts_at: existing.starts_at, ends_at: existing.ends_at };
+    const { error } = await db
+      .from("appointments")
+      .update({ starts_at: start.toISOString(), ends_at: end.toISOString() })
+      .eq("id", existing.id);
+    if (error) {
+      if (error.code === "23P01") return "taken";
+      throw new Error(error.message);
+    }
+    appointmentId = existing.id;
+  } else {
+    const title =
+      interpolateVars(cfg.appointment_title ?? "", run.vars).trim() ||
+      formatSlotLabel(start, settings.timezone);
+    const { data: created, error } = await db
+      .from("appointments")
+      .insert({
+        account_id: run.account_id,
+        contact_id: run.contact_id,
+        conversation_id: run.conversation_id,
+        assigned_to: await resolveAssignee(db, run.account_id, cfg.assigned_to),
+        title,
+        starts_at: start.toISOString(),
+        ends_at: end.toISOString(),
+        source: "flow",
+        flow_run_id: run.id,
+      })
+      .select("id")
+      .single();
+    if (error) {
+      if (error.code === "23P01") return "taken";
+      throw new Error(error.message);
+    }
+    appointmentId = (created as { id: string }).id;
   }
 
   const newVars = {
@@ -615,13 +649,17 @@ async function bookOfferedSlot(
     .eq("current_node_key", run.current_node_key)
     .select("id");
   if (!claimed || claimed.length === 0) {
-    await db.from("appointments").delete().eq("id", (created as { id: string }).id);
+    if (previousTimes) {
+      await db.from("appointments").update(previousTimes).eq("id", appointmentId);
+    } else {
+      await db.from("appointments").delete().eq("id", appointmentId);
+    }
     return "lost_race";
   }
   run.vars = newVars;
   run.reprompt_count = 0;
   await logEvent(db, run.id, "node_entered", node.node_key, {
-    appointment_id: (created as { id: string }).id,
+    appointment_id: appointmentId,
   });
   return "booked";
 }

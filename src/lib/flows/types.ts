@@ -206,9 +206,21 @@ export interface OfferSlotsNodeConfig {
   max_options?: number;
   /** Agent whose calendar to book; empty = the shared calendar. */
   assigned_to?: string;
+  /**
+   * Move the contact's soonest upcoming (non-cancelled) appointment to
+   * the tapped slot instead of creating a new one — an UPDATE on that
+   * row, not a cancel-then-insert, so a booking conflict on the new
+   * time leaves the original untouched. When the contact has nothing
+   * upcoming to move, the run takes `no_slots_next_node_key` (same
+   * branch as "nothing free" — there's nothing useful to distinguish
+   * for a bot script) without ever sending the list. Default false
+   * (create a new appointment, the original behavior).
+   */
+  reschedule?: boolean;
   /** After a successful booking. */
   next_node_key: string;
-  /** When no free slot exists in the window. */
+  /** When no free slot exists in the window (or, in reschedule mode,
+   *  when the contact has no upcoming appointment to move). */
   no_slots_next_node_key: string;
 }
 

@@ -38,6 +38,7 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -863,6 +864,7 @@ interface OfferSlotsCfg {
   days_ahead?: number;
   max_options?: number;
   assigned_to?: string;
+  reschedule?: boolean;
   next_node_key?: string;
   no_slots_next_node_key?: string;
 }
@@ -916,6 +918,16 @@ function OfferSlotsForm({
   return (
     <>
       <p className="text-xs text-muted-foreground">{t("offerSlotsHelp", { var: "{{vars.agendamento}}" })}</p>
+      <div className="flex items-center justify-between gap-3 rounded-md border border-border p-2">
+        <div>
+          <p className="text-sm font-medium">{t("rescheduleLabel")}</p>
+          <p className="text-xs text-muted-foreground">{t("rescheduleHelp")}</p>
+        </div>
+        <Switch
+          checked={cfg.reschedule ?? false}
+          onCheckedChange={(v) => onUpdateConfig({ reschedule: v })}
+        />
+      </div>
       <TextRow
         label={t("bodyText")}
         value={cfg.text ?? ""}
@@ -928,11 +940,13 @@ function OfferSlotsForm({
           value={cfg.button_label ?? ""}
           onChange={(v) => onUpdateConfig({ button_label: v })}
         />
-        <TextRow
-          label={t("appointmentTitleLabel")}
-          value={cfg.appointment_title ?? ""}
-          onChange={(v) => onUpdateConfig({ appointment_title: v })}
-        />
+        {!cfg.reschedule && (
+          <TextRow
+            label={t("appointmentTitleLabel")}
+            value={cfg.appointment_title ?? ""}
+            onChange={(v) => onUpdateConfig({ appointment_title: v })}
+          />
+        )}
       </div>
       <div className="grid grid-cols-3 gap-3">
         {numberField("duration_minutes", t("durationLabel"), 5, 480)}
@@ -970,7 +984,7 @@ function OfferSlotsForm({
         allNodes={allNodes}
         currentKey={currentKey}
         onChange={(v) => onUpdateConfig({ no_slots_next_node_key: v })}
-        label={t("whenNoSlots")}
+        label={cfg.reschedule ? t("whenNoAppointment") : t("whenNoSlots")}
       />
     </>
   );

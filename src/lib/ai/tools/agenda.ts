@@ -9,7 +9,7 @@ import {
   slotReplyId,
   parseSlotReplyId,
 } from '@/lib/appointments/slots'
-import { loadAppointmentSettings, loadBusyRanges } from '@/lib/appointments/store'
+import { findUpcomingAppointment, loadAppointmentSettings, loadBusyRanges } from '@/lib/appointments/store'
 import { engineSendInteractiveList } from '@/lib/flows/meta-send'
 
 // ============================================================
@@ -345,30 +345,14 @@ async function executeRescheduleAppointment(
   ctx: AgendaToolContext,
   args: Record<string, unknown>,
 ): Promise<string> {
-  const { data: existing, error: findErr } = await ctx.db
-    .from('appointments')
-    .select('id, starts_at, ends_at')
-    .eq('account_id', ctx.accountId)
-    .eq('contact_id', ctx.contactId)
-    .neq('status', 'cancelled')
-    .gt('starts_at', new Date().toISOString())
-    .order('starts_at', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-
-  if (findErr) {
-    console.error('[ai agenda tools] reschedule_appointment lookup failed:', findErr)
-    return jsonResult({ error: 'lookup_failed' })
-  }
+  const existing = await findUpcomingAppointment(ctx.db, ctx.accountId, ctx.contactId)
   if (!existing) {
     return jsonResult({ error: 'no_appointment_found' })
   }
 
   const settings = await loadAppointmentSettings(ctx.db, ctx.accountId)
   const existingDuration =
-    (new Date(existing.ends_at as string).getTime() -
-      new Date(existing.starts_at as string).getTime()) /
-    60_000
+    (new Date(existing.ends_at).getTime() - new Date(existing.starts_at).getTime()) / 60_000
   const duration = positiveInt(args, 'duration_minutes') ?? existingDuration
   const start = resolveRequestedStart(args, settings)
 
@@ -382,7 +366,7 @@ async function executeRescheduleAppointment(
   const { error } = await ctx.db
     .from('appointments')
     .update({ starts_at: start.toISOString(), ends_at: end.toISOString() })
-    .eq('id', existing.id as string)
+    .eq('id', existing.id)
 
   if (error) {
     if ((error as { code?: string }).code === '23P01') {

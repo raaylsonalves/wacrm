@@ -206,7 +206,7 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
         '- "collect_input" — config: { prompt_text, var_key, next_node_key } (waits for the customer\'s next text reply, stores it under var_key)\n' +
         '- "condition" — config: { subject: "var"|"tag"|"contact_field", subject_key, operator: "equals"|"contains"|"present"|"absent", value?, true_next, false_next }\n' +
         '- "set_tag" — config: { mode: "add"|"remove", tag_id, next_node_key }\n' +
-        '- "offer_slots" — config: { text, button_label, appointment_title?, duration_minutes?, days_ahead?, max_options? (≤10), assigned_to?, next_node_key, no_slots_next_node_key } (lists free agenda slots and books the tapped one; the time lands in {{vars.agendamento}})\n' +
+        '- "offer_slots" — config: { text, button_label, appointment_title?, duration_minutes?, days_ahead?, max_options? (≤10), assigned_to?, reschedule? (default false — when true, moves the contact\'s soonest upcoming appointment to the tapped time instead of creating a new one; appointment_title is ignored in this mode), next_node_key, no_slots_next_node_key (also used when reschedule is true and the contact has nothing upcoming) } (lists free agenda slots and books/reschedules the tapped one; the time lands in {{vars.agendamento}})\n' +
         '- "handoff" / "end" — terminal nodes, config: {} (no outgoing edge)',
       inputSchema: {
         id: z.string().describe('Flow id.'),
