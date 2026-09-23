@@ -14,6 +14,21 @@ import { isBusinessScopedUserId } from './wa-identity'
 const META_API_VERSION = 'v21.0'
 const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`
 
+/**
+ * Timeout for the outbound message-send calls (text, typing indicator,
+ * interactive buttons/list) — these had none before, which was mostly
+ * harmless when each was one fire-and-forget call, but became load-
+ * bearing once the AI auto-reply agent's agenda tools (specs/ai-agenda-
+ * tool-calling.md) can call `sendInteractiveList` mid-reply: an
+ * unbounded hang here doesn't fail gracefully like the AI provider
+ * calls do (which have their own AbortSignal timeout) — it just runs
+ * out the webhook route's 60s maxDuration with no reply ever sent.
+ * Aborting instead throws a normal Error, which the agenda tools'
+ * try/catch turns into a `{"error": "internal_error"}` tool result the
+ * model can react to.
+ */
+const META_SEND_TIMEOUT_MS = 10_000
+
 export interface MetaSendResult {
   messageId: string
 }
@@ -375,6 +390,7 @@ export async function sendTextMessage(
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(META_SEND_TIMEOUT_MS),
   })
   if (!response.ok) {
     await throwMetaError(response, `Meta API error: ${response.status}`)
@@ -867,6 +883,7 @@ export async function sendTypingIndicator(
       message_id: messageId,
       typing_indicator: { type: 'text' },
     }),
+    signal: AbortSignal.timeout(META_SEND_TIMEOUT_MS),
   })
   if (!response.ok) {
     await throwMetaError(response, `Meta API error: ${response.status}`)
@@ -994,6 +1011,7 @@ export async function sendInteractiveButtons(
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(META_SEND_TIMEOUT_MS),
   })
   if (!response.ok) {
     await throwMetaError(response, `Meta API error: ${response.status}`)
@@ -1125,6 +1143,7 @@ export async function sendInteractiveList(
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(META_SEND_TIMEOUT_MS),
   })
   if (!response.ok) {
     await throwMetaError(response, `Meta API error: ${response.status}`)
