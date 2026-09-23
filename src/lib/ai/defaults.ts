@@ -43,15 +43,25 @@ export const MAX_REPLY_SEGMENTS = 4
  *  bounds token spend on the caller's own key. */
 export const MAX_OUTPUT_TOKENS = 1024
 
-// Lower than a typical single-request timeout because, with agenda
-// tools enabled, one "call" can be several sequential HTTP round trips
-// (see MAX_TOOL_ROUNDS in providers/shared.ts) — each adapter treats
-// this as a TOTAL budget for the whole tool-calling exchange, not a
-// per-request timeout, so the sum can never balloon past it regardless
-// of how many rounds the model takes. Sized to leave headroom under the
-// webhook route's 60s maxDuration even if generateReplyWithFallback
-// retries once on a timeout (worst case ~2x this value).
-const DEFAULT_REQUEST_TIMEOUT_MS = 20_000
+// This is a TOTAL budget for one generateReply() call, not a per-
+// request timeout — with agenda tools enabled, one "call" can be
+// several sequential HTTP round trips (see MAX_TOOL_ROUNDS in
+// providers/shared.ts), and each adapter spends this single deadline
+// across all of them rather than resetting it every round.
+//
+// Draft/playground (no tools, one call, no fallback chain) use this
+// value as-is — it doesn't need trimming down for them, they have
+// nothing to multiply. The auto-reply path's own multiplication risk
+// (multiple fallback tiers, each retried) is bounded separately, by
+// generateReplyWithFallback's own chain-wide deadline
+// (OVERALL_BUDGET_MS) — a first attempt at a slow provider can use up
+// to this full value, but every attempt after that gets whatever the
+// chain has left, never a fresh copy of it. Lowering THIS constant
+// instead of adding that chain-wide cap was tried first and broke
+// draft/playground for no reason — they were never at risk of the
+// multiplication, they were just handed a smaller budget than a
+// merely-slow-but-fine response needed.
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
 const DEFAULT_CONTEXT_MESSAGE_LIMIT = 20
 
 /** Total per-call provider timeout (see the constant above for why it's
