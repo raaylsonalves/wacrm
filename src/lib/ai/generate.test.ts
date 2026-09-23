@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { generateReply, parseGeneration } from './generate'
+import { generateReply, parseGeneration, stripModerationArtifacts } from './generate'
 import { AiError, type AiConfig } from './types'
 
 function config(overrides: Partial<AiConfig> = {}): AiConfig {
@@ -40,7 +40,35 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
+describe('stripModerationArtifacts', () => {
+  it('removes trailing safety-classifier lines a moderation-wrapped model appends', () => {
+    const raw = 'Sexta às 9h é horário de abertura!\n\nUser Safety: safe\nResponse Safety: safe'
+    expect(stripModerationArtifacts(raw)).toBe('Sexta às 9h é horário de abertura!')
+  })
+
+  it('is case-insensitive and tolerates extra spacing', () => {
+    expect(stripModerationArtifacts('Oi!\n  user safety : Safe  ')).toBe('Oi!')
+    expect(stripModerationArtifacts('Oi!\nCONTENT SAFETY: unsafe')).toBe('Oi!')
+    expect(stripModerationArtifacts('Oi!\nPrompt Safety: safe')).toBe('Oi!')
+  })
+
+  it('never touches legitimate text that merely mentions the word "safety"', () => {
+    const text = 'A sua safety é importante pra gente, por isso confirmamos tudo antes.'
+    expect(stripModerationArtifacts(text)).toBe(text)
+  })
+
+  it('is a no-op on text with nothing to strip', () => {
+    expect(stripModerationArtifacts('Prontinho, agendado!')).toBe('Prontinho, agendado!')
+  })
+})
+
 describe('parseGeneration', () => {
+  it('strips a moderation-artifact line before splitting into segments', () => {
+    const result = parseGeneration('Beleza! Corte confirmado.\n\nUser Safety: safe\nResponse Safety: safe')
+    expect(result.text).toBe('Beleza! Corte confirmado.')
+    expect(result.segments).toEqual(['Beleza! Corte confirmado.'])
+  })
+
   it('returns text with no handoff', () => {
     expect(parseGeneration('Hello there')).toEqual({
       text: 'Hello there',

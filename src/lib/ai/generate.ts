@@ -100,12 +100,28 @@ export async function generateReply(args: GenerateArgs): Promise<GenerateResult>
  * means every caller gets a clean, delimiter-free string by
  * construction, whether or not it uses `segments` itself.
  */
+/**
+ * Some providers — observed live on an OpenRouter free-tier model with
+ * a moderation wrapper — tack safety-classifier metadata onto the
+ * assistant's own text instead of returning it out-of-band, e.g. a
+ * trailing "User Safety: safe\nResponse Safety: safe". That's an
+ * artifact of the model/proxy, not a message either side of the
+ * conversation ever wrote, and it must never reach the customer.
+ * Deliberately anchored to whole lines (`^...$` per line) so it can't
+ * eat legitimate text that merely contains the word "safety".
+ */
+const MODERATION_ARTIFACT_LINE = /^[ \t]*(?:user|response|content|prompt)\s+safety\s*:\s*\S+[ \t]*$/gim
+
+export function stripModerationArtifacts(text: string): string {
+  return text.replace(MODERATION_ARTIFACT_LINE, '').trim()
+}
+
 export function parseGeneration(
   raw: string,
   usage: AiUsage | null = null,
 ): GenerateResult {
   const handoff = raw.includes(HANDOFF_SENTINEL)
-  const stripped = raw.split(HANDOFF_SENTINEL).join('').trim()
+  const stripped = stripModerationArtifacts(raw.split(HANDOFF_SENTINEL).join('').trim())
 
   const rawSegments = stripped
     .split(MULTI_MESSAGE_DELIMITER)
