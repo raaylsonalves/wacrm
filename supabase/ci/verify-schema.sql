@@ -321,6 +321,21 @@ BEGIN
       'appointments_source_check does not allow ''ai'' — migration 061 did not apply';
   END IF;
 
+  -- 062 — without 'openrouter' in both provider CHECKs, saving or
+  -- logging usage for an OpenRouter-configured account fails outright.
+  IF pg_get_constraintdef(
+       (SELECT oid FROM pg_constraint WHERE conname = 'ai_configs_provider_check')
+     ) NOT LIKE '%openrouter%' THEN
+    RAISE EXCEPTION
+      'ai_configs_provider_check does not allow ''openrouter'' — migration 062 did not apply';
+  END IF;
+  IF pg_get_constraintdef(
+       (SELECT oid FROM pg_constraint WHERE conname = 'ai_usage_log_provider_check')
+     ) NOT LIKE '%openrouter%' THEN
+    RAISE EXCEPTION
+      'ai_usage_log_provider_check does not allow ''openrouter'' — migration 062 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

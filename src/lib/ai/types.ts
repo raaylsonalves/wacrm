@@ -6,7 +6,7 @@
 // whether the account is on OpenAI or Anthropic.
 // ============================================================
 
-export type AiProvider = 'openai' | 'anthropic' | 'gemini'
+export type AiProvider = 'openai' | 'anthropic' | 'gemini' | 'openrouter'
 
 /** A provider/model/key triple — the primary config and each fallback
  *  tier share this shape (see `AiConfig.fallbacks`). */

@@ -1,15 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { decrypt } from '@/lib/whatsapp/encryption'
-import type { AiConfig, AiProviderCredentials } from './types'
+import type { AiConfig, AiProvider, AiProviderCredentials } from './types'
 
 interface RawFallbackRow {
-  provider: 'openai' | 'anthropic' | 'gemini'
+  provider: AiProvider
   model: string
   api_key: string
 }
 
 interface AiConfigRow {
-  provider: 'openai' | 'anthropic' | 'gemini'
+  provider: AiProvider
   model: string
   api_key: string
   system_prompt: string | null

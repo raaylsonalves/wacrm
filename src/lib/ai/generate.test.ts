@@ -514,3 +514,100 @@ describe('generateReply — Gemini', () => {
     })
   })
 })
+
+describe('generateReply — OpenRouter', () => {
+  it('calls the chat completions endpoint and returns the reply', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      okResponse({
+        choices: [{ message: { content: 'Sure — happy to help!' } }],
+        usage: { prompt_tokens: 12, completion_tokens: 5, total_tokens: 17 },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await generateReply({
+      config: config({ provider: 'openrouter', apiKey: 'sk-or-test', model: 'openrouter/auto' }),
+      systemPrompt: 'sys',
+      messages: [{ role: 'user', content: 'Hi' }],
+    })
+
+    expect(res).toEqual({
+      text: 'Sure — happy to help!',
+      segments: ['Sure — happy to help!'],
+      handoff: false,
+      usage: { promptTokens: 12, completionTokens: 5, totalTokens: 17 },
+    })
+    const [url, opts] = fetchMock.mock.calls[0]
+    expect(url).toContain('openrouter.ai')
+    expect(opts.headers.Authorization).toBe('Bearer sk-or-test')
+    const body = JSON.parse(opts.body)
+    expect(body.model).toBe('openrouter/auto')
+    expect(body.max_tokens).toBeDefined()
+    expect(body.max_completion_tokens).toBeUndefined()
+  })
+
+  it('maps a 401 to an invalid_key AiError', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(errResponse(401, { error: { message: 'Invalid API key' } })),
+    )
+    await expect(
+      generateReply({
+        config: config({ provider: 'openrouter' }),
+        systemPrompt: 'sys',
+        messages: [{ role: 'user', content: 'Hi' }],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid_key', status: 401 })
+  })
+
+  it('runs a tool call round trip and returns the final text', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        okResponse({
+          choices: [
+            {
+              message: {
+                content: null,
+                tool_calls: [
+                  { id: 'call_1', function: { name: 'offer_slots', arguments: '{"days_ahead":5}' } },
+                ],
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(okResponse({ choices: [{ message: { content: 'Prontinho!' } }] }))
+    vi.stubGlobal('fetch', fetchMock)
+    const executeTool = vi.fn().mockResolvedValue('{"sent":true}')
+
+    const res = await generateReply({
+      config: config({ provider: 'openrouter' }),
+      systemPrompt: 'sys',
+      messages: [{ role: 'user', content: 'quero marcar' }],
+      tools: [{ name: 'offer_slots', description: 'x', parameters: { type: 'object', properties: {} } }],
+      executeTool,
+    })
+
+    expect(res.text).toBe('Prontinho!')
+    expect(executeTool).toHaveBeenCalledWith('offer_slots', { days_ahead: 5 })
+    const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body)
+    expect(secondBody.messages).toContainEqual(
+      expect.objectContaining({ role: 'tool', tool_call_id: 'call_1', content: '{"sent":true}' }),
+    )
+  })
+
+  it('throws on an empty completion', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(okResponse({ choices: [{ message: { content: '' } }] })),
+    )
+    await expect(
+      generateReply({
+        config: config({ provider: 'openrouter' }),
+        systemPrompt: 'sys',
+        messages: [{ role: 'user', content: 'Hi' }],
+      }),
+    ).rejects.toBeInstanceOf(AiError)
+  })
+})
