@@ -8,6 +8,7 @@ import {
   type ToolExecutor,
 } from './types'
 import { generateReply } from './generate'
+import { aiRequestTimeoutMs } from './defaults'
 
 // ============================================================
 // Provider/model fallback chain (specs/ai-provider-fallback-chain.md).
@@ -27,6 +28,21 @@ const RETRYABLE_CODES = new Set(['provider_error', 'timeout', 'network_error'])
 /** One retry (2 attempts total) per tier — enough to ride out a blip
  *  without adding noticeable latency to the customer-facing reply. */
 const RETRY_DELAYS_MS = [1500]
+
+/**
+ * Hard ceiling on the WHOLE fallback chain — every tier, every retry,
+ * combined — not just one call. Each `generate()` call already caps
+ * itself at its own `timeoutMs` (see the "TOTAL budget" comment in
+ * providers/openai.ts), but with 2 tiers x up to 2 attempts each, that
+ * alone still allows up to ~4x a single call's timeout in the worst
+ * case — comfortably over the auto-reply webhook route's 60s
+ * maxDuration, which is exactly what let a real dispatch get killed by
+ * Vercel's hard timeout with no reply ever sent and no error caught
+ * anywhere (specs/ai-agenda-tool-calling.md's reported regression).
+ * Sized to leave real headroom under 60s for everything else the
+ * webhook does before and after this call.
+ */
+const OVERALL_BUDGET_MS = 35_000
 
 export interface FallbackAttempt {
   provider: string
@@ -98,12 +114,26 @@ export async function generateReplyWithFallback(
   ]
 
   const attempts: FallbackAttempt[] = []
+  const defaultTimeoutMs = aiRequestTimeoutMs()
+  const chainDeadline = Date.now() + OVERALL_BUDGET_MS
+  const budgetExceededError = () =>
+    new AiError('Ran out of the overall AI reply time budget.', { code: 'timeout', status: 504 })
 
-  for (const tier of tiers) {
+  outer: for (const tier of tiers) {
     const maxAttempts = 1 + RETRY_DELAYS_MS.length
     let lastError: AiError | null = null
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const remaining = chainDeadline - Date.now()
+      if (remaining <= 0) {
+        // The chain-wide budget is spent — stop trying entirely rather
+        // than starting an attempt with (or without) a shrinking
+        // timeout that would push the whole dispatch past the
+        // webhook route's 60s maxDuration with no result either way.
+        lastError = budgetExceededError()
+        attempts.push({ provider: tier.provider, model: tier.model, error: lastError })
+        break outer
+      }
       try {
         const result = await generate({
           config: { ...config, provider: tier.provider, model: tier.model, apiKey: tier.apiKey },
@@ -111,6 +141,10 @@ export async function generateReplyWithFallback(
           messages,
           tools,
           executeTool,
+          // Never hand an attempt more time than the chain has left —
+          // a late attempt with a full fresh timeout is exactly how 2
+          // tiers x 2 attempts each blew past 60s with nothing caught.
+          timeoutMs: Math.min(defaultTimeoutMs, remaining),
         })
         return { ...result, provider: tier.provider, model: tier.model, attempts }
       } catch (err) {
@@ -118,7 +152,9 @@ export async function generateReplyWithFallback(
         lastError = aiError
         const retryable = RETRYABLE_CODES.has(aiError.code)
         const hasMoreAttempts = attempt < maxAttempts - 1
-        if (!retryable || !hasMoreAttempts) break
+        const timeForRetryDelay =
+          hasMoreAttempts && chainDeadline - Date.now() > RETRY_DELAYS_MS[attempt]
+        if (!retryable || !hasMoreAttempts || !timeForRetryDelay) break
         await delay(RETRY_DELAYS_MS[attempt])
       }
     }

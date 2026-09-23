@@ -143,6 +143,50 @@ describe('generateReplyWithFallback', () => {
     }
   })
 
+  it('stops trying further tiers once the overall chain budget is spent', async () => {
+    // Primary's single attempt fails with a transient error; by the time
+    // the retry-delay check runs, the chain-wide deadline (now +
+    // OVERALL_BUDGET_MS, computed once up front) must already read as
+    // exhausted — so no retry, no fallback tier, regardless of how many
+    // tiers/retries are configured. This is the fix for the reported
+    // regression: 2 tiers x 2 attempts each, each hitting its own
+    // per-call timeout, added up to well over the webhook route's 60s
+    // maxDuration with nothing ever caught.
+    const generate = vi.fn().mockRejectedValue(new AiError('down', { code: 'provider_error' }))
+
+    const realNow = Date.now
+    let calls = 0
+    vi.spyOn(Date, 'now').mockImplementation(() => {
+      calls++
+      // Call 1 establishes the chain deadline; jump time far past the
+      // budget starting at call 2 (the first per-attempt `remaining` check).
+      return calls === 1 ? realNow() : realNow() + 999_999
+    })
+
+    const promise = generateReplyWithFallback(
+      {
+        config: config({
+          fallbacks: [{ provider: 'anthropic', model: 'claude-haiku', apiKey: 'key-fallback' }],
+        }),
+        systemPrompt: 'sys',
+        messages: [],
+      },
+      { generate, delay: noDelay },
+    )
+    await expect(promise).rejects.toBeInstanceOf(AllProvidersFailedError)
+    try {
+      await promise
+    } catch (err) {
+      const failure = err as InstanceType<typeof AllProvidersFailedError>
+      // Only the primary tier's slot in `attempts` — the fallback tier
+      // was never even tried once the budget was gone.
+      expect(failure.attempts).toHaveLength(1)
+      expect(failure.attempts[0].provider).toBe('gemini')
+    }
+    expect(generate).not.toHaveBeenCalled()
+    vi.restoreAllMocks()
+  })
+
   it('never retries or falls back on a non-transient error with no fallback configured', async () => {
     const generate = vi.fn().mockRejectedValue(new AiError('bad key', { code: 'invalid_key' }))
     await expect(

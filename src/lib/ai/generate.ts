@@ -29,6 +29,13 @@ export interface GenerateArgs {
    *  hasn't approved yet. */
   tools?: ToolDefinition[]
   executeTool?: ToolExecutor
+  /** Override the default per-call timeout budget. Used by
+   *  `generateReplyWithFallback` to shrink later attempts/tiers to
+   *  whatever's left of its own overall deadline, rather than handing
+   *  every attempt a full fresh timeout regardless of how much of the
+   *  fallback chain's own budget is already spent. Defaults to
+   *  `aiRequestTimeoutMs()`. */
+  timeoutMs?: number
 }
 
 /**
@@ -38,7 +45,7 @@ export interface GenerateArgs {
  */
 export async function generateReply(args: GenerateArgs): Promise<GenerateResult> {
   const { config, systemPrompt, messages, tools, executeTool } = args
-  const timeoutMs = aiRequestTimeoutMs()
+  const timeoutMs = args.timeoutMs ?? aiRequestTimeoutMs()
   const providerArgs = {
     apiKey: config.apiKey,
     model: config.model,
