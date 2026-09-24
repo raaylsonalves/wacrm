@@ -336,6 +336,15 @@ BEGIN
       'ai_usage_log_provider_check does not allow ''openrouter'' — migration 062 did not apply';
   END IF;
 
+  -- 063 — the lexical KB search must OR the query's terms, not AND
+  -- them, or a real customer question with filler words never matches.
+  IF pg_get_functiondef(
+       (SELECT oid FROM pg_proc WHERE proname = 'match_ai_knowledge_fts')
+     ) NOT LIKE '%string_agg(lexeme%' THEN
+    RAISE EXCEPTION
+      'match_ai_knowledge_fts still ANDs every term — migration 063 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;
