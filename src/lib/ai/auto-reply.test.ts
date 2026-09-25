@@ -18,6 +18,7 @@ const h = vi.hoisted(() => ({
     claim: true as boolean,
     updatePayload: null as Record<string, unknown> | null,
     rpcCalls: [] as { name: string; args: unknown }[],
+    contact: null as { name: string | null } | null,
   },
 }))
 
@@ -54,6 +55,16 @@ vi.mock('./admin-client', () => ({
           in: () => chain,
           limit: () =>
             Promise.resolve({ data: h.state.autoResponders, error: null }),
+        }
+        return chain
+      }
+      if (table === 'contacts') {
+        // .select().eq().eq().maybeSingle() → the contact's known name
+        const chain = {
+          select: () => chain,
+          eq: () => chain,
+          maybeSingle: () =>
+            Promise.resolve({ data: h.state.contact, error: null }),
         }
         return chain
       }
@@ -115,6 +126,7 @@ beforeEach(() => {
   h.state.claim = true
   h.state.updatePayload = null
   h.state.rpcCalls = []
+  h.state.contact = null
   h.loadAiConfig.mockResolvedValue(aiConfig())
   h.buildConversationContext.mockResolvedValue([{ role: 'user', content: 'hi' }])
   h.retrieveKnowledge.mockResolvedValue([])
@@ -155,6 +167,24 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     expect(h.retrieveKnowledge).toHaveBeenCalled()
     const systemPrompt = h.generateReplyWithFallback.mock.calls[0][0].systemPrompt as string
     expect(systemPrompt).toContain('Returns accepted within 30 days.')
+  })
+
+  it('teaches the model to ask for the customer name when unknown', async () => {
+    h.state.contact = { name: null }
+    await dispatchInboundToAiReply(ARGS)
+    const call = h.generateReplyWithFallback.mock.calls[0][0]
+    expect(call.systemPrompt).toContain("don't know this customer's name yet")
+    expect(call.tools).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'save_contact_name' })]),
+    )
+  })
+
+  it('tells the model the known customer name instead of asking again', async () => {
+    h.state.contact = { name: 'Maria' }
+    await dispatchInboundToAiReply(ARGS)
+    const systemPrompt = h.generateReplyWithFallback.mock.calls[0][0].systemPrompt as string
+    expect(systemPrompt).toContain('"Maria"')
+    expect(systemPrompt).not.toContain("don't know this customer's name")
   })
 
   it('stands down when an active message-level automation exists', async () => {

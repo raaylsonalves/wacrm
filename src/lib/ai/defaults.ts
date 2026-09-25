@@ -101,8 +101,14 @@ export function buildSystemPrompt(args: {
    *  — see specs/ai-agenda-tool-calling.md). Omitted/false leaves the
    *  prompt byte-for-byte identical to before these tools existed. */
   agendaToolsEnabled?: boolean
+  /** The contact's current name in the CRM (auto_reply only — see
+   *  `save_contact_name` in tools/contact.ts). Null/empty means it
+   *  isn't known yet (WhatsApp gave no usable profile name and nobody
+   *  has told the bot one), which teaches the model to ask instead of
+   *  guessing or leaving it forever unknown. */
+  contactName?: string | null
 }): string {
-  const { userPrompt, mode, knowledge, agendaToolsEnabled } = args
+  const { userPrompt, mode, knowledge, agendaToolsEnabled, contactName } = args
   const parts: string[] = [
     'You are a customer-messaging assistant for a business that uses a WhatsApp CRM. ' +
       'You are shown the recent WhatsApp conversation between the business (assistant) and a customer (user). ' +
@@ -120,6 +126,14 @@ export function buildSystemPrompt(args: {
     parts.push(
       'Write like a real person messaging on WhatsApp, not a formal document: short sentences, a warm and natural register (adjust formality to match the business context below). ' +
         `If your reply naturally covers more than one idea, split it into separate short messages the way a person would send them one after another — put ${MULTI_MESSAGE_DELIMITER} alone on its own line between each one. Use at most ${MAX_REPLY_SEGMENTS} messages, and only split when the reply genuinely has multiple parts; a short, single-idea reply should stay one message with no delimiter at all.`,
+    )
+  }
+
+  if (mode === 'auto_reply') {
+    parts.push(
+      contactName && contactName.trim()
+        ? `This customer's name in the CRM is "${contactName.trim()}". Use it naturally when it fits — don't force it into every message.`
+        : "You don't know this customer's name yet. Early in the conversation, ask for it in a natural, low-pressure way (part of your greeting, not an interrogation). As soon as they tell you, call save_contact_name so future conversations already know it — don't ask again after that. Skip asking if the conversation is a one-off/transactional exchange where it wouldn't feel natural.",
     )
   }
 

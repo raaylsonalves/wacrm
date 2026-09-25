@@ -16,6 +16,7 @@ import type { AiConfig } from './types'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
 import { AGENDA_TOOLS, createAgendaToolExecutor } from './tools/agenda'
+import { CONTACT_TOOLS, createContactToolExecutor } from './tools/contact'
 import {
   engineSendText,
   loadAccountMetaCredentials,
@@ -214,19 +215,33 @@ export async function dispatchInboundToAiReply(
       latestUserMessage(messages),
     )
 
+    // Best-effort: a lookup failure just means the prompt treats the
+    // name as unknown (the model asks for it), not a hard failure.
+    const { data: contactRow } = await db
+      .from('contacts')
+      .select('name')
+      .eq('id', contactId)
+      .eq('account_id', accountId)
+      .maybeSingle()
+
     const systemPrompt = buildSystemPrompt({
       userPrompt: config.systemPrompt,
       mode: 'auto_reply',
       knowledge,
       agendaToolsEnabled: config.agendaEnabled,
+      contactName: contactRow?.name ?? null,
     })
 
     // Agenda tools (specs/ai-agenda-tool-calling.md) are opt-in per
     // account and auto-reply-only — draft/playground never build these,
     // since a tool call is a real side effect (a WhatsApp send, an
-    // appointment write) a human hasn't approved yet.
-    const tools = config.agendaEnabled ? AGENDA_TOOLS : undefined
-    const executeTool = config.agendaEnabled
+    // appointment write) a human hasn't approved yet. The contact-name
+    // tool isn't agenda-specific, so it's always available in auto-reply.
+    const tools = config.agendaEnabled
+      ? [...CONTACT_TOOLS, ...AGENDA_TOOLS]
+      : CONTACT_TOOLS
+    const contactExecutor = createContactToolExecutor({ db, accountId, contactId })
+    const agendaExecutor = config.agendaEnabled
       ? createAgendaToolExecutor({
           db,
           accountId,
@@ -234,7 +249,13 @@ export async function dispatchInboundToAiReply(
           contactId,
           userId: configOwnerUserId,
         })
-      : undefined
+      : null
+    const executeTool = (name: string, callArgs: Record<string, unknown>) =>
+      name === 'save_contact_name'
+        ? contactExecutor(name, callArgs)
+        : agendaExecutor
+          ? agendaExecutor(name, callArgs)
+          : Promise.resolve(JSON.stringify({ error: `Unknown tool: ${name}` }))
 
     let generation
     try {

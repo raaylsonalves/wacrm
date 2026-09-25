@@ -682,7 +682,22 @@ export function AiConfig() {
                 disabled={disabled || !autoReplyEnabled}
               >
                 <SelectTrigger id="ai-handoff">
-                  <SelectValue />
+                  {/* Base UI only resolves a Select.Value's label from a
+                   *  currently-mounted SelectItem — closed content isn't
+                   *  mounted, so without an explicit render function it
+                   *  falls back to the raw stored value (a member's uuid)
+                   *  once the popup closes. Resolve it ourselves instead. */}
+                  <SelectValue>
+                    {(value: string) =>
+                      value === HANDOFF_QUEUE
+                        ? t('handoffQueue')
+                        : (members.find((m) => m.user_id === value) &&
+                            memberLabel(
+                              members.find((m) => m.user_id === value)!,
+                            )) ||
+                          value
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={HANDOFF_QUEUE}>
