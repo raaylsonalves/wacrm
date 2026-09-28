@@ -7,7 +7,7 @@
 > for implementada ou uma nova for aberta.
 >
 > PRD-mãe: [`prd-melhorias-inspiradas-no-deskcomm.md`](prd-melhorias-inspiradas-no-deskcomm.md).
-> Última revisão: 2026-09-28 (multi-agente + roteador implementado).
+> Última revisão: 2026-09-28 (navegação agrupada implementada).
 
 ## Concluído
 
@@ -155,11 +155,31 @@
 - Testado: `src/lib/ai/router.test.ts` (9 casos).
 - Spec: [`multi-agent-router.md`](../specs/multi-agent-router.md).
 
+### Navegação agrupada
+- `src/components/layout/sidebar.tsx`: array plano `navItems` (10
+  itens) virou `navGroups` — 4 grupos com cabeçalho (Atendimento, CRM,
+  Agente de IA, Canais), escondidos em modo colapsado (rail) igual a
+  qualquer outro texto do sidebar hoje.
+- Novo item "Conexões" no grupo Canais, apontando pra
+  `/settings?tab=whatsapp` (a tela de canais WAHA/Cloud API
+  implementada antes) — o item que a spec original só deixou
+  comentado como follow-up.
+- `isActive` passou a comparar só a parte do path (antes de `?`), já
+  que esse novo item carrega query string e `usePathname()` nunca
+  inclui uma.
+- Badge "beta" do Flows, dot de unread do Inbox e badge de
+  notificações continuam idênticos — mesmo JSX, só reindentado dentro
+  do loop de grupos.
+- Nenhuma rota mudou de URL — reorganização só visual.
+- Verificado visualmente no navegador (sessão já logada): os 4 grupos
+  renderizam corretos, com todos os 10 itens redistribuídos e nenhum
+  perdido.
+- Spec: [`grouped-navigation.md`](../specs/grouped-navigation.md).
+
 ## Pendente — specs escritas, aguardando implementação
 
 | Spec | Prioridade (PRD) | O que falta |
 |---|---|---|
-| [`grouped-navigation.md`](../specs/grouped-navigation.md) | — | Tudo — menu lateral continua a lista plana atual. |
 | [`signup-onboarding-wizard.md`](../specs/signup-onboarding-wizard.md) | — | Tudo — sem wizard, sem `accounts.onboarding_state`. |
 
 ## Decisão de produto pendente (nem é spec ainda — precisa validar com dados reais antes)

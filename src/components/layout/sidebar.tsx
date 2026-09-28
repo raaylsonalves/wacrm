@@ -10,6 +10,7 @@ import { useUnreadNotifications } from '@/hooks/use-unread-notifications';
 import {
   Bell,
   Bot,
+  Cable,
   CalendarDays,
   Crown,
   GitBranch,
@@ -99,17 +100,56 @@ interface NavItem {
   beta?: boolean;
 }
 
-const navItems: NavItem[] = [
-  { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
-  { href: '/inbox', labelKey: 'inbox', icon: MessageSquare },
-  { href: '/notifications', labelKey: 'notifications', icon: Bell },
-  { href: '/contacts', labelKey: 'contacts', icon: Users },
-  { href: '/pipelines', labelKey: 'pipelines', icon: GitBranch },
-  { href: '/agenda', labelKey: 'agenda', icon: CalendarDays },
-  { href: '/broadcasts', labelKey: 'broadcasts', icon: Radio },
-  { href: '/automations', labelKey: 'automations', icon: Zap },
-  { href: '/flows', labelKey: 'flows', icon: Workflow, beta: true },
-  { href: '/agents', labelKey: 'aiAgents', icon: Bot },
+interface NavGroup {
+  /** Group header — hidden in collapsed/rail mode, same as every
+   *  other text label in the sidebar. */
+  labelKey: string;
+  items: NavItem[];
+}
+
+// Grouped per specs/grouped-navigation.md. Where Automações/Flows land
+// is the least obvious call — filed under "Agente de IA" because most
+// of them trigger or gate AI today; moving them to their own group
+// later is a one-line change, not a restructure (that's the point of
+// keeping this a plain array instead of a shared registry — wacrm has
+// exactly one navigation surface, unlike the multi-surface case that
+// justified a registry in deskcomm).
+const navGroups: NavGroup[] = [
+  {
+    labelKey: 'navGroupAtendimento',
+    items: [
+      { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
+      { href: '/inbox', labelKey: 'inbox', icon: MessageSquare },
+      { href: '/notifications', labelKey: 'notifications', icon: Bell },
+    ],
+  },
+  {
+    labelKey: 'navGroupCrm',
+    items: [
+      { href: '/contacts', labelKey: 'contacts', icon: Users },
+      { href: '/pipelines', labelKey: 'pipelines', icon: GitBranch },
+      { href: '/agenda', labelKey: 'agenda', icon: CalendarDays },
+    ],
+  },
+  {
+    labelKey: 'navGroupAgenteIa',
+    items: [
+      { href: '/agents', labelKey: 'aiAgents', icon: Bot },
+      { href: '/automations', labelKey: 'automations', icon: Zap },
+      { href: '/flows', labelKey: 'flows', icon: Workflow, beta: true },
+    ],
+  },
+  {
+    labelKey: 'navGroupCanais',
+    items: [
+      { href: '/broadcasts', labelKey: 'broadcasts', icon: Radio },
+      {
+        href: '/settings?tab=whatsapp',
+        labelKey: 'channelsSettings',
+        icon: Cable,
+      },
+    ],
+  },
 ];
 
 const bottomNavItems = [
@@ -269,83 +309,109 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
         {/* Main navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <ul className="flex flex-col gap-1">
-            {navItems.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== '/dashboard' && pathname.startsWith(item.href));
+          {navGroups.map((group, groupIndex) => (
+            <div key={group.labelKey} className={cn(groupIndex > 0 && 'mt-4')}>
+              {/* Group header — hidden in rail mode, same treatment
+                  every other text label in the sidebar already gets. */}
+              <p
+                className={cn(
+                  'text-muted-foreground/70 px-3 pb-1 text-[11px] font-semibold tracking-wider uppercase',
+                  collapsed && 'lg:hidden'
+                )}
+              >
+                {t(group.labelKey as string)}
+              </p>
+              <ul className="flex flex-col gap-1">
+                {group.items.map((item) => {
+                  // A nav href can carry a query string (the Canais entry
+                  // points at /settings?tab=whatsapp) — usePathname()
+                  // never includes one, so compare against the path part
+                  // only, or this item would never highlight as active.
+                  const itemPath = item.href.split('?')[0];
+                  const isActive =
+                    pathname === itemPath ||
+                    (itemPath !== '/dashboard' &&
+                      pathname.startsWith(itemPath));
 
-              const showUnreadDot =
-                item.href === '/inbox' && totalUnread > 0 && !isActive;
+                  const showUnreadDot =
+                    item.href === '/inbox' && totalUnread > 0 && !isActive;
 
-              // Unlike the inbox dot, the notifications count stays visible
-              // even while the page is active — it reflects unread state
-              // (cleared by marking notifications read), not "currently
-              // viewing this section".
-              const showNotificationBadge =
-                item.href === '/notifications' && unreadNotifications > 0;
+                  // Unlike the inbox dot, the notifications count stays visible
+                  // even while the page is active — it reflects unread state
+                  // (cleared by marking notifications read), not "currently
+                  // viewing this section".
+                  const showNotificationBadge =
+                    item.href === '/notifications' && unreadNotifications > 0;
 
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    title={collapsed ? t(item.labelKey as string) : undefined}
-                    className={cn(
-                      // Taller on mobile so fingers can hit the row reliably (≥44px).
-                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2',
-                      collapsed && 'lg:justify-center lg:px-0',
-                      isActive
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    )}
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    <span className={cn('flex-1', collapsed && 'lg:hidden')}>
-                      {t(item.labelKey as string)}
-                    </span>
-                    {item.beta && (
-                      <span
-                        aria-label={t('beta')}
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        title={
+                          collapsed ? t(item.labelKey as string) : undefined
+                        }
                         className={cn(
-                          'rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-amber-700 uppercase dark:text-amber-300',
-                          collapsed && 'lg:hidden'
+                          // Taller on mobile so fingers can hit the row reliably (≥44px).
+                          'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2',
+                          collapsed && 'lg:justify-center lg:px-0',
+                          isActive
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                         )}
                       >
-                        {t('beta')}
-                      </span>
-                    )}
-                    {showUnreadDot && (
-                      <span
-                        aria-label={t('unreadConversations', {
-                          count: totalUnread,
-                        })}
-                        className={cn(
-                          'relative flex h-2 w-2',
-                          collapsed && 'lg:hidden'
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span
+                          className={cn('flex-1', collapsed && 'lg:hidden')}
+                        >
+                          {t(item.labelKey as string)}
+                        </span>
+                        {item.beta && (
+                          <span
+                            aria-label={t('beta')}
+                            className={cn(
+                              'rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-amber-700 uppercase dark:text-amber-300',
+                              collapsed && 'lg:hidden'
+                            )}
+                          >
+                            {t('beta')}
+                          </span>
                         )}
-                      >
-                        <span className="bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
-                        <span className="bg-primary relative inline-flex h-2 w-2 rounded-full" />
-                      </span>
-                    )}
-                    {showNotificationBadge && (
-                      <span
-                        aria-label={t('unreadNotifications', {
-                          count: unreadNotifications,
-                        })}
-                        className={cn(
-                          'bg-primary text-primary-foreground flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold',
-                          collapsed && 'lg:hidden'
+                        {showUnreadDot && (
+                          <span
+                            aria-label={t('unreadConversations', {
+                              count: totalUnread,
+                            })}
+                            className={cn(
+                              'relative flex h-2 w-2',
+                              collapsed && 'lg:hidden'
+                            )}
+                          >
+                            <span className="bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+                            <span className="bg-primary relative inline-flex h-2 w-2 rounded-full" />
+                          </span>
                         )}
-                      >
-                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                        {showNotificationBadge && (
+                          <span
+                            aria-label={t('unreadNotifications', {
+                              count: unreadNotifications,
+                            })}
+                            className={cn(
+                              'bg-primary text-primary-foreground flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold',
+                              collapsed && 'lg:hidden'
+                            )}
+                          >
+                            {unreadNotifications > 9
+                              ? '9+'
+                              : unreadNotifications}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
 
           <div className="border-border my-4 border-t" />
 
