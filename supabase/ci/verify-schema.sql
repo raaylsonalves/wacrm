@@ -345,6 +345,26 @@ BEGIN
       'match_ai_knowledge_fts still ANDs every term — migration 063 did not apply';
   END IF;
 
+  -- 064 — the WAHA send throttle's claim is only correct under
+  -- concurrent invocations if last_sent_at exists and the RPC is the
+  -- installed atomic UPDATE...WHERE...RETURNING; a missing column or
+  -- a silently-reverted function body would mean sends go out
+  -- unthrottled with no error anywhere.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'whatsapp_waha_channels'
+      AND column_name = 'last_sent_at'
+  ) THEN
+    RAISE EXCEPTION
+      'whatsapp_waha_channels.last_sent_at is missing — migration 064 did not apply';
+  END IF;
+  IF pg_get_functiondef(
+       'public.claim_waha_send_slot(uuid,integer)'::regprocedure
+     ) NOT LIKE '%RETURNING 1%' THEN
+    RAISE EXCEPTION
+      'claim_waha_send_slot is missing its atomic claim — migration 064 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

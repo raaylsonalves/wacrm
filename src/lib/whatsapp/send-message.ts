@@ -40,6 +40,10 @@ import {
   toWahaChatId,
   WahaApiError,
 } from '@/lib/whatsapp/waha-api';
+import {
+  claimWahaSendSlot,
+  WahaThrottleError,
+} from '@/lib/whatsapp/waha-throttle';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
 import {
   phoneVariants,
@@ -292,6 +296,18 @@ export async function sendMessageToConversation(
         400
       );
     }
+    // Automations and broadcast already refuse an opted-out contact
+    // (src/lib/automations/engine.ts, use-broadcast-sending.ts) — this
+    // was the one send path that didn't (specs/waha-anti-banimento-e-
+    // opt-out.md): a human agent replying manually could still message
+    // someone who asked to stop.
+    if (contact.opted_out_at) {
+      throw new SendMessageError(
+        'contact_opted_out',
+        'This contact asked to stop receiving messages.',
+        409
+      );
+    }
 
     const { data: wahaChannel, error: wahaError } = await db
       .from('whatsapp_waha_channels')
@@ -309,6 +325,16 @@ export async function sendMessageToConversation(
     }
 
     try {
+      // Anti-ban throttle (specs/waha-anti-banimento-e-opt-out.md) —
+      // blocks until this channel's session has gone quiet for its
+      // minimum interval. Every WAHA send must go through this; there
+      // is no other caller of sendWahaText today, but a future one
+      // (automations/broadcast, currently Cloud-API-only) inherits the
+      // same protection by calling this first, not by sendWahaText
+      // enforcing it internally — sendWahaText stays a pure HTTP call.
+      await claimWahaSendSlot(wahaChannel.id, {
+        connectedAt: wahaChannel.connected_at,
+      });
       const result = await sendWahaText(
         wahaChannel.waha_base_url,
         decrypt(wahaChannel.waha_api_key),
@@ -318,6 +344,9 @@ export async function sendMessageToConversation(
       );
       waMessageId = result.id;
     } catch (err) {
+      if (err instanceof WahaThrottleError) {
+        throw new SendMessageError('meta_error', err.message, 503);
+      }
       const message =
         err instanceof WahaApiError
           ? err.message
