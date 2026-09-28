@@ -40,6 +40,20 @@ recurring billing before it needs almost anything else.
 - Marketplace/reseller billing (an agency sub-billing its own clients
   inside one wacrm instance) — out of scope until single-account
   billing works.
+- **Per-extra-number add-on pricing.** Noted here as a reminder, not
+  designed: once an account can connect more than one WhatsApp number
+  (Cloud API + N WAHA channels, `specs/waha-channel-connection.md`),
+  charging per additional connected number is an obvious add-on model
+  ("+1 número = +R$X/mês") that this spec doesn't cover. It would need
+  a `billing_customers`-adjacent concept of metered add-on items
+  (Stripe calls these "usage-based" or additional subscription items)
+  keyed off `COUNT(whatsapp_waha_channels) + has_cloud_api` per
+  account, checked wherever a new channel is connected
+  (`POST /api/whatsapp/waha/channels`) — gate the connect action on
+  "plan allows N more channels," not just on role. Left as a follow-up
+  once the base plan/gating plumbing below exists; designing the
+  add-on metering before the base subscription model is real would be
+  building on nothing.
 
 ## Current behavior
 
