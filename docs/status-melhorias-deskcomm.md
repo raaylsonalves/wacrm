@@ -235,11 +235,29 @@ que já tinha sido levantado no início desta rodada de conversas.
 
 ## Pendente — specs escritas, aguardando implementação
 
-Nenhuma — todas as specs desta rodada (PRD +
+Todas as specs da rodada anterior (PRD +
 `agenda-exploratory.md`/`waha-channel-connection.md`/
 `multi-agent-router.md`/`grouped-navigation.md`/
 `signup-onboarding-wizard.md`/`audit-log-endurecido.md`/
 `waha-anti-banimento-e-opt-out.md`) estão implementadas.
+
+| Spec | O que falta |
+|---|---|
+| [`pwa-web-push-notifications.md`](../specs/pwa-web-push-notifications.md) | Tudo — sem manifest, sem service worker, sem tabela `push_subscriptions`. Motivada por um bug real relatado pelo usuário: notificação dá "navegador não suporta" no celular, porque a feature atual (`use-browser-notifications.ts`) é só `Notification` API síncrona com aba aberta — nunca funcionaria em mobile sem isso. |
+
+## Gap conhecido — multi-número fora do Inbox
+
+Confirmado em 2026-09-28: a separação por canal (WAHA vs. Cloud API,
+ou WAHA A vs. WAHA B) só existe de fato no **Inbox** (badge + filtro,
+implementado nesta rodada) e, parcialmente, no **Agente de IA** (só se
+um Roteador estiver configurado com `channel_id`). Dashboard,
+Automações, Flows e Broadcast são account-wide — nenhum deles sabe
+que existe mais de um número. Sem spec aberta pra isso ainda.
+
+Também confirmado: `specs/billing-subscriptions.md` (exploratória, sem
+código) cobre só "ter um plano pago" genérico — não menciona
+cobrança por número extra conectado. Seria uma extensão dessa spec ou
+uma nova, não existe ainda.
 
 ## Decisão de produto pendente (nem é spec ainda — precisa validar com dados reais antes)
 
