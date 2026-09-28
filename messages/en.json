@@ -2546,5 +2546,48 @@
       "5": "Fri",
       "6": "Sat"
     }
+  },
+  "Onboarding": {
+    "stepWelcome": "Welcome",
+    "stepChannel": "Channel",
+    "stepAiAgent": "AI Agent",
+    "stepTest": "Test",
+    "stepTeam": "Team",
+    "skipOnboarding": "Skip onboarding and go to the Inbox",
+    "skipStepBtn": "Skip for now",
+    "continueBtn": "Continue",
+    "welcome": {
+      "title": "Welcome! Let's set things up",
+      "description": "Just a few steps before your account is ready — you can skip any of them and finish later in Settings.",
+      "nameField": "Business name",
+      "namePlaceholder": "e.g. Acme Inc.",
+      "saveFailed": "Could not save the business name"
+    },
+    "channel": {
+      "title": "Connect a WhatsApp number",
+      "description": "Connect your official Meta Cloud API number, or scan a QR code to connect via WAHA.",
+      "conflictWarning": "The same number can't be connected both ways at once: connecting a number by QR (WAHA) that's already on the Official API disconnects it from Meta, and vice versa. Pick one path per number.",
+      "cloudApiTab": "Official API (Meta)",
+      "qrTab": "QR numbers"
+    },
+    "aiAgent": {
+      "title": "Set up your AI agent",
+      "description": "Paste your own OpenAI, Anthropic, Gemini, or OpenRouter key and write the first system prompt — you can refine it later."
+    },
+    "test": {
+      "title": "See it work",
+      "description": "Send a message as if you were a customer and watch your agent reply for real — using the setup from the last step."
+    },
+    "team": {
+      "title": "Invite your team",
+      "description": "Now that the agent works, bring in the people who'll use it with you. Optional — you can always invite people later from Settings.",
+      "inviteBtn": "Invite a teammate"
+    },
+    "done": {
+      "title": "You're all set",
+      "description": "Here's what got configured — and what you skipped.",
+      "skippedNote": "You skipped: {steps}. You can finish these anytime in Settings.",
+      "goToInboxBtn": "Go to the Inbox"
+    }
   }
 }

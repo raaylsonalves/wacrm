@@ -421,6 +421,18 @@ BEGIN
       'conversations.active_ai_agent_id is missing — migration 066 did not apply';
   END IF;
 
+  -- 067 — onboarding wizard. Missing onboarded_at would make the
+  -- "never redirect an already-onboarded account back into the
+  -- wizard" guarantee unenforceable, silently.
+  IF (
+    SELECT COUNT(*) FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'accounts'
+      AND column_name IN ('onboarding_state', 'onboarded_at')
+  ) <> 2 THEN
+    RAISE EXCEPTION
+      'accounts.onboarding_state/onboarded_at are missing — migration 067 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

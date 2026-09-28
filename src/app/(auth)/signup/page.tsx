@@ -62,13 +62,16 @@ function SignupPageInner() {
 
     setLoading(true);
 
-    // If we have an invite token, point Supabase's verification
-    // email back at the join page so the user can accept after
-    // verifying. Without a token, Supabase uses its default
-    // redirect (the app root).
+    // If we have an invite token, point Supabase's verification email
+    // back at the join page so the user can accept after verifying —
+    // they're joining an account that already exists (and already
+    // went through onboarding, or explicitly skipped it), so the
+    // wizard never applies to them (specs/signup-onboarding-wizard.md
+    // non-goals). Otherwise, land on /onboarding — a brand-new
+    // account with nothing configured yet.
     const emailRedirectTo = inviteToken
       ? `${window.location.origin}/join/${encodeURIComponent(inviteToken)}`
-      : undefined;
+      : `${window.location.origin}/onboarding`;
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -77,7 +80,7 @@ function SignupPageInner() {
         data: {
           full_name: fullName,
         },
-        ...(emailRedirectTo ? { emailRedirectTo } : {}),
+        emailRedirectTo,
       },
     });
 

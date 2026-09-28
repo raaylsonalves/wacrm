@@ -2546,5 +2546,48 @@
       "5": "금",
       "6": "토"
     }
+  },
+  "Onboarding": {
+    "stepWelcome": "환영",
+    "stepChannel": "채널",
+    "stepAiAgent": "AI 에이전트",
+    "stepTest": "테스트",
+    "stepTeam": "팀",
+    "skipOnboarding": "온보딩 건너뛰고 수신함으로 이동",
+    "skipStepBtn": "지금은 건너뛰기",
+    "continueBtn": "계속",
+    "welcome": {
+      "title": "환영합니다! 설정을 시작해요",
+      "description": "계정이 준비되기까지 몇 단계만 남았습니다 — 언제든 건너뛰고 나중에 설정에서 완료할 수 있어요.",
+      "nameField": "비즈니스 이름",
+      "namePlaceholder": "예: Acme 주식회사",
+      "saveFailed": "비즈니스 이름을 저장하지 못했습니다"
+    },
+    "channel": {
+      "title": "WhatsApp 번호 연결하기",
+      "description": "공식 Meta Cloud API 번호를 연결하거나, QR 코드를 스캔해 WAHA로 연결하세요.",
+      "conflictWarning": "같은 번호를 두 방식으로 동시에 연결할 수 없습니다. 공식 API에 이미 연결된 번호를 QR(WAHA)로 연결하면 Meta 연결이 해제되며, 반대의 경우도 마찬가지입니다. 번호마다 한 가지 방식을 선택하세요.",
+      "cloudApiTab": "공식 API (Meta)",
+      "qrTab": "QR 번호"
+    },
+    "aiAgent": {
+      "title": "AI 에이전트 설정하기",
+      "description": "OpenAI, Anthropic, Gemini 또는 OpenRouter의 자체 키를 붙여넣고 첫 시스템 프롬프트를 작성하세요 — 나중에 다듬을 수 있습니다."
+    },
+    "test": {
+      "title": "작동하는 모습 보기",
+      "description": "고객인 것처럼 메시지를 보내고 에이전트가 실제로 응답하는 모습을 확인하세요 — 이전 단계의 설정을 사용합니다."
+    },
+    "team": {
+      "title": "팀 초대하기",
+      "description": "에이전트가 작동하는 걸 확인했으니, 함께 사용할 사람들을 초대하세요. 선택 사항이며, 나중에 설정에서 언제든 초대할 수 있습니다.",
+      "inviteBtn": "동료 초대"
+    },
+    "done": {
+      "title": "모든 준비가 끝났습니다",
+      "description": "설정된 항목과 건너뛴 항목입니다.",
+      "skippedNote": "건너뛴 항목: {steps}. 설정에서 언제든 완료할 수 있습니다.",
+      "goToInboxBtn": "수신함으로 이동"
+    }
   }
 }

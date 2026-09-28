@@ -2534,5 +2534,48 @@
       "5": "Vie",
       "6": "Sáb"
     }
+  },
+  "Onboarding": {
+    "stepWelcome": "Bienvenida",
+    "stepChannel": "Canal",
+    "stepAiAgent": "Agente de IA",
+    "stepTest": "Prueba",
+    "stepTeam": "Equipo",
+    "skipOnboarding": "Saltar la configuración e ir a la Bandeja de entrada",
+    "skipStepBtn": "Saltar por ahora",
+    "continueBtn": "Continuar",
+    "welcome": {
+      "title": "¡Bienvenido! Vamos a configurar todo",
+      "description": "Solo unos pasos más antes de que tu cuenta esté lista — puedes saltar cualquiera y terminarlo después en Configuración.",
+      "nameField": "Nombre del negocio",
+      "namePlaceholder": "ej.: Acme S.A.",
+      "saveFailed": "No se pudo guardar el nombre del negocio"
+    },
+    "channel": {
+      "title": "Conecta un número de WhatsApp",
+      "description": "Conecta tu número oficial de la API Cloud de Meta, o escanea un código QR para conectar vía WAHA.",
+      "conflictWarning": "Un mismo número no puede estar conectado por las dos vías a la vez: conectar un número por QR (WAHA) que ya está en la API Oficial lo desconecta de Meta, y viceversa. Elige una vía por número.",
+      "cloudApiTab": "API Oficial (Meta)",
+      "qrTab": "Números por QR"
+    },
+    "aiAgent": {
+      "title": "Configura tu agente de IA",
+      "description": "Pega tu propia clave de OpenAI, Anthropic, Gemini u OpenRouter y escribe el primer prompt del sistema — puedes ajustarlo después."
+    },
+    "test": {
+      "title": "Míralo funcionar",
+      "description": "Envía un mensaje como si fueras un cliente y observa a tu agente responder de verdad — usando la configuración del paso anterior."
+    },
+    "team": {
+      "title": "Invita a tu equipo",
+      "description": "Ahora que el agente funciona, invita a las personas que lo usarán contigo. Opcional — siempre puedes invitar gente después desde Configuración.",
+      "inviteBtn": "Invitar a un compañero"
+    },
+    "done": {
+      "title": "Todo listo",
+      "description": "Esto es lo que se configuró — y lo que te saltaste.",
+      "skippedNote": "Te saltaste: {steps}. Puedes terminarlo cuando quieras desde Configuración.",
+      "goToInboxBtn": "Ir a la Bandeja de entrada"
+    }
   }
 }

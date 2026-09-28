@@ -20,7 +20,17 @@ interface Turn {
   segments?: string[];
 }
 
-export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
+export function AiPlayground({
+  onGoToSetup,
+  onReplyReceived,
+}: {
+  onGoToSetup?: () => void;
+  /** Fires once a real assistant reply lands — the onboarding wizard's
+   *  "test" step (specs/signup-onboarding-wizard.md) uses this to
+   *  unlock its "Continue" button only after the agent has actually
+   *  answered, not just because the user typed something. */
+  onReplyReceived?: () => void;
+}) {
   const t = useTranslations('Agents.playground');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState('');
@@ -80,6 +90,7 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
           handoff: Boolean(data.handoff),
         },
       ]);
+      onReplyReceived?.();
     } catch {
       toast.error(t('unreachable'));
       setTurns(turns);

@@ -7,7 +7,13 @@
 > for implementada ou uma nova for aberta.
 >
 > PRD-mãe: [`prd-melhorias-inspiradas-no-deskcomm.md`](prd-melhorias-inspiradas-no-deskcomm.md).
-> Última revisão: 2026-09-28 (navegação agrupada implementada).
+> Última revisão: 2026-09-28 (wizard de onboarding implementado — TODAS
+> as specs desta rodada estão concluídas). **Atenção**: as migrations
+> 064-067 (throttle WAHA, audit log, multi-agente, onboarding) ainda
+> não foram aplicadas ao banco real — confirmado ao vivo em
+> 2026-09-28, ver nota na seção do onboarding abaixo. Rode
+> `supabase db push` (ou equivalente) antes de considerar qualquer uma
+> dessas features "funcionando em produção".
 
 ## Concluído
 
@@ -176,11 +182,64 @@
   perdido.
 - Spec: [`grouped-navigation.md`](../specs/grouped-navigation.md).
 
+### Wizard de onboarding pós-cadastro
+- Migration 067: `accounts.onboarding_state jsonb` + `onboarded_at
+  timestamptz`, com backfill de `onboarded_at = now()` pras contas já
+  existentes (non-goal explícito da spec: sem onboarding retroativo
+  forçado).
+- `src/lib/onboarding/steps.ts` — lista única (`STEPS`) de onde o
+  roteador, o indicador de progresso e o resumo final derivam, igual à
+  doutrina do deskcomm citada na spec. Sem o `applies(ctx)` do
+  rascunho original: nenhum passo condicional existe hoje, então essa
+  parte da interface foi cortada até haver um caso real.
+- `src/app/onboarding/*` — layout com stepper + link "Pular onboarding
+  e ir para a Caixa de entrada" sempre visível; roteador raiz que
+  resolve o próximo passo incompleto; 5 telas (`welcome`, `channel`,
+  `ai-agent`, `test`, `team`) cada uma com "Pular por agora"; `done`
+  com resumo feito/pulado por passo.
+- Passos reaproveitam componentes já existentes em vez de duplicar:
+  `channel` embute `WhatsAppConfig`/`WahaChannels` (as mesmas telas de
+  Configurações), `ai-agent` embute `AiConfig`, `team` embute
+  `InviteMemberDialog`, `test` embute o `AiPlayground` (ganhou um
+  `onReplyReceived` novo, aditivo) — resposta real do provedor
+  configurado, não uma resposta fake.
+- **Recorte consciente**: o "fuso horário" que o rascunho da spec
+  citava no passo `welcome` foi removido — não existe coluna/conceito
+  de timezone em `accounts` hoje, só `NEXT_PUBLIC_APP_LOCALE`
+  (idioma). Adicionar isso seria inventar escopo que a spec não pediu
+  de verdade.
+- `signup/page.tsx`: `emailRedirectTo` agora aponta pra `/onboarding`
+  também no caso sem convite (antes só o caso com convite setava
+  redirect). Convite continua indo pra `/join/<token>`, sem passar
+  pelo wizard.
+- Testado: `src/lib/onboarding/steps.test.ts` (8 casos, lógica pura de
+  resolução/marcação de passos).
+- **Verificado ao vivo no navegador** (sessão real já logada): acessar
+  `/onboarding` redirecionou pra `/onboarding/welcome` corretamente; o
+  link "Pular onboarding" persistiu e redirecionou pra `/dashboard`.
+  Isso revelou uma coisa importante — ver o alerta abaixo.
+- Spec: [`signup-onboarding-wizard.md`](../specs/signup-onboarding-wizard.md).
+
+## ⚠️ Migrations pendentes de aplicar no banco real
+
+Confirmado ao vivo em 2026-09-28: o teste do onboarding no navegador
+mostrou o erro `Could not find the 'onboarded_at' column of 'accounts'
+in the schema cache` — ou seja, **as migrations 064
+(`waha_send_throttle`), 065 (`audit_log`), 066
+(`ai_multi_agent_router`) e 067 (`onboarding_state`) nunca foram
+aplicadas ao banco de produção**, só existem como arquivo `.sql` no
+repo. O código degrada com segurança (não quebra, só não persiste),
+mas nenhuma dessas quatro features funciona de verdade até rodar as
+migrations pendentes (`supabase db push` ou equivalente) — mesmo ponto
+que já tinha sido levantado no início desta rodada de conversas.
+
 ## Pendente — specs escritas, aguardando implementação
 
-| Spec | Prioridade (PRD) | O que falta |
-|---|---|---|
-| [`signup-onboarding-wizard.md`](../specs/signup-onboarding-wizard.md) | — | Tudo — sem wizard, sem `accounts.onboarding_state`. |
+Nenhuma — todas as specs desta rodada (PRD +
+`agenda-exploratory.md`/`waha-channel-connection.md`/
+`multi-agent-router.md`/`grouped-navigation.md`/
+`signup-onboarding-wizard.md`/`audit-log-endurecido.md`/
+`waha-anti-banimento-e-opt-out.md`) estão implementadas.
 
 ## Decisão de produto pendente (nem é spec ainda — precisa validar com dados reais antes)
 

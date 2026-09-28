@@ -2534,5 +2534,48 @@
       "5": "Sex",
       "6": "Sáb"
     }
+  },
+  "Onboarding": {
+    "stepWelcome": "Bem-vindo",
+    "stepChannel": "Canal",
+    "stepAiAgent": "Agente de IA",
+    "stepTest": "Teste",
+    "stepTeam": "Equipe",
+    "skipOnboarding": "Pular onboarding e ir para a Caixa de entrada",
+    "skipStepBtn": "Pular por agora",
+    "continueBtn": "Continuar",
+    "welcome": {
+      "title": "Bem-vindo! Vamos configurar",
+      "description": "Só mais alguns passos antes da sua conta estar pronta — você pode pular qualquer um e terminar depois em Configurações.",
+      "nameField": "Nome do negócio",
+      "namePlaceholder": "ex.: Acme Ltda.",
+      "saveFailed": "Não foi possível salvar o nome do negócio"
+    },
+    "channel": {
+      "title": "Conecte um número de WhatsApp",
+      "description": "Conecte seu número oficial da API Cloud da Meta, ou escaneie um QR code pra conectar via WAHA.",
+      "conflictWarning": "Um mesmo número não pode ficar conectado nas duas vias ao mesmo tempo: conectar um número por QR (WAHA) que já está na API Oficial desconecta esse número da Meta, e vice-versa. Escolha uma via por número.",
+      "cloudApiTab": "API Oficial (Meta)",
+      "qrTab": "Números por QR"
+    },
+    "aiAgent": {
+      "title": "Configure seu agente de IA",
+      "description": "Cole sua própria chave OpenAI, Anthropic, Gemini ou OpenRouter e escreva o primeiro prompt do sistema — pode refinar depois."
+    },
+    "test": {
+      "title": "Veja funcionar",
+      "description": "Mande uma mensagem como se fosse um cliente e veja seu agente responder de verdade — usando a configuração do passo anterior."
+    },
+    "team": {
+      "title": "Convide sua equipe",
+      "description": "Agora que o agente funciona, traga as pessoas que vão usá-lo com você. Opcional — você pode convidar gente depois em Configurações.",
+      "inviteBtn": "Convidar colega"
+    },
+    "done": {
+      "title": "Tudo pronto",
+      "description": "Aqui está o que foi configurado — e o que você pulou.",
+      "skippedNote": "Você pulou: {steps}. Pode terminar isso quando quiser em Configurações.",
+      "goToInboxBtn": "Ir para a Caixa de entrada"
+    }
   }
 }
