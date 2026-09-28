@@ -146,7 +146,7 @@ export async function planBroadcastResume(
 ): Promise<ResumePlan> {
   const { data: broadcast, error: bcError } = await db
     .from('broadcasts')
-    .select('id, template_name, template_language')
+    .select('id, template_name, template_language, primary_channel_id')
     .eq('id', broadcastId)
     .eq('account_id', accountId)
     .maybeSingle();
@@ -205,17 +205,34 @@ export async function planBroadcastResume(
     );
   }
 
-  const { data: config, error: configError } = await db
-    .from('whatsapp_config')
-    .select('*')
-    .eq('account_id', accountId)
-    .single();
-  if (configError || !config) {
-    throw new BroadcastError(
-      'whatsapp_not_configured',
-      'WhatsApp not configured. Please set up your WhatsApp integration first.',
-      400
-    );
+  const isWahaBroadcast = !!broadcast.primary_channel_id;
+
+  // A WAHA broadcast never touches whatsapp_config — same split
+  // createBroadcast makes (specs/broadcast-channel-rotation.md).
+  let phoneNumberId = '';
+  let accessToken = '';
+  let channelPoolIds: string[] = [];
+  if (!isWahaBroadcast) {
+    const { data: config, error: configError } = await db
+      .from('whatsapp_config')
+      .select('*')
+      .eq('account_id', accountId)
+      .single();
+    if (configError || !config) {
+      throw new BroadcastError(
+        'whatsapp_not_configured',
+        'WhatsApp not configured. Please set up your WhatsApp integration first.',
+        400
+      );
+    }
+    phoneNumberId = config.phone_number_id;
+    accessToken = decrypt(config.access_token);
+  } else {
+    const { data: pool } = await db
+      .from('broadcast_channel_pool')
+      .select('waha_channel_id')
+      .eq('broadcast_id', broadcastId);
+    channelPoolIds = (pool ?? []).map((p) => p.waha_channel_id);
   }
 
   const resolvedTemplate = await resolveTemplateRow(
@@ -236,9 +253,11 @@ export async function planBroadcastResume(
     broadcastId,
     templateName: broadcast.template_name,
     templateLanguage: resolvedTemplate.language,
-    phoneNumberId: config.phone_number_id,
-    accessToken: decrypt(config.access_token),
+    phoneNumberId,
+    accessToken,
     templateRow: resolvedTemplate.row,
+    primaryChannelId: broadcast.primary_channel_id ?? null,
+    channelPoolIds,
     planned: slice.map((row) => ({
       recipientRowId: row.id,
       phone: sanitizePhoneForMeta(contactPhone(row) ?? ''),

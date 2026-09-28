@@ -27,9 +27,15 @@ import {
   phoneVariants,
   isRecipientNotAllowedError,
 } from '@/lib/whatsapp/phone-utils';
-import { resolveTemplateRow } from '@/lib/whatsapp/template-body';
+import {
+  resolveTemplateRow,
+  templateContentText,
+} from '@/lib/whatsapp/template-body';
 import type { MessageTemplate } from '@/types';
 import { findOrCreateContact } from '@/lib/api/v1/contacts';
+import { sendWahaText, toWahaChatId, WahaApiError } from '@/lib/whatsapp/waha-api';
+import { claimWahaSendSlot, WahaThrottleError } from '@/lib/whatsapp/waha-throttle';
+import { pickNextChannel } from '@/lib/whatsapp/broadcast-rotation';
 
 /** Thrown by createBroadcast on a caller-visible failure; route maps it. */
 export class BroadcastError extends Error {
@@ -55,6 +61,13 @@ export interface CreateBroadcastParams {
   templateName: string;
   templateLanguage?: string | null;
   recipients: BroadcastRecipientInput[];
+  /** A WAHA channel id anchors this broadcast to WAHA instead of the
+   *  account's Cloud API number (specs/broadcast-channel-rotation.md).
+   *  Omitted/null = today's only mode, unchanged. */
+  primaryChannelId?: string | null;
+  /** Additional WAHA channels this broadcast may rotate across.
+   *  Ignored unless `primaryChannelId` is set. */
+  channelPoolIds?: string[];
 }
 
 interface PlannedRecipient {
@@ -67,9 +80,14 @@ export interface BroadcastPlan {
   broadcastId: string;
   templateName: string;
   templateLanguage: string;
+  /** Cloud API fields — empty strings in WAHA mode (unused there). */
   phoneNumberId: string;
   accessToken: string;
   templateRow: MessageTemplate | null;
+  /** Set when this broadcast sends via WAHA. `null` = Cloud API,
+   *  unchanged from before this feature. */
+  primaryChannelId: string | null;
+  channelPoolIds: string[];
   planned: PlannedRecipient[];
   /** Phones rejected up front (invalid E.164) — counted as failed. */
   rejected: number;
@@ -89,7 +107,11 @@ export async function createBroadcast(
   auditUserId: string,
   params: CreateBroadcastParams
 ): Promise<BroadcastPlan> {
-  const { name, templateName, recipients } = params;
+  const { name, templateName, recipients, primaryChannelId } = params;
+  const channelPoolIds = Array.isArray(params.channelPoolIds)
+    ? params.channelPoolIds.filter((id): id is string => typeof id === 'string')
+    : [];
+  const isWahaBroadcast = !!primaryChannelId;
 
   if (!templateName) {
     throw new BroadcastError('bad_request', "'template_name' is required", 400);
@@ -109,21 +131,47 @@ export async function createBroadcast(
     );
   }
 
-  // Config (fail fast + provides the audit trail owner already resolved
-  // by the caller). Meta send needs phone_number_id + decrypted token.
-  const { data: config, error: configError } = await db
-    .from('whatsapp_config')
-    .select('*')
-    .eq('account_id', accountId)
-    .single();
-  if (configError || !config) {
-    throw new BroadcastError(
-      'whatsapp_not_configured',
-      'WhatsApp not configured. Please set up your WhatsApp integration first.',
-      400
-    );
+  // Cloud API config, only needed in Cloud API mode — a WAHA
+  // broadcast never touches whatsapp_config at all (specs/broadcast-
+  // channel-rotation.md's whole point: an account with only WAHA
+  // channels connected couldn't broadcast before this).
+  let phoneNumberId = '';
+  let accessToken = '';
+  if (!isWahaBroadcast) {
+    const { data: config, error: configError } = await db
+      .from('whatsapp_config')
+      .select('*')
+      .eq('account_id', accountId)
+      .single();
+    if (configError || !config) {
+      throw new BroadcastError(
+        'whatsapp_not_configured',
+        'WhatsApp not configured. Please set up your WhatsApp integration first.',
+        400
+      );
+    }
+    accessToken = decrypt(config.access_token);
+    phoneNumberId = config.phone_number_id;
+  } else {
+    // Every channel in the primary+pool set must actually belong to
+    // this account — otherwise an account could broadcast through a
+    // channel (and its stored credentials) that isn't theirs.
+    const candidateIds = Array.from(new Set([primaryChannelId, ...channelPoolIds]));
+    const { data: owned } = await db
+      .from('whatsapp_waha_channels')
+      .select('id')
+      .eq('account_id', accountId)
+      .in('id', candidateIds);
+    const ownedIds = new Set((owned ?? []).map((c) => c.id));
+    const missing = candidateIds.filter((id) => !ownedIds.has(id));
+    if (missing.length > 0) {
+      throw new BroadcastError(
+        'bad_request',
+        `Unknown WAHA channel id(s) for this account: ${missing.join(', ')}`,
+        400
+      );
+    }
   }
-  const accessToken = decrypt(config.access_token);
 
   // Template row (once) for header/button components; guard a
   // malformed local row rather than N identical opaque failures.
@@ -141,6 +189,19 @@ export async function createBroadcast(
     );
   }
   const templateRow = resolvedTemplate.row;
+
+  // WAHA has no template concept (specs/waha-channel-connection.md's
+  // own scoping) — a WAHA broadcast sends the rendered body as plain
+  // text, so without a locally-synced row's body_text there is
+  // nothing to render at all (no Meta call to fall back on, unlike
+  // the Cloud API path which can send by template name alone).
+  if (isWahaBroadcast && !templateRow?.body_text) {
+    throw new BroadcastError(
+      'template_not_synced',
+      'This template needs to be synced locally (Settings → Templates → Sync from Meta) before it can be used for a WAHA broadcast — WAHA sends the rendered text directly, with no Meta fallback.',
+      400
+    );
+  }
 
   // Resolve each recipient to a contact. Invalid phones are dropped
   // (counted as rejected) rather than aborting the whole broadcast.
@@ -212,6 +273,7 @@ export async function createBroadcast(
       // Frozen per-recipient params (migration 038) — without them a
       // resume of this broadcast has no way to reconstruct {{1}}.
       p_template_params: deduped.map((r) => r.params),
+      p_primary_channel_id: primaryChannelId ?? null,
     }
   );
   if (createErr || !createdRows || createdRows.length === 0) {
@@ -220,6 +282,21 @@ export async function createBroadcast(
   }
 
   const broadcastId = createdRows[0].broadcast_id as string;
+
+  if (isWahaBroadcast && channelPoolIds.length > 0) {
+    const { error: poolErr } = await db.from('broadcast_channel_pool').insert(
+      channelPoolIds.map((waha_channel_id) => ({
+        broadcast_id: broadcastId,
+        waha_channel_id,
+      }))
+    );
+    if (poolErr) {
+      // Non-fatal: the broadcast still works from the primary channel
+      // alone, it just won't rotate. Log loudly rather than failing a
+      // campaign that already committed its recipients.
+      console.error('[broadcast-core] channel pool insert failed:', poolErr);
+    }
+  }
 
   // Pair each inserted recipient row back to its phone/params by
   // contact_id — unambiguous now that duplicates are collapsed.
@@ -253,9 +330,11 @@ export async function createBroadcast(
     broadcastId,
     templateName,
     templateLanguage: resolvedTemplate.language,
-    phoneNumberId: config.phone_number_id,
+    phoneNumberId,
     accessToken,
     templateRow,
+    primaryChannelId: primaryChannelId ?? null,
+    channelPoolIds,
     planned,
     rejected,
   };
@@ -279,6 +358,11 @@ export async function deliverBroadcast(
   plan: BroadcastPlan
 ): Promise<void> {
   for (const recipient of plan.planned) {
+    if (plan.primaryChannelId) {
+      await deliverWahaRecipient(db, plan, recipient);
+      continue;
+    }
+
     const variants = phoneVariants(recipient.phone);
     let sentMessageId: string | null = null;
     let lastError: string | null = null;
@@ -327,6 +411,82 @@ export async function deliverBroadcast(
   }
 
   await finalizeBroadcastStatus(db, plan.broadcastId);
+}
+
+/**
+ * One recipient of a WAHA broadcast: rotate to the least-recently-
+ * used connected channel (specs/broadcast-channel-rotation.md),
+ * throttle it (migration 064's `claim_waha_send_slot` — rotation
+ * decides WHICH channel to ask, the throttle still decides WHETHER it
+ * can send right now), then send the template's rendered text as a
+ * plain WAHA message (no template/header/button concept there). No
+ * phone-variant retry — that's a Meta "recipient not in allowed list"
+ * workaround with no WAHA equivalent.
+ */
+async function deliverWahaRecipient(
+  db: SupabaseClient,
+  plan: BroadcastPlan,
+  recipient: BroadcastPlan['planned'][number]
+): Promise<void> {
+  const text = templateContentText(plan.templateRow, recipient.params);
+  if (!text) {
+    await db
+      .from('broadcast_recipients')
+      .update({ status: 'failed', error_message: 'Template has no body text to send' })
+      .eq('id', recipient.recipientRowId);
+    return;
+  }
+
+  const channel = await pickNextChannel(
+    db,
+    plan.primaryChannelId!,
+    plan.channelPoolIds
+  );
+  if (!channel) {
+    await db
+      .from('broadcast_recipients')
+      .update({
+        status: 'failed',
+        error_message: 'No connected WAHA channel available in this broadcast\'s pool',
+      })
+      .eq('id', recipient.recipientRowId);
+    return;
+  }
+
+  try {
+    await claimWahaSendSlot(channel.id, {
+      isBroadcast: true,
+      connectedAt: channel.connected_at,
+    });
+    const result = await sendWahaText(
+      channel.waha_base_url,
+      decrypt(channel.waha_api_key),
+      channel.waha_session_name,
+      toWahaChatId(recipient.phone),
+      text
+    );
+    await db
+      .from('broadcast_recipients')
+      .update({
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        whatsapp_message_id: result.id,
+        sent_via_channel_id: channel.id,
+        error_message: null,
+      })
+      .eq('id', recipient.recipientRowId);
+  } catch (err) {
+    const message =
+      err instanceof WahaThrottleError || err instanceof WahaApiError
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : 'Unknown WAHA error';
+    await db
+      .from('broadcast_recipients')
+      .update({ status: 'failed', error_message: message })
+      .eq('id', recipient.recipientRowId);
+  }
 }
 
 /**

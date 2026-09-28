@@ -433,6 +433,43 @@ BEGIN
       'accounts.onboarding_state/onboarded_at are missing — migration 067 did not apply';
   END IF;
 
+  -- 068 — broadcast channel rotation. The 9-arg overload replacing
+  -- the 8-arg one is the part most likely to silently half-apply (the
+  -- DROP could succeed while the CREATE fails, or vice versa) —
+  -- assert the NEW signature resolves and the OLD one is gone, not
+  -- just that "a" create_broadcast_with_recipients exists.
+  IF NOT (
+    SELECT COUNT(*) FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'broadcasts'
+      AND column_name = 'primary_channel_id'
+  ) = 1 THEN
+    RAISE EXCEPTION
+      'broadcasts.primary_channel_id is missing — migration 068 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'broadcast_recipients'
+      AND column_name = 'sent_via_channel_id'
+  ) THEN
+    RAISE EXCEPTION
+      'broadcast_recipients.sent_via_channel_id is missing — migration 068 did not apply';
+  END IF;
+  IF to_regclass('public.broadcast_channel_pool') IS NULL THEN
+    RAISE EXCEPTION 'broadcast_channel_pool is missing — migration 068 did not apply';
+  END IF;
+  IF to_regprocedure(
+       'public.create_broadcast_with_recipients(uuid,uuid,text,text,text,integer,uuid[],jsonb[],uuid)'
+     ) IS NULL THEN
+    RAISE EXCEPTION
+      'create_broadcast_with_recipients 9-arg overload is missing — migration 068 did not apply';
+  END IF;
+  IF to_regprocedure(
+       'public.create_broadcast_with_recipients(uuid,uuid,text,text,text,integer,uuid[],jsonb[])'
+     ) IS NOT NULL THEN
+    RAISE EXCEPTION
+      'create_broadcast_with_recipients 8-arg overload still exists — migration 068''s DROP did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

@@ -7,13 +7,12 @@
 > for implementada ou uma nova for aberta.
 >
 > PRD-mãe: [`prd-melhorias-inspiradas-no-deskcomm.md`](prd-melhorias-inspiradas-no-deskcomm.md).
-> Última revisão: 2026-09-28 (wizard de onboarding implementado — TODAS
-> as specs desta rodada estão concluídas). **Atenção**: as migrations
-> 064-067 (throttle WAHA, audit log, multi-agente, onboarding) ainda
-> não foram aplicadas ao banco real — confirmado ao vivo em
-> 2026-09-28, ver nota na seção do onboarding abaixo. Rode
-> `supabase db push` (ou equivalente) antes de considerar qualquer uma
-> dessas features "funcionando em produção".
+> Última revisão: 2026-09-28 (rodízio de números no broadcast
+> implementado). Migrations 064-068 (throttle WAHA, audit log,
+> multi-agente, onboarding, rodízio de broadcast) foram aplicadas ao
+> banco real via MCP do Supabase em 2026-09-28 — confirmado por
+> `list_migrations`. Qualquer migration nova a partir de agora precisa
+> do mesmo passo explícito antes de virar "funcionando em produção".
 
 ## Concluído
 
@@ -244,23 +243,61 @@ Todas as specs da rodada anterior (PRD +
 | Spec | O que falta |
 |---|---|
 | [`pwa-web-push-notifications.md`](../specs/pwa-web-push-notifications.md) | Tudo — sem manifest, sem service worker, sem tabela `push_subscriptions`. Motivada por um bug real relatado pelo usuário: notificação dá "navegador não suporta" no celular, porque a feature atual (`use-browser-notifications.ts`) é só `Notification` API síncrona com aba aberta — nunca funcionaria em mobile sem isso. |
-| [`broadcast-channel-rotation.md`](../specs/broadcast-channel-rotation.md) | Tudo — broadcast hoje só manda pela Cloud API; portado do rodízio de números do deskcomm (`campaign_channel_sessions`). Fecha o gap real "Broadcast é account-wide" listado abaixo. |
 | [`channel-routing-responsibles.md`](../specs/channel-routing-responsibles.md) | Tudo — "responsáveis por número" do deskcomm (`channel_routing_policies`), restringe quais agentes humanos podem ser donos de conversa de cada canal. |
 | [`inbox-power-features.md`](../specs/inbox-power-features.md) | Tudo — 4 features pequenas e independentes portadas do Inbox do deskcomm: snooze, tags de conversa (separadas de tags de contato), notas internas, atalhos de teclado. |
+
+### Rodízio de números no broadcast — ✅ implementado
+- Migration 068: `broadcasts.primary_channel_id` (NULL = Cloud API,
+  como sempre foi), `broadcast_recipients.sent_via_channel_id`,
+  tabela `broadcast_channel_pool`. `create_broadcast_with_recipients`
+  (037/038/041) ganhou `p_primary_channel_id` — a versão de 8
+  argumentos foi **removida** (não só substituída) pra não sobrar duas
+  funções fazendo quase a mesma coisa.
+- `src/lib/whatsapp/broadcast-rotation.ts`: `pickNextChannel` — o
+  canal do pool com `last_sent_at` mais antigo (nunca enviado vem
+  primeiro), restrito a `status = 'connected'` (senão um canal
+  desconectado pareceria "o mais livre" e seria escolhido sempre).
+- `src/lib/whatsapp/broadcast-core.ts`: `createBroadcast` agora nem
+  consulta `whatsapp_config` quando `primaryChannelId` é passado — uma
+  conta só-WAHA já conseguia conectar canal antes, mas não conseguia
+  disparar broadcast nenhum; isso fecha esse buraco. `deliverBroadcast`
+  ganhou o branch WAHA: roda `pickNextChannel` → `claimWahaSendSlot`
+  (throttle da migration 064, que decide *se* pode mandar; o rodízio
+  decide só *qual* canal perguntar) → `sendWahaText`, sem retry de
+  variante de telefone (não existe "recipient not allowed" no WAHA).
+- `src/lib/whatsapp/broadcast-resume.ts`: o resume (`planBroadcastResume`)
+  também aprendeu o mesmo split — antes exigia `whatsapp_config`
+  incondicionalmente, o que quebraria retomar um broadcast WAHA.
+- **Corrigido de passagem**: achei e corrigi um bug real que essa
+  mudança expôs — `createBroadcast`'s `return` referenciava
+  `config.phone_number_id` fora do escopo do bloco onde `config` foi
+  declarado; só não quebrava porque o modo Cloud API sempre passava
+  por ali antes. Ficou `phoneNumberId` (variável hoisted), corrigido
+  como parte deste commit.
+- `/api/v1/broadcasts` (a única rota que já chamava `broadcast-core.ts`
+  — o wizard do dashboard usa uma rota antiga separada que nunca grava
+  em `broadcast_recipients`, gap pré-existente e fora de escopo aqui)
+  ganhou `primary_channel_id`/`channel_pool_ids` no corpo do POST.
+- Testado: `broadcast-rotation.test.ts` (4 casos) +
+  `broadcast-core.test.ts` (6 casos novos: 3 de `createBroadcast` WAHA,
+  3 de `deliverBroadcast` WAHA).
+- **Escopo deixado de fora**: o wizard visual de broadcast do dashboard
+  (`src/components/broadcasts/*`) não ganhou seletor de canal — ele
+  não usa `broadcast-core.ts`, então integrá-lo é um trabalho
+  separado, não coberto aqui.
+- Spec: [`broadcast-channel-rotation.md`](../specs/broadcast-channel-rotation.md).
 
 ## Gap conhecido — multi-número fora do Inbox
 
 Confirmado em 2026-09-28 (e comparado com o deskcomm no mesmo dia): a
 separação por canal (WAHA vs. Cloud API, ou WAHA A vs. WAHA B) só
-existe de fato no **Inbox** (badge + filtro, implementado nesta
-rodada) e, parcialmente, no **Agente de IA** (só se um Roteador
-estiver configurado com `channel_id`). Dashboard e Automações/Flows
-são account-wide nos DOIS produtos (não é só gap do wacrm) — mas
-**Broadcast está atrás do deskcomm**, que já tem rodízio de números
-por campanha (`broadcast-channel-rotation.md` acima cobre isso). O
-deskcomm também tem "responsáveis por número"
-(`channel-routing-responsibles.md` acima), que o wacrm não tinha
-equivalente nenhum.
+existe de fato no **Inbox** (badge + filtro) e no **Broadcast**
+(rodízio, acabou de ser implementado), e parcialmente no **Agente de
+IA** (só se um Roteador estiver configurado com `channel_id`).
+Dashboard e Automações/Flows são account-wide nos DOIS produtos (não é
+só gap do wacrm). O deskcomm também tem "responsáveis por número"
+(`channel-routing-responsibles.md` — ainda pendente aqui), que o wacrm
+não tinha equivalente nenhum.
 
 Também confirmado: `specs/billing-subscriptions.md` (exploratória, sem
 código) cobre só "ter um plano pago" genérico — agora tem uma nota

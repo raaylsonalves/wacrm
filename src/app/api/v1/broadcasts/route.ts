@@ -10,7 +10,16 @@
 //     "recipients": [                        // required, 1..1000
 //       { "to": "+14155550123", "params": ["Jane"] },
 //       { "to": "+14155550124" }
-//     ]
+//     ],
+//     "primary_channel_id": "<waha channel id>", // optional — sends via
+//                                                 // WAHA instead of the
+//                                                 // account's Cloud API
+//                                                 // number (specs/
+//                                                 // broadcast-channel-
+//                                                 // rotation.md)
+//     "channel_pool_ids": ["<waha channel id>"]  // optional, WAHA only —
+//                                                 // additional channels
+//                                                 // to rotate sends across
 //   }
 //
 // The broadcast + its recipient rows are persisted synchronously, then
@@ -72,6 +81,13 @@ export async function POST(request: Request) {
         to: typeof r?.to === 'string' ? r.to : '',
         params: Array.isArray(r?.params) ? r.params : undefined,
       })),
+      primaryChannelId:
+        typeof body.primary_channel_id === 'string'
+          ? body.primary_channel_id
+          : null,
+      channelPoolIds: Array.isArray(body.channel_pool_ids)
+        ? body.channel_pool_ids.filter((id): id is string => typeof id === 'string')
+        : undefined,
     });
 
     // Fan out after the response is sent. Uses the same service-role
