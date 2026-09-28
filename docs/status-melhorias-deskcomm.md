@@ -244,20 +244,28 @@ Todas as specs da rodada anterior (PRD +
 | Spec | O que falta |
 |---|---|
 | [`pwa-web-push-notifications.md`](../specs/pwa-web-push-notifications.md) | Tudo — sem manifest, sem service worker, sem tabela `push_subscriptions`. Motivada por um bug real relatado pelo usuário: notificação dá "navegador não suporta" no celular, porque a feature atual (`use-browser-notifications.ts`) é só `Notification` API síncrona com aba aberta — nunca funcionaria em mobile sem isso. |
+| [`broadcast-channel-rotation.md`](../specs/broadcast-channel-rotation.md) | Tudo — broadcast hoje só manda pela Cloud API; portado do rodízio de números do deskcomm (`campaign_channel_sessions`). Fecha o gap real "Broadcast é account-wide" listado abaixo. |
+| [`channel-routing-responsibles.md`](../specs/channel-routing-responsibles.md) | Tudo — "responsáveis por número" do deskcomm (`channel_routing_policies`), restringe quais agentes humanos podem ser donos de conversa de cada canal. |
+| [`inbox-power-features.md`](../specs/inbox-power-features.md) | Tudo — 4 features pequenas e independentes portadas do Inbox do deskcomm: snooze, tags de conversa (separadas de tags de contato), notas internas, atalhos de teclado. |
 
 ## Gap conhecido — multi-número fora do Inbox
 
-Confirmado em 2026-09-28: a separação por canal (WAHA vs. Cloud API,
-ou WAHA A vs. WAHA B) só existe de fato no **Inbox** (badge + filtro,
-implementado nesta rodada) e, parcialmente, no **Agente de IA** (só se
-um Roteador estiver configurado com `channel_id`). Dashboard,
-Automações, Flows e Broadcast são account-wide — nenhum deles sabe
-que existe mais de um número. Sem spec aberta pra isso ainda.
+Confirmado em 2026-09-28 (e comparado com o deskcomm no mesmo dia): a
+separação por canal (WAHA vs. Cloud API, ou WAHA A vs. WAHA B) só
+existe de fato no **Inbox** (badge + filtro, implementado nesta
+rodada) e, parcialmente, no **Agente de IA** (só se um Roteador
+estiver configurado com `channel_id`). Dashboard e Automações/Flows
+são account-wide nos DOIS produtos (não é só gap do wacrm) — mas
+**Broadcast está atrás do deskcomm**, que já tem rodízio de números
+por campanha (`broadcast-channel-rotation.md` acima cobre isso). O
+deskcomm também tem "responsáveis por número"
+(`channel-routing-responsibles.md` acima), que o wacrm não tinha
+equivalente nenhum.
 
 Também confirmado: `specs/billing-subscriptions.md` (exploratória, sem
-código) cobre só "ter um plano pago" genérico — não menciona
-cobrança por número extra conectado. Seria uma extensão dessa spec ou
-uma nova, não existe ainda.
+código) cobre só "ter um plano pago" genérico — agora tem uma nota
+registrando cobrança por número extra conectado como follow-up, sem
+desenho ainda.
 
 ## Decisão de produto pendente (nem é spec ainda — precisa validar com dados reais antes)
 
