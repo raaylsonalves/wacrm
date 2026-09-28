@@ -18,6 +18,7 @@ import { NextResponse } from "next/server";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 import { requireRole, toErrorResponse } from "@/lib/auth/account";
+import { audit } from "@/lib/audit";
 import { isAccountRole } from "@/lib/auth/roles";
 import {
   checkRateLimit,
@@ -81,12 +82,30 @@ export async function PATCH(
       );
     }
 
+    // Read the old role BEFORE the RPC so the audit row can show the
+    // actual transition — the RPC itself doesn't return it.
+    const { data: before } = await ctx.supabase
+      .from("profiles")
+      .select("account_role")
+      .eq("user_id", userId)
+      .eq("account_id", ctx.accountId)
+      .maybeSingle();
+
     const { error } = await ctx.supabase.rpc("set_member_role", {
       p_user_id: userId,
       p_new_role: role,
     });
 
     if (error) return rpcErrorToResponse(error);
+
+    void audit({
+      accountId: ctx.accountId,
+      actorUserId: ctx.userId,
+      action: "member.role_changed",
+      resourceType: "profile",
+      resourceId: userId,
+      metadata: { old_role: before?.account_role ?? null, new_role: role },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

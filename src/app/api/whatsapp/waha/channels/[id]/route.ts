@@ -14,6 +14,7 @@
 import { NextResponse } from 'next/server';
 
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
+import { audit } from '@/lib/audit';
 import { decrypt } from '@/lib/whatsapp/encryption';
 import {
   deleteWahaSession,
@@ -143,6 +144,15 @@ export async function DELETE(
         { status: 500 }
       );
     }
+
+    void audit({
+      accountId: ctx.accountId,
+      actorUserId: ctx.userId,
+      action: 'channel.deleted',
+      resourceType: 'whatsapp_waha_channel',
+      resourceId: id,
+      metadata: { label: channel.label },
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

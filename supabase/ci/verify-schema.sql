@@ -365,6 +365,32 @@ BEGIN
       'claim_waha_send_slot is missing its atomic claim — migration 064 did not apply';
   END IF;
 
+  -- 065 — audit_log's entire value proposition over a plain log table
+  -- is that even a leaked service_role key can't erase its own trail.
+  -- A silently-skipped REVOKE (this file's own CREATE-TABLE-default-
+  -- ACL trap, called out in the migration's own header) would leave
+  -- that guarantee false while everything else about the table looks
+  -- fine.
+  IF to_regclass('public.audit_log') IS NULL THEN
+    RAISE EXCEPTION 'public.audit_log is missing — migration 065 did not apply';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.role_table_grants
+    WHERE table_schema = 'public' AND table_name = 'audit_log'
+      AND grantee IN ('anon', 'authenticated', 'service_role')
+      AND privilege_type IN ('UPDATE', 'DELETE', 'TRUNCATE')
+  ) THEN
+    RAISE EXCEPTION
+      'audit_log still has UPDATE/DELETE/TRUNCATE grants — migration 065 REVOKE did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'audit_log'
+      AND policyname = 'audit_log_select'
+  ) THEN
+    RAISE EXCEPTION 'audit_log_select RLS policy is missing — migration 065 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

@@ -15,6 +15,7 @@ import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
+import { audit } from '@/lib/audit';
 import {
   checkRateLimit,
   rateLimitResponse,
@@ -239,6 +240,15 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    void audit({
+      accountId: ctx.accountId,
+      actorUserId: ctx.userId,
+      action: 'channel.created',
+      resourceType: 'whatsapp_waha_channel',
+      resourceId: channel.id,
+      metadata: { label },
+    });
 
     return NextResponse.json({ channel }, { status: 201 });
   } catch (err) {

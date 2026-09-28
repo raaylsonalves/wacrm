@@ -17,6 +17,7 @@
 import { NextResponse } from 'next/server';
 
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
+import { audit } from '@/lib/audit';
 import {
   checkRateLimit,
   rateLimitResponse,
@@ -168,6 +169,15 @@ export async function POST(
         { status: 500 }
       );
     }
+
+    void audit({
+      accountId: ctx.accountId,
+      actorUserId: ctx.userId,
+      action: 'contact.anonymized',
+      resourceType: 'contact',
+      resourceId: id,
+      metadata: { mediaDeleted },
+    });
 
     return NextResponse.json({ success: true, mediaDeleted });
   } catch (err) {

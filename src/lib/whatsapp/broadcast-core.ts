@@ -18,6 +18,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { audit } from '@/lib/audit';
 import { sendTemplateMessage } from '@/lib/whatsapp/meta-api';
 import { decrypt } from '@/lib/whatsapp/encryption';
 import {
@@ -229,6 +230,24 @@ export async function createBroadcast(
       return { recipientRowId: row.recipient_id, phone: r.phone, params: r.params };
     }
   );
+
+  // One row per dispatch, not per recipient — recipient-level detail
+  // already lives in broadcast_recipients, and logging N rows here
+  // for a large broadcast would be disproportionate volume for what
+  // the audit trail needs to answer ("who fired this campaign").
+  // Never the template body/params — those are the message content.
+  void audit({
+    accountId,
+    actorUserId: auditUserId,
+    action: 'broadcast.sent',
+    resourceType: 'broadcast',
+    resourceId: broadcastId,
+    metadata: {
+      template_name: templateName,
+      recipient_count: planned.length,
+      rejected_count: rejected,
+    },
+  });
 
   return {
     broadcastId,

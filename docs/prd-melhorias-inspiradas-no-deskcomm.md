@@ -35,7 +35,7 @@ em 2026-09-28.
 
 ## Oportunidades, em ordem de prioridade
 
-### P0 — Log de auditoria estruturado e protegido contra adulteração
+### P0 — Log de auditoria estruturado e protegido contra adulteração — ✅ implementado em 2026-09-28
 
 **Gap confirmado**: `wacrm` não tem uma tabela de auditoria — mutações (quem
 criou/editou/excluiu o quê) não deixam rastro pesquisável. O DeskcommCRM tem
@@ -70,22 +70,6 @@ quem pediu pra parar" é o motivo nº 1 de denúncia em massa que detona um
 número. Isso é risco de produto direto, não só qualidade de código.
 
 **Ver spec**: [`specs/waha-anti-banimento-e-opt-out.md`](../specs/waha-anti-banimento-e-opt-out.md)
-
-### P1 — Distribuição self-host (avaliar, não necessariamente construir)
-
-**Gap confirmado**: `wacrm` só roda na Vercel/Supabase gerenciados pelo
-operador; não existe imagem Docker nem instalador para VPS de cliente. O
-DeskcommCRM tem um kit de instalação completo (`install.sh`/`update.sh`,
-`docker-compose.prod.yml`, branding por instância).
-
-**Por que é P1 e não P0**: isso é uma decisão de modelo de negócio, não um bug
-— só vale a pena se houver demanda real de cliente que queira rodar a própria
-instância (ex.: por exigência de compliance de manter dado em infraestrutura
-própria). Recomendo tratar como pergunta de produto antes de virar spec:
-"algum cliente do wacrm pediu isso?" Se sim, a doutrina de packaging do
-DeskcommCRM (`docs/doctrine/packaging.md` lá) é um blueprint pronto a
-consultar, não para copiar às cegas — o wacrm não tem a mesma arquitetura de
-workers.
 
 ### P2 — White-label / marca por conta
 
@@ -126,7 +110,8 @@ nos pedidos de clientes, não antes.
 ## Próximos passos
 
 1. Revisar as duas specs P0 (`audit-log-endurecido.md`,
-   `waha-anti-banimento-e-opt-out.md`) e decidir se entram no backlog.
-2. Para os P1/P2: validar com dados reais de clientes/pedidos antes de
-   transformar em spec — são apostas de modelo de negócio, não conserto de
-   lacuna técnica.
+   `waha-anti-banimento-e-opt-out.md` — a segunda já implementada) e decidir
+   se a primeira entra no backlog.
+2. Para os P2 (white-label, extensões): validar com dados reais de
+   clientes/pedidos antes de transformar em spec — são apostas de modelo de
+   negócio, não conserto de lacuna técnica.

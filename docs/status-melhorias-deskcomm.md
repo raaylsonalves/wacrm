@@ -7,7 +7,8 @@
 > for implementada ou uma nova for aberta.
 >
 > PRD-mãe: [`prd-melhorias-inspiradas-no-deskcomm.md`](prd-melhorias-inspiradas-no-deskcomm.md).
-> Última revisão: 2026-09-28 (throttle WAHA implementado).
+> Última revisão: 2026-09-28 (log de auditoria implementado; P1 self-host
+> removido da lista a pedido do usuário — fora do radar de produto).
 
 ## Concluído
 
@@ -87,19 +88,40 @@
   fallback chain, logging, thoughtSignature do Gemini).
 - "Limpar histórico da conversa" no menu de contexto do Inbox.
 
+### Log de auditoria endurecido
+- Migration 065: tabela `audit_log` (índice `(account_id, created_at
+  desc)`), RLS de leitura por membro da conta, e o endurecimento real —
+  `REVOKE UPDATE, DELETE, TRUNCATE` de `anon`, `authenticated` E
+  `service_role` — nem uma chave de serviço vazada apaga o rastro.
+- Helper `audit()` em `src/lib/audit.ts`: fire-and-forget, nunca lança
+  (erro só vai pro console), nunca aceita segredo/corpo de mensagem no
+  `metadata`.
+- Instrumentado nos 4 pontos de alto risco da spec: criar/excluir
+  canal WAHA (`src/app/api/whatsapp/waha/channels/route.ts` e
+  `[id]/route.ts`), mudar papel de membro
+  (`src/app/api/account/members/[userId]/route.ts`, grava
+  `old_role`/`new_role`), disparar broadcast
+  (`src/lib/whatsapp/broadcast-core.ts`'s `createBroadcast` — 1 linha
+  por disparo, não por destinatário, sem corpo/params do template), e
+  anonimizar contato (`src/app/api/contacts/[id]/anonymize/route.ts`).
+- **Gap conhecido**: a rota legada de envio imediato de broadcast
+  (`src/app/api/whatsapp/broadcast/route.ts`, o fluxo antigo do
+  dashboard que não passa por `createBroadcast`) não está
+  instrumentada ainda — só o caminho moderno (`/api/v1/broadcasts`)
+  está.
+- Testado: `src/lib/audit.test.ts` (4 casos).
+- Spec: [`audit-log-endurecido.md`](../specs/audit-log-endurecido.md).
+
 ## Pendente — specs escritas, aguardando implementação
 
 | Spec | Prioridade (PRD) | O que falta |
 |---|---|---|
-| [`audit-log-endurecido.md`](../specs/audit-log-endurecido.md) | P0 | Tudo — tabela `audit_log` não existe. |
 | [`multi-agent-router.md`](../specs/multi-agent-router.md) | — | Tudo — `ai_configs` continua único por conta, sem roteador. |
 | [`grouped-navigation.md`](../specs/grouped-navigation.md) | — | Tudo — menu lateral continua a lista plana atual. |
 | [`signup-onboarding-wizard.md`](../specs/signup-onboarding-wizard.md) | — | Tudo — sem wizard, sem `accounts.onboarding_state`. |
 
 ## Decisão de produto pendente (nem é spec ainda — precisa validar com dados reais antes)
 
-- **P1 — Distribuição self-host** (instalador Docker): só vale a pena
-  se houver pedido real de cliente.
 - **P2 — White-label por conta**: só vale a pena se o wacrm for
   vendido por agências/revendas.
 - **P2 — Extensões declarativas**: só vale a pena se aparecer padrão
