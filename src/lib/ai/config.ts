@@ -9,6 +9,7 @@ interface RawFallbackRow {
 }
 
 interface AiConfigRow {
+  id?: string
   provider: AiProvider
   model: string
   api_key: string
@@ -22,8 +23,19 @@ interface AiConfigRow {
   agenda_enabled?: boolean
 }
 
+/** One row of `listAiAgents` — never the decrypted key, just enough
+ *  for the agents list screen and the router builder's agent picker. */
+export interface AiAgentSummary {
+  id: string
+  name: string
+  provider: AiProvider
+  model: string
+  isDefault: boolean
+  isActive: boolean
+}
+
 const CONFIG_COLUMNS_BASE =
-  'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, embeddings_api_key'
+  'id, provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, embeddings_api_key'
 const CONFIG_COLUMNS = `${CONFIG_COLUMNS_BASE}, fallbacks, agenda_enabled`
 
 /** Postgres "undefined_column" — thrown by `fallbacks` not existing yet
@@ -83,14 +95,17 @@ function decryptFallbacks(
 export async function loadAiConfig(
   db: SupabaseClient,
   accountId: string,
-  opts: { requireActive?: boolean } = {},
+  opts: { requireActive?: boolean; agentId?: string } = {},
 ): Promise<AiConfig | null> {
-  const { requireActive = true } = opts
-  let { data, error } = await db
-    .from('ai_configs')
-    .select(CONFIG_COLUMNS)
-    .eq('account_id', accountId)
-    .maybeSingle()
+  const { requireActive = true, agentId } = opts
+  // No agentId → the account's default agent (migration 066). Every
+  // caller from before multi-agent existed calls this with no
+  // agentId, so an account with exactly one agent (today's only
+  // shape, and still the common case) resolves the same row it
+  // always did — is_default is backfilled true for it.
+  let query = db.from('ai_configs').select(CONFIG_COLUMNS).eq('account_id', accountId)
+  query = agentId ? query.eq('id', agentId) : query.eq('is_default', true)
+  let { data, error } = await query.maybeSingle()
 
   // Defensive: if migration 052 (adds `ai_configs.fallbacks`) or 060
   // (adds `ai_configs.agenda_enabled`) hasn't been applied yet,
@@ -102,11 +117,14 @@ export async function loadAiConfig(
     console.warn(
       '[ai config] ai_configs.fallbacks / agenda_enabled do not exist yet (migration 052/060 not applied) — provider fallback and agenda tools are disabled until they are.',
     )
-    ;({ data, error } = await db
+    let retryQuery = db
       .from('ai_configs')
       .select(CONFIG_COLUMNS_BASE)
       .eq('account_id', accountId)
-      .maybeSingle())
+    retryQuery = agentId
+      ? retryQuery.eq('id', agentId)
+      : retryQuery.eq('is_default', true)
+    ;({ data, error } = await retryQuery.maybeSingle())
   }
 
   if (error) throw error
@@ -139,6 +157,7 @@ export async function loadAiConfig(
   }
 
   return {
+    id: row.id,
     provider: row.provider,
     model: row.model,
     apiKey: decrypt(row.api_key),
@@ -168,10 +187,16 @@ export async function loadEmbeddingsKey(
   db: SupabaseClient,
   accountId: string,
 ): Promise<{ key: string | null; corrupt: boolean }> {
+  // Scoped to the default agent (multi-agent, migration 066) — the
+  // knowledge base stays account-wide/shared (non-goal in
+  // specs/multi-agent-router.md), and its embeddings key lives on
+  // that one row. Without this scope, an account with a 2nd agent
+  // would have `.maybeSingle()` error on >1 matching row.
   const { data, error } = await db
     .from('ai_configs')
     .select('embeddings_api_key')
     .eq('account_id', accountId)
+    .eq('is_default', true)
     .maybeSingle()
   if (error || !data?.embeddings_api_key) return { key: null, corrupt: false }
   try {
@@ -182,4 +207,30 @@ export async function loadEmbeddingsKey(
     )
     return { key: null, corrupt: true }
   }
+}
+
+/**
+ * List every agent on the account (specs/multi-agent-router.md) — no
+ * keys, just enough for the agents list screen and a router's agent
+ * picker. Ordered oldest-first so the default agent (always the
+ * first one created, pre-multi-agent) sorts first by default.
+ */
+export async function listAiAgents(
+  db: SupabaseClient,
+  accountId: string,
+): Promise<AiAgentSummary[]> {
+  const { data, error } = await db
+    .from('ai_configs')
+    .select('id, name, provider, model, is_default, is_active')
+    .eq('account_id', accountId)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    provider: row.provider,
+    model: row.model,
+    isDefault: row.is_default,
+    isActive: row.is_active,
+  }))
 }

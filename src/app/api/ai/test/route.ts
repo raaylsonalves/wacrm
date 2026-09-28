@@ -61,6 +61,7 @@ export async function POST(request: Request) {
         .from('ai_configs')
         .select(fallbackIndex !== null ? 'fallbacks' : 'api_key')
         .eq('account_id', accountId)
+        .eq('is_default', true)
         .maybeSingle()
 
       const storedEncrypted =

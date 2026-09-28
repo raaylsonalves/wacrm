@@ -22,6 +22,11 @@ export interface AiProviderCredentials {
  * (stored AES-256-GCM-encrypted at rest).
  */
 export interface AiConfig {
+  /** ai_configs.id — absent when the config wasn't loaded from a row
+   *  (e.g. a validate-before-save call built ad hoc). Present on
+   *  anything from `loadAiConfig`; used to persist sticky routing
+   *  (specs/multi-agent-router.md). */
+  id?: string
   provider: AiProvider
   model: string
   apiKey: string

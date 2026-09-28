@@ -108,10 +108,14 @@ export async function GET() {
 
     // `api_key` is selected only to derive `has_key` — it is stripped
     // out below and never returned to the client.
+    // Scoped to the default agent (migration 066) — this route only
+    // ever edits that one row; additional agents go through
+    // /api/ai/agents.
     let { data, error } = await supabase
       .from('ai_configs')
       .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled`)
       .eq('account_id', accountId)
+      .eq('is_default', true)
       .maybeSingle()
 
     // Migration 052 (`ai_configs.fallbacks`) may not be applied yet —
@@ -121,6 +125,7 @@ export async function GET() {
         .from('ai_configs')
         .select(BASE_COLUMNS)
         .eq('account_id', accountId)
+        .eq('is_default', true)
         .maybeSingle())
     }
 
@@ -236,6 +241,7 @@ export async function POST(request: Request) {
       .from('ai_configs')
       .select('id, provider, model, api_key, fallbacks')
       .eq('account_id', accountId)
+      .eq('is_default', true)
       .maybeSingle()
 
     if (!existing) {
@@ -247,6 +253,7 @@ export async function POST(request: Request) {
         .from('ai_configs')
         .select('id, provider, model, api_key')
         .eq('account_id', accountId)
+        .eq('is_default', true)
         .maybeSingle()
       if (retry.data) existing = { ...retry.data, fallbacks: null }
     }
@@ -396,10 +403,14 @@ export async function POST(request: Request) {
 
     if (existing) {
       const payload = encryptedKey ? { ...shared, api_key: encryptedKey } : shared
+      // By `id`, not `account_id` — an UPDATE with no unique-row
+      // constraint on the filter would touch EVERY agent in the
+      // account once a 2nd one exists (migration 066); `existing` was
+      // already resolved to this one specific default-agent row above.
       let { error: upErr } = await supabase
         .from('ai_configs')
         .update(payload)
-        .eq('account_id', accountId)
+        .eq('id', existing.id)
       if (upErr && isUndefinedColumnError(upErr)) {
         // Migration 052 (`ai_configs.fallbacks`) hasn't been applied
         // yet — save everything else, but reject if the admin actually
@@ -416,7 +427,7 @@ export async function POST(request: Request) {
         ;({ error: upErr } = await supabase
           .from('ai_configs')
           .update(payloadWithoutFallbacks)
-          .eq('account_id', accountId))
+          .eq('id', existing.id))
       }
       if (upErr) {
         console.error('[ai/config POST] update error:', upErr)
@@ -430,6 +441,12 @@ export async function POST(request: Request) {
         account_id: accountId,
         created_by: userId,
         api_key: encryptedKey, // guaranteed non-null: rawKey required when no existing row
+        // This route only ever creates/edits the account's default
+        // agent (migration 066) — additional agents are created via
+        // /api/ai/agents. `name` stays the schema default ('Assistente')
+        // for this, the very first config, so an account that never
+        // touches multi-agent sees the same thing it always did.
+        is_default: true,
         ...shared,
       }
       let { error: insErr } = await supabase.from('ai_configs').insert(insertPayload)
@@ -471,10 +488,55 @@ export async function POST(request: Request) {
 export async function DELETE() {
   try {
     const { supabase, accountId } = await requireRole('admin')
+
+    // Only the default agent — deleting by `account_id` alone would
+    // remove EVERY agent on the account once a 2nd one exists
+    // (migration 066). If other agents remain, promote the oldest one
+    // to default first so the account never ends up with agents but
+    // no default (the exact gap specs/multi-agent-router.md flags as
+    // an open risk) — loadAiConfig's no-agentId lookup always has a
+    // row to resolve.
+    const { data: defaultRow } = await supabase
+      .from('ai_configs')
+      .select('id')
+      .eq('account_id', accountId)
+      .eq('is_default', true)
+      .maybeSingle()
+
+    if (!defaultRow) {
+      return NextResponse.json({ success: true })
+    }
+
+    const { data: nextDefault } = await supabase
+      .from('ai_configs')
+      .select('id')
+      .eq('account_id', accountId)
+      .neq('id', defaultRow.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (nextDefault) {
+      // Unset the old default BEFORE promoting the new one — both
+      // can't be true at once under idx_ai_configs_account_default
+      // (the partial unique index), so setting the new one first
+      // would 23505.
+      await supabase
+        .from('ai_configs')
+        .update({ is_default: false })
+        .eq('id', defaultRow.id)
+      await supabase
+        .from('ai_configs')
+        .update({ is_default: true })
+        .eq('id', nextDefault.id)
+    }
+
+    // By `id`, not the `is_default` filter used to find it above — if
+    // promotion just ran, this row is no longer the default.
     const { error } = await supabase
       .from('ai_configs')
       .delete()
-      .eq('account_id', accountId)
+      .eq('id', defaultRow.id)
     if (error) {
       console.error('[ai/config DELETE] error:', error)
       return NextResponse.json(

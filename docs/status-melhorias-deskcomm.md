@@ -7,8 +7,7 @@
 > for implementada ou uma nova for aberta.
 >
 > PRD-mãe: [`prd-melhorias-inspiradas-no-deskcomm.md`](prd-melhorias-inspiradas-no-deskcomm.md).
-> Última revisão: 2026-09-28 (log de auditoria implementado; P1 self-host
-> removido da lista a pedido do usuário — fora do radar de produto).
+> Última revisão: 2026-09-28 (multi-agente + roteador implementado).
 
 ## Concluído
 
@@ -112,11 +111,54 @@
 - Testado: `src/lib/audit.test.ts` (4 casos).
 - Spec: [`audit-log-endurecido.md`](../specs/audit-log-endurecido.md).
 
+### Múltiplos agentes de IA + roteador de intenção
+- Migration 066: `ai_configs` perde o `UNIQUE(account_id)`, ganha
+  `name`/`is_default` (backfill automático — a conta com 1 agente
+  continua exatamente igual); `ai_routers`/`ai_router_members` novas;
+  `conversations.active_ai_agent_id` para o sticky routing.
+- `src/lib/ai/config.ts`: `loadAiConfig` ganha `agentId?` opcional (sem
+  ele, resolve o agente `is_default` — comportamento idêntico ao de
+  antes para quem não usa multi-agente); `listAiAgents()` novo.
+  `/api/ai/config` (o editor do agente padrão, inalterado na UI) e
+  `/api/ai/test` foram ajustados por baixo dos panos para escopar
+  todas as queries por `is_default`/`id`, já que um `UPDATE`/`DELETE`
+  só por `account_id` passaria a afetar TODOS os agentes da conta.
+- `src/lib/ai/router.ts`: `loadActiveRouterForChannel` (canal
+  específico vence o roteador de conta inteira) e
+  `resolveAgentViaRouter` — sticky, classificação via prompt curto
+  contra a própria chave BYO da conta (nunca um serviço de
+  classificação separado), fallback pro `fallback_agent_id` ou pro
+  agente padrão, e falha do classificador nunca derruba o turno
+  (sempre cai no agente padrão já carregado).
+- Wireado em `dispatchInboundToAiReply` (`src/lib/ai/auto-reply.ts`) —
+  a resolução roda antes do corte por limite de respostas, então o
+  cap/handoff/claim atômico já operam sobre o agente resolvido, não
+  sobre um fixo. Inerte pra qualquer conta sem roteador ativo.
+- APIs novas: `/api/ai/agents` (listar/criar agentes extras — só o
+  agente padrão continua editável em `/api/ai/config`, com o conjunto
+  completo de recursos: fallback chain, embeddings, agenda; agentes
+  extras são mais enxutos de propósito), `/api/ai/agents/[id]`
+  (editar/excluir), `/api/ai/routers` (listar/criar),
+  `/api/ai/routers/[id]` (editar, incluindo ativar/desativar com
+  guarda contra roteador sem nenhuma intenção configurada),
+  `/api/ai/routers/[id]/members` (substitui a lista de intenções por
+  completo).
+- UI: nova aba "Agentes e Roteador" em `/agents` (admin+) —
+  `src/components/agents/ai-agents-list.tsx` (lista + criar/excluir
+  agente) e `ai-routers.tsx` (lista de roteadores, toggle ativo,
+  editor com confiança mínima, sticky, agente de fallback e a lista de
+  intenções → agente).
+- Guarda pro risco que a spec apontava ("`is_default` sem agente
+  algum"): excluir o agente padrão via `DELETE /api/ai/config`
+  promove automaticamente o agente mais antigo remanescente antes de
+  apagar — nunca sobra uma conta com agentes mas sem nenhum default.
+- Testado: `src/lib/ai/router.test.ts` (9 casos).
+- Spec: [`multi-agent-router.md`](../specs/multi-agent-router.md).
+
 ## Pendente — specs escritas, aguardando implementação
 
 | Spec | Prioridade (PRD) | O que falta |
 |---|---|---|
-| [`multi-agent-router.md`](../specs/multi-agent-router.md) | — | Tudo — `ai_configs` continua único por conta, sem roteador. |
 | [`grouped-navigation.md`](../specs/grouped-navigation.md) | — | Tudo — menu lateral continua a lista plana atual. |
 | [`signup-onboarding-wizard.md`](../specs/signup-onboarding-wizard.md) | — | Tudo — sem wizard, sem `accounts.onboarding_state`. |
 

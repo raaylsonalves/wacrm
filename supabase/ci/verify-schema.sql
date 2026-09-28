@@ -391,6 +391,36 @@ BEGIN
     RAISE EXCEPTION 'audit_log_select RLS policy is missing — migration 065 did not apply';
   END IF;
 
+  -- 066 — multi-agent + router. The UNIQUE(account_id) drop and the
+  -- partial unique index are both load-bearing: without the drop, a
+  -- 2nd ai_configs insert for the same account 23505s; without the
+  -- index, two rows could both claim is_default and every caller that
+  -- assumes exactly one (loadAiConfig's default lookup) would break in
+  -- a way that only shows up once an account actually creates a 2nd
+  -- agent, not at migration time.
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'ai_configs_account_id_key'
+  ) THEN
+    RAISE EXCEPTION
+      'ai_configs_account_id_key still exists — migration 066 did not apply';
+  END IF;
+  IF to_regclass('public.idx_ai_configs_account_default') IS NULL THEN
+    RAISE EXCEPTION
+      'idx_ai_configs_account_default is missing — migration 066 did not apply';
+  END IF;
+  IF to_regclass('public.ai_routers') IS NULL
+     OR to_regclass('public.ai_router_members') IS NULL THEN
+    RAISE EXCEPTION 'ai_routers/ai_router_members are missing — migration 066 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'conversations'
+      AND column_name = 'active_ai_agent_id'
+  ) THEN
+    RAISE EXCEPTION
+      'conversations.active_ai_agent_id is missing — migration 066 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

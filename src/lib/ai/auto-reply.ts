@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './admin-client'
 import { loadAiConfig } from './config'
+import { loadActiveRouterForChannel, resolveAgentViaRouter } from './router'
 import { buildConversationContext } from './context'
 import { retrieveKnowledge } from './knowledge'
 import {
@@ -114,7 +115,7 @@ export async function dispatchInboundToAiReply(
   try {
     const db = supabaseAdmin()
 
-    const config = await loadAiConfig(db, accountId)
+    let config = await loadAiConfig(db, accountId)
     if (!config || !config.autoReplyEnabled) {
       console.info(`${tag} skipped: AI not configured or auto-reply disabled`)
       return
@@ -142,7 +143,9 @@ export async function dispatchInboundToAiReply(
 
     const { data: conv, error: convErr } = await db
       .from('conversations')
-      .select('assigned_agent_id, ai_autoreply_disabled, ai_reply_count')
+      .select(
+        'assigned_agent_id, ai_autoreply_disabled, ai_reply_count, whatsapp_channel_id, active_ai_agent_id',
+      )
       .eq('id', conversationId)
       .maybeSingle()
     if (convErr || !conv) {
@@ -157,6 +160,45 @@ export async function dispatchInboundToAiReply(
       console.info(`${tag} skipped: auto-reply is disabled on this conversation (paused/handed off)`)
       return // handed off / turned off here
     }
+
+    // Multi-agent router (specs/multi-agent-router.md) — inert for any
+    // account with no active router (the common case today): resolves
+    // to null and `config` stays the account's default agent, exactly
+    // as before this feature existed. When active, whichever agent it
+    // resolves to takes over the cap/handoff/claim logic below, which
+    // is why this runs before all three.
+    try {
+      const activeRouter = await loadActiveRouterForChannel(
+        db,
+        accountId,
+        conv.whatsapp_channel_id ?? null,
+      )
+      if (activeRouter) {
+        const { data: latestInbound } = await db
+          .from('messages')
+          .select('content_text')
+          .eq('conversation_id', conversationId)
+          .eq('sender_type', 'contact')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        config = await resolveAgentViaRouter({
+          db,
+          accountId,
+          conversationId,
+          defaultConfig: config,
+          activeRouter,
+          currentAgentId: conv.active_ai_agent_id ?? null,
+          messageText: latestInbound?.content_text ?? '',
+        })
+      }
+    } catch (err) {
+      // Doctrine (spec's "erro no classificador nunca derruba o
+      // turno"): any failure resolving the router falls back to the
+      // default agent already loaded above, not a dropped reply.
+      console.warn(`${tag} router resolution failed, using default agent:`, err)
+    }
+
     // Cheap early-out; the authoritative cap check is the atomic claim
     // below (this read can race a concurrent inbound). Reaching the cap
     // hands off to a human here — the settings copy already promises

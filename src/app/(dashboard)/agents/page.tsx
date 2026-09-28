@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Bot, Sparkles, Settings2, BarChart3 } from 'lucide-react';
+import { Bot, Sparkles, Settings2, BarChart3, Users } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AiPlayground } from '@/components/agents/ai-playground';
 import { AiUsageCard } from '@/components/agents/ai-usage';
+import { AiMultiAgent } from '@/components/agents/ai-multi-agent';
 import { AiConfig } from '@/components/settings/ai-config';
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
 
-type Tab = 'playground' | 'setup' | 'usage';
+type Tab = 'playground' | 'setup' | 'multiAgent' | 'usage';
 
 export default function AgentsPage() {
   const t = useTranslations('Agents');
@@ -41,14 +42,12 @@ export default function AgentsPage() {
   return (
     <div>
       <div className="flex items-center gap-2">
-        <Bot className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <Bot className="text-primary h-6 w-6" />
+        <h1 className="text-foreground text-2xl font-bold tracking-tight">
           {t('title')}
         </h1>
       </div>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t('description')}
-      </p>
+      <p className="text-muted-foreground mt-1 text-sm">{t('description')}</p>
 
       {decided && (
         <Tabs
@@ -64,6 +63,11 @@ export default function AgentsPage() {
               <Settings2 className="mr-1.5 h-4 w-4" /> {t('tabSetup')}
             </TabsTrigger>
             {canViewUsage && (
+              <TabsTrigger value="multiAgent">
+                <Users className="mr-1.5 h-4 w-4" /> {t('tabMultiAgent')}
+              </TabsTrigger>
+            )}
+            {canViewUsage && (
               <TabsTrigger value="usage">
                 <BarChart3 className="mr-1.5 h-4 w-4" /> {t('tabUsage')}
               </TabsTrigger>
@@ -77,6 +81,12 @@ export default function AgentsPage() {
           <TabsContent value="setup" className="mt-4">
             <AiConfig />
           </TabsContent>
+
+          {canViewUsage && (
+            <TabsContent value="multiAgent" className="mt-4">
+              <AiMultiAgent />
+            </TabsContent>
+          )}
 
           {canViewUsage && (
             <TabsContent value="usage" className="mt-4">
