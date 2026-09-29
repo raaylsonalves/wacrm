@@ -34,6 +34,9 @@ interface UsageResponse {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
+    cached_tokens?: number;
+    cache_reported_prompt_tokens?: number;
+    cache_reported_calls?: number;
   };
   by_mode: {
     auto_reply: { calls: number; tokens: number };
@@ -163,6 +166,19 @@ export function AiUsageCard() {
                 icon={PencilLine}
               />
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              {(data.totals.cache_reported_prompt_tokens ?? 0) > 0
+                ? t('cacheRate', {
+                    percent: Math.round(
+                      ((data.totals.cached_tokens ?? 0) /
+                        (data.totals.cache_reported_prompt_tokens ?? 1)) *
+                        100,
+                    ),
+                    calls: data.totals.cache_reported_calls ?? 0,
+                  })
+                : t('cacheUnknown')}
+            </p>
 
             <div>
               <p className="mb-2 text-xs font-medium text-muted-foreground">

@@ -31,7 +31,48 @@ describe('logAiUsage', () => {
       prompt_tokens: 30,
       completion_tokens: 6,
       total_tokens: 36,
+      cached_tokens: null,
     })
+  })
+
+  it('records the cached share when the provider reported it', async () => {
+    const { db, insert } = fakeDb()
+    await logAiUsage(db, {
+      accountId: 'a',
+      conversationId: null,
+      mode: 'auto_reply',
+      provider: 'openai',
+      model: 'gpt-x',
+      usage: { promptTokens: 1000, completionTokens: 10, totalTokens: 1010, cachedTokens: 800 },
+    })
+    expect(insert.mock.calls[0][0]).toMatchObject({ prompt_tokens: 1000, cached_tokens: 800 })
+  })
+
+  it('a reported zero stays 0, an unreported value stays NULL', async () => {
+    const { db, insert } = fakeDb()
+    const args = { accountId: 'a', conversationId: null, mode: 'auto_reply' as const, provider: 'openai' as const, model: 'm' }
+    await logAiUsage(db, { ...args, usage: { promptTokens: 5, completionTokens: 1, totalTokens: 6, cachedTokens: 0 } })
+    await logAiUsage(db, { ...args, usage: { promptTokens: 5, completionTokens: 1, totalTokens: 6 } })
+    expect(insert.mock.calls[0][0].cached_tokens).toBe(0)
+    expect(insert.mock.calls[1][0].cached_tokens).toBeNull()
+  })
+
+  it('keeps the spend row when the cached_tokens column does not exist yet', async () => {
+    const insert = vi
+      .fn()
+      .mockResolvedValueOnce({ error: { code: '42703', message: 'column does not exist' } })
+      .mockResolvedValueOnce({ error: null })
+    const db = { from: vi.fn(() => ({ insert })) } as unknown as SupabaseClient
+    await logAiUsage(db, {
+      accountId: 'a',
+      conversationId: null,
+      mode: 'draft',
+      provider: 'openai',
+      model: 'm',
+      usage: { promptTokens: 5, completionTokens: 1, totalTokens: 6, cachedTokens: 3 },
+    })
+    expect(insert).toHaveBeenCalledTimes(2)
+    expect(insert.mock.calls[1][0]).not.toHaveProperty('cached_tokens')
   })
 
   it('is a no-op when the provider reported no usage', async () => {

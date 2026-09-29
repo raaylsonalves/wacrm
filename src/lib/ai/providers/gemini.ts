@@ -26,6 +26,7 @@ interface GeminiResponse {
     promptTokenCount?: number
     candidatesTokenCount?: number
     totalTokenCount?: number
+    cachedContentTokenCount?: number
   }
   promptFeedback?: { blockReason?: string }
 }
@@ -157,6 +158,7 @@ export async function generateGemini(args: ProviderArgs): Promise<ProviderResult
       prompt: data.usageMetadata?.promptTokenCount,
       completion: data.usageMetadata?.candidatesTokenCount,
       total: data.usageMetadata?.totalTokenCount,
+      cached: data.usageMetadata?.cachedContentTokenCount,
     })
 
     const parts = data.candidates?.[0]?.content?.parts ?? []

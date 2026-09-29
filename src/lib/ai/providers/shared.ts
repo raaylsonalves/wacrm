@@ -36,6 +36,8 @@ export function normalizeUsage(raw: {
   prompt?: unknown
   completion?: unknown
   total?: unknown
+  /** Cached share of the prompt, when the provider states it. */
+  cached?: unknown
 }): AiUsage | null {
   const num = (v: unknown): number =>
     typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0
@@ -46,7 +48,10 @@ export function normalizeUsage(raw: {
   if (promptTokens === 0 && completionTokens === 0 && totalTokens === 0) {
     return null
   }
-  return { promptTokens, completionTokens, totalTokens }
+  // Reported-or-absent: a provider that says nothing must not read as 0%.
+  return typeof raw.cached === 'number' && Number.isFinite(raw.cached) && raw.cached >= 0
+    ? { promptTokens, completionTokens, totalTokens, cachedTokens: Math.floor(raw.cached) }
+    : { promptTokens, completionTokens, totalTokens }
 }
 
 /** Map a fetch rejection (timeout / DNS / offline) to a typed AiError. */

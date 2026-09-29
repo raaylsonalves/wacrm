@@ -35,7 +35,7 @@ export async function logAiUsage(
 ): Promise<void> {
   if (!args.usage) return
   try {
-    const { error } = await db.from('ai_usage_log').insert({
+    const row = {
       account_id: args.accountId,
       conversation_id: args.conversationId,
       agent_id: args.agentId ?? null,
@@ -45,7 +45,16 @@ export async function logAiUsage(
       prompt_tokens: args.usage.promptTokens,
       completion_tokens: args.usage.completionTokens,
       total_tokens: args.usage.totalTokens,
+    }
+    let { error } = await db.from('ai_usage_log').insert({
+      ...row,
+      // NULL = the provider did not say (never 0).
+      cached_tokens: args.usage.cachedTokens ?? null,
     })
+    // Migration 078 not applied yet: keep the spend row rather than lose it.
+    if (error && (error as { code?: string }).code === '42703') {
+      ;({ error } = await db.from('ai_usage_log').insert(row))
+    }
     if (error) {
       console.error('[ai usage] log insert failed:', error)
     }

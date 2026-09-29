@@ -102,6 +102,9 @@ export interface AiUsage {
   promptTokens: number
   completionTokens: number
   totalTokens: number
+  /** Prompt tokens served from the provider's cache. Only present when the
+   *  provider REPORTED it — absent is "unknown", not zero. */
+  cachedTokens?: number
 }
 
 /** Raw text + usage a provider adapter returns before handoff parsing. */

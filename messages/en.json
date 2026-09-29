@@ -2687,6 +2687,8 @@
       "tokensPerDay": "Tokens per day",
       "byModel": "By model",
       "modelCalls": "{tokens} tok · {count, plural, =1 {# call} other {# calls}}",
+      "cacheRate": "{percent}% of the prompt was served from the provider's cache (across the {calls} calls where it reported).",
+      "cacheUnknown": "The provider did not report how much of the prompt came from cache — this saving can't be measured yet.",
       "partialWindow": "Showing a partial window — usage is high enough that only the most recent records are summarized here."
     }
   },

@@ -19,6 +19,8 @@ interface UsageRow {
   prompt_tokens: number
   completion_tokens: number
   total_tokens: number
+  /** NULL = the provider did not report it. */
+  cached_tokens?: number | null
 }
 
 /**
@@ -59,18 +61,23 @@ export async function GET(request: Request) {
     const agentFilter =
       rawAgent && /^[0-9a-f-]{36}$/i.test(rawAgent) ? rawAgent : null
 
-    const base = supabase
-      .from('ai_usage_log')
-      .select(
-        'created_at, agent_id, mode, provider, model, prompt_tokens, completion_tokens, total_tokens',
-      )
-      .eq('account_id', accountId)
-      .gte('created_at', since.toISOString())
-      .order('created_at', { ascending: false })
-      .limit(MAX_ROWS + 1)
-    const { data, error } = await (agentFilter
-      ? base.eq('agent_id', agentFilter)
-      : base)
+    const readRows = (cols: string) => {
+      const q = supabase
+        .from('ai_usage_log')
+        .select(cols)
+        .eq('account_id', accountId)
+        .gte('created_at', since.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(MAX_ROWS + 1)
+      return agentFilter ? q.eq('agent_id', agentFilter) : q
+    }
+    const cols =
+      'created_at, agent_id, mode, provider, model, prompt_tokens, completion_tokens, total_tokens'
+    let { data, error } = await readRows(`${cols}, cached_tokens`)
+    // Migration 078 (cached_tokens) may not be applied yet.
+    if (error && (error as { code?: string }).code === '42703') {
+      ;({ data, error } = await readRows(cols))
+    }
 
     if (error) {
       console.error('[ai/usage GET] fetch error:', error)
@@ -80,7 +87,7 @@ export async function GET(request: Request) {
       )
     }
 
-    const all = (data ?? []) as UsageRow[]
+    const all = (data ?? []) as unknown as UsageRow[]
     const truncated = all.length > MAX_ROWS
     const rows = truncated ? all.slice(0, MAX_ROWS) : all
 
@@ -88,6 +95,11 @@ export async function GET(request: Request) {
     let promptTokens = 0
     let completionTokens = 0
     let totalTokens = 0
+    // Cache share is computed ONLY over rows whose provider reported it —
+    // an unreported row is unknown, not a miss.
+    let cachedTokens = 0
+    let cachedReportedPrompt = 0
+    let cachedReportedCalls = 0
 
     // Per-mode + per-model tallies.
     const byMode = {
@@ -119,6 +131,11 @@ export async function GET(request: Request) {
       promptTokens += r.prompt_tokens
       completionTokens += r.completion_tokens
       totalTokens += r.total_tokens
+      if (typeof r.cached_tokens === 'number') {
+        cachedTokens += r.cached_tokens
+        cachedReportedPrompt += r.prompt_tokens
+        cachedReportedCalls += 1
+      }
 
       // `mode` is DB-CHECK-constrained to these two values.
       byMode[r.mode].calls += 1
@@ -157,6 +174,11 @@ export async function GET(request: Request) {
         prompt_tokens: promptTokens,
         completion_tokens: completionTokens,
         total_tokens: totalTokens,
+        cached_tokens: cachedTokens,
+        // Prompt tokens of the calls that reported cache — the denominator
+        // for the cache rate; 0 = no provider reported it.
+        cache_reported_prompt_tokens: cachedReportedPrompt,
+        cache_reported_calls: cachedReportedCalls,
       },
       by_mode: byMode,
       by_model: byModel,
