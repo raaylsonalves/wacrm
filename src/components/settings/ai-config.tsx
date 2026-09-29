@@ -184,10 +184,10 @@ export function AiConfig({
   // typed a custom model.
   const handleProviderChange = (next: AiProvider) => {
     setProvider(next);
+    // Every provider's default counts — a list that forgot OpenRouter left
+    // `openrouter/free` behind when switching away from it.
     const isDefaultModel =
-      model === AI_PROVIDER_DEFAULT_MODEL.openai ||
-      model === AI_PROVIDER_DEFAULT_MODEL.anthropic ||
-      model === AI_PROVIDER_DEFAULT_MODEL.gemini ||
+      Object.values(AI_PROVIDER_DEFAULT_MODEL).includes(model) ||
       model.trim() === '';
     if (isDefaultModel) setModel(AI_PROVIDER_DEFAULT_MODEL[next]);
   };

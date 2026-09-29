@@ -75,15 +75,31 @@ export function ModelPicker({
     } catch {
       if (mine === seq.current) setState({ status: 'error', code: 'unreachable' });
     }
-    // The key is deliberately NOT a dependency: it changes on every
-    // keystroke, and the list is refreshed by the button / a provider
-    // change instead.
+    // The key is deliberately NOT a dependency of `load`: it changes on
+    // every keystroke. It gets its own debounced refresh below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider, agentId]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // After switching provider the first fetch runs with the STORED key —
+  // which belongs to the old provider and is refused. Pasting the new key
+  // must refresh the list on its own (debounced, so typing doesn't fire a
+  // request per keystroke); before this, only the refresh button did.
+  const firstKey = useRef(true);
+  useEffect(() => {
+    if (firstKey.current) {
+      firstKey.current = false;
+      return;
+    }
+    const key = apiKey.trim();
+    if (key.length < 8) return;
+    const timer = setTimeout(() => void load(), 700);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKey]);
 
   const models = useMemo(
     () => (state.status === 'ok' ? state.models : []),
