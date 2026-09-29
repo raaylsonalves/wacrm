@@ -1091,6 +1091,8 @@
         "conditionBranchYes": "Rama: sí",
         "conditionBranchNo": "Rama: no",
         "sentViaMeta": "Enviado vía Meta ({messageId})",
+        "followupStopped": "Seguimiento detenido: {outcome, select, replied {el cliente respondió} opted_out {el contacto pidió no recibir mensajes} closed {se cerró la conversación} handoff {una persona tomó el control} window_closed {se cerró la ventana de 24 h} frequency_cap {se alcanzó el límite semanal de seguimientos} automation_off {se desactivó la automatización} not_deliverable {no se pudo entregar} other {la secuencia ya había terminado}}",
+        "followupDeferred": "Aplazado hasta el próximo horario permitido ({until})",
         "interactiveSentViaMeta": "Mensaje interactivo enviado vía Meta ({messageId})",
         "templateSentViaMeta": "Plantilla enviada vía Meta ({messageId})",
         "tagAlreadyPresent": "La etiqueta {tagId} ya está presente",
@@ -1165,7 +1167,28 @@
         "time_based": {
           "label": "Por horario",
           "hint": "Según una programación recurrente"
+        },
+        "conversation_silence": {
+          "label": "La conversación quedó en silencio",
+          "hint": "El cliente dejó de responder después de nuestro último mensaje: inicia una secuencia de seguimiento"
         }
+      },
+      "silence": {
+        "after": "Esperar un silencio de",
+        "minutes": "minutos",
+        "hours": "horas",
+        "days": "días",
+        "afterHint": "Se cuenta desde nuestro último mensaje. Mínimo 5 minutos.",
+        "audience": "Aplica a",
+        "audienceAi": "Conversaciones que atiende la IA",
+        "audienceAll": "Todas las conversaciones abiertas",
+        "handoff": "Cuando una persona toma el control",
+        "handoffCancel": "Detener la secuencia",
+        "handoffAllow": "Continuar de todos modos",
+        "window": "Enviar solo dentro de un horario",
+        "to": "a",
+        "windowHint": "Los pasos que vencen fuera del horario esperan la próxima apertura.",
+        "risk": "Hacer seguimiento a quien dejó de responder es lo más arriesgado que puede hacer un número de WhatsApp. La respuesta del cliente, que una persona tome el control, cerrar el chat o una baja detienen la secuencia, y cada contacto recibe como máximo 3 seguimientos por semana sumando todas las secuencias. Empieza con pocos pasos y bien espaciados."
       },
       "trigger": "Disparador",
       "triggerType": "Tipo de disparador",

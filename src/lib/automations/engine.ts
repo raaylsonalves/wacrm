@@ -32,6 +32,23 @@ import {
 } from './meta-send';
 import { validateInteractivePayload } from '@/lib/whatsapp/interactive';
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf';
+import { pickVariant } from '@/lib/variant';
+import {
+  endEnrollment,
+  guardFollowupSend,
+  isEnrollmentActive,
+  recordFollowupSend,
+} from './followup-store';
+
+/** Steps that put a message in front of the customer — the ones a
+ *  follow-up run re-checks (replied? opted out? window? cap?) right
+ *  before sending. */
+const FOLLOWUP_SEND_STEPS = new Set([
+  'send_message',
+  'send_buttons',
+  'send_list',
+  'send_template',
+]);
 
 // ------------------------------------------------------------
 // Public API
@@ -50,6 +67,10 @@ export interface AutomationContext {
   agent_id?: string;
   /** Button / list-row id the customer tapped, for interactive_reply. */
   interactive_reply_id?: string;
+  /** Set on follow-up runs (specs/followup-sequences.md): every send is
+   *  re-checked against this enrollment, and parked waits carry it so a
+   *  customer reply can cancel them. */
+  followup_enrollment_id?: string;
 }
 
 export interface DispatchInput {
@@ -156,6 +177,17 @@ export async function resumePendingExecution(pending: {
   context: AutomationContext;
 }): Promise<void> {
   const db = supabaseAdmin();
+
+  // A follow-up's parked wait outlives the world it was armed in: the
+  // customer may have replied, a human may have taken over. SQL triggers
+  // cancel most of these; this catches the row the cron had already
+  // claimed when that happened.
+  const enrollmentId = pending.context?.followup_enrollment_id;
+  if (enrollmentId && !(await isEnrollmentActive(enrollmentId))) {
+    await markPending(pending.id, 'cancelled');
+    return;
+  }
+
   const { data: automation, error } = await db
     .from('automations')
     .select('*')
@@ -183,6 +215,7 @@ export async function resumePendingExecution(pending: {
       `[automations] resume: automation ${pending.automation_id} is inactive, cancelling pending wait ${pending.id}`
     );
     await markPending(pending.id, 'failed');
+    if (enrollmentId) await endEnrollment(enrollmentId, 'cancelled', 'automation_off');
     return;
   }
 
@@ -202,6 +235,27 @@ export async function resumePendingExecution(pending: {
     console.error('[automations] resume failed:', err);
     await markPending(pending.id, 'failed');
   }
+}
+
+/**
+ * Start a follow-up run for a conversation the sweep just enrolled.
+ * Same machinery as any triggered automation (log row, steps, durable
+ * waits) — the enrollment id in `context` is what makes every send
+ * re-checkable and every parked wait cancellable.
+ */
+export async function startFollowupRun(
+  automation: Automation,
+  args: { contactId: string; conversationId: string; enrollmentId: string }
+): Promise<void> {
+  await executeAutomation(automation, {
+    accountId: automation.account_id,
+    triggerType: 'conversation_silence',
+    contactId: args.contactId,
+    context: {
+      conversation_id: args.conversationId,
+      followup_enrollment_id: args.enrollmentId,
+    },
+  });
 }
 
 // ------------------------------------------------------------
@@ -279,8 +333,12 @@ interface ExecuteArgs {
   triggerEvent: string;
 }
 
-async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
+/** Resolves true when a follow-up guard halted this scope (stopped or
+ *  deferred), so the parent scope stops too instead of running the steps
+ *  after the halted send (e.g. the closing `sem-resposta` tag). */
+async function executeStepsFrom(args: ExecuteArgs): Promise<boolean> {
   const db = supabaseAdmin();
+  const enrollmentId = args.context.followup_enrollment_id;
 
   const baseQuery = db
     .from('automation_steps')
@@ -300,18 +358,22 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
 
   if (stepsErr) {
     await finalizeLog(args.logId, 'failed', stepsErr.message);
-    return;
+    return false;
   }
   if (!steps || steps.length === 0) {
     if (args.parentStepId === null && args.logId) {
       await finalizeLog(args.logId, 'success', null);
     }
-    return;
+    if (args.parentStepId === null && enrollmentId) {
+      await endEnrollment(enrollmentId, 'completed', 'exhausted');
+    }
+    return false;
   }
 
   const results: AutomationLogStepResult[] = [];
   let status: 'success' | 'partial' | 'failed' = 'success';
   let errorMessage: string | null = null;
+  let halted = false;
 
   for (const step of steps as AutomationStep[]) {
     // `wait` is the suspension point: enqueue and stop processing this
@@ -332,6 +394,7 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
         context: args.context,
         run_at: new Date(Date.now() + ms).toISOString(),
         status: 'pending',
+        enrollment_id: enrollmentId ?? null,
       });
       results.push({
         step_id: step.id,
@@ -341,7 +404,66 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
       });
       status = 'partial';
       await appendResults(args.logId, results, status, errorMessage);
-      return;
+      return false;
+    }
+
+    // Follow-up runs re-read the world before EVERY send: the customer
+    // may have replied since the wait was armed, a person may have taken
+    // over, the 24h window may have closed. This — not the SQL triggers —
+    // is what makes the race between "cron claimed it" and "customer
+    // answered" harmless.
+    if (enrollmentId && FOLLOWUP_SEND_STEPS.has(step.step_type)) {
+      const verdict = await guardFollowupSend({
+        enrollmentId,
+        stepIsTemplate: step.step_type === 'send_template',
+      });
+      if (verdict.kind === 'stop') {
+        results.push({
+          step_id: step.id,
+          step_type: step.step_type,
+          status: 'success',
+          detail: {
+            key: 'followupStopped',
+            params: { outcome: verdict.outcome ?? 'ended' },
+          },
+        });
+        halted = true;
+        break;
+      }
+      if (verdict.kind === 'defer') {
+        // Outside the send window (or snoozed): park THIS step for the
+        // next opening instead of sending at 3am or dropping it.
+        await db.from('automation_pending_executions').insert({
+          automation_id: args.automation.id,
+          account_id: args.automation.account_id,
+          user_id: args.automation.user_id,
+          contact_id: args.contactId,
+          log_id: args.logId,
+          parent_step_id: args.parentStepId,
+          branch: args.branch,
+          next_step_position: step.position,
+          context: args.context,
+          run_at: verdict.until.toISOString(),
+          status: 'pending',
+          enrollment_id: enrollmentId,
+        });
+        results.push({
+          step_id: step.id,
+          step_type: step.step_type,
+          status: 'success',
+          detail: {
+            key: 'followupDeferred',
+            params: { until: verdict.until.toISOString() },
+          },
+        });
+        await appendResults(
+          args.logId,
+          results,
+          args.parentStepId === null ? 'partial' : null,
+          errorMessage
+        );
+        return true;
+      }
     }
 
     try {
@@ -356,13 +478,17 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
         });
         // Recurse into the chosen branch at position 0 (children use their
         // own ordering within the branch scope).
-        await executeStepsFrom({
+        const childHalted = await executeStepsFrom({
           ...args,
           parentStepId: step.id,
           branch: taken ? 'yes' : 'no',
           startPosition: 0,
           logId: args.logId,
         });
+        if (childHalted) {
+          halted = true;
+          break;
+        }
         continue;
       }
 
@@ -373,6 +499,17 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
         status: 'success',
         detail,
       });
+      if (
+        enrollmentId &&
+        args.contactId &&
+        FOLLOWUP_SEND_STEPS.has(step.step_type)
+      ) {
+        await recordFollowupSend({
+          enrollmentId,
+          accountId: args.automation.account_id,
+          contactId: args.contactId,
+        });
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       results.push({
@@ -383,16 +520,26 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
       });
       status = 'failed';
       errorMessage = msg;
+      // A failed send ends the follow-up; leaving it 'active' would keep
+      // it counted (and cancellable) forever.
+      if (enrollmentId) {
+        await endEnrollment(enrollmentId, 'cancelled', 'not_deliverable');
+      }
       break;
     }
   }
 
   if (args.parentStepId === null) {
+    if (enrollmentId && !halted && status !== 'failed') {
+      // Ran off the end of the sequence without being stopped.
+      await endEnrollment(enrollmentId, 'completed', 'exhausted');
+    }
     await appendResults(args.logId, results, status, errorMessage);
   } else {
     // Nested branch — just append results; parent scope decides final status.
     await appendResults(args.logId, results, null, errorMessage);
   }
+  return halted;
 }
 
 async function runStep(
@@ -405,9 +552,15 @@ async function runStep(
     case 'send_message': {
       const cfg = step.step_config as SendMessageStepConfig;
       if (!args.contactId) throw new Error('send_message needs a contact');
-      const text = interpolate(cfg.text, args);
-      if (!text.trim()) throw new Error('send_message has empty text');
       const conversationId = await resolveConversationId(args);
+      // Optional wording variants: identical bodies to many customers are
+      // what makes a number look automated. Picked by conversation id, so
+      // one conversation always gets the same phrasing.
+      const chosen = cfg.variants?.length
+        ? pickVariant([cfg.text, ...cfg.variants], conversationId) ?? cfg.text
+        : cfg.text;
+      const text = interpolate(chosen, args);
+      if (!text.trim()) throw new Error('send_message has empty text');
       const { whatsapp_message_id } = await engineSendText({
         accountId: args.automation.account_id,
         userId: args.automation.user_id,
@@ -977,7 +1130,7 @@ async function finalizeLog(
     .eq('id', logId);
 }
 
-async function markPending(id: string, status: 'done' | 'failed') {
+async function markPending(id: string, status: 'done' | 'failed' | 'cancelled') {
   await supabaseAdmin()
     .from('automation_pending_executions')
     .update({ status })

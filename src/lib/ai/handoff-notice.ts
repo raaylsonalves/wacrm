@@ -12,6 +12,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { OFFLINE_AFTER_MS } from '@/lib/presence'
+import { hashKey } from '@/lib/variant'
 
 /** Variant lists for one locale, read from `AiHandoffNotice` in
  *  messages/<locale>.json. */
@@ -24,15 +25,8 @@ export interface HandoffNoticeDict {
   optOut: string[]
 }
 
-/** FNV-1a — stable across runs and platforms, unlike `Math.random`. */
-export function hashKey(key: string): number {
-  let h = 0x811c9dc5
-  for (let i = 0; i < key.length; i++) {
-    h ^= key.charCodeAt(i)
-    h = Math.imul(h, 0x01000193)
-  }
-  return h >>> 0
-}
+// Shared with the follow-up sequences (same rule: stable per conversation).
+export { hashKey }
 
 /**
  * Pick the notice wording.

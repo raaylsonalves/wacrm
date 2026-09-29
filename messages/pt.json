@@ -1091,6 +1091,8 @@
         "conditionBranchYes": "Ramo: sim",
         "conditionBranchNo": "Ramo: não",
         "sentViaMeta": "Enviado via Meta ({messageId})",
+        "followupStopped": "Follow-up interrompido: {outcome, select, replied {o cliente respondeu} opted_out {o contato pediu para sair} closed {a conversa foi encerrada} handoff {uma pessoa assumiu} window_closed {a janela de 24h fechou} frequency_cap {limite semanal de follow-ups atingido} automation_off {a automação foi desativada} not_deliverable {não foi possível entregar} other {a sequência já havia terminado}}",
+        "followupDeferred": "Adiado para o próximo horário permitido ({until})",
         "interactiveSentViaMeta": "Mensagem interativa enviada via Meta ({messageId})",
         "templateSentViaMeta": "Modelo enviado via Meta ({messageId})",
         "tagAlreadyPresent": "Tag {tagId} já presente",
@@ -1165,7 +1167,28 @@
         "time_based": {
           "label": "Por horário",
           "hint": "Em um agendamento recorrente"
+        },
+        "conversation_silence": {
+          "label": "Conversa ficou em silêncio",
+          "hint": "O cliente parou de responder depois da nossa última mensagem — inicia uma sequência de follow-up"
         }
+      },
+      "silence": {
+        "after": "Esperar silêncio de",
+        "minutes": "minutos",
+        "hours": "horas",
+        "days": "dias",
+        "afterHint": "Contado a partir da nossa última mensagem. Mínimo de 5 minutos.",
+        "audience": "Vale para",
+        "audienceAi": "Conversas atendidas pela IA",
+        "audienceAll": "Todas as conversas abertas",
+        "handoff": "Quando uma pessoa assume",
+        "handoffCancel": "Encerrar a sequência",
+        "handoffAllow": "Continuar mesmo assim",
+        "window": "Enviar só dentro de um horário",
+        "to": "até",
+        "windowHint": "Passos que vencem fora do horário esperam a próxima abertura.",
+        "risk": "Follow-up para quem parou de responder é a coisa mais arriscada que um número de WhatsApp pode fazer. Resposta do cliente, uma pessoa assumindo, conversa encerrada ou pedido para sair encerram a sequência, e cada contato recebe no máximo 3 follow-ups por semana somando todas as sequências. Comece com poucos passos e bem espaçados."
       },
       "trigger": "Gatilho",
       "triggerType": "Tipo de gatilho",

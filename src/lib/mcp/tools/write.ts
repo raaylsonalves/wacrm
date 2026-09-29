@@ -116,6 +116,7 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
             'tag_added',
             'time_based',
             'interactive_reply',
+            'conversation_silence',
           ])
           .optional()
           .describe('Required unless cloning a template.'),
@@ -156,6 +157,7 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
             'tag_added',
             'time_based',
             'interactive_reply',
+            'conversation_silence',
           ])
           .optional(),
         trigger_config: z

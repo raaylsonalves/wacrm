@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { resumePendingExecution } from '@/lib/automations/engine'
 import type { AutomationContext } from '@/lib/automations/engine'
+import { runFollowupSweep } from '@/lib/automations/followup-sweep'
 
 /**
  * Drain due `automation_pending_executions` rows. Meant to be hit
@@ -70,7 +71,6 @@ export async function GET(request: Request) {
     .limit(50)
 
   const candidates = [...(due ?? []), ...(stale ?? [])]
-  if (candidates.length === 0) return NextResponse.json({ processed: 0 })
 
   let processed = 0
   for (const row of candidates) {
@@ -106,5 +106,10 @@ export async function GET(request: Request) {
     processed++
   }
 
-  return NextResponse.json({ processed })
+  // Follow-up sequences: find conversations that went quiet and enroll
+  // them. After the drain, so a wait that just resumed has already had
+  // its say. Never throws.
+  const followups = await runFollowupSweep()
+
+  return NextResponse.json({ processed, followups })
 }

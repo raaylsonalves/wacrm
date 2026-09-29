@@ -546,6 +546,55 @@ BEGIN
     RAISE EXCEPTION 'conversations_ai_handoff_reason_check is missing — migration 072 did not apply';
   END IF;
 
+  -- 073 — follow-up sequences. The UNIQUE key IS the enrollment claim
+  -- (ON CONFLICT DO NOTHING is how overlapping sweeps avoid double
+  -- enrolling); the widened status CHECK is what lets a parked wait be
+  -- cancelled; and bump_conversation_on_inbound was redefined AGAIN, so
+  -- it must still carry 070's snoozed_until along with the new markers.
+  IF to_regclass('public.followup_enrollments') IS NULL
+     OR to_regclass('public.followup_sends') IS NULL THEN
+    RAISE EXCEPTION 'followup tables are missing — migration 073 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.followup_enrollments'::regclass
+      AND contype = 'u'
+      AND pg_get_constraintdef(oid) =
+          'UNIQUE (automation_id, conversation_id, episode_at)'
+  ) THEN
+    RAISE EXCEPTION 'followup_enrollments claim key is missing — migration 073 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.automation_pending_executions'::regclass
+      AND conname = 'automation_pending_executions_status_check'
+      AND position('cancelled' IN pg_get_constraintdef(oid)) > 0
+  ) THEN
+    RAISE EXCEPTION 'automation_pending_executions status CHECK does not allow cancelled — migration 073 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'conversations'
+      AND column_name = 'last_customer_message_at'
+  ) THEN
+    RAISE EXCEPTION 'conversations.last_customer_message_at is missing — migration 073 did not apply';
+  END IF;
+  IF position('last_customer_message_at' IN pg_get_functiondef(
+       'public.bump_conversation_on_inbound(uuid,text)'::regprocedure
+     )) = 0
+     OR position('snoozed_until' IN pg_get_functiondef(
+       'public.bump_conversation_on_inbound(uuid,text)'::regprocedure
+     )) = 0
+     OR position('cancel_followups' IN pg_get_functiondef(
+       'public.bump_conversation_on_inbound(uuid,text)'::regprocedure
+     )) = 0 THEN
+    RAISE EXCEPTION 'bump_conversation_on_inbound lost a 070/073 marker — a later redefinition dropped it';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_followups_on_conversation_change')
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_followups_on_contact_opt_out') THEN
+    RAISE EXCEPTION 'follow-up stop triggers are missing — migration 073 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

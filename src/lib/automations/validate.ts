@@ -58,6 +58,16 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
       if (!nonEmpty(c.text)) {
         issues.push({ path: `${path}.text`, message: 'message text is required' })
       }
+      if (
+        c.variants != null &&
+        (!Array.isArray(c.variants) ||
+          c.variants.some((v) => typeof v !== 'string' || v.trim() === ''))
+      ) {
+        issues.push({
+          path: `${path}.variants`,
+          message: 'variants must be a list of non-empty texts',
+        })
+      }
       break
     case 'send_buttons':
     case 'send_list': {
@@ -199,6 +209,60 @@ export function validateTriggerForActivation(
   } else if (triggerType === 'tag_added') {
     if (!nonEmpty(cfg.tag_id)) {
       issues.push({ path: 'trigger.tag_id', message: 'tag is required' })
+    }
+  } else if (triggerType === 'conversation_silence') {
+    const sa = cfg.silence_after as Record<string, unknown> | undefined
+    const unit = sa?.unit
+    const amount = sa?.amount
+    if (
+      typeof amount !== 'number' ||
+      !Number.isFinite(amount) ||
+      (unit !== 'minutes' && unit !== 'hours' && unit !== 'days')
+    ) {
+      issues.push({
+        path: 'trigger.silence_after',
+        message: 'silence_after needs an amount and a unit (minutes, hours or days)',
+      })
+    } else if (amount * (unit === 'days' ? 1440 : unit === 'hours' ? 60 : 1) < 5) {
+      issues.push({
+        path: 'trigger.silence_after',
+        message: 'silence must be at least 5 minutes',
+      })
+    }
+    if (
+      cfg.audience != null &&
+      cfg.audience !== 'ai_conversations' &&
+      cfg.audience !== 'all_open'
+    ) {
+      issues.push({
+        path: 'trigger.audience',
+        message: 'audience must be "ai_conversations" or "all_open"',
+      })
+    }
+    if (
+      cfg.handoff_policy != null &&
+      cfg.handoff_policy !== 'cancel' &&
+      cfg.handoff_policy !== 'allow'
+    ) {
+      issues.push({
+        path: 'trigger.handoff_policy',
+        message: 'handoff_policy must be "cancel" or "allow"',
+      })
+    }
+    const w = cfg.send_window as Record<string, unknown> | undefined
+    if (w != null) {
+      const s = w.start_hour
+      const e = w.end_hour
+      if (
+        typeof s !== 'number' || typeof e !== 'number' ||
+        !Number.isInteger(s) || !Number.isInteger(e) ||
+        s < 0 || s > 23 || e < 0 || e > 24 || s === e
+      ) {
+        issues.push({
+          path: 'trigger.send_window',
+          message: 'send_window needs whole start/end hours that differ',
+        })
+      }
     }
   } else if (triggerType === 'interactive_reply') {
     const ids = cfg.reply_ids

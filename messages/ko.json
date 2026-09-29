@@ -1091,6 +1091,8 @@
         "conditionBranchYes": "분기: 예",
         "conditionBranchNo": "분기: 아니요",
         "sentViaMeta": "Meta를 통해 전송됨 ({messageId})",
+        "followupStopped": "후속 메시지 중단: {outcome, select, replied {고객이 응답함} opted_out {연락처가 수신 거부함} closed {대화가 종료됨} handoff {담당자가 넘겨받음} window_closed {24시간 창이 닫힘} frequency_cap {주간 후속 메시지 한도 도달} automation_off {자동화가 꺼짐} not_deliverable {전달할 수 없음} other {시퀀스가 이미 종료됨}}",
+        "followupDeferred": "다음 허용 시간까지 보류됨 ({until})",
         "interactiveSentViaMeta": "대화형 메시지가 Meta를 통해 전송됨 ({messageId})",
         "templateSentViaMeta": "템플릿이 Meta를 통해 전송됨 ({messageId})",
         "tagAlreadyPresent": "태그 {tagId}가 이미 있습니다",
@@ -1165,7 +1167,28 @@
         "time_based": {
           "label": "시간 기반",
           "hint": "반복 일정에 따라"
+        },
+        "conversation_silence": {
+          "label": "대화가 조용해짐",
+          "hint": "우리가 마지막으로 보낸 뒤 고객이 응답하지 않으면 후속 메시지 시퀀스를 시작합니다"
         }
+      },
+      "silence": {
+        "after": "다음 시간 동안 응답이 없으면",
+        "minutes": "분",
+        "hours": "시간",
+        "days": "일",
+        "afterHint": "우리의 마지막 메시지부터 계산합니다. 최소 5분.",
+        "audience": "적용 대상",
+        "audienceAi": "AI가 응대 중인 대화",
+        "audienceAll": "열려 있는 모든 대화",
+        "handoff": "담당자가 대화를 넘겨받았을 때",
+        "handoffCancel": "시퀀스 중단",
+        "handoffAllow": "계속 진행",
+        "window": "정해진 시간대에만 발송",
+        "to": "~",
+        "windowHint": "시간대 밖에 도래한 단계는 다음 허용 시간까지 대기합니다.",
+        "risk": "응답이 끊긴 사람에게 다시 연락하는 것은 WhatsApp 번호가 할 수 있는 가장 위험한 일입니다. 고객 응답, 담당자 인계, 대화 종료, 수신 거부 중 하나가 발생하면 시퀀스가 중단되며, 모든 시퀀스를 합쳐 한 연락처에 주당 최대 3건만 보냅니다. 단계를 적게, 간격을 넓게 시작하세요."
       },
       "trigger": "트리거",
       "triggerType": "트리거 유형",

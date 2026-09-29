@@ -1091,6 +1091,8 @@
         "conditionBranchYes": "Branch: yes",
         "conditionBranchNo": "Branch: no",
         "sentViaMeta": "Sent via Meta ({messageId})",
+        "followupStopped": "Follow-up stopped: {outcome, select, replied {the customer replied} opted_out {the contact opted out} closed {the conversation was closed} handoff {a person took over} window_closed {the 24h window closed} frequency_cap {weekly follow-up limit reached} automation_off {the automation was turned off} not_deliverable {it could not be delivered} other {the sequence had already ended}}",
+        "followupDeferred": "Held for the next allowed time ({until})",
         "interactiveSentViaMeta": "Interactive message sent via Meta ({messageId})",
         "templateSentViaMeta": "Template sent via Meta ({messageId})",
         "tagAlreadyPresent": "Tag {tagId} already present",
@@ -1165,7 +1167,28 @@
         "time_based": {
           "label": "Time-Based",
           "hint": "On a recurring schedule"
+        },
+        "conversation_silence": {
+          "label": "Conversation went silent",
+          "hint": "The customer stops replying after we wrote last — starts a follow-up sequence"
         }
+      },
+      "silence": {
+        "after": "Wait for silence of",
+        "minutes": "minutes",
+        "hours": "hours",
+        "days": "days",
+        "afterHint": "Counted from our last message. Minimum 5 minutes.",
+        "audience": "Applies to",
+        "audienceAi": "Conversations the AI is handling",
+        "audienceAll": "All open conversations",
+        "handoff": "When a person takes over",
+        "handoffCancel": "Stop the sequence",
+        "handoffAllow": "Keep going anyway",
+        "window": "Only send within a time window",
+        "to": "to",
+        "windowHint": "Steps that come due outside the window wait for the next opening.",
+        "risk": "Following up with people who stopped replying is the riskiest thing a WhatsApp number can do. A customer reply, a person taking over, closing the chat or an opt-out stops the sequence, and each contact gets at most 3 follow-ups per week across all sequences. Start with few steps, well spaced out."
       },
       "trigger": "Trigger",
       "triggerType": "Trigger type",

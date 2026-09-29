@@ -277,3 +277,32 @@ key-parity test enforces it.
 - **Cost of `audience: all_open`.** Including human-owned conversations
   is what deskcomm allows behind `handoff_policy`; default stays
   AI-only to match the old spec's caution.
+
+## Implementation notes (2026-09-29)
+
+Built: migration 073, `conversation_silence` trigger + sweep folded into
+`GET /api/automations/cron`, the three-layer stop conditions, send-time
+guard (replied / opt-out / closed / handoff / 24h window / weekly cap /
+send window / snooze), message `variants`, trigger form in the builder,
+four locales. Pure rules in `followup-logic.ts` (tested), DB side in
+`followup-store.ts`, sweep in `followup-sweep.ts`.
+
+Deviations from the text above, on purpose:
+
+- **No `automations.kind` column.** `trigger_type = 'conversation_silence'`
+  already says it; a second column would be a second truth that can
+  disagree.
+- **`followup_sends` table** added: the cross-sequence weekly cap needs one
+  row per message actually sent (`steps_sent` on the enrollment can't
+  answer "how many did this *contact* get").
+- **`handoff_policy`: `cancel` and `allow` only.** `pause` (resume when the
+  thread returns to the AI) is deferred.
+- **New outcomes** `frequency_cap`, `automation_off`, `not_deliverable`.
+- Guard **fails closed**: a lookup error means "don't send".
+- Weekly cap is a constant (3); the per-account setting is not built.
+
+Not built yet: the ready-made "3 touches" template (the template registry
+assumes one text step), the conversation-thread chip ("follow-up 2/3
+scheduled · cancel"), the enrolled → replied/exhausted funnel on the
+automation detail, a variants editor in the builder (the field is
+accepted by the API/MCP), and the "≥1 send step" activation check.

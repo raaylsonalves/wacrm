@@ -549,6 +549,9 @@ export type AutomationTriggerType =
   | 'conversation_assigned'
   | 'tag_added'
   | 'time_based'
+  /** The customer went quiet after we spoke last — starts a follow-up
+   *  sequence (specs/followup-sequences.md; swept by the automations cron). */
+  | 'conversation_silence'
   /** Customer tapped a reply button / list row whose id matches; lets
    *  multi-step menus be chained across automations. */
   | 'interactive_reply';
@@ -609,6 +612,9 @@ export type AutomationTriggerConfig =
 
 export interface SendMessageStepConfig {
   text: string;
+  /** Alternative phrasings; one is picked per conversation (by hash), so
+   *  many customers don't all receive the identical sentence. */
+  variants?: string[];
 }
 
 /**

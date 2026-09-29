@@ -147,6 +147,7 @@ const TRIGGER_OPTIONS: { value: AutomationTriggerType }[] = [
   { value: "conversation_assigned" },
   { value: "tag_added" },
   { value: "time_based" },
+  { value: "conversation_silence" },
 ]
 
 function cid(): string {
@@ -870,6 +871,9 @@ function TriggerCard({
                 />
               </div>
             )}
+            {type === "conversation_silence" && (
+              <SilenceConfig config={config} onChange={onConfigChange} t={t} />
+            )}
             {type === "time_based" && (
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
@@ -891,6 +895,148 @@ function TriggerCard({
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Trigger settings for a follow-up sequence: how long the customer must
+ * stay quiet, whose conversations it covers, when steps may send, and
+ * what happens if a person takes over. Defaults mirror the sweep's
+ * (`parseSilenceConfig`): AI conversations only, cancel on handoff.
+ */
+function SilenceConfig({
+  config,
+  onChange,
+  t,
+}: {
+  config: Record<string, unknown>
+  onChange: (c: Record<string, unknown>) => void
+  t: ReturnType<typeof useTranslations>
+}) {
+  const sa = (config.silence_after as { amount?: number; unit?: string } | undefined) ?? {}
+  const win = config.send_window as
+    | { start_hour: number; end_hour: number; tz: string }
+    | undefined
+  const set = (patch: Record<string, unknown>) => onChange({ ...config, ...patch })
+  const field = "w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">
+          {t("silence.after")}
+        </label>
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            min={1}
+            value={sa.amount ?? ""}
+            onChange={(e) =>
+              set({
+                silence_after: {
+                  amount: Number(e.target.value),
+                  unit: sa.unit ?? "hours",
+                },
+              })
+            }
+            className="w-24 bg-muted text-foreground"
+          />
+          <select
+            value={sa.unit ?? "hours"}
+            onChange={(e) =>
+              set({ silence_after: { amount: sa.amount ?? 4, unit: e.target.value } })
+            }
+            className={field}
+          >
+            <option value="minutes">{t("silence.minutes")}</option>
+            <option value="hours">{t("silence.hours")}</option>
+            <option value="days">{t("silence.days")}</option>
+          </select>
+        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground">{t("silence.afterHint")}</p>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">
+          {t("silence.audience")}
+        </label>
+        <select
+          value={(config.audience as string) ?? "ai_conversations"}
+          onChange={(e) => set({ audience: e.target.value })}
+          className={field}
+        >
+          <option value="ai_conversations">{t("silence.audienceAi")}</option>
+          <option value="all_open">{t("silence.audienceAll")}</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">
+          {t("silence.handoff")}
+        </label>
+        <select
+          value={(config.handoff_policy as string) ?? "cancel"}
+          onChange={(e) => set({ handoff_policy: e.target.value })}
+          className={field}
+        >
+          <option value="cancel">{t("silence.handoffCancel")}</option>
+          <option value="allow">{t("silence.handoffAllow")}</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={!!win}
+            onChange={(e) =>
+              set({
+                send_window: e.target.checked
+                  ? {
+                      start_hour: 9,
+                      end_hour: 18,
+                      tz:
+                        Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+                    }
+                  : undefined,
+              })
+            }
+          />
+          {t("silence.window")}
+        </label>
+        {win && (
+          <div className="flex items-center gap-2 text-sm text-foreground">
+            <Input
+              type="number"
+              min={0}
+              max={23}
+              value={win.start_hour}
+              onChange={(e) =>
+                set({ send_window: { ...win, start_hour: Number(e.target.value) } })
+              }
+              className="w-20 bg-muted text-foreground"
+            />
+            <span>{t("silence.to")}</span>
+            <Input
+              type="number"
+              min={1}
+              max={24}
+              value={win.end_hour}
+              onChange={(e) =>
+                set({ send_window: { ...win, end_hour: Number(e.target.value) } })
+              }
+              className="w-20 bg-muted text-foreground"
+            />
+            <span className="text-xs text-muted-foreground">{win.tz}</span>
+          </div>
+        )}
+        <p className="mt-1 text-[11px] text-muted-foreground">{t("silence.windowHint")}</p>
+      </div>
+
+      <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-800 dark:text-amber-200">
+        {t("silence.risk")}
+      </p>
     </div>
   )
 }
