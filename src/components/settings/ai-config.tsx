@@ -32,6 +32,7 @@ import type { AccountMember } from '@/types';
 import { fetchAccountMembers, memberLabel } from '@/lib/account/members';
 import { ModelPicker } from '@/components/agents/model-picker';
 import { TranscriptionModelField } from '@/components/agents/transcription-model-field';
+import { VoiceReplyField } from '@/components/agents/voice-reply-field';
 import {
   HandoffKeywordsField,
   keywordsToList,
@@ -75,6 +76,8 @@ export function AiConfig({
   const [name, setName] = useState('');
   const [handoffKeywordsText, setHandoffKeywordsText] = useState('');
   const [transcriptionModel, setTranscriptionModel] = useState('');
+  const [voiceMode, setVoiceMode] = useState<'off' | 'mirror'>('off');
+  const [voiceName, setVoiceName] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -146,6 +149,8 @@ export function AiConfig({
         setHandoffAgentId(data.handoff_agent_id ?? '');
         setHandoffKeywordsText(((data.handoff_keywords ?? []) as string[]).join('\n'));
         setTranscriptionModel(data.transcription_model ?? '');
+        setVoiceMode(data.voice_reply_mode === 'mirror' ? 'mirror' : 'off');
+        setVoiceName(data.voice_name ?? '');
         setHasStoredKey(Boolean(data.has_key));
         setApiKey(data.has_key ? MASKED_KEY : '');
         setKeyEdited(false);
@@ -212,6 +217,8 @@ export function AiConfig({
     handoff_agent_id: handoffAgentId || null,
     handoff_keywords: keywordsToList(handoffKeywordsText),
     transcription_model: transcriptionModel || null,
+    voice_reply_mode: voiceMode,
+    voice_name: voiceName || null,
     fallbacks: fallbackEnabled
       ? [
           {
@@ -775,6 +782,20 @@ export function AiConfig({
               <TranscriptionModelField
                 value={transcriptionModel}
                 onChange={setTranscriptionModel}
+                disabled={disabled}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{tDetail('voice.title')}</Label>
+              <p className="text-xs text-muted-foreground">
+                {tDetail('voice.description')}
+              </p>
+              <VoiceReplyField
+                mode={voiceMode}
+                voice={voiceName}
+                onModeChange={setVoiceMode}
+                onVoiceChange={setVoiceName}
                 disabled={disabled}
               />
             </div>

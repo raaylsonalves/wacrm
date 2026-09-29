@@ -46,6 +46,10 @@ export async function transcribeInboundAudio(
   /** The resolved agent's transcription model (null = default). */
   model: string | null = null,
   deps: Deps = {},
+  /** The agent's own OpenAI key, when its provider is OpenAI. Preferred
+   *  over the knowledge-base key, which is often left empty — that was
+   *  why voice notes failed for an account already running on OpenAI. */
+  openAiKey: string | null = null,
 ): Promise<AudioTranscription> {
   const { transcribe = transcribeAudio, getUrl = getMediaUrl, download = downloadMedia } = deps
 
@@ -66,7 +70,7 @@ export async function transcribeInboundAudio(
     return result
   }
 
-  const { key } = await loadEmbeddingsKey(db, accountId)
+  const key = openAiKey || (await loadEmbeddingsKey(db, accountId)).key
   if (!key) return record({ status: 'failed', reason: 'no_key' })
 
   let bytes: Uint8Array

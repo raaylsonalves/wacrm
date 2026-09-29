@@ -2542,6 +2542,13 @@
       "save": "Save changes",
       "saved": "Saved",
       "saveFailed": "Could not save",
+      "voice": {
+        "title": "Answer voice notes with voice",
+        "description": "When a customer sends a voice note, the AI answers with a voice message (long replies stay as text). Uses the same OpenAI key as transcription and costs more than text.",
+        "off": "Off — always text",
+        "mirror": "Answer in voice when the customer sends audio",
+        "voiceOption": "Voice: {voice}"
+      },
       "transcription": {
         "title": "Model that transcribes voice notes",
         "description": "When a customer sends a voice note, this model turns it into text for the AI to answer. It uses the knowledge-base OpenAI key; without one, voice notes are not understood.",

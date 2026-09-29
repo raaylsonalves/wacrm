@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cleanHandoffKeywords } from '@/lib/ai/handoff-keywords'
 import { parseTranscriptionModel } from '@/lib/ai/transcribe'
+import { parseVoiceMode, parseVoiceName } from '@/lib/ai/voice-reply'
 import {
   getCurrentAccount,
   requireRole,
@@ -115,7 +116,7 @@ export async function GET() {
     // /api/ai/agents.
     let { data, error } = await supabase
       .from('ai_configs')
-      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled, handoff_keywords, transcription_model`)
+      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled, handoff_keywords, transcription_model, voice_reply_mode, voice_name`)
       .eq('account_id', accountId)
       .eq('is_default', true)
       .maybeSingle()
@@ -411,6 +412,8 @@ export async function POST(request: Request) {
     if ('transcription_model' in body) {
       shared.transcription_model = parseTranscriptionModel(body.transcription_model)
     }
+    if ('voice_reply_mode' in body) shared.voice_reply_mode = parseVoiceMode(body.voice_reply_mode)
+    if ('voice_name' in body) shared.voice_name = parseVoiceName(body.voice_name)
     if (rawEmbeddingsKey) {
       shared.embeddings_api_key = encrypt(rawEmbeddingsKey)
     } else if (clearEmbeddingsKey) {
@@ -442,12 +445,16 @@ export async function POST(request: Request) {
           agenda_enabled: _omit2,
           handoff_keywords: _omit3,
           transcription_model: _omit4,
+          voice_reply_mode: _omit5,
+          voice_name: _omit6,
           ...payloadWithoutFallbacks
         } = payload
         void _omit
         void _omit2
         void _omit3
         void _omit4
+        void _omit5
+        void _omit6
         ;({ error: upErr } = await supabase
           .from('ai_configs')
           .update(payloadWithoutFallbacks)
@@ -485,12 +492,16 @@ export async function POST(request: Request) {
           agenda_enabled: _omit2,
           handoff_keywords: _omit3,
           transcription_model: _omit4,
+          voice_reply_mode: _omit5,
+          voice_name: _omit6,
           ...insertWithoutFallbacks
         } = insertPayload as Record<string, unknown>
         void _omit
         void _omit2
         void _omit3
         void _omit4
+        void _omit5
+        void _omit6
         ;({ error: insErr } = await supabase
           .from('ai_configs')
           .insert(insertWithoutFallbacks))

@@ -9,6 +9,8 @@ import { observeBeforeSend } from './guardrails/observe'
 import { classifyAcknowledgment, shouldSkipAcknowledgment } from './ack'
 import { loadNoticeText } from './notice-text'
 import { waitForQuietPeriod } from './burst'
+import { sendVoiceReply, shouldReplyInVoice } from './voice-reply'
+import { loadEmbeddingsKey } from './config'
 import {
   loadAudioRetryText,
   transcribeInboundAudio,
@@ -412,6 +414,8 @@ export async function dispatchInboundToAiReply(
         accountId,
         args.audio,
         config.transcriptionModel ?? null,
+        {},
+        config.provider === 'openai' ? config.apiKey : null,
       )
       if (heard.status === 'failed') {
         console.info(`${tag} audio could not be transcribed (${heard.reason})`)
@@ -822,6 +826,39 @@ export async function dispatchInboundToAiReply(
     // lost whole and the customer got nothing (a 4,402-character reply
     // from a free model, seen in production). The prompt asks for short
     // messages; this doesn't depend on the model obeying.
+    // Voice reply (specs/ai-voice-replies.md, phase 2): the customer spoke,
+    // the agent is set to answer in kind, and the reply is short. The text
+    // above was already generated and guardrailed; any failure here falls
+    // through to sending that text, never silence.
+    if (
+      shouldReplyInVoice({
+        mode: config.voiceReplyMode,
+        inboundWasAudio: !!args.audio,
+        text,
+      })
+    ) {
+      try {
+        const voiceKey =
+          config.provider === 'openai'
+            ? config.apiKey
+            : (await loadEmbeddingsKey(db, accountId)).key
+        if (!voiceKey) throw new Error('no OpenAI key for speech')
+        await sendVoiceReply(db, {
+          accountId,
+          userId: configOwnerUserId,
+          conversationId,
+          contactId,
+          text,
+          apiKey: voiceKey,
+          voice: config.voiceName,
+        })
+        console.info(`${tag} sent a voice reply`)
+        return
+      } catch (voiceErr) {
+        console.warn(`${tag} voice reply failed, sending text instead:`, voiceErr)
+      }
+    }
+
     const segments = (generation.segments.length > 0 ? generation.segments : [text]).flatMap(
       (segment) => splitLongText(segment),
     )

@@ -2530,6 +2530,13 @@
       "save": "Salvar alterações",
       "saved": "Salvo",
       "saveFailed": "Não foi possível salvar",
+      "voice": {
+        "title": "Responder áudio com áudio",
+        "description": "Quando o cliente manda um áudio, a IA responde com uma mensagem de voz (respostas longas continuam em texto). Usa a mesma chave OpenAI da transcrição e custa mais que texto.",
+        "off": "Desligado — sempre em texto",
+        "mirror": "Responder em voz quando o cliente mandar áudio",
+        "voiceOption": "Voz: {voice}"
+      },
       "transcription": {
         "title": "Modelo que transcreve os áudios",
         "description": "Quando o cliente manda um áudio, este modelo o transforma em texto para a IA responder. Usa a chave OpenAI da base de conhecimento; sem ela, o áudio não é entendido.",

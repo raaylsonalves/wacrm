@@ -44,6 +44,15 @@ describe('transcribeInboundAudio', () => {
     expect(updates[0]).toEqual({ transcript: null, transcript_status: 'failed' })
   })
 
+  it("uses the agent's own OpenAI key when the knowledge-base key is empty", async () => {
+    vi.mocked(loadEmbeddingsKey).mockResolvedValue({ key: null, corrupt: false })
+    const { db } = fakeDb()
+    const transcribe = vi.fn().mockResolvedValue('oi')
+    const r = await transcribeInboundAudio(db, 'acc', audio, null, { transcribe, getUrl, download }, 'sk-main')
+    expect(r).toEqual({ status: 'done', transcript: 'oi' })
+    expect(transcribe.mock.calls[0][0].apiKey).toBe('sk-main')
+  })
+
   it('a failing provider is a failed result, never a throw', async () => {
     vi.mocked(loadEmbeddingsKey).mockResolvedValue({ key: 'sk-test', corrupt: false })
     const { db } = fakeDb()

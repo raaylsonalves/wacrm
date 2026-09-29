@@ -27,7 +27,7 @@ changes for an agent that touches none of it.
 - The text model needed no work: it is the agent's existing `model`, and
   a small text-only model there is exactly the point.
 
-## Phase 2 — answer in voice (pipeline)  [not built]
+## Phase 2 — answer in voice (pipeline)  [BUILT, migration 079 — see notes below]
 
 Reply text → text-to-speech → WhatsApp voice note. Text is produced and
 **guardrailed first** (`specs/ai-output-guardrails.md`), then spoken, so a
@@ -81,3 +81,19 @@ quality is the bottleneck.
 - Should `mirror` be the only voice mode at first? (leaning yes)
 - Per-agent voice vs per-account voice for a small business with several
   agents.
+
+## Phase 2 implementation notes
+
+- `src/lib/ai/voice-reply.ts`: `gpt-4o-mini-tts`, `response_format: opus`,
+  9 allow-listed voices (default `coral`), `mirror` mode only, 600-char cap.
+- Uploaded to `chat-media/<account>/ai-voice/`, sent as `type: audio` by
+  link; the row keeps the text in `content_text`, `ai_generated = true`.
+- Any failure (no key, TTS, upload, Meta) sends the text instead.
+- Key: the agent's own key when its provider is OpenAI, else the
+  knowledge-base key. Same rule now applies to transcription, which was
+  failing for an account on OpenAI with the knowledge-base key empty.
+- NOT verified live: that WhatsApp renders OpenAI's `opus` output as a
+  voice note. If it arrives as a file or is refused, the container needs
+  checking (Ogg vs raw Opus).
+- Not built: "listen to a sample" button, `always` mode, TTS cost on the
+  Usage tab (speech is billed per character, not recorded yet), WAHA.

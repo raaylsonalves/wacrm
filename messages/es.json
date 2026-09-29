@@ -2530,6 +2530,13 @@
       "save": "Guardar cambios",
       "saved": "Guardado",
       "saveFailed": "No se pudo guardar",
+      "voice": {
+        "title": "Responder audio con audio",
+        "description": "Cuando el cliente envía un audio, la IA responde con un mensaje de voz (las respuestas largas siguen en texto). Usa la misma clave OpenAI de la transcripción y cuesta más que el texto.",
+        "off": "Apagado — siempre en texto",
+        "mirror": "Responder con voz cuando el cliente envíe audio",
+        "voiceOption": "Voz: {voice}"
+      },
       "transcription": {
         "title": "Modelo que transcribe los audios",
         "description": "Cuando el cliente envía un audio, este modelo lo convierte en texto para que la IA responda. Usa la clave OpenAI de la base de conocimiento; sin ella, el audio no se entiende.",

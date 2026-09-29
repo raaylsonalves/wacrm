@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import type { AiConfig, AiProvider, AiProviderCredentials } from './types'
 import { parseTranscriptionModel } from './transcribe'
+import { parseVoiceMode, parseVoiceName } from './voice-reply'
 
 interface RawFallbackRow {
   provider: AiProvider
@@ -24,6 +25,8 @@ interface AiConfigRow {
   agenda_enabled?: boolean
   handoff_keywords?: string[] | null
   transcription_model?: string | null
+  voice_reply_mode?: string | null
+  voice_name?: string | null
 }
 
 /** One row of `listAiAgents` — never the decrypted key, just enough
@@ -39,7 +42,7 @@ export interface AiAgentSummary {
 
 const CONFIG_COLUMNS_BASE =
   'id, provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, embeddings_api_key'
-const CONFIG_COLUMNS = `${CONFIG_COLUMNS_BASE}, fallbacks, agenda_enabled, handoff_keywords, transcription_model`
+const CONFIG_COLUMNS = `${CONFIG_COLUMNS_BASE}, fallbacks, agenda_enabled, handoff_keywords, transcription_model, voice_reply_mode, voice_name`
 
 /** Postgres "undefined_column" — thrown by `fallbacks` not existing yet
  *  when migration 052 hasn't been applied. See the fallback query below. */
@@ -174,6 +177,8 @@ export async function loadAiConfig(
     agendaEnabled: row.agenda_enabled ?? false,
     handoffKeywords: row.handoff_keywords ?? [],
     transcriptionModel: parseTranscriptionModel(row.transcription_model),
+    voiceReplyMode: parseVoiceMode(row.voice_reply_mode),
+    voiceName: parseVoiceName(row.voice_name),
   }
 }
 

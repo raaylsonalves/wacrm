@@ -36,7 +36,13 @@ export function TranscriptionModelField({
       disabled={disabled}
     >
       <SelectTrigger>
-        <SelectValue />
+      {/* Base UI resolves a closed Select's label only from mounted
+       *  items, so it would show the raw value — resolve it here. */}
+        <SelectValue>
+          {(v: string) =>
+            v === DEFAULT ? t('default', { model: TRANSCRIBE_MODEL }) : v
+          }
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={DEFAULT}>

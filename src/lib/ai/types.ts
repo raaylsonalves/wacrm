@@ -60,6 +60,9 @@ export interface AiConfig {
   handoffKeywords?: string[]
   /** Model that transcribes this agent's voice notes (null = default). */
   transcriptionModel?: string | null
+  /** 'mirror' = answer a voice note with a voice note. */
+  voiceReplyMode?: 'off' | 'mirror'
+  voiceName?: string | null
 }
 
 /** A JSON-schema tool definition, provider-neutral — each adapter maps

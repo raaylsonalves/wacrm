@@ -19,6 +19,7 @@ import { AiError, type AiProvider } from '@/lib/ai/types';
 import { audit } from '@/lib/audit';
 import { cleanHandoffKeywords } from '@/lib/ai/handoff-keywords';
 import { parseTranscriptionModel } from '@/lib/ai/transcribe';
+import { parseVoiceMode, parseVoiceName } from '@/lib/ai/voice-reply';
 
 const VALID_PROVIDERS: AiProvider[] = [
   'openai',
@@ -115,6 +116,8 @@ export async function PATCH(
     if ('transcription_model' in body) {
       update.transcription_model = parseTranscriptionModel(body.transcription_model);
     }
+    if ('voice_reply_mode' in body) update.voice_reply_mode = parseVoiceMode(body.voice_reply_mode);
+    if ('voice_name' in body) update.voice_name = parseVoiceName(body.voice_name);
     if ('handoff_keywords' in body) {
       update.handoff_keywords = cleanHandoffKeywords(body.handoff_keywords);
     }

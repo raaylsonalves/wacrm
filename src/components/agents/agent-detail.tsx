@@ -30,6 +30,7 @@ import {
   keywordsToList,
 } from '@/components/agents/handoff-keywords-field';
 import { TranscriptionModelField } from '@/components/agents/transcription-model-field';
+import { VoiceReplyField } from '@/components/agents/voice-reply-field';
 import { AgentChannels } from '@/components/agents/agent-channels';
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
@@ -58,6 +59,8 @@ interface AgentRow {
   handoff_agent_id: string | null;
   handoff_keywords: string[] | null;
   transcription_model: string | null;
+  voice_reply_mode: string | null;
+  voice_name: string | null;
   has_key: boolean;
 }
 
@@ -99,6 +102,8 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   const [handoffTo, setHandoffTo] = useState('');
   const [keywords, setKeywords] = useState('');
   const [transcriptionModel, setTranscriptionModel] = useState('');
+  const [voiceMode, setVoiceMode] = useState<'off' | 'mirror'>('off');
+  const [voiceName, setVoiceName] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -124,6 +129,8 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         setHandoffTo(a.handoff_agent_id ?? '');
         setKeywords((a.handoff_keywords ?? []).join('\n'));
         setTranscriptionModel(a.transcription_model ?? '');
+        setVoiceMode(a.voice_reply_mode === 'mirror' ? 'mirror' : 'off');
+        setVoiceName(a.voice_name ?? '');
       } catch {
         if (alive) toast.error(t('loadFailed'));
       }
@@ -175,6 +182,8 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         handoff_agent_id: handoffTo || null,
         handoff_keywords: keywordsToList(keywords),
         transcription_model: transcriptionModel || null,
+        voice_reply_mode: voiceMode,
+        voice_name: voiceName || null,
       };
       // Changing provider/model/key makes the server re-validate against
       // the provider (a round trip), so only send it when it changed.
@@ -410,6 +419,18 @@ export function AgentDetail({ agentId }: { agentId: string }) {
             <TranscriptionModelField
               value={transcriptionModel}
               onChange={setTranscriptionModel}
+              disabled={disabled}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>{t('voice.title')}</Label>
+            <p className="text-muted-foreground text-xs">{t('voice.description')}</p>
+            <VoiceReplyField
+              mode={voiceMode}
+              voice={voiceName}
+              onModeChange={setVoiceMode}
+              onVoiceChange={setVoiceName}
               disabled={disabled}
             />
           </div>
