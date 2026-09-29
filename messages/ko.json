@@ -333,6 +333,8 @@
       "quickReplySaveError": "빠른 답장을 저장하지 못했습니다."
     },
     "bubble": {
+    "transcript": "텍스트 변환",
+    "transcriptFailed": "이 음성 메시지는 텍스트로 변환할 수 없었습니다.",
       "photo": "사진",
       "video": "동영상",
       "audio": "오디오",
@@ -2696,6 +2698,7 @@
       "modelCalls": "{tokens} 토큰 · 호출 {count}회",
       "cacheRate": "프롬프트의 {percent}%가 제공업체 캐시에서 처리되었습니다 (보고된 {calls}건 기준).",
       "cacheUnknown": "제공업체가 캐시 사용량을 알려주지 않아 이 절감 효과는 아직 측정할 수 없습니다.",
+      "audioUsage": "오디오: 음성 변환 {heard}건 ({tokens} 토큰) · 음성 답변 {spoken}건 ({chars}자).",
       "partialWindow": "일부 기간만 표시 중 — 사용량이 많아 최근 기록만 요약되었습니다."
     }
   },

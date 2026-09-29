@@ -1,5 +1,5 @@
-import { AiError } from './types'
-import { providerHttpError, toNetworkError } from './providers/shared'
+import { AiError, type AiUsage } from './types'
+import { normalizeUsage, providerHttpError, toNetworkError } from './providers/shared'
 import { extensionForMime } from '@/lib/media/filename'
 
 const OPENAI_TRANSCRIBE_URL = 'https://api.openai.com/v1/audio/transcriptions'
@@ -38,6 +38,15 @@ const TRANSCRIBE_TIMEOUT_MS = 30_000
  * Throws `AiError` on any provider/network failure or an empty result —
  * the caller turns that into "couldn't understand the audio".
  */
+/** Same call, plus the token usage the transcription models report. */
+export async function transcribeAudioWithUsage(
+  args: Parameters<typeof transcribeAudio>[0],
+): Promise<{ text: string; usage: AiUsage | null }> {
+  let usage: AiUsage | null = null
+  const text = await transcribeAudio({ ...args, onUsage: (u) => (usage = u) })
+  return { text, usage }
+}
+
 export async function transcribeAudio(args: {
   apiKey: string
   bytes: Uint8Array
@@ -48,6 +57,7 @@ export async function transcribeAudio(args: {
    *  in Cyrillic. Omitted when unknown, letting the model detect. */
   language?: string | null
   timeoutMs?: number
+  onUsage?: (usage: AiUsage) => void
 }): Promise<string> {
   const { apiKey, bytes, mimeType, timeoutMs = TRANSCRIBE_TIMEOUT_MS } = args
   const model = parseTranscriptionModel(args.model) ?? TRANSCRIBE_MODEL
@@ -76,7 +86,16 @@ export async function transcribeAudio(args: {
   }
   if (!res.ok) throw await providerHttpError('OpenAI', res)
 
-  const data = (await res.json().catch(() => null)) as { text?: unknown } | null
+  const data = (await res.json().catch(() => null)) as {
+    text?: unknown
+    usage?: { input_tokens?: number; output_tokens?: number; total_tokens?: number }
+  } | null
+  const usage = normalizeUsage({
+    prompt: data?.usage?.input_tokens,
+    completion: data?.usage?.output_tokens,
+    total: data?.usage?.total_tokens,
+  })
+  if (usage) args.onUsage?.(usage)
   const text = typeof data?.text === 'string' ? data.text.trim() : ''
   if (!text) {
     throw new AiError('The transcription came back empty.', { code: 'empty_response' })

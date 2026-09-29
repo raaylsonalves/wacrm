@@ -9,7 +9,8 @@ import { observeBeforeSend } from './guardrails/observe'
 import { classifyAcknowledgment, shouldSkipAcknowledgment } from './ack'
 import { loadNoticeText } from './notice-text'
 import { waitForQuietPeriod } from './burst'
-import { sendVoiceReply, shouldReplyInVoice } from './voice-reply'
+import { TTS_MODEL, sendVoiceReply, shouldReplyInVoice } from './voice-reply'
+import { TRANSCRIBE_MODEL } from './transcribe'
 import { loadEmbeddingsKey } from './config'
 import {
   loadAudioRetryText,
@@ -417,6 +418,18 @@ export async function dispatchInboundToAiReply(
         {},
         config.provider === 'openai' ? config.apiKey : null,
       )
+      if (heard.status === 'done' && heard.usage) {
+        void logAiUsage(db, {
+          accountId,
+          conversationId,
+          agentId: config.id ?? null,
+          mode: 'auto_reply',
+          provider: 'openai',
+          model: config.transcriptionModel ?? TRANSCRIBE_MODEL,
+          usage: heard.usage,
+          kind: 'transcription',
+        })
+      }
       if (heard.status === 'failed') {
         console.info(`${tag} audio could not be transcribed (${heard.reason})`)
         // First time: say so and ask for text. If the customer's PREVIOUS
@@ -853,6 +866,17 @@ export async function dispatchInboundToAiReply(
           voice: config.voiceName,
         })
         console.info(`${tag} sent a voice reply`)
+        void logAiUsage(db, {
+          accountId,
+          conversationId,
+          agentId: config.id ?? null,
+          mode: 'auto_reply',
+          provider: 'openai',
+          model: TTS_MODEL,
+          usage: null,
+          kind: 'speech',
+          speechChars: text.length,
+        })
         return
       } catch (voiceErr) {
         console.warn(`${tag} voice reply failed, sending text instead:`, voiceErr)

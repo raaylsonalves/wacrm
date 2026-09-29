@@ -303,6 +303,10 @@ export interface Message {
    * Null on every row written before migration 039.
    */
   media_type?: string | null;
+  /** What a customer's voice note said, transcribed for the AI
+   *  (migration 076). Null until/unless it was transcribed. */
+  transcript?: string | null;
+  transcript_status?: 'done' | 'failed' | null;
   template_name?: string;
   message_id?: string;
   status: MessageStatus;

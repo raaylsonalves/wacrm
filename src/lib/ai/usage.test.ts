@@ -118,3 +118,37 @@ describe('logAiUsage — agent attribution', () => {
     expect(insert).toHaveBeenCalledWith(expect.objectContaining({ agent_id: null }))
   })
 })
+
+describe('logAiUsage — audio rows', () => {
+  it('records a speech row with characters and no tokens', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null })
+    const db = { from: vi.fn(() => ({ insert })) } as unknown as SupabaseClient
+    await logAiUsage(db, {
+      accountId: 'a',
+      conversationId: 'c',
+      mode: 'auto_reply',
+      provider: 'openai',
+      model: 'gpt-4o-mini-tts',
+      usage: null,
+      kind: 'speech',
+      speechChars: 120,
+    })
+    expect(insert.mock.calls[0][0]).toMatchObject({ kind: 'speech', speech_chars: 120, total_tokens: 0 })
+  })
+
+  it('drops an audio row rather than mislabel it as chat on an unmigrated db', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: { code: '42703', message: 'no column' } })
+    const db = { from: vi.fn(() => ({ insert })) } as unknown as SupabaseClient
+    await logAiUsage(db, {
+      accountId: 'a',
+      conversationId: 'c',
+      mode: 'auto_reply',
+      provider: 'openai',
+      model: 'm',
+      usage: null,
+      kind: 'speech',
+      speechChars: 5,
+    })
+    expect(insert).toHaveBeenCalledTimes(1)
+  })
+})

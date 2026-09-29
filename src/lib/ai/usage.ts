@@ -12,8 +12,13 @@ export interface LogAiUsageArgs {
   mode: 'auto_reply' | 'draft'
   provider: AiProvider
   model: string
-  /** Provider usage; a no-op when null (nothing worth recording). */
+  /** Provider usage; a no-op when null (nothing worth recording) unless
+   *  `speechChars` is set. */
   usage: AiUsage | null
+  /** 'chat' (default) | 'transcription' | 'speech' (migration 080). */
+  kind?: 'chat' | 'transcription' | 'speech'
+  /** Characters spoken (speech rows; billed per character). */
+  speechChars?: number
 }
 
 /**
@@ -33,7 +38,8 @@ export async function logAiUsage(
   db: SupabaseClient,
   args: LogAiUsageArgs,
 ): Promise<void> {
-  if (!args.usage) return
+  if (!args.usage && !args.speechChars) return
+  const kind = args.kind ?? 'chat'
   try {
     const row = {
       account_id: args.accountId,
@@ -42,17 +48,23 @@ export async function logAiUsage(
       mode: args.mode,
       provider: args.provider,
       model: args.model,
-      prompt_tokens: args.usage.promptTokens,
-      completion_tokens: args.usage.completionTokens,
-      total_tokens: args.usage.totalTokens,
+      prompt_tokens: args.usage?.promptTokens ?? 0,
+      completion_tokens: args.usage?.completionTokens ?? 0,
+      total_tokens: args.usage?.totalTokens ?? 0,
     }
     let { error } = await db.from('ai_usage_log').insert({
       ...row,
       // NULL = the provider did not say (never 0).
-      cached_tokens: args.usage.cachedTokens ?? null,
+      cached_tokens: args.usage?.cachedTokens ?? null,
+      // Only written for audio rows, so a chat row is unchanged in shape
+      // and an unmigrated database still accepts it.
+      ...(kind !== 'chat' ? { kind, speech_chars: args.speechChars ?? null } : {}),
     })
     // Migration 078 not applied yet: keep the spend row rather than lose it.
     if (error && (error as { code?: string }).code === '42703') {
+      // An audio row on a database without migration 080 would read as
+      // chat spend; drop it rather than mislabel it.
+      if (kind !== 'chat') return
       ;({ error } = await db.from('ai_usage_log').insert(row))
     }
     if (error) {

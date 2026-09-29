@@ -38,6 +38,12 @@ interface UsageResponse {
     cache_reported_prompt_tokens?: number;
     cache_reported_calls?: number;
   };
+  audio?: {
+    speech_chars: number;
+    speech_calls: number;
+    transcription_tokens: number;
+    transcription_calls: number;
+  };
   by_mode: {
     auto_reply: { calls: number; tokens: number };
     draft: { calls: number; tokens: number };
@@ -179,6 +185,17 @@ export function AiUsageCard() {
                   })
                 : t('cacheUnknown')}
             </p>
+            {data.audio &&
+              (data.audio.speech_calls > 0 || data.audio.transcription_calls > 0) && (
+                <p className="text-xs text-muted-foreground">
+                  {t('audioUsage', {
+                    heard: data.audio.transcription_calls,
+                    tokens: formatCompactNumber(data.audio.transcription_tokens),
+                    spoken: data.audio.speech_calls,
+                    chars: formatCompactNumber(data.audio.speech_chars),
+                  })}
+                </p>
+              )}
 
             <div>
               <p className="mb-2 text-xs font-medium text-muted-foreground">

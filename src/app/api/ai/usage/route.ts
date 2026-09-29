@@ -21,6 +21,9 @@ interface UsageRow {
   total_tokens: number
   /** NULL = the provider did not report it. */
   cached_tokens?: number | null
+  /** 'chat' | 'transcription' | 'speech' (migration 080; absent = chat). */
+  kind?: string | null
+  speech_chars?: number | null
 }
 
 /**
@@ -73,8 +76,11 @@ export async function GET(request: Request) {
     }
     const cols =
       'created_at, agent_id, mode, provider, model, prompt_tokens, completion_tokens, total_tokens'
-    let { data, error } = await readRows(`${cols}, cached_tokens`)
-    // Migration 078 (cached_tokens) may not be applied yet.
+    let { data, error } = await readRows(`${cols}, cached_tokens, kind, speech_chars`)
+    // Migrations 078/080 may not be applied yet — degrade step by step.
+    if (error && (error as { code?: string }).code === '42703') {
+      ;({ data, error } = await readRows(`${cols}, cached_tokens`))
+    }
     if (error && (error as { code?: string }).code === '42703') {
       ;({ data, error } = await readRows(cols))
     }
@@ -89,7 +95,28 @@ export async function GET(request: Request) {
 
     const all = (data ?? []) as unknown as UsageRow[]
     const truncated = all.length > MAX_ROWS
-    const rows = truncated ? all.slice(0, MAX_ROWS) : all
+    const windowRows = truncated ? all.slice(0, MAX_ROWS) : all
+
+    // Audio rows are billed differently (speech per character,
+    // transcription per audio token), so they are summed on their own and
+    // kept out of every chat figure below.
+    let speechChars = 0
+    let speechCalls = 0
+    let transcriptionTokens = 0
+    let transcriptionCalls = 0
+    const rows = windowRows.filter((r) => {
+      if (r.kind === 'speech') {
+        speechChars += r.speech_chars ?? 0
+        speechCalls += 1
+        return false
+      }
+      if (r.kind === 'transcription') {
+        transcriptionTokens += r.total_tokens
+        transcriptionCalls += 1
+        return false
+      }
+      return true
+    })
 
     // Totals.
     let promptTokens = 0
@@ -179,6 +206,12 @@ export async function GET(request: Request) {
         // for the cache rate; 0 = no provider reported it.
         cache_reported_prompt_tokens: cachedReportedPrompt,
         cache_reported_calls: cachedReportedCalls,
+      },
+      audio: {
+        speech_chars: speechChars,
+        speech_calls: speechCalls,
+        transcription_tokens: transcriptionTokens,
+        transcription_calls: transcriptionCalls,
       },
       by_mode: byMode,
       by_model: byModel,

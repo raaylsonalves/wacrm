@@ -13,7 +13,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getMediaUrl, downloadMedia } from '@/lib/whatsapp/meta-api'
 import { loadEmbeddingsKey } from './config'
-import { transcribeAudio } from './transcribe'
+import { transcribeAudioWithUsage } from './transcribe'
+import type { AiUsage } from './types'
 import { hashKey } from '@/lib/variant'
 
 export interface InboundAudio {
@@ -25,11 +26,14 @@ export interface InboundAudio {
 }
 
 export type AudioTranscription =
-  | { status: 'done'; transcript: string }
+  | { status: 'done'; transcript: string; usage?: AiUsage | null }
   | { status: 'failed'; reason: 'no_key' | 'download' | 'transcribe' }
 
 interface Deps {
-  transcribe?: typeof transcribeAudio
+  /** May return the bare text (tests) or text + usage. */
+  transcribe?: (
+    a: Parameters<typeof transcribeAudioWithUsage>[0],
+  ) => Promise<string | { text: string; usage: AiUsage | null }>
   getUrl?: typeof getMediaUrl
   download?: typeof downloadMedia
 }
@@ -51,7 +55,7 @@ export async function transcribeInboundAudio(
    *  why voice notes failed for an account already running on OpenAI. */
   openAiKey: string | null = null,
 ): Promise<AudioTranscription> {
-  const { transcribe = transcribeAudio, getUrl = getMediaUrl, download = downloadMedia } = deps
+  const { transcribe = transcribeAudioWithUsage, getUrl = getMediaUrl, download = downloadMedia } = deps
 
   const record = async (
     result: AudioTranscription,
@@ -86,7 +90,7 @@ export async function transcribeInboundAudio(
   }
 
   try {
-    const transcript = await transcribe({
+    const out = await transcribe({
       apiKey: key,
       bytes,
       mimeType,
@@ -94,7 +98,10 @@ export async function transcribeInboundAudio(
       // The deployment's locale (build-time, single-locale app).
       language: process.env.NEXT_PUBLIC_APP_LOCALE || null,
     })
-    return record({ status: 'done', transcript })
+    const transcript = typeof out === 'string' ? out : out.text
+    const usage = typeof out === 'string' ? null : out.usage
+    await record({ status: 'done', transcript })
+    return usage ? { status: 'done', transcript, usage } : { status: 'done', transcript }
   } catch (err) {
     console.warn('[ai audio] transcription failed:', err instanceof Error ? err.message : err)
     return record({ status: 'failed', reason: 'transcribe' })

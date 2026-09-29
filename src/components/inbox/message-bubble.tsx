@@ -80,6 +80,35 @@ function StatusIcon({
   }
 }
 
+/**
+ * The words behind a voice note: the customer's transcript (written when
+ * the AI transcribed it), or, on the AI's own voice reply, the text it
+ * spoke (kept in content_text). A person skims this faster than they can
+ * play the audio.
+ */
+function AudioText({
+  message,
+  t,
+}: {
+  message: Message;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const fromCustomer = message.sender_type === "customer";
+  const text = fromCustomer ? message.transcript : message.content_text;
+  if (text && text.trim()) {
+    return (
+      <p className="mt-1 max-w-[280px] whitespace-pre-wrap break-words text-xs opacity-80">
+        <span className="font-medium">{t("transcript")}:</span>{" "}
+        <span className="italic">{text}</span>
+      </p>
+    );
+  }
+  if (fromCustomer && message.transcript_status === "failed") {
+    return <p className="mt-1 text-xs italic opacity-70">{t("transcriptFailed")}</p>;
+  }
+  return null;
+}
+
 function MessageContent({
   message,
   t,
@@ -144,6 +173,7 @@ function MessageContent({
           ) : (
             <MediaUnavailable label={t("audio")} t={t} />
           )}
+          <AudioText message={message} t={t} />
         </div>
       );
 

@@ -653,6 +653,12 @@ BEGIN
     RAISE EXCEPTION 'ai_configs.voice_reply_mode is missing — migration 079 did not apply';
   END IF;
   IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'ai_usage_log' AND column_name = 'speech_chars'
+  ) THEN
+    RAISE EXCEPTION 'ai_usage_log.speech_chars is missing — migration 080 did not apply';
+  END IF;
+  IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
     WHERE conname = 'conversations_ai_handoff_reason_check'
       AND pg_get_constraintdef(oid) LIKE '%audio_unintelligible%'

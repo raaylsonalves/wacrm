@@ -333,6 +333,8 @@
       "quickReplySaveError": "Não foi possível salvar a resposta rápida."
     },
     "bubble": {
+    "transcript": "Transcrição",
+    "transcriptFailed": "Não foi possível transcrever este áudio.",
       "photo": "Foto",
       "video": "Vídeo",
       "audio": "Áudio",
@@ -2684,6 +2686,7 @@
       "modelCalls": "{tokens} tok · {count, plural, =1 {# chamada} other {# chamadas}}",
       "cacheRate": "{percent}% do prompt veio do cache do provedor (nas {calls} chamadas em que ele informou).",
       "cacheUnknown": "O provedor não informou quanto do prompt veio do cache — ainda não dá para medir esse ganho.",
+      "audioUsage": "Áudio: {heard} transcrições ({tokens} tokens) · {spoken} respostas em voz ({chars} caracteres).",
       "partialWindow": "Exibindo uma janela parcial — o uso é alto o suficiente para que apenas os registros mais recentes sejam resumidos aqui."
     }
   },
