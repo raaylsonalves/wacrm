@@ -6,6 +6,11 @@ import { loadChannelAgentId } from './channel-agent'
 import { matchHandoffKeyword } from './handoff-keywords'
 import { splitLongText } from './split-long'
 import { observeBeforeSend } from './guardrails/observe'
+import {
+  loadAudioRetryText,
+  transcribeInboundAudio,
+  type InboundAudio,
+} from './audio-inbound'
 import { retrieveKnowledge } from './knowledge'
 import {
   generateReplyWithFallback,
@@ -198,6 +203,10 @@ interface DispatchArgs {
    *  a typing indicator (which also marks it read) is shown while the
    *  reply is generated. Optional so older callers keep working. */
   inboundMessageId?: string
+  /** The inbound message is a voice note. It is transcribed here, AFTER
+   *  the eligibility gates, so an account with the AI off never pays to
+   *  transcribe (specs/ai-audio-inbound.md). */
+  audio?: InboundAudio
 }
 
 /**
@@ -389,6 +398,53 @@ export async function dispatchInboundToAiReply(
         noticeCtx,
       )
       return
+    }
+
+    if (args.audio) {
+      const heard = await transcribeInboundAudio(db, accountId, args.audio)
+      if (heard.status === 'failed') {
+        console.info(`${tag} audio could not be transcribed (${heard.reason})`)
+        // First time: say so and ask for text. If the customer's PREVIOUS
+        // message was also an audio we could not read, stop asking and
+        // hand the thread to a person. Not counted against the reply cap.
+        const { data: recent } = await db
+          .from('messages')
+          .select('transcript_status')
+          .eq('conversation_id', conversationId)
+          .eq('sender_type', 'customer')
+          .order('created_at', { ascending: false })
+          .limit(2)
+        const repeated = recent?.[1]?.transcript_status === 'failed'
+        const retryText = repeated ? null : await loadAudioRetryText(conversationId)
+        let asked = false
+        if (retryText) {
+          try {
+            await engineSendText({
+              accountId,
+              userId: configOwnerUserId,
+              conversationId,
+              contactId,
+              text: retryText,
+              aiGenerated: true,
+            })
+            asked = true
+          } catch (sendErr) {
+            console.error(`${tag} could not send the audio retry message:`, sendErr)
+          }
+        }
+        if (!asked) {
+          await handOffToHuman(
+            db,
+            conversationId,
+            config,
+            conv.assigned_agent_id,
+            'audio_unintelligible',
+            buildHandoffMeta({ replyCount: conv.ai_reply_count ?? 0 }),
+            noticeCtx,
+          )
+        }
+        return
+      }
     }
 
     const messages = await buildConversationContext(db, conversationId)

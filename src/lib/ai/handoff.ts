@@ -15,6 +15,7 @@ export type HandoffReason =
   | 'rate_limited'
   | 'system_error'
   | 'customer_requested_human'
+  | 'audio_unintelligible'
 
 /** Structured, non-translated facts stored in `ai_handoff_meta`. */
 export interface HandoffMeta {

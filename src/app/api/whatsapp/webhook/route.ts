@@ -1084,9 +1084,12 @@ async function processMessage(
   // alone, exactly as before this existed. Awaited inside `after()`
   // (same reason as the webhook dispatch below); `dispatchInboundToAiReply`
   // owns its eligibility gates + try/catch and never throws.
+  // A voice note has no text; the AI path transcribes it (only once it
+  // knows it is going to answer) — specs/ai-audio-inbound.md.
+  const voiceNote = message.type === 'audio' && !!message.audio?.id;
   const aiShouldDispatch =
     !flowConsumed &&
-    inboundText.trim().length > 0 &&
+    (inboundText.trim().length > 0 || voiceNote) &&
     (!interactiveReplyId ||
       (await wasLastBotMessageAiGenerated(conversation.id)));
   if (aiShouldDispatch) {
@@ -1098,6 +1101,13 @@ async function processMessage(
       // Lets the bot show "typing…" (and mark the message read) while
       // the reply is generated.
       inboundMessageId: message.id,
+      audio: voiceNote
+        ? {
+            messageRowId: insertedRows[0].id,
+            mediaId: message.audio!.id,
+            accessToken,
+          }
+        : undefined,
     });
   }
 

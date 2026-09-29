@@ -428,7 +428,8 @@
           "providerFailure": "The AI providers were unavailable",
           "rateLimited": "Too many messages at once — the assistant paused here",
           "systemError": "Internal error while reserving the assistant’s reply",
-          "customerRequestedHuman": "The customer asked for a person"
+          "customerRequestedHuman": "The customer asked for a person",
+          "audioUnintelligible": "The assistant could not make out the customer's voice note"
         },
         "lastMessage": "Customer’s last message",
         "showMore": "Show more",
@@ -450,6 +451,12 @@
           "no_notice_text": "no notice text configured"
         }
       }
+    }
+  },
+  "AiAudioNotice": {
+    "retry": {
+      "v1": "I couldn't quite make out your voice message. Could you type what you need, please?",
+      "v2": "I had trouble understanding the audio. Could you send it as text?"
     }
   },
   "AiHandoffNotice": {

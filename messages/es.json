@@ -428,7 +428,8 @@
           "providerFailure": "Los proveedores de IA no estuvieron disponibles",
           "rateLimited": "Demasiados mensajes a la vez — el asistente se pausó aquí",
           "systemError": "Error interno al reservar la respuesta del asistente",
-          "customerRequestedHuman": "El cliente pidió hablar con una persona"
+          "customerRequestedHuman": "El cliente pidió hablar con una persona",
+          "audioUnintelligible": "El asistente no pudo entender el audio del cliente"
         },
         "lastMessage": "Último mensaje del cliente",
         "showMore": "Ver más",
@@ -450,6 +451,12 @@
           "no_notice_text": "sin texto de aviso configurado"
         }
       }
+    }
+  },
+  "AiAudioNotice": {
+    "retry": {
+      "v1": "No pude escuchar bien tu audio. ¿Puedes escribirme lo que necesitas, por favor?",
+      "v2": "Tuve dificultad para entender el audio. ¿Podrías enviarlo por texto?"
     }
   },
   "AiHandoffNotice": {

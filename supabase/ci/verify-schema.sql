@@ -628,6 +628,19 @@ BEGIN
   IF to_regclass('public.ai_guardrail_traces') IS NULL THEN
     RAISE EXCEPTION 'ai_guardrail_traces is missing — migration 075 did not apply';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'transcript_status'
+  ) THEN
+    RAISE EXCEPTION 'messages.transcript_status is missing — migration 076 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'conversations_ai_handoff_reason_check'
+      AND pg_get_constraintdef(oid) LIKE '%audio_unintelligible%'
+  ) THEN
+    RAISE EXCEPTION 'handoff reason check does not allow audio_unintelligible — migration 076 did not apply';
+  END IF;
 
   RAISE NOTICE 'schema verification passed';
 END

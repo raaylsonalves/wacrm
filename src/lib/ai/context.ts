@@ -2,10 +2,15 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ChatMessage } from './types'
 import { aiContextMessageLimit } from './defaults'
 
+/** Prefix on a transcribed voice note in the model's transcript. */
+export const AUDIO_MARK = '[áudio transcrito]'
+
 interface DbMessage {
   sender_type: 'customer' | 'agent' | 'bot'
+  content_type: string
   content_text: string | null
   interactive_reply_id: string | null
+  transcript: string | null
 }
 
 /**
@@ -24,6 +29,10 @@ interface DbMessage {
  * specs/ai-agenda-tool-calling.md — can quote the exact id back
  * instead of re-deriving it from the label.
  *
+ * A voice note enters as its transcript (`messages.transcript`, written by
+ * audio-inbound.ts), marked so the model knows it was spoken. An audio
+ * message with no transcript stays out, like any media.
+ *
  * Ordered oldest-first (chronological) so the transcript reads
  * naturally and the most recent customer message lands last.
  */
@@ -34,9 +43,9 @@ export async function buildConversationContext(
 ): Promise<ChatMessage[]> {
   const { data, error } = await db
     .from('messages')
-    .select('sender_type, content_text, interactive_reply_id')
+    .select('sender_type, content_type, content_text, interactive_reply_id, transcript')
     .eq('conversation_id', conversationId)
-    .in('content_type', ['text', 'interactive'])
+    .in('content_type', ['text', 'interactive', 'audio'])
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -44,11 +53,16 @@ export async function buildConversationContext(
 
   const rows = ((data ?? []) as DbMessage[]).reverse()
   return rows
-    .filter((m) => m.content_text && m.content_text.trim())
+    .map((m) => ({
+      ...m,
+      text: m.content_type === 'audio' ? m.transcript : m.content_text,
+    }))
+    .filter((m) => m.text && m.text.trim())
     .map((m) => {
+      const spoken = m.content_type === 'audio' ? `${AUDIO_MARK} ${m.text!.trim()}` : m.text!.trim()
       const content = m.interactive_reply_id
-        ? `${m.content_text!.trim()} (id: ${m.interactive_reply_id})`
-        : m.content_text!.trim()
+        ? `${spoken} (id: ${m.interactive_reply_id})`
+        : spoken
       return {
         role: m.sender_type === 'customer' ? 'user' : 'assistant',
         content,

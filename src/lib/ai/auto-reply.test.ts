@@ -12,7 +12,11 @@ const h = vi.hoisted(() => ({
   engineSendText: vi.fn(),
   loadAccountMetaCredentials: vi.fn(),
   sendTypingIndicator: vi.fn(),
+  transcribeInboundAudio: vi.fn(),
+  loadAudioRetryText: vi.fn(),
   state: {
+    /** The customer's two latest messages' transcript_status, newest first. */
+    recentCustomer: [] as { transcript_status: string | null }[],
     conv: null as Record<string, unknown> | null,
     autoResponders: [] as { id: string }[],
     claim: true as boolean,
@@ -32,6 +36,10 @@ const h = vi.hoisted(() => ({
 }))
 
 vi.mock('./config', () => ({ loadAiConfig: h.loadAiConfig }))
+vi.mock('./audio-inbound', () => ({
+  transcribeInboundAudio: h.transcribeInboundAudio,
+  loadAudioRetryText: h.loadAudioRetryText,
+}))
 vi.mock('./context', () => ({ buildConversationContext: h.buildConversationContext }))
 vi.mock('./knowledge', () => ({ retrieveKnowledge: h.retrieveKnowledge }))
 // `AllProvidersFailedError` is imported by auto-reply.ts alongside the
@@ -93,6 +101,16 @@ vi.mock('./admin-client', () => ({
               data: h.state.boundAgentId ? { agent_id: h.state.boundAgentId } : null,
               error: null,
             }),
+        }
+        return chain
+      }
+      if (table === 'messages') {
+        // .select().eq().eq().order().limit() → the customer's latest messages
+        const chain = {
+          select: () => chain,
+          eq: () => chain,
+          order: () => chain,
+          limit: () => Promise.resolve({ data: h.state.recentCustomer, error: null }),
         }
         return chain
       }
@@ -189,6 +207,9 @@ beforeEach(() => {
   h.state.boundAgentId = null
   h.state.rpcCalls = []
   h.state.contact = null
+  h.state.recentCustomer = []
+  h.transcribeInboundAudio.mockReset()
+  h.loadAudioRetryText.mockReset()
   h.loadAiConfig.mockResolvedValue(aiConfig())
   h.buildConversationContext.mockResolvedValue([{ role: 'user', content: 'hi' }])
   h.retrieveKnowledge.mockResolvedValue([])
@@ -651,6 +672,43 @@ describe('dispatchInboundToAiReply — deterministic handoff keywords', () => {
     ])
     await dispatchInboundToAiReply(ARGS)
     expect(h.generateReplyWithFallback).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('dispatchInboundToAiReply — voice notes', () => {
+  const AUDIO = { messageRowId: 'row-1', mediaId: 'media-1', accessToken: 'tok' }
+
+  it('a transcribed voice note is answered like text', async () => {
+    h.transcribeInboundAudio.mockResolvedValue({ status: 'done', transcript: 'quero agendar' })
+    await dispatchInboundToAiReply({ ...ARGS, audio: AUDIO })
+    expect(h.transcribeInboundAudio).toHaveBeenCalledTimes(1)
+    expect(h.generateReplyWithFallback).toHaveBeenCalledTimes(1)
+  })
+
+  it('first unreadable audio: asks for text, no handoff, no model call', async () => {
+    h.transcribeInboundAudio.mockResolvedValue({ status: 'failed', reason: 'transcribe' })
+    h.loadAudioRetryText.mockResolvedValue('Pode escrever?')
+    h.state.recentCustomer = [{ transcript_status: 'failed' }]
+    await dispatchInboundToAiReply({ ...ARGS, audio: AUDIO })
+    expect(h.engineSendText).toHaveBeenCalledTimes(1)
+    expect(h.engineSendText.mock.calls[0][0].text).toBe('Pode escrever?')
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+    expect(h.state.updatePayload).toBeNull()
+  })
+
+  it('second unreadable audio in a row: hands off instead of asking again', async () => {
+    h.transcribeInboundAudio.mockResolvedValue({ status: 'failed', reason: 'transcribe' })
+    h.loadAudioRetryText.mockResolvedValue('Pode escrever?')
+    h.state.recentCustomer = [{ transcript_status: 'failed' }, { transcript_status: 'failed' }]
+    await dispatchInboundToAiReply({ ...ARGS, audio: AUDIO })
+    expect(h.state.updatePayload).toMatchObject({ ai_handoff_reason: 'audio_unintelligible' })
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+  })
+
+  it('does not transcribe (or pay) when a human owns the thread', async () => {
+    h.state.conv = { assigned_agent_id: 'agent-1', ai_autoreply_disabled: false, ai_reply_count: 0 }
+    await dispatchInboundToAiReply({ ...ARGS, audio: AUDIO })
+    expect(h.transcribeInboundAudio).not.toHaveBeenCalled()
   })
 })
 

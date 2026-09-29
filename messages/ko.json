@@ -428,7 +428,8 @@
           "providerFailure": "AI 제공자를 사용할 수 없었습니다",
           "rateLimited": "동시에 메시지가 너무 많아 어시스턴트가 여기서 멈췄습니다",
           "systemError": "어시스턴트 답변을 예약하는 중 내부 오류가 발생했습니다",
-          "customerRequestedHuman": "고객이 상담원을 요청했습니다"
+          "customerRequestedHuman": "고객이 상담원을 요청했습니다",
+          "audioUnintelligible": "어시스턴트가 고객의 음성 메시지를 이해하지 못했습니다"
         },
         "lastMessage": "고객의 마지막 메시지",
         "showMore": "더 보기",
@@ -450,6 +451,12 @@
           "no_notice_text": "안내 문구가 설정되지 않음"
         }
       }
+    }
+  },
+  "AiAudioNotice": {
+    "retry": {
+      "v1": "음성 메시지를 잘 알아듣지 못했어요. 필요한 내용을 글로 남겨주시겠어요?",
+      "v2": "음성을 이해하는 데 어려움이 있었어요. 텍스트로 보내주실 수 있나요?"
     }
   },
   "AiHandoffNotice": {
