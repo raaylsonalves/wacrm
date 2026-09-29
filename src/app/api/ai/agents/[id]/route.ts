@@ -18,6 +18,7 @@ import { validateAiCredentials } from '@/lib/ai/validate';
 import { AiError, type AiProvider } from '@/lib/ai/types';
 import { audit } from '@/lib/audit';
 import { cleanHandoffKeywords } from '@/lib/ai/handoff-keywords';
+import { parseTranscriptionModel } from '@/lib/ai/transcribe';
 
 const VALID_PROVIDERS: AiProvider[] = [
   'openai',
@@ -110,6 +111,9 @@ export async function PATCH(
         20,
         Math.max(1, Math.floor(maxPer))
       );
+    }
+    if ('transcription_model' in body) {
+      update.transcription_model = parseTranscriptionModel(body.transcription_model);
     }
     if ('handoff_keywords' in body) {
       update.handoff_keywords = cleanHandoffKeywords(body.handoff_keywords);

@@ -2524,6 +2524,11 @@
       "save": "Salvar alterações",
       "saved": "Salvo",
       "saveFailed": "Não foi possível salvar",
+      "transcription": {
+        "title": "Modelo que transcreve os áudios",
+        "description": "Quando o cliente manda um áudio, este modelo o transforma em texto para a IA responder. Usa a chave OpenAI da base de conhecimento; sem ela, o áudio não é entendido.",
+        "default": "Padrão ({model})"
+      },
       "keywords": {
         "title": "Frases que chamam uma pessoa",
         "description": "Se o cliente escrever uma destas, a conversa vai para uma pessoa na hora — sem chamar a IA e sem gastar tokens.",

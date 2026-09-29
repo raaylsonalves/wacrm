@@ -401,7 +401,12 @@ export async function dispatchInboundToAiReply(
     }
 
     if (args.audio) {
-      const heard = await transcribeInboundAudio(db, accountId, args.audio)
+      const heard = await transcribeInboundAudio(
+        db,
+        accountId,
+        args.audio,
+        config.transcriptionModel ?? null,
+      )
       if (heard.status === 'failed') {
         console.info(`${tag} audio could not be transcribed (${heard.reason})`)
         // First time: say so and ask for text. If the customer's PREVIOUS

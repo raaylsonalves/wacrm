@@ -2536,6 +2536,11 @@
       "save": "Save changes",
       "saved": "Saved",
       "saveFailed": "Could not save",
+      "transcription": {
+        "title": "Model that transcribes voice notes",
+        "description": "When a customer sends a voice note, this model turns it into text for the AI to answer. It uses the knowledge-base OpenAI key; without one, voice notes are not understood.",
+        "default": "Default ({model})"
+      },
       "keywords": {
         "title": "Phrases that call a person",
         "description": "If the customer writes one of these, the conversation goes to a person immediately — no AI call, no tokens.",

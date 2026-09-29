@@ -2524,6 +2524,11 @@
       "save": "Guardar cambios",
       "saved": "Guardado",
       "saveFailed": "No se pudo guardar",
+      "transcription": {
+        "title": "Modelo que transcribe los audios",
+        "description": "Cuando el cliente envía un audio, este modelo lo convierte en texto para que la IA responda. Usa la clave OpenAI de la base de conocimiento; sin ella, el audio no se entiende.",
+        "default": "Predeterminado ({model})"
+      },
       "keywords": {
         "title": "Frases que llaman a una persona",
         "description": "Si el cliente escribe una de estas, la conversación pasa a una persona al instante — sin llamar a la IA y sin gastar tokens.",

@@ -58,6 +58,8 @@ export interface AiConfig {
    *  (specs/ai-agents-management.md §4). Empty/absent = off. Optional so
    *  the ad-hoc configs built for key validation needn't carry it. */
   handoffKeywords?: string[]
+  /** Model that transcribes this agent's voice notes (null = default). */
+  transcriptionModel?: string | null
 }
 
 /** A JSON-schema tool definition, provider-neutral — each adapter maps

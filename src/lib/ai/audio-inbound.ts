@@ -43,6 +43,8 @@ export async function transcribeInboundAudio(
   db: SupabaseClient,
   accountId: string,
   audio: InboundAudio,
+  /** The resolved agent's transcription model (null = default). */
+  model: string | null = null,
   deps: Deps = {},
 ): Promise<AudioTranscription> {
   const { transcribe = transcribeAudio, getUrl = getMediaUrl, download = downloadMedia } = deps
@@ -80,7 +82,7 @@ export async function transcribeInboundAudio(
   }
 
   try {
-    const transcript = await transcribe({ apiKey: key, bytes, mimeType })
+    const transcript = await transcribe({ apiKey: key, bytes, mimeType, model })
     return record({ status: 'done', transcript })
   } catch (err) {
     console.warn('[ai audio] transcription failed:', err instanceof Error ? err.message : err)

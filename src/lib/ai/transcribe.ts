@@ -8,6 +8,24 @@ const OPENAI_TRANSCRIBE_URL = 'https://api.openai.com/v1/audio/transcriptions'
  *  speech, so the smaller model is the right cost point. */
 export const TRANSCRIBE_MODEL = 'gpt-4o-mini-transcribe'
 
+/** Models an agent may pick for transcription. An allow-list rather than
+ *  free text: a typo would fail every voice note, and the endpoint only
+ *  serves these. Listing order = cheapest first. */
+export const TRANSCRIPTION_MODELS = [
+  'gpt-4o-mini-transcribe',
+  'whisper-1',
+  'gpt-4o-transcribe',
+] as const
+export type TranscriptionModel = (typeof TRANSCRIPTION_MODELS)[number]
+
+/** A stored or submitted value → a known model, or null (= the default). */
+export function parseTranscriptionModel(value: unknown): TranscriptionModel | null {
+  return typeof value === 'string' &&
+    (TRANSCRIPTION_MODELS as readonly string[]).includes(value)
+    ? (value as TranscriptionModel)
+    : null
+}
+
 /** A voice note answer is worth waiting for, but not past the webhook's
  *  own budget. */
 const TRANSCRIBE_TIMEOUT_MS = 30_000
@@ -24,9 +42,12 @@ export async function transcribeAudio(args: {
   apiKey: string
   bytes: Uint8Array
   mimeType: string | null
+  /** The agent's choice; anything unknown falls back to the default. */
+  model?: string | null
   timeoutMs?: number
 }): Promise<string> {
   const { apiKey, bytes, mimeType, timeoutMs = TRANSCRIBE_TIMEOUT_MS } = args
+  const model = parseTranscriptionModel(args.model) ?? TRANSCRIBE_MODEL
 
   const form = new FormData()
   form.append(
@@ -34,7 +55,7 @@ export async function transcribeAudio(args: {
     new Blob([bytes as BlobPart], { type: mimeType ?? 'application/octet-stream' }),
     `audio.${extensionForMime(mimeType)}`,
   )
-  form.append('model', TRANSCRIBE_MODEL)
+  form.append('model', model)
   form.append('response_format', 'json')
 
   let res: Response

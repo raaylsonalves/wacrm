@@ -635,6 +635,12 @@ BEGIN
     RAISE EXCEPTION 'messages.transcript_status is missing — migration 076 did not apply';
   END IF;
   IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'ai_configs' AND column_name = 'transcription_model'
+  ) THEN
+    RAISE EXCEPTION 'ai_configs.transcription_model is missing — migration 077 did not apply';
+  END IF;
+  IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
     WHERE conname = 'conversations_ai_handoff_reason_check'
       AND pg_get_constraintdef(oid) LIKE '%audio_unintelligible%'

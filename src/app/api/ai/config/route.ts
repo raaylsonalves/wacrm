@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cleanHandoffKeywords } from '@/lib/ai/handoff-keywords'
+import { parseTranscriptionModel } from '@/lib/ai/transcribe'
 import {
   getCurrentAccount,
   requireRole,
@@ -114,7 +115,7 @@ export async function GET() {
     // /api/ai/agents.
     let { data, error } = await supabase
       .from('ai_configs')
-      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled, handoff_keywords`)
+      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled, handoff_keywords, transcription_model`)
       .eq('account_id', accountId)
       .eq('is_default', true)
       .maybeSingle()
@@ -407,6 +408,9 @@ export async function POST(request: Request) {
     if ('handoff_keywords' in body) {
       shared.handoff_keywords = cleanHandoffKeywords(body.handoff_keywords)
     }
+    if ('transcription_model' in body) {
+      shared.transcription_model = parseTranscriptionModel(body.transcription_model)
+    }
     if (rawEmbeddingsKey) {
       shared.embeddings_api_key = encrypt(rawEmbeddingsKey)
     } else if (clearEmbeddingsKey) {
@@ -437,11 +441,13 @@ export async function POST(request: Request) {
           fallbacks: _omit,
           agenda_enabled: _omit2,
           handoff_keywords: _omit3,
+          transcription_model: _omit4,
           ...payloadWithoutFallbacks
         } = payload
         void _omit
         void _omit2
         void _omit3
+        void _omit4
         ;({ error: upErr } = await supabase
           .from('ai_configs')
           .update(payloadWithoutFallbacks)
@@ -478,11 +484,13 @@ export async function POST(request: Request) {
           fallbacks: _omit,
           agenda_enabled: _omit2,
           handoff_keywords: _omit3,
+          transcription_model: _omit4,
           ...insertWithoutFallbacks
         } = insertPayload as Record<string, unknown>
         void _omit
         void _omit2
         void _omit3
+        void _omit4
         ;({ error: insErr } = await supabase
           .from('ai_configs')
           .insert(insertWithoutFallbacks))

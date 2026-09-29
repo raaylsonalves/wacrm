@@ -29,6 +29,7 @@ import {
   HandoffKeywordsField,
   keywordsToList,
 } from '@/components/agents/handoff-keywords-field';
+import { TranscriptionModelField } from '@/components/agents/transcription-model-field';
 import { AgentChannels } from '@/components/agents/agent-channels';
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
@@ -56,6 +57,7 @@ interface AgentRow {
   auto_reply_max_per_conversation: number;
   handoff_agent_id: string | null;
   handoff_keywords: string[] | null;
+  transcription_model: string | null;
   has_key: boolean;
 }
 
@@ -96,6 +98,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   const [maxReplies, setMaxReplies] = useState(3);
   const [handoffTo, setHandoffTo] = useState('');
   const [keywords, setKeywords] = useState('');
+  const [transcriptionModel, setTranscriptionModel] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -120,6 +123,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         setMaxReplies(a.auto_reply_max_per_conversation);
         setHandoffTo(a.handoff_agent_id ?? '');
         setKeywords((a.handoff_keywords ?? []).join('\n'));
+        setTranscriptionModel(a.transcription_model ?? '');
       } catch {
         if (alive) toast.error(t('loadFailed'));
       }
@@ -170,6 +174,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         auto_reply_max_per_conversation: maxReplies,
         handoff_agent_id: handoffTo || null,
         handoff_keywords: keywordsToList(keywords),
+        transcription_model: transcriptionModel || null,
       };
       // Changing provider/model/key makes the server re-validate against
       // the provider (a round trip), so only send it when it changed.
@@ -397,6 +402,16 @@ export function AgentDetail({ agentId }: { agentId: string }) {
             <Label>{t('keywords.title')}</Label>
             <p className="text-muted-foreground text-xs">{t('keywords.description')}</p>
             <HandoffKeywordsField value={keywords} onChange={setKeywords} disabled={disabled} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>{t('transcription.title')}</Label>
+            <p className="text-muted-foreground text-xs">{t('transcription.description')}</p>
+            <TranscriptionModelField
+              value={transcriptionModel}
+              onChange={setTranscriptionModel}
+              disabled={disabled}
+            />
           </div>
 
           {canEdit && (

@@ -31,6 +31,7 @@ import type { AiProvider } from '@/lib/ai/types';
 import type { AccountMember } from '@/types';
 import { fetchAccountMembers, memberLabel } from '@/lib/account/members';
 import { ModelPicker } from '@/components/agents/model-picker';
+import { TranscriptionModelField } from '@/components/agents/transcription-model-field';
 import {
   HandoffKeywordsField,
   keywordsToList,
@@ -73,6 +74,7 @@ export function AiConfig({
   const tDetail = useTranslations('Agents.detail');
   const [name, setName] = useState('');
   const [handoffKeywordsText, setHandoffKeywordsText] = useState('');
+  const [transcriptionModel, setTranscriptionModel] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -143,6 +145,7 @@ export function AiConfig({
         setMaxPerConversation(data.auto_reply_max_per_conversation ?? 3);
         setHandoffAgentId(data.handoff_agent_id ?? '');
         setHandoffKeywordsText(((data.handoff_keywords ?? []) as string[]).join('\n'));
+        setTranscriptionModel(data.transcription_model ?? '');
         setHasStoredKey(Boolean(data.has_key));
         setApiKey(data.has_key ? MASKED_KEY : '');
         setKeyEdited(false);
@@ -208,6 +211,7 @@ export function AiConfig({
     auto_reply_max_per_conversation: maxPerConversation,
     handoff_agent_id: handoffAgentId || null,
     handoff_keywords: keywordsToList(handoffKeywordsText),
+    transcription_model: transcriptionModel || null,
     fallbacks: fallbackEnabled
       ? [
           {
@@ -759,6 +763,18 @@ export function AiConfig({
                 value={handoffKeywordsText}
                 onChange={setHandoffKeywordsText}
                 disabled={disabled || !autoReplyEnabled}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{tDetail('transcription.title')}</Label>
+              <p className="text-xs text-muted-foreground">
+                {tDetail('transcription.description')}
+              </p>
+              <TranscriptionModelField
+                value={transcriptionModel}
+                onChange={setTranscriptionModel}
+                disabled={disabled}
               />
             </div>
           </CardContent>
