@@ -17,6 +17,7 @@ import { generateOpenAi } from './providers/openai'
 import { generateAnthropic } from './providers/anthropic'
 import { generateGemini } from './providers/gemini'
 import { generateOpenRouter } from './providers/openrouter'
+import { looksLikeReasoningLeak, stripThinkBlocks } from './reasoning-leak'
 
 export interface GenerateArgs {
   config: AiConfig
@@ -121,7 +122,13 @@ export function parseGeneration(
   usage: AiUsage | null = null,
 ): GenerateResult {
   const handoff = raw.includes(HANDOFF_SENTINEL)
-  const stripped = stripModerationArtifacts(raw.split(HANDOFF_SENTINEL).join('').trim())
+  const cleaned = stripModerationArtifacts(
+    stripThinkBlocks(raw.split(HANDOFF_SENTINEL).join('').trim()),
+  )
+  // A model that answered with its own reasoning: send nothing. An empty
+  // text makes auto-reply hand the conversation to a person (empty_reply)
+  // rather than show the customer a monologue.
+  const stripped = looksLikeReasoningLeak(cleaned) ? '' : cleaned
 
   const rawSegments = stripped
     .split(MULTI_MESSAGE_DELIMITER)

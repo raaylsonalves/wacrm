@@ -85,6 +85,10 @@ export async function generateOpenRouter(args: ProviderArgs): Promise<ProviderRe
           model,
           messages: body,
           max_tokens: MAX_OUTPUT_TOKENS,
+          // Reasoning models otherwise return their chain of thought in
+          // the message; ask OpenRouter to leave it out. Models without
+          // reasoning ignore this. (generate.ts still filters a leak.)
+          reasoning: { exclude: true },
           ...(tools && tools.length > 0 ? { tools: toOpenRouterTools(tools) } : {}),
         }),
         signal: AbortSignal.timeout(remaining),
