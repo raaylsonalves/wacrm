@@ -658,6 +658,16 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'ai_usage_log.speech_chars is missing — migration 080 did not apply';
   END IF;
+  IF to_regclass('public.prospecting_campaigns') IS NULL
+     OR to_regclass('public.prospecting_candidates') IS NULL THEN
+    RAISE EXCEPTION 'prospecting tables are missing — migration 082 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'conversations' AND column_name = 'pinned_ai_agent_id'
+  ) THEN
+    RAISE EXCEPTION 'conversations.pinned_ai_agent_id is missing — migration 082 did not apply';
+  END IF;
   IF to_regclass('public.contact_imports') IS NULL
      OR to_regclass('public.contact_import_errors') IS NULL THEN
     RAISE EXCEPTION 'contact_imports tables are missing — migration 081 did not apply';

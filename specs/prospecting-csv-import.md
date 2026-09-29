@@ -542,3 +542,30 @@ Not built yet:
 - The old `parse-contact-csv.ts` / broadcast CSV parser still exist
   (adapters over `lib/csv` not done); `import-modal.tsx` is no longer used.
 - Imports list / re-open a past report; staged durable import (phase 2).
+
+## Part B — implementation notes (v1)
+
+Built with BOTH first-touch paths (decision, user 2026-09-29):
+- **WAHA** — the campaign's agent writes each approach (`buildApproachPrompt`,
+  fixed rules: never claims the lead asked), opt-out line appended by code;
+  daily cap = min(campaign limit, warm-up ceiling by the number's age).
+- **Official API** — an approved template, body variables mapped to first
+  name / name / company / fixed text. No warm-up ceiling (Meta tiers apply).
+
+Shared: migration 082 (campaigns, candidates, `claim_prospecting_candidate`,
+`conversations.pinned_ai_agent_id`, triggers stamping replied / qualified /
+opted-out — verified in a rolled-back transaction), activation from any tag
+(`lista:…`) creating deal + pinned conversation per lead and skipping
+opted-out / third-party / in-service contacts, one send per campaign per cron
+tick inside Mon–Fri 09–18 America/Sao_Paulo with delay-only jitter, failures
+never retried and scoped (candidate vs pause campaign), the pinned agent
+answering replies ahead of router and number binding, `qualify_lead` tool
+(only this deal, only to the campaign's qualified stage), `/prospecting`
+page with the funnel from stamps.
+
+Not built / not verified:
+- Not run end-to-end against a real number (it sends real messages).
+- Activation capped at 500 leads and runs inside the request.
+- Window/timezone not editable in the UI (defaults only).
+- Non-responder follow-up (use a follow-up sequence manually for now).
+- Reply attribution window fixed at 72h; campaign screen has no per-lead list.

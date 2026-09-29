@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { resumePendingExecution } from '@/lib/automations/engine'
 import type { AutomationContext } from '@/lib/automations/engine'
 import { runFollowupSweep } from '@/lib/automations/followup-sweep'
+import { runProspectingTick } from '@/lib/prospecting/tick'
 
 /**
  * Drain due `automation_pending_executions` rows. Meant to be hit
@@ -110,6 +111,11 @@ export async function GET(request: Request) {
   // them. After the drain, so a wait that just resumed has already had
   // its say. Never throws.
   const followups = await runFollowupSweep()
+  // Prospecting campaigns: at most one cold send per campaign per tick.
+  const prospecting = await runProspectingTick().catch((err) => {
+    console.error('[cron] prospecting tick failed:', err)
+    return null
+  })
 
-  return NextResponse.json({ processed, followups })
+  return NextResponse.json({ processed, followups, prospecting })
 }

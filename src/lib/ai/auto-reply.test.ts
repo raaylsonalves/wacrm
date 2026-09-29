@@ -969,3 +969,23 @@ describe('dispatchInboundToAiReply — multi-message replies (specs/ai-humanized
     )
   })
 })
+
+describe('dispatchInboundToAiReply — agent pinned by a prospecting campaign', () => {
+  it('answers with the pinned agent', async () => {
+    h.state.conv = { assigned_agent_id: null, ai_autoreply_disabled: false, ai_reply_count: 0, pinned_ai_agent_id: 'agent-p' }
+    h.loadAiConfig.mockImplementation(async (_db: unknown, _acc: string, opts?: { agentId?: string }) =>
+      aiConfig({ id: opts?.agentId ?? 'default', model: opts?.agentId ? 'pinned-model' : 'gpt-test' }),
+    )
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback.mock.calls[0][0].config.model).toBe('pinned-model')
+  })
+
+  it('stays silent when the pinned agent is off', async () => {
+    h.state.conv = { assigned_agent_id: null, ai_autoreply_disabled: false, ai_reply_count: 0, pinned_ai_agent_id: 'agent-p' }
+    h.loadAiConfig.mockImplementation(async (_db: unknown, _acc: string, opts?: { agentId?: string }) =>
+      opts?.agentId ? aiConfig({ id: 'agent-p', autoReplyEnabled: false }) : aiConfig({ id: 'default' }),
+    )
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+  })
+})

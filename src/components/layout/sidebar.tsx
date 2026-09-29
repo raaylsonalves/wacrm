@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useTotalUnread } from '@/hooks/use-total-unread';
 import { useUnreadNotifications } from '@/hooks/use-unread-notifications';
-import {
+import { Target,
   Bell,
   Bot,
   Cable,
@@ -128,6 +128,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: '/contacts', labelKey: 'contacts', icon: Users },
       { href: '/pipelines', labelKey: 'pipelines', icon: GitBranch },
+      { href: '/prospecting', labelKey: 'prospecting', icon: Target },
       { href: '/agenda', labelKey: 'agenda', icon: CalendarDays },
     ],
   },

@@ -46,6 +46,7 @@
     "automations": "자동화",
     "flows": "플로우",
     "aiAgents": "AI 에이전트",
+    "prospecting": "잠재 고객 발굴",
     "channelsSettings": "연결",
     "navGroupAtendimento": "상담",
     "navGroupCrm": "CRM",
@@ -453,6 +454,92 @@
           "no_notice_text": "안내 문구가 설정되지 않음"
         }
       }
+    }
+  },
+  "Prospecting": {
+    "title": "잠재 고객 발굴",
+    "subtitle": "리드 목록에 한 명씩 연락하고 누가 답했고 누가 적격인지 추적합니다. WAHA에서는 AI가 메시지를 쓰고, 공식 번호에서는 승인된 템플릿이 발송됩니다.",
+    "new": "새 캠페인",
+    "newHint": "Each lead becomes a deal in the pipeline and a conversation. Sending is paced, during business hours, and the chosen agent answers when the lead writes back.",
+    "empty": "No campaigns yet. Import a list in Contacts and create the first one.",
+    "start": "캠페인 시작",
+    "started": "캠페인 시작: 대기 {queued}명, 건너뜀 {skipped}명.",
+    "pause": "일시정지",
+    "resume": "재개",
+    "cancel": "취소",
+    "status": {
+      "draft": "초안",
+      "running": "진행 중",
+      "paused": "일시정지",
+      "completed": "완료",
+      "cancelled": "취소됨"
+    },
+    "channel": {
+      "cloud": "공식 번호 (템플릿)",
+      "waha": "WAHA (AI 작성)"
+    },
+    "funnel": {
+      "leads": "리드",
+      "sent": "연락함",
+      "replied": "응답함",
+      "qualified": "적격",
+      "details": "대기 {queued} · 실패 {failed} · 건너뜀 {skipped} · 수신거부 {optedOut}"
+    },
+    "form": {
+      "name": "Campaign name",
+      "list": "Lead list",
+      "channel": "Number",
+      "pick": "Choose…",
+      "cloudHint": "On the official API the first message must be a template approved by Meta. The AI takes over when the lead replies.",
+      "wahaHint": "On WAHA the AI writes an approach for each lead and a \"reply STOP\" line is added automatically. The daily cap follows the number's warm-up.",
+      "agent": "Agent that answers the replies",
+      "pipeline": "Pipeline",
+      "entryStage": "Entry stage",
+      "qualifiedStage": "Qualified stage",
+      "template": "Approved template",
+      "noTemplates": "No approved template in this account. Create one under Channels → Templates and wait for Meta's approval.",
+      "token": {
+        "first_name": "First name",
+        "name": "Full name",
+        "company": "Company",
+        "text": "Fixed text"
+      },
+      "instruction": "What we offer and the tone of the approach",
+      "instructionPlaceholder": "E.g. we build websites and catalogs for car repair shops; friendly and direct.",
+      "criteria": "When the lead is qualified",
+      "criteriaPlaceholder": "E.g. owns a shop, wants to sell online and makes the decision.",
+      "legal": "Legal basis for approaching these leads",
+      "legalPlaceholder": "E.g. shops with a public contact, approached to offer a service for their segment.",
+      "dailyLimit": "Daily limit",
+      "interval": "Interval between sends (minutes)",
+      "pacingHint": "Sends Monday to Friday, 9am to 6pm (São Paulo time), with a random delay so it doesn't look automated."
+    },
+    "errors": {
+      "generic": "Could not complete.",
+      "name_required": "Name the campaign.",
+      "list_required": "Choose the lead list.",
+      "channel_required": "Choose the number.",
+      "agent_id_required": "Choose the agent.",
+      "pipeline_id_required": "Choose the pipeline.",
+      "entry_stage_id_required": "Choose the entry stage.",
+      "qualified_stage_id_required": "Choose the qualified stage.",
+      "stages_must_differ": "Entry and qualified stages must be different.",
+      "instruction_required": "Describe what we offer (at least 10 characters).",
+      "criteria_required": "Describe when a lead is qualified (at least 10 characters).",
+      "template_required": "Choose an approved template.",
+      "legal_basis_required": "Describe the legal basis (at least 10 characters).",
+      "window_invalid": "Invalid sending window.",
+      "agent_missing": "The agent no longer exists.",
+      "channel_missing": "The WAHA number no longer exists.",
+      "channel_disconnected": "The WAHA number is disconnected.",
+      "whatsapp_not_configured": "The official number is not configured.",
+      "template_not_approved": "The template is not approved.",
+      "stage_missing": "The pipeline or stages no longer exist.",
+      "another_running": "A campaign is already running. Pause it before starting another.",
+      "list_empty": "No lead in the list could be approached.",
+      "not_running": "The campaign is not running.",
+      "not_paused": "The campaign is not paused.",
+      "already_finished": "The campaign has already finished."
     }
   },
   "AiAckNotice": {

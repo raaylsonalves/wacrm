@@ -41,6 +41,12 @@ import { latestUserMessage } from './query'
 import { AGENDA_TOOLS, createAgendaToolExecutor } from './tools/agenda'
 import { CONTACT_TOOLS, createContactToolExecutor } from './tools/contact'
 import {
+  PROSPECTING_TOOLS,
+  createProspectingToolExecutor,
+  loadProspectContext,
+  prospectPromptLine,
+} from './tools/prospecting'
+import {
   engineSendText,
   loadAccountMetaCredentials,
 } from '@/lib/flows/meta-send'
@@ -293,7 +299,7 @@ export async function dispatchInboundToAiReply(
     const { data: conv, error: convErr } = await db
       .from('conversations')
       .select(
-        'assigned_agent_id, ai_autoreply_disabled, ai_reply_count, whatsapp_channel_id, active_ai_agent_id',
+        'assigned_agent_id, ai_autoreply_disabled, ai_reply_count, whatsapp_channel_id, active_ai_agent_id, pinned_ai_agent_id',
       )
       .eq('id', conversationId)
       .maybeSingle()
@@ -312,13 +318,35 @@ export async function dispatchInboundToAiReply(
 
     let routed = false
 
+    // A conversation opened by a prospecting campaign is answered by the
+    // campaign's own agent — the one that wrote the approach — ahead of
+    // the router and the per-number binding. Same rule as a binding: if
+    // that agent is off or gone, the AI stays silent rather than answer
+    // with someone else's persona.
+    if (conv.pinned_ai_agent_id && conv.pinned_ai_agent_id !== config.id) {
+      let pinned: AiConfig | null = null
+      try {
+        pinned = await loadAiConfig(db, accountId, { agentId: conv.pinned_ai_agent_id })
+      } catch (err) {
+        console.warn(`${tag} pinned agent could not be loaded:`, err)
+      }
+      if (!pinned || !pinned.autoReplyEnabled) {
+        console.info(`${tag} skipped: the agent pinned to this conversation is off or unavailable`)
+        return
+      }
+      config = pinned
+      routed = true
+    } else if (conv.pinned_ai_agent_id) {
+      routed = true
+    }
+
     // Multi-agent router (specs/multi-agent-router.md) — inert for any
     // account with no active router (the common case today): resolves
     // to null and `config` stays the account's default agent, exactly
     // as before this feature existed. When active, whichever agent it
     // resolves to takes over the cap/handoff/claim logic below, which
     // is why this runs before all three.
-    try {
+    if (!routed) try {
       const activeRouter = await loadActiveRouterForChannel(
         db,
         accountId,
@@ -633,7 +661,7 @@ export async function dispatchInboundToAiReply(
       .eq('account_id', accountId)
       .maybeSingle()
 
-    const systemPrompt = buildSystemPrompt({
+    let systemPrompt = buildSystemPrompt({
       userPrompt: config.systemPrompt,
       mode: 'auto_reply',
       knowledge,
@@ -646,9 +674,18 @@ export async function dispatchInboundToAiReply(
     // since a tool call is a real side effect (a WhatsApp send, an
     // appointment write) a human hasn't approved yet. The contact-name
     // tool isn't agenda-specific, so it's always available in auto-reply.
-    const tools = config.agendaEnabled
+    // Prospecting: only a conversation with an open campaign deal gets the
+    // qualify tool, and the criteria go at the END of the prompt (the
+    // variable part — see buildSystemPrompt's ordering note).
+    const prospect = await loadProspectContext(db, conversationId)
+    if (prospect) systemPrompt = `${systemPrompt}\n\n${prospectPromptLine(prospect)}`
+    const baseTools = config.agendaEnabled
       ? [...CONTACT_TOOLS, ...AGENDA_TOOLS]
       : CONTACT_TOOLS
+    const tools = prospect ? [...baseTools, ...PROSPECTING_TOOLS] : baseTools
+    const prospectExecutor = prospect
+      ? createProspectingToolExecutor({ db, accountId, ctx: prospect })
+      : null
     const contactExecutor = createContactToolExecutor({ db, accountId, contactId })
     const agendaExecutor = config.agendaEnabled
       ? createAgendaToolExecutor({
@@ -660,7 +697,9 @@ export async function dispatchInboundToAiReply(
         })
       : null
     const executeTool = (name: string, callArgs: Record<string, unknown>) =>
-      name === 'save_contact_name'
+      name === 'qualify_lead' && prospectExecutor
+        ? prospectExecutor(name, callArgs)
+        : name === 'save_contact_name'
         ? contactExecutor(name, callArgs)
         : agendaExecutor
           ? agendaExecutor(name, callArgs)

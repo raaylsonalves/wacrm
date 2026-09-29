@@ -46,6 +46,7 @@
     "automations": "Automações",
     "flows": "Fluxos",
     "aiAgents": "Agentes de IA",
+    "prospecting": "Prospecção",
     "channelsSettings": "Conexões",
     "navGroupAtendimento": "Atendimento",
     "navGroupCrm": "CRM",
@@ -453,6 +454,92 @@
           "no_notice_text": "sem texto de aviso configurado"
         }
       }
+    }
+  },
+  "Prospecting": {
+    "title": "Prospecção",
+    "subtitle": "Aborde uma lista de leads um a um e acompanhe quem respondeu e quem se qualificou. Pelo WAHA a IA escreve cada abordagem; pelo número oficial vai um template aprovado.",
+    "new": "Nova campanha",
+    "newHint": "Cada lead da lista vira um negócio no funil e uma conversa. O envio é feito aos poucos, no horário comercial, e o agente escolhido responde quando o lead escrever.",
+    "empty": "Nenhuma campanha ainda. Importe uma lista em Contatos e crie a primeira.",
+    "start": "Iniciar campanha",
+    "started": "Campanha iniciada: {queued} leads na fila, {skipped} pulados.",
+    "pause": "Pausar",
+    "resume": "Retomar",
+    "cancel": "Cancelar",
+    "status": {
+      "draft": "Rascunho",
+      "running": "Em andamento",
+      "paused": "Pausada",
+      "completed": "Concluída",
+      "cancelled": "Cancelada"
+    },
+    "channel": {
+      "cloud": "Número oficial (template)",
+      "waha": "WAHA (IA escreve)"
+    },
+    "funnel": {
+      "leads": "Leads",
+      "sent": "Abordados",
+      "replied": "Responderam",
+      "qualified": "Qualificados",
+      "details": "{queued} na fila · {failed} com falha · {skipped} pulados · {optedOut} pediram para sair"
+    },
+    "form": {
+      "name": "Nome da campanha",
+      "list": "Lista de leads",
+      "channel": "Número",
+      "pick": "Escolha…",
+      "cloudHint": "Pela API oficial, a primeira mensagem precisa ser um template aprovado pela Meta. A IA assume quando o lead responder.",
+      "wahaHint": "Pelo WAHA, a IA escreve uma abordagem para cada lead e a linha \"responda SAIR\" é incluída automaticamente. O limite diário respeita o aquecimento do número.",
+      "agent": "Agente que atende as respostas",
+      "pipeline": "Funil",
+      "entryStage": "Etapa de entrada",
+      "qualifiedStage": "Etapa de qualificado",
+      "template": "Template aprovado",
+      "noTemplates": "Nenhum template aprovado nesta conta. Crie um em Canais → Templates e aguarde a aprovação da Meta.",
+      "token": {
+        "first_name": "Primeiro nome",
+        "name": "Nome completo",
+        "company": "Empresa",
+        "text": "Texto fixo"
+      },
+      "instruction": "O que oferecemos e o tom da abordagem",
+      "instructionPlaceholder": "Ex.: criamos sites e catálogos para oficinas mecânicas; tom próximo e direto.",
+      "criteria": "Quando o lead está qualificado",
+      "criteriaPlaceholder": "Ex.: tem oficina própria, quer vender online e decide a contratação.",
+      "legal": "Base legal para abordar estes leads (LGPD)",
+      "legalPlaceholder": "Ex.: oficinas com contato público no Google, abordadas para oferecer um serviço do segmento.",
+      "dailyLimit": "Limite por dia",
+      "interval": "Intervalo entre envios (minutos)",
+      "pacingHint": "Envia de segunda a sexta, das 9h às 18h (horário de Brasília), com uma variação no intervalo para não parecer robô."
+    },
+    "errors": {
+      "generic": "Não foi possível concluir.",
+      "name_required": "Dê um nome à campanha.",
+      "list_required": "Escolha a lista de leads.",
+      "channel_required": "Escolha o número.",
+      "agent_id_required": "Escolha o agente.",
+      "pipeline_id_required": "Escolha o funil.",
+      "entry_stage_id_required": "Escolha a etapa de entrada.",
+      "qualified_stage_id_required": "Escolha a etapa de qualificado.",
+      "stages_must_differ": "As etapas de entrada e de qualificado precisam ser diferentes.",
+      "instruction_required": "Descreva o que oferecemos (mínimo de 10 caracteres).",
+      "criteria_required": "Descreva quando o lead está qualificado (mínimo de 10 caracteres).",
+      "template_required": "Escolha um template aprovado.",
+      "legal_basis_required": "Descreva a base legal (mínimo de 10 caracteres).",
+      "window_invalid": "Horário de envio inválido.",
+      "agent_missing": "O agente não existe mais.",
+      "channel_missing": "O número WAHA não existe mais.",
+      "channel_disconnected": "O número WAHA está desconectado.",
+      "whatsapp_not_configured": "O número oficial não está configurado.",
+      "template_not_approved": "O template não está aprovado.",
+      "stage_missing": "O funil ou as etapas não existem mais.",
+      "another_running": "Já há uma campanha em andamento. Pause-a antes de iniciar outra.",
+      "list_empty": "Nenhum lead da lista pôde ser abordado.",
+      "not_running": "A campanha não está em andamento.",
+      "not_paused": "A campanha não está pausada.",
+      "already_finished": "A campanha já terminou."
     }
   },
   "AiAckNotice": {
