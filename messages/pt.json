@@ -224,6 +224,7 @@
       "assigned": "Atribuída",
       "unassign": "Remover atribuição",
       "noTeammates": "Nenhum colega disponível",
+      "noResponsibles": "Ainda ninguém é responsável por este número",
       "me": " (eu)",
       "noMessagesYet": "Nenhuma mensagem ainda",
       "sendTemplateHint": "Envie um modelo para iniciar a conversa",
@@ -1516,7 +1517,28 @@
     "whatsappTabs": {
       "cloudApi": "API Oficial (Meta)",
       "qr": "Números por QR",
+      "responsibles": "Responsáveis",
       "conflictWarning": "Um mesmo número não pode ficar conectado nas duas vias ao mesmo tempo: conectar um número por QR (WAHA) que já está na API Oficial desconecta esse número da Meta, e vice-versa. Escolha uma via por número — você pode usar as duas vias em números diferentes na mesma conta."
+    },
+    "channelRouting": {
+      "title": "Responsáveis por número",
+      "description": "Restrinja a quais colegas as conversas de um número podem ser atribuídas. Um número sem configuração continua aberto para todos os colegas.",
+      "cloudApiLabel": "API Oficial",
+      "configureBtn": "Configurar",
+      "stateUnrestricted": "Aberto para todos os colegas",
+      "stateEmpty": "Ainda ninguém é responsável por este número",
+      "stateRestricted": "{count} {count, plural, =1 {responsável} other {responsáveis}}",
+      "dialogTitle": "Responsáveis por \"{label}\"",
+      "dialogDescription": "Apenas os colegas marcados abaixo poderão ser atribuídos às conversas deste número. Deixe todos desmarcados para indicar que ainda não há dono, em vez de reabrir para todos.",
+      "noMembers": "Nenhum colega encontrado",
+      "clearBtn": "Remover restrição",
+      "cancelBtn": "Cancelar",
+      "saveBtn": "Salvar",
+      "toastLoadFailed": "Falha ao carregar os canais",
+      "toastSaved": "Responsáveis salvos",
+      "toastSaveFailed": "Falha ao salvar responsáveis",
+      "toastCleared": "Restrição removida — todos os colegas voltaram a ser elegíveis",
+      "toastClearFailed": "Falha ao remover a restrição"
     },
     "waha": {
       "title": "Canais WAHA",

@@ -470,6 +470,26 @@ BEGIN
       'create_broadcast_with_recipients 8-arg overload still exists — migration 068''s DROP did not apply';
   END IF;
 
+  -- 069 — per-channel responsible agents. The enforcement trigger is
+  -- the part that actually matters (the tables alone don't stop a
+  -- forged assignment) — assert it, not just the tables under it.
+  IF to_regclass('public.channel_routing_policies') IS NULL THEN
+    RAISE EXCEPTION
+      'channel_routing_policies is missing — migration 069 did not apply';
+  END IF;
+  IF to_regclass('public.channel_routing_responsibles') IS NULL THEN
+    RAISE EXCEPTION
+      'channel_routing_responsibles is missing — migration 069 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'trg_enforce_channel_routing'
+      AND tgrelid = 'public.conversations'::regclass
+  ) THEN
+    RAISE EXCEPTION
+      'trg_enforce_channel_routing is missing on conversations — migration 069 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

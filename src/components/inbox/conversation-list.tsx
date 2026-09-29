@@ -12,6 +12,11 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
 import { useCan } from '@/hooks/use-can';
 import { slaTier, formatElapsedMinutes, type SlaTier } from '@/lib/inbox/sla';
+import {
+  policiesToMap,
+  eligibleAssigneesFromMap,
+  type ChannelPolicyEntry,
+} from '@/lib/channels/routing';
 import type { Conversation, ConversationStatus, Profile, Tag } from '@/types';
 import { Search, ChevronDown, X, Check, Loader2, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -246,6 +251,37 @@ export function ConversationList({
           return;
         }
         setProfiles((data as Profile[]) ?? []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Per-channel routing policy, fetched once for the whole list rather
+  // than per row (specs/channel-routing-responsibles.md) — a row's
+  // eligible-assignee set is a pure lookup against this map, no
+  // per-conversation round trip.
+  const [routingPolicyMap, setRoutingPolicyMap] = useState<Map<string, string[]>>(
+    new Map()
+  );
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/settings/channel-routing')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload) => {
+        if (cancelled || !payload) return;
+        const entries: ChannelPolicyEntry[] = (payload.channels ?? [])
+          .filter((c: { restricted: boolean }) => c.restricted)
+          .map((c: { channelId: string | null; responsibleUserIds: string[] }) => ({
+            channelId: c.channelId,
+            responsibleUserIds: c.responsibleUserIds,
+          }));
+        setRoutingPolicyMap(policiesToMap(entries));
+      })
+      .catch(() => {
+        /* unrestricted fallback — an empty map means every channel is
+           treated as unrestricted, same as the account never having
+           configured this feature. */
       });
     return () => {
       cancelled = true;
@@ -696,6 +732,7 @@ export function ConversationList({
                 tThread={tThread}
                 allTags={tags}
                 profiles={profiles}
+                routingPolicyMap={routingPolicyMap}
                 onStatusChange={handleRowStatusChange}
                 onAssignChange={handleRowAssignChange}
                 onToggleTag={handleRowToggleTag}
@@ -727,6 +764,7 @@ interface ConversationItemProps {
   tThread: ReturnType<typeof useTranslations>;
   allTags: Tag[];
   profiles: Profile[];
+  routingPolicyMap: Map<string, string[]>;
   onStatusChange: (
     conversationId: string,
     status: ConversationStatus
@@ -770,6 +808,7 @@ function ConversationItem({
   tThread,
   allTags,
   profiles,
+  routingPolicyMap,
   onStatusChange,
   onAssignChange,
   onToggleTag,
@@ -779,6 +818,13 @@ function ConversationItem({
   channelLabel,
 }: ConversationItemProps) {
   const contact = conversation.contact;
+  const eligibleAssigneeIds = eligibleAssigneesFromMap(
+    routingPolicyMap,
+    conversation.whatsapp_channel_id ?? null
+  );
+  const assignableProfiles = eligibleAssigneeIds
+    ? profiles.filter((p) => eligibleAssigneeIds.includes(p.user_id))
+    : profiles;
   const displayName = contact?.name || contact?.phone || t('unknown');
   const initials = displayName.charAt(0).toUpperCase();
   const contactTags = contact?.tags ?? [];
@@ -959,10 +1005,14 @@ function ConversationItem({
 
         <ContextMenuGroup>
           <ContextMenuLabel>{tThread('assign')}</ContextMenuLabel>
-          {profiles.length === 0 ? (
-            <ContextMenuItem disabled>{tThread('noTeammates')}</ContextMenuItem>
+          {assignableProfiles.length === 0 ? (
+            <ContextMenuItem disabled>
+              {eligibleAssigneeIds
+                ? tThread('noResponsibles')
+                : tThread('noTeammates')}
+            </ContextMenuItem>
           ) : (
-            profiles.map((p) => {
+            assignableProfiles.map((p) => {
               const key = `assign:${p.user_id}`;
               const busy = pendingKey === key;
               return (

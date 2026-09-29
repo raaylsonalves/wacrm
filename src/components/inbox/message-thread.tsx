@@ -264,6 +264,40 @@ export function MessageThread({
     };
   }, []);
 
+  // Which of those profiles this conversation's channel actually
+  // allows assigning to (specs/channel-routing-responsibles.md). The
+  // trigger in migration 069 is what actually enforces this — this
+  // fetch only decides what the dropdown offers, so an ineligible
+  // member doesn't appear and then error on click.
+  const [eligibility, setEligibility] = useState<{
+    restricted: boolean;
+    eligibleUserIds: string[];
+  } | null>(null);
+  useEffect(() => {
+    const conversationId = conversation?.id;
+    if (!conversationId) {
+      setEligibility(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/conversations/${conversationId}/eligible-assignees`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload) => {
+        if (!cancelled) setEligibility(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setEligibility(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [conversation?.id]);
+
+  const assignableProfiles =
+    eligibility?.restricted
+      ? profiles.filter((p) => eligibility.eligibleUserIds.includes(p.user_id))
+      : profiles;
+
   // 24-hour session timer
   const sessionInfo = useMemo(() => {
     if (!messages.length) return { expired: false, remaining: "" };
@@ -1103,12 +1137,12 @@ export function MessageThread({
               align="end"
               className="border-border bg-popover"
             >
-              {profiles.length === 0 ? (
+              {assignableProfiles.length === 0 ? (
                 <DropdownMenuItem disabled className="text-sm text-muted-foreground">
-                  {t("noTeammates")}
+                  {eligibility?.restricted ? t("noResponsibles") : t("noTeammates")}
                 </DropdownMenuItem>
               ) : (
-                profiles.map((p) => {
+                assignableProfiles.map((p) => {
                   const isSelected = p.user_id === assignedAgentId;
                   const presence = getPresence(p.user_id);
                   return (

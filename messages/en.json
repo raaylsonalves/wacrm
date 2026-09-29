@@ -224,6 +224,7 @@
       "assigned": "Assigned",
       "unassign": "Unassign",
       "noTeammates": "No teammates available",
+      "noResponsibles": "No one is responsible for this number yet",
       "me": " (me)",
       "noMessagesYet": "No messages yet",
       "sendTemplateHint": "Send a template to start the conversation",
@@ -1516,7 +1517,28 @@
     "whatsappTabs": {
       "cloudApi": "Official API (Meta)",
       "qr": "QR numbers",
+      "responsibles": "Responsibles",
       "conflictWarning": "The same number can't be connected both ways at once: connecting a number by QR (WAHA) that's already on the Official API disconnects it from Meta, and vice versa. Pick one path per number — you can use both paths for different numbers on the same account."
+    },
+    "channelRouting": {
+      "title": "Responsible agents per number",
+      "description": "Restrict which teammates a number's conversations can be assigned to. A number with no configuration stays open to every teammate.",
+      "cloudApiLabel": "Official API",
+      "configureBtn": "Configure",
+      "stateUnrestricted": "Open to every teammate",
+      "stateEmpty": "No one is responsible for this number yet",
+      "stateRestricted": "{count} {count, plural, =1 {responsible} other {responsibles}}",
+      "dialogTitle": "Responsibles for \"{label}\"",
+      "dialogDescription": "Only the teammates checked below can be assigned this number's conversations. Leave everyone unchecked to mark it as having no owner yet, rather than opening it back up.",
+      "noMembers": "No teammates found",
+      "clearBtn": "Remove restriction",
+      "cancelBtn": "Cancel",
+      "saveBtn": "Save",
+      "toastLoadFailed": "Failed to load channels",
+      "toastSaved": "Responsibles saved",
+      "toastSaveFailed": "Failed to save responsibles",
+      "toastCleared": "Restriction removed — every teammate is eligible again",
+      "toastClearFailed": "Failed to remove restriction"
     },
     "waha": {
       "title": "WAHA channels",

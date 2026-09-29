@@ -7,10 +7,10 @@
 > for implementada ou uma nova for aberta.
 >
 > PRD-mãe: [`prd-melhorias-inspiradas-no-deskcomm.md`](prd-melhorias-inspiradas-no-deskcomm.md).
-> Última revisão: 2026-09-28 (rodízio de números no broadcast
-> implementado). Migrations 064-068 (throttle WAHA, audit log,
-> multi-agente, onboarding, rodízio de broadcast) foram aplicadas ao
-> banco real via MCP do Supabase em 2026-09-28 — confirmado por
+> Última revisão: 2026-09-29 (responsáveis por canal implementado).
+> Migrations 064-069 (throttle WAHA, audit log, multi-agente,
+> onboarding, rodízio de broadcast, responsáveis por canal) foram
+> aplicadas ao banco real via MCP do Supabase — confirmado por
 > `list_migrations`. Qualquer migration nova a partir de agora precisa
 > do mesmo passo explícito antes de virar "funcionando em produção".
 
@@ -243,7 +243,6 @@ Todas as specs da rodada anterior (PRD +
 | Spec | O que falta |
 |---|---|
 | [`pwa-web-push-notifications.md`](../specs/pwa-web-push-notifications.md) | Tudo — sem manifest, sem service worker, sem tabela `push_subscriptions`. Motivada por um bug real relatado pelo usuário: notificação dá "navegador não suporta" no celular, porque a feature atual (`use-browser-notifications.ts`) é só `Notification` API síncrona com aba aberta — nunca funcionaria em mobile sem isso. |
-| [`channel-routing-responsibles.md`](../specs/channel-routing-responsibles.md) | Tudo — "responsáveis por número" do deskcomm (`channel_routing_policies`), restringe quais agentes humanos podem ser donos de conversa de cada canal. |
 | [`inbox-power-features.md`](../specs/inbox-power-features.md) | Tudo — 4 features pequenas e independentes portadas do Inbox do deskcomm: snooze, tags de conversa (separadas de tags de contato), notas internas, atalhos de teclado. |
 
 ### Rodízio de números no broadcast — ✅ implementado
@@ -287,6 +286,47 @@ Todas as specs da rodada anterior (PRD +
   separado, não coberto aqui.
 - Spec: [`broadcast-channel-rotation.md`](../specs/broadcast-channel-rotation.md).
 
+### Responsáveis por canal — ✅ implementado
+- Migration 069: `channel_routing_policies` (uma linha por canal;
+  `waha_channel_id` NULL = o número da Cloud API, mesma convenção
+  NULL-é-Cloud-API da 056) + `channel_routing_responsibles`
+  (many-to-many pra `auth.users`). Sem policy = sem restrição
+  (comportamento igual ao de antes desta feature); policy com zero
+  responsibles = "restricted_empty" — um estado explícito de "ainda
+  sem dono", diferente de "aberto pra todo mundo".
+- **A aplicação de fato é um trigger em Postgres**
+  (`enforce_channel_routing_assignment`, `BEFORE UPDATE` em
+  `conversations`), não código de app — os dois pontos de escrita
+  hoje (`conversation-list.tsx`, `message-thread.tsx`) fazem
+  `.update()` direto do navegador via RLS, sem passar por nenhuma rota
+  de API que um resolver em TS pudesse interceptar. O trigger só
+  reage quando `assigned_agent_id` muda pra um valor não-nulo — uma
+  atribuição já existente que fica inelegível depois (a policy foi
+  criada depois, ou o responsável foi removido) não é desfeita
+  retroativamente, como o próprio spec recomenda; desatribuir sempre é
+  permitido.
+- `src/lib/channels/routing.ts`: resolver compartilhado — versão
+  single-conversation (`eligibleAssigneesForConversation`, usada por
+  `GET /api/conversations/[id]/eligible-assignees`, que o
+  `MessageThread` chama pra filtrar seu próprio dropdown) e versão
+  batch (`loadChannelRoutingPolicies` + `policiesToMap` +
+  `eligibleAssigneesFromMap`, usada pela lista do Inbox pra montar um
+  mapa uma vez em vez de uma consulta por conversa).
+- `GET/PUT/DELETE /api/settings/channel-routing`: leitura aberta a
+  qualquer membro (os dropdowns de atribuição precisam ler pra
+  filtrar), escrita `admin+` — mesmo corte que `/api/account/members`
+  já usa.
+- UI: nova aba "Responsáveis" em Settings → WhatsApp (junto de "API
+  Oficial" e "Números por QR"), um card por canal (incluindo o slot da
+  Cloud API) com diálogo de checkbox por membro da conta.
+- Os dois dropdowns de atribuição (menu de contexto da lista, cabeçalho
+  da thread) filtram a lista de perfis pelo resultado do resolver —
+  um membro inelegível simplesmente não aparece como opção, em vez de
+  aparecer e dar erro ao clicar.
+- Testado: `src/lib/channels/routing.test.ts` (4 casos, lógica pura do
+  lookup em Map).
+- Spec: [`channel-routing-responsibles.md`](../specs/channel-routing-responsibles.md).
+
 ## Gap conhecido — multi-número fora do Inbox
 
 Confirmado em 2026-09-28 (e comparado com o deskcomm no mesmo dia): a
@@ -295,9 +335,9 @@ existe de fato no **Inbox** (badge + filtro) e no **Broadcast**
 (rodízio, acabou de ser implementado), e parcialmente no **Agente de
 IA** (só se um Roteador estiver configurado com `channel_id`).
 Dashboard e Automações/Flows são account-wide nos DOIS produtos (não é
-só gap do wacrm). O deskcomm também tem "responsáveis por número"
-(`channel-routing-responsibles.md` — ainda pendente aqui), que o wacrm
-não tinha equivalente nenhum.
+só gap do wacrm). "Responsáveis por número" (`channel-routing-
+responsibles.md`) foi implementado nesta sessão — esse gap específico
+está fechado.
 
 Também confirmado: `specs/billing-subscriptions.md` (exploratória, sem
 código) cobre só "ter um plano pago" genérico — agora tem uma nota
