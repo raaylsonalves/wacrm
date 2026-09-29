@@ -419,7 +419,53 @@
       "tookOver": "Tomaste el control de este chat.",
       "resumed": "IA reanudada.",
       "updateError": "No se pudo actualizar el asistente de IA.",
-      "networkError": "No se pudo conectar con el servidor."
+      "networkError": "No se pudo conectar con el servidor.",
+      "handoff": {
+        "reason": {
+          "modelRequested": "El asistente pasó la conversación al equipo",
+          "emptyReply": "El asistente no pudo formular una respuesta",
+          "replyCap": "El asistente alcanzó su límite de {max} respuestas",
+          "providerFailure": "Los proveedores de IA no estuvieron disponibles",
+          "rateLimited": "Demasiados mensajes a la vez — el asistente se pausó aquí",
+          "systemError": "Error interno al reservar la respuesta del asistente",
+          "customerRequestedHuman": "El cliente pidió hablar con una persona"
+        },
+        "lastMessage": "Último mensaje del cliente",
+        "showMore": "Ver más",
+        "showLess": "Ver menos",
+        "attempts": "Intentos: {list}",
+        "attemptCode": {
+          "rate_limited": "límite de uso",
+          "timeout": "tiempo agotado",
+          "invalid_key": "clave inválida",
+          "network_error": "error de red",
+          "unavailable": "no disponible"
+        },
+        "notified": "Cliente avisado",
+        "notNotified": "El cliente NO fue avisado ({reason})",
+        "skipped": {
+          "send_failed": "falló el envío del mensaje",
+          "opted_out": "pidió no recibir mensajes",
+          "human_assigned": "ya había una persona en la conversación",
+          "no_notice_text": "sin texto de aviso configurado"
+        }
+      }
+    }
+  },
+  "AiHandoffNotice": {
+    "online": {
+      "v1": "Recibí tu mensaje. Estoy avisando a alguien de nuestro equipo para continuar contigo; te responderán por aquí en breve.",
+      "v2": "Voy a pasar tu conversación a una persona del equipo, que está conectada ahora y debería responderte pronto. ¡Gracias por tu paciencia!",
+      "v3": "Esto lo resuelve mejor una persona del equipo. Ya les avisé y alguien te responderá en este mismo chat a continuación."
+    },
+    "offline": {
+      "v1": "Recibí tu mensaje y lo estoy enviando a nuestro equipo. En cuanto sea posible, alguien te responderá por aquí.",
+      "v2": "Tu conversación pasó a un miembro del equipo. Ahora mismo no hay nadie conectado, pero tu mensaje quedó registrado y responderemos lo antes posible.",
+      "v3": "¡Entendido! Esto necesita a una persona del equipo. Dejé todo anotado para ella y recibirás la respuesta en este chat lo antes posible."
+    },
+    "optOut": {
+      "v1": "De acuerdo, no te enviaremos más mensajes. Si cambias de opinión, solo escríbenos.",
+      "v2": "Listo: no recibirás más mensajes nuestros. Gracias por avisarnos."
     }
   },
   "Contacts": {

@@ -419,7 +419,53 @@
       "tookOver": "You’ve taken over this chat.",
       "resumed": "AI resumed.",
       "updateError": "Couldn’t update the AI assistant.",
-      "networkError": "Couldn’t reach the server."
+      "networkError": "Couldn’t reach the server.",
+      "handoff": {
+        "reason": {
+          "modelRequested": "The assistant handed this conversation to the team",
+          "emptyReply": "The assistant could not come up with a reply",
+          "replyCap": "The assistant reached its limit of {max} replies",
+          "providerFailure": "The AI providers were unavailable",
+          "rateLimited": "Too many messages at once — the assistant paused here",
+          "systemError": "Internal error while reserving the assistant’s reply",
+          "customerRequestedHuman": "The customer asked for a person"
+        },
+        "lastMessage": "Customer’s last message",
+        "showMore": "Show more",
+        "showLess": "Show less",
+        "attempts": "Tried: {list}",
+        "attemptCode": {
+          "rate_limited": "rate limited",
+          "timeout": "timed out",
+          "invalid_key": "invalid key",
+          "network_error": "network error",
+          "unavailable": "unavailable"
+        },
+        "notified": "Customer was notified",
+        "notNotified": "Customer was NOT notified ({reason})",
+        "skipped": {
+          "send_failed": "the message failed to send",
+          "opted_out": "they opted out of messages",
+          "human_assigned": "a person already owns the thread",
+          "no_notice_text": "no notice text configured"
+        }
+      }
+    }
+  },
+  "AiHandoffNotice": {
+    "online": {
+      "v1": "Got your message. I’m bringing in someone from our team to continue this with you — they’ll reply here shortly.",
+      "v2": "I’m passing your conversation to a person on our team, who is online right now and should reply soon. Thanks for your patience!",
+      "v3": "This one is better handled by a team member. I’ve just let them know, and someone will answer you in this same chat next."
+    },
+    "offline": {
+      "v1": "Got your message and I’m forwarding it to our team. Someone will reply here as soon as possible.",
+      "v2": "Your conversation has been passed to a team member. Nobody is online at the moment, but your message is saved and we’ll answer as soon as we can.",
+      "v3": "Understood! This needs a person on our team. I’ve left everything noted for them, and you’ll get an answer in this chat as soon as possible."
+    },
+    "optOut": {
+      "v1": "Okay, we won’t send you any more messages. If you change your mind, just write to us.",
+      "v2": "Done: you won’t receive more messages from us. Thanks for letting us know."
     }
   },
   "Contacts": {

@@ -1272,6 +1272,10 @@ export function MessageThread({
         conversationId={conversation.id}
         disabled={conversation.ai_autoreply_disabled ?? false}
         handoffSummary={conversation.ai_handoff_summary}
+        handoffReason={conversation.ai_handoff_reason}
+        handoffMeta={conversation.ai_handoff_meta}
+        customerNotified={conversation.ai_handoff_customer_notified}
+        noticeSkippedReason={conversation.ai_handoff_notice_skipped_reason}
         assignedAgentId={assignedAgentId}
         currentUserId={user?.id}
         onChange={(patch) => {

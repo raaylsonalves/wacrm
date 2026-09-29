@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Sparkles, Hand, Undo2, Loader2 } from "lucide-react";
+import { Sparkles, Hand, Undo2, Loader2, Check, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/hooks/use-auth";
+import type { Conversation } from "@/types";
 
 // ------------------------------------------------------------
 // Account AI status is the same for every conversation, so cache it per
@@ -46,8 +47,15 @@ interface AiThreadBannerProps {
   conversationId: string;
   /** `conversations.ai_autoreply_disabled` — bot paused on this thread. */
   disabled: boolean;
-  /** `conversations.ai_handoff_summary` — note the bot left on handoff. */
+  /** `conversations.ai_handoff_summary` — legacy English note, only on
+   *  rows written before migration 072. */
   handoffSummary?: string | null;
+  /** Why the bot stopped, and the facts behind it (migration 072). */
+  handoffReason?: string | null;
+  handoffMeta?: Conversation["ai_handoff_meta"];
+  /** Whether the customer was told a person is taking over. */
+  customerNotified?: boolean | null;
+  noticeSkippedReason?: string | null;
   /** Current assignee; when a human owns the thread the bot won't run,
    *  so the "AI active" banner is suppressed. */
   assignedAgentId?: string | null;
@@ -74,6 +82,10 @@ export function AiThreadBanner({
   conversationId,
   disabled,
   handoffSummary,
+  handoffReason,
+  handoffMeta,
+  customerNotified,
+  noticeSkippedReason,
   assignedAgentId,
   currentUserId,
   onChange,
@@ -140,13 +152,18 @@ export function AiThreadBanner({
   // Paused here (a human took over, or the model handed off).
   if (paused) {
     return (
-      <Banner tone="muted">
-        <div className="min-w-0 flex-1">
+      <Banner tone="muted" align="start">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <p className="font-medium text-foreground">{t("pausedTitle")}</p>
-          {handoffSummary && (
-            <p className="truncate text-muted-foreground" title={handoffSummary}>
-              {handoffSummary}
-            </p>
+          {handoffReason ? (
+            <HandoffDetails
+              reason={handoffReason}
+              meta={handoffMeta ?? null}
+              customerNotified={customerNotified ?? null}
+              noticeSkippedReason={noticeSkippedReason ?? null}
+            />
+          ) : (
+            handoffSummary && <ClampedText text={handoffSummary} />
           )}
         </div>
         <BannerButton onClick={() => toggle(false)} busy={busy} icon={Undo2}>
@@ -175,17 +192,129 @@ export function AiThreadBanner({
   );
 }
 
+// snake_case reason codes (CHECK in migration 072) → message keys.
+const REASON_KEYS: Record<string, string> = {
+  model_requested: "modelRequested",
+  reply_cap: "replyCap",
+  provider_failure: "providerFailure",
+  empty_reply: "emptyReply",
+  rate_limited: "rateLimited",
+  system_error: "systemError",
+  customer_requested_human: "customerRequestedHuman",
+};
+
+const ATTEMPT_CODES = new Set([
+  "rate_limited",
+  "timeout",
+  "invalid_key",
+  "network_error",
+  "unavailable",
+]);
+
+/** Why the bot stopped, the customer's last message, and whether the
+ *  customer was told — the three things a human opening a handed-off
+ *  thread needs, in the deployment's language. */
+function HandoffDetails({
+  reason,
+  meta,
+  customerNotified,
+  noticeSkippedReason,
+}: {
+  reason: string;
+  meta: Conversation["ai_handoff_meta"] | null;
+  customerNotified: boolean | null;
+  noticeSkippedReason: string | null;
+}) {
+  const t = useTranslations("Inbox.aiBanner.handoff");
+  const reasonKey = REASON_KEYS[reason];
+  const attempts = (meta?.attempts ?? [])
+    .map(
+      (a) =>
+        `${a.provider} (${t(`attemptCode.${ATTEMPT_CODES.has(a.code) ? a.code : "unavailable"}`)})`,
+    )
+    .join(", ");
+  // Unknown skip reasons (a newer server than this client) fall back to
+  // the generic "failed to send" wording rather than a raw key.
+  const skippedKey =
+    noticeSkippedReason &&
+    ["send_failed", "opted_out", "human_assigned", "no_notice_text"].includes(
+      noticeSkippedReason,
+    )
+      ? noticeSkippedReason
+      : "send_failed";
+
+  return (
+    <div className="space-y-1.5 text-muted-foreground">
+      {reasonKey && <p>{t(`reason.${reasonKey}`, { max: meta?.max ?? 0 })}</p>}
+      {attempts && <p>{t("attempts", { list: attempts })}</p>}
+      {meta?.lastCustomerMessage && (
+        <div className="border-l-2 border-border pl-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide">
+            {t("lastMessage")}
+          </p>
+          <ClampedText text={meta.lastCustomerMessage} />
+        </div>
+      )}
+      {customerNotified === true && (
+        <p className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300">
+          <Check className="h-3 w-3" />
+          {t("notified")}
+        </p>
+      )}
+      {customerNotified === false && (
+        <p className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300">
+          <TriangleAlert className="h-3 w-3" />
+          {t("notNotified", { reason: t(`skipped.${skippedKey}`) })}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Wrapped text, three lines then "show more" — the handoff note used to
+ *  be a one-line ellipsis whose full text lived in a hover tooltip, which
+ *  does nothing on a phone. */
+function ClampedText({ text }: { text: string }) {
+  const t = useTranslations("Inbox.aiBanner.handoff");
+  const [open, setOpen] = useState(false);
+  const long = text.length > 140;
+  return (
+    <div>
+      <p
+        className={cn(
+          "whitespace-pre-line break-words text-muted-foreground",
+          !open && "line-clamp-3",
+        )}
+      >
+        {text}
+      </p>
+      {long && (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="mt-0.5 font-medium text-foreground underline-offset-2 hover:underline"
+        >
+          {open ? t("showLess") : t("showMore")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Banner({
   tone,
+  align = "center",
   children,
 }: {
   tone: "primary" | "muted";
+  align?: "center" | "start";
   children: React.ReactNode;
 }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 border-b px-3 py-2 text-xs sm:px-4",
+        "flex gap-3 border-b px-3 py-2 text-xs sm:px-4",
+        align === "start" ? "items-start" : "items-center",
         tone === "primary"
           ? "border-primary/20 bg-primary/5"
           : "border-border bg-muted/40",

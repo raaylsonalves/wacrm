@@ -1,66 +1,64 @@
 import { describe, it, expect } from 'vitest'
-import { buildHandoffSummary } from './handoff'
+import { buildHandoffMeta, lastCustomerMessage } from './handoff'
 
-describe('buildHandoffSummary', () => {
-  it('notes the reply count and quotes the last customer message', () => {
-    const summary = buildHandoffSummary({
-      messages: [
+describe('lastCustomerMessage', () => {
+  it('returns the most recent customer message, whitespace collapsed', () => {
+    expect(
+      lastCustomerMessage([
         { role: 'user', content: 'Hi' },
         { role: 'assistant', content: 'Hello! How can I help?' },
-        { role: 'user', content: 'I want a refund' },
+        { role: 'user', content: 'I want\n a   refund' },
+      ]),
+    ).toBe('I want a refund')
+  })
+
+  it('is null when there is no customer text', () => {
+    expect(lastCustomerMessage([{ role: 'assistant', content: 'Hello' }])).toBeNull()
+    expect(lastCustomerMessage([{ role: 'user', content: '   ' }])).toBeNull()
+  })
+
+  it('bounds a very long message and ellipsizes it', () => {
+    const quote = lastCustomerMessage([{ role: 'user', content: 'x'.repeat(2000) }])!
+    expect(quote.length).toBe(500)
+    expect(quote.endsWith('…')).toBe(true)
+  })
+})
+
+describe('buildHandoffMeta', () => {
+  it('carries the reply count and the customer quote', () => {
+    expect(
+      buildHandoffMeta({
+        messages: [{ role: 'user', content: 'agent please' }],
+        replyCount: 2,
+      }),
+    ).toEqual({ replyCount: 2, lastCustomerMessage: 'agent please' })
+  })
+
+  it('keeps a reply count of zero (the bot bailed on the first inbound)', () => {
+    expect(buildHandoffMeta({ replyCount: 0 })).toEqual({ replyCount: 0 })
+  })
+
+  it('records the cap for a reply-limit handoff', () => {
+    expect(buildHandoffMeta({ max: 5 })).toEqual({ max: 5 })
+  })
+
+  it('reduces provider attempts to provider + code only', () => {
+    expect(
+      buildHandoffMeta({
+        attempts: [
+          { provider: 'gemini', error: { code: 'unavailable' } },
+          { provider: 'anthropic', error: { code: 'timeout' } },
+        ],
+      }),
+    ).toEqual({
+      attempts: [
+        { provider: 'gemini', code: 'unavailable' },
+        { provider: 'anthropic', code: 'timeout' },
       ],
-      replyCount: 2,
     })
-    expect(summary).toBe(
-      '🤖 AI agent handed off after 2 replies. Last customer message: “I want a refund”',
-    )
   })
 
-  it('uses the singular "reply" for a count of one', () => {
-    const summary = buildHandoffSummary({
-      messages: [{ role: 'user', content: 'help' }],
-      replyCount: 1,
-    })
-    expect(summary).toContain('after 1 reply.')
-  })
-
-  it('says "without replying" when the bot bailed on the first inbound', () => {
-    const summary = buildHandoffSummary({
-      messages: [{ role: 'user', content: 'agent please' }],
-      replyCount: 0,
-    })
-    expect(summary).toContain('handed off without replying.')
-    expect(summary).toContain('“agent please”')
-  })
-
-  it('picks the most recent customer turn, ignoring assistant turns', () => {
-    const summary = buildHandoffSummary({
-      messages: [
-        { role: 'user', content: 'first' },
-        { role: 'user', content: 'second' },
-        { role: 'assistant', content: 'a reply' },
-      ],
-      replyCount: 1,
-    })
-    expect(summary).toContain('“second”')
-  })
-
-  it('collapses whitespace and truncates a long message', () => {
-    const long = 'x'.repeat(300)
-    const summary = buildHandoffSummary({
-      messages: [{ role: 'user', content: long }],
-      replyCount: 0,
-    })
-    expect(summary).toContain('…')
-    // 160-char cap on the quote; the whole note stays well under 250.
-    expect(summary.length).toBeLessThan(250)
-  })
-
-  it('degrades gracefully when there is no customer message', () => {
-    const summary = buildHandoffSummary({
-      messages: [{ role: 'assistant', content: 'greeting' }],
-      replyCount: 0,
-    })
-    expect(summary).toBe('🤖 AI agent handed off without replying.')
+  it('omits keys with nothing to say', () => {
+    expect(buildHandoffMeta({ messages: [], attempts: [] })).toEqual({})
   })
 })

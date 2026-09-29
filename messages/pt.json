@@ -419,7 +419,53 @@
       "tookOver": "Você assumiu esta conversa.",
       "resumed": "IA retomada.",
       "updateError": "Não foi possível atualizar o assistente de IA.",
-      "networkError": "Não foi possível conectar ao servidor."
+      "networkError": "Não foi possível conectar ao servidor.",
+      "handoff": {
+        "reason": {
+          "modelRequested": "O assistente encaminhou a conversa para a equipe",
+          "emptyReply": "O assistente não conseguiu formular uma resposta",
+          "replyCap": "O assistente atingiu o limite de {max} respostas",
+          "providerFailure": "Os provedores de IA ficaram indisponíveis",
+          "rateLimited": "Muitas mensagens ao mesmo tempo — o assistente pausou aqui",
+          "systemError": "Falha interna ao reservar a resposta do assistente",
+          "customerRequestedHuman": "O cliente pediu um atendente"
+        },
+        "lastMessage": "Última mensagem do cliente",
+        "showMore": "Ver mais",
+        "showLess": "Ver menos",
+        "attempts": "Tentativas: {list}",
+        "attemptCode": {
+          "rate_limited": "limite de uso",
+          "timeout": "tempo esgotado",
+          "invalid_key": "chave inválida",
+          "network_error": "erro de rede",
+          "unavailable": "indisponível"
+        },
+        "notified": "Cliente avisado",
+        "notNotified": "Cliente NÃO foi avisado ({reason})",
+        "skipped": {
+          "send_failed": "o envio da mensagem falhou",
+          "opted_out": "pediu para não receber mensagens",
+          "human_assigned": "já havia um atendente na conversa",
+          "no_notice_text": "sem texto de aviso configurado"
+        }
+      }
+    }
+  },
+  "AiHandoffNotice": {
+    "online": {
+      "v1": "Recebi sua mensagem. Já estou chamando alguém da nossa equipe para continuar esse atendimento com você — em instantes te respondem por aqui.",
+      "v2": "Vou passar sua conversa para uma pessoa da equipe, que está online agora e deve te responder em breve. Obrigado pela paciência!",
+      "v3": "Isso é melhor resolvido por um atendente. Acabei de avisar o time e alguém te responde em seguida neste mesmo chat."
+    },
+    "offline": {
+      "v1": "Recebi sua mensagem e vou encaminhá-la para nossa equipe. Assim que possível, alguém te responde por aqui.",
+      "v2": "Sua conversa foi passada para um atendente. No momento o time não está online, mas sua mensagem já está registrada e responderemos assim que possível.",
+      "v3": "Entendi! Esse assunto precisa de uma pessoa da equipe. Deixei tudo anotado para ela e você receberá a resposta neste chat assim que possível."
+    },
+    "optOut": {
+      "v1": "Tudo bem, não vamos mais te enviar mensagens. Se mudar de ideia, é só nos escrever.",
+      "v2": "Pedido registrado: você não receberá mais mensagens nossas. Obrigado por avisar."
     }
   },
   "Contacts": {

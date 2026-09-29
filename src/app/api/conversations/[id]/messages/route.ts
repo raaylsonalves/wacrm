@@ -127,6 +127,10 @@ export async function DELETE(
         ai_reply_count: 0,
         ai_autoreply_disabled: false,
         ai_handoff_summary: null,
+        ai_handoff_reason: null,
+        ai_handoff_meta: null,
+        ai_handoff_customer_notified: null,
+        ai_handoff_notice_skipped_reason: null,
       })
       .eq('id', id);
     if (resetErr) {

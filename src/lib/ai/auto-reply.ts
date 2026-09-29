@@ -9,10 +9,16 @@ import {
 } from './generate-with-fallback'
 import { buildSystemPrompt } from './defaults'
 import {
-  buildHandoffSummary,
-  buildProviderFailureSummary,
-  buildCapReachedSummary,
+  buildHandoffMeta,
+  type HandoffMeta,
+  type HandoffReason,
 } from './handoff'
+import {
+  handoffNoticeText,
+  isTeamOnline,
+  loadHandoffNoticeDict,
+} from './handoff-notice'
+import { isOptOutMessage } from '@/lib/contacts/opt-out'
 import type { AiConfig } from './types'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
@@ -32,32 +38,147 @@ const SEGMENT_DELAY_MS = 1200
 
 /**
  * Stop the bot on this thread and route it to a human — the single
- * mechanism behind all three ways auto-reply gives up: the model
- * itself asking to hand off, every configured provider failing, or the
- * per-conversation reply cap being reached. (a) pauses the bot here
+ * mechanism behind every way auto-reply gives up: the model itself
+ * asking to hand off, every configured provider failing, the
+ * per-conversation reply cap or the account-wide rate limit being hit,
+ * or an internal error reserving the reply. (a) pauses the bot here
  * (sticky until re-enabled from the inbox), (b) routes to the
  * configured handoff agent — null leaves it in the shared queue —
- * without stomping an existing human assignment, and (c) leaves a
- * short internal note. Assigning fires the `on_conversation_assigned`
- * trigger, which notifies the agent — this is the only "someone should
- * look at this" signal in every one of these paths, so skipping it
- * (as the reply-cap path used to) silently strands the conversation.
+ * without stomping an existing human assignment, (c) records the
+ * *reason* (rendered localized by the inbox banner — never a finished
+ * English sentence), and (d) tells the customer a person is taking
+ * over, so they aren't left in silence
+ * (specs/handoff-customer-notice.md). Assigning fires the
+ * `on_conversation_assigned` trigger, which notifies the agent — this
+ * is the only "someone should look at this" signal in every one of
+ * these paths, so skipping it (as the reply-cap path used to) silently
+ * strands the conversation.
  */
 async function handOffToHuman(
   db: ReturnType<typeof supabaseAdmin>,
   conversationId: string,
   config: Pick<AiConfig, 'handoffAgentId'>,
   currentAssignedAgentId: string | null,
-  summary: string,
+  reason: HandoffReason,
+  meta: HandoffMeta,
+  notice: NoticeContext,
 ): Promise<void> {
   const update: Record<string, unknown> = {
     ai_autoreply_disabled: true,
-    ai_handoff_summary: summary,
+    ai_handoff_reason: reason,
+    ai_handoff_meta: meta,
+    // New writes leave the legacy free-text note empty; the banner falls
+    // back to it only for rows written before migration 072.
+    ai_handoff_summary: null,
   }
   if (config.handoffAgentId && !currentAssignedAgentId) {
     update.assigned_agent_id = config.handoffAgentId
   }
   await db.from('conversations').update(update).eq('id', conversationId)
+
+  // Order matters: the handoff state is written FIRST and the notice is
+  // best-effort after it. A failed send must never leave the
+  // conversation half-handed-off — fail closed on the action, open on
+  // the information (recorded on the row for the banner).
+  await notifyCustomerOfHandoff(db, conversationId, currentAssignedAgentId, meta, notice)
+}
+
+interface NoticeContext {
+  accountId: string
+  contactId: string
+  /** WhatsApp config owner — the outbound send's audit user. */
+  userId: string
+}
+
+/**
+ * Tell the customer the conversation moved to a person. Never throws.
+ *
+ * Skipped when a human already owns the thread (they are talking to the
+ * customer), when the customer opted out and this message isn't the
+ * opt-out itself, and when another concurrent handoff already claimed
+ * the notice. Sent at most once per handoff: the claim flips
+ * `ai_handoff_customer_notified` from NULL, and "Resume AI" resets it
+ * so a later handoff can notify again.
+ */
+async function notifyCustomerOfHandoff(
+  db: ReturnType<typeof supabaseAdmin>,
+  conversationId: string,
+  currentAssignedAgentId: string | null,
+  meta: HandoffMeta,
+  ctx: NoticeContext,
+): Promise<void> {
+  try {
+    if (currentAssignedAgentId) return
+
+    const { data: claimed } = await db
+      .from('conversations')
+      .update({ ai_handoff_customer_notified: false })
+      .eq('id', conversationId)
+      .is('ai_handoff_customer_notified', null)
+      .select('id')
+    if (!claimed || claimed.length === 0) return
+
+    const skip = async (why: string) => {
+      await db
+        .from('conversations')
+        .update({ ai_handoff_notice_skipped_reason: why })
+        .eq('id', conversationId)
+    }
+
+    const { data: contact } = await db
+      .from('contacts')
+      .select('opted_out_at')
+      .eq('id', ctx.contactId)
+      .eq('account_id', ctx.accountId)
+      .maybeSingle()
+
+    // The customer's own opt-out gets a confirmation; a contact who opted
+    // out earlier gets nothing at all.
+    const optOut = isOptOutMessage(meta.lastCustomerMessage ?? '')
+    if (!optOut && contact?.opted_out_at) {
+      await skip('opted_out')
+      return
+    }
+
+    const [dict, teamOnline] = await Promise.all([
+      loadHandoffNoticeDict(),
+      isTeamOnline(db, ctx.accountId),
+    ])
+    const text = handoffNoticeText({
+      optOut,
+      teamOnline,
+      leadKey: conversationId,
+      dict,
+    })
+    if (!text) {
+      await skip('no_notice_text')
+      return
+    }
+
+    try {
+      await engineSendText({
+        accountId: ctx.accountId,
+        userId: ctx.userId,
+        conversationId,
+        contactId: ctx.contactId,
+        text,
+        aiGenerated: true,
+      })
+    } catch (err) {
+      console.warn(`[ai auto-reply ${conversationId}] handoff notice failed:`, err)
+      await skip('send_failed')
+      return
+    }
+    await db
+      .from('conversations')
+      .update({
+        ai_handoff_customer_notified: true,
+        ai_handoff_notice_skipped_reason: null,
+      })
+      .eq('id', conversationId)
+  } catch (err) {
+    console.warn(`[ai auto-reply ${conversationId}] handoff notice errored:`, err)
+  }
 }
 
 interface DispatchArgs {
@@ -111,6 +232,11 @@ export async function dispatchInboundToAiReply(
   // "typing shown, no reply, no visible error" gave no way to tell a
   // silent early-out apart from a hang without querying the DB by hand.
   const tag = `[ai auto-reply ${conversationId}]`
+  const noticeCtx: NoticeContext = {
+    accountId,
+    contactId,
+    userId: configOwnerUserId,
+  }
 
   try {
     const db = supabaseAdmin()
@@ -207,8 +333,18 @@ export async function dispatchInboundToAiReply(
     // a customer message nobody is ever notified about.
     if (conv.ai_reply_count >= config.autoReplyMaxPerConversation) {
       console.info(`${tag} hands off: reached the per-conversation reply cap (${config.autoReplyMaxPerConversation})`)
-      const summary = buildCapReachedSummary({ max: config.autoReplyMaxPerConversation })
-      await handOffToHuman(db, conversationId, config, conv.assigned_agent_id, summary)
+      await handOffToHuman(
+        db,
+        conversationId,
+        config,
+        conv.assigned_agent_id,
+        'reply_cap',
+        buildHandoffMeta({
+          replyCount: conv.ai_reply_count ?? 0,
+          max: config.autoReplyMaxPerConversation,
+        }),
+        noticeCtx,
+      )
       return
     }
 
@@ -221,15 +357,26 @@ export async function dispatchInboundToAiReply(
     // Account-wide throttle on the shared BYO key. The per-conversation
     // cap bounds one thread; this bounds a burst across many threads (a
     // marketing blast landing 200 replies at once) so we never run the
-    // owner's key past the provider's rate limit. Over the limit → skip
-    // the auto-reply; the inbound still sits in the inbox for a human.
+    // owner's key past the provider's rate limit. Over the limit → hand
+    // this thread to a human instead of dropping it: it used to `return`
+    // here with no reply, no note and no notice, so a burst simply lost
+    // customers.
     const acctLimit = checkRateLimit(
       `ai-autoreply:${accountId}`,
       RATE_LIMITS.aiAutoReplyAccount,
     )
     if (!acctLimit.success) {
       console.warn(
-        `${tag} skipped: account ${accountId} hit the per-account rate limit`,
+        `${tag} hands off: account ${accountId} hit the per-account rate limit`,
+      )
+      await handOffToHuman(
+        db,
+        conversationId,
+        config,
+        conv.assigned_agent_id,
+        'rate_limited',
+        buildHandoffMeta({ messages, replyCount: conv.ai_reply_count ?? 0 }),
+        noticeCtx,
       )
       return
     }
@@ -328,8 +475,19 @@ export async function dispatchInboundToAiReply(
         // handoff mechanics as the content-handoff path below, just with
         // a note explaining it was a provider outage, not the model
         // choosing to bail.
-        const summary = buildProviderFailureSummary({ attempts: err.attempts })
-        await handOffToHuman(db, conversationId, config, conv.assigned_agent_id, summary)
+        await handOffToHuman(
+          db,
+          conversationId,
+          config,
+          conv.assigned_agent_id,
+          'provider_failure',
+          buildHandoffMeta({
+            messages,
+            replyCount: conv.ai_reply_count ?? 0,
+            attempts: err.attempts,
+          }),
+          noticeCtx,
+        )
         return
       }
       console.error(
@@ -364,11 +522,15 @@ export async function dispatchInboundToAiReply(
       console.info(`${tag} hands off: ${handoff ? 'model requested handoff' : 'empty reply text'}`)
       // The model can't (or shouldn't) answer — stop auto-replying on
       // this thread and hand it to a human.
-      const summary = buildHandoffSummary({
-        messages,
-        replyCount: conv.ai_reply_count ?? 0,
-      })
-      await handOffToHuman(db, conversationId, config, conv.assigned_agent_id, summary)
+      await handOffToHuman(
+        db,
+        conversationId,
+        config,
+        conv.assigned_agent_id,
+        handoff ? 'model_requested' : 'empty_reply',
+        buildHandoffMeta({ messages, replyCount: conv.ai_reply_count ?? 0 }),
+        noticeCtx,
+      )
       return
     }
 
@@ -390,6 +552,17 @@ export async function dispatchInboundToAiReply(
       // service role, or the migration not applied. Log it loudly: a
       // silent return makes "auto-reply never fires" undiagnosable.
       console.error('[ai auto-reply] claim_ai_reply_slot failed:', claimErr)
+      // Loud log AND a handoff: a deploy problem must not present to the
+      // customer as "the bot ignores people".
+      await handOffToHuman(
+        db,
+        conversationId,
+        config,
+        conv.assigned_agent_id,
+        'system_error',
+        buildHandoffMeta({ messages, replyCount: conv.ai_reply_count ?? 0 }),
+        noticeCtx,
+      )
       return
     }
     if (claimed !== true) {
@@ -398,8 +571,19 @@ export async function dispatchInboundToAiReply(
       // atomic claim. Rare, but the outcome is identical to hitting
       // the cap outright — hand off rather than silently dropping the
       // reply we already generated (and already spent tokens on).
-      const summary = buildCapReachedSummary({ max: config.autoReplyMaxPerConversation })
-      await handOffToHuman(db, conversationId, config, conv.assigned_agent_id, summary)
+      await handOffToHuman(
+        db,
+        conversationId,
+        config,
+        conv.assigned_agent_id,
+        'reply_cap',
+        buildHandoffMeta({
+          messages,
+          replyCount: conv.ai_reply_count ?? 0,
+          max: config.autoReplyMaxPerConversation,
+        }),
+        noticeCtx,
+      )
       return
     }
 

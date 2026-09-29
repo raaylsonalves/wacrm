@@ -1,98 +1,71 @@
 import type { ChatMessage } from './types'
 
-/** Longest the quoted customer message runs before we ellipsize it —
- *  keeps the internal note to a glanceable one-liner. */
-const MAX_QUOTE_LEN = 160
-
 /**
- * Build the short internal note the auto-reply bot leaves on a
- * conversation when it hands off to a human. Deterministic — composed
- * from context we already have (no extra LLM call / token spend), so it
- * can't fail or add latency to the handoff.
- *
- * Reads as, e.g.:
- *   "🤖 AI agent handed off after 2 replies. Last customer message:
- *    “can I speak to a manager about my refund?”"
- *
- * `replyCount` is the bot's auto-reply tally for the thread (0 when it
- * bailed on the very first inbound without answering).
+ * Why the auto-reply bot stopped on a conversation. Stored in
+ * `conversations.ai_handoff_reason` (CHECK in migration 072) and
+ * rendered localized by the inbox banner — the server never writes a
+ * finished sentence, because the app is build-time single-locale and a
+ * hard-coded English note could not be translated.
  */
-export function buildHandoffSummary(args: {
-  messages: ChatMessage[]
-  replyCount: number
-}): string {
-  const { messages, replyCount } = args
+export type HandoffReason =
+  | 'model_requested'
+  | 'reply_cap'
+  | 'provider_failure'
+  | 'empty_reply'
+  | 'rate_limited'
+  | 'system_error'
+  | 'customer_requested_human'
 
-  const lastCustomer = [...messages]
+/** Structured, non-translated facts stored in `ai_handoff_meta`. */
+export interface HandoffMeta {
+  /** The bot's auto-reply tally for the thread when it stopped. */
+  replyCount?: number
+  /** The per-conversation cap in force (reply_cap only). */
+  max?: number
+  /** What the customer last wrote — the one thing the human needs. */
+  lastCustomerMessage?: string
+  /** Providers tried and the `AiError.code` each failed with. */
+  attempts?: { provider: string; code: string }[]
+}
+
+/** Longest the stored customer quote runs. The banner clamps it to a few
+ *  lines and offers "show more", so this only bounds row size. */
+const MAX_QUOTE_LEN = 500
+
+/** Most recent non-empty customer message in the model context, with
+ *  whitespace collapsed. Null when there is none (the bot bailed on an
+ *  attachment-only thread). */
+export function lastCustomerMessage(messages: ChatMessage[]): string | null {
+  const last = [...messages]
     .reverse()
     .find((m) => m.role === 'user' && m.content.trim())
-
-  const replies =
-    replyCount === 0
-      ? 'without replying'
-      : `after ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
-
-  const base = `🤖 AI agent handed off ${replies}.`
-
-  if (!lastCustomer) return base
-
-  const quote = truncate(lastCustomer.content.trim(), MAX_QUOTE_LEN)
-  return `${base} Last customer message: “${quote}”`
+  if (!last) return null
+  const collapsed = last.content.replace(/\s+/g, ' ').trim()
+  if (collapsed.length <= MAX_QUOTE_LEN) return collapsed
+  return `${collapsed.slice(0, MAX_QUOTE_LEN - 1).trimEnd()}…`
 }
 
-function truncate(text: string, max: number): string {
-  const collapsed = text.replace(/\s+/g, ' ')
-  if (collapsed.length <= max) return collapsed
-  return `${collapsed.slice(0, max - 1).trimEnd()}…`
-}
-
-/** Human-readable label for an `AiError.code`, used in the failure note
- *  below — short enough to read at a glance in the inbox. */
-function describeFailureCode(code: string): string {
-  switch (code) {
-    case 'rate_limited':
-      return 'rate limited'
-    case 'timeout':
-      return 'timed out'
-    case 'invalid_key':
-      return 'invalid key'
-    case 'network_error':
-      return 'network error'
-    default:
-      return 'unavailable'
+/**
+ * Assemble the meta stored with a handoff. Deterministic — composed from
+ * context we already have (no LLM call), so it can't fail or add latency
+ * to the handoff. Keys with no value are omitted rather than stored null.
+ */
+export function buildHandoffMeta(args: {
+  messages?: ChatMessage[]
+  replyCount?: number
+  max?: number
+  attempts?: { provider: string; error: { code: string } }[]
+}): HandoffMeta {
+  const meta: HandoffMeta = {}
+  if (args.replyCount !== undefined) meta.replyCount = args.replyCount
+  if (args.max !== undefined) meta.max = args.max
+  const quote = args.messages ? lastCustomerMessage(args.messages) : null
+  if (quote) meta.lastCustomerMessage = quote
+  if (args.attempts && args.attempts.length > 0) {
+    meta.attempts = args.attempts.map((a) => ({
+      provider: a.provider,
+      code: a.error.code,
+    }))
   }
-}
-
-/**
- * Build the internal note left when every configured AI provider/model
- * tier failed (see `generateReplyWithFallback` in
- * `generate-with-fallback.ts`) and auto-reply hands the conversation to
- * a human as a result — a distinct cause from `buildHandoffSummary`'s
- * "the model chose to hand off", so it gets its own note explaining
- * which providers were tried and why each one failed.
- *
- * Reads as, e.g.:
- *   "🤖 AI unavailable after trying 2 providers: gemini (unavailable),
- *    anthropic (timed out) — transferred automatically."
- */
-export function buildProviderFailureSummary(args: {
-  attempts: { provider: string; model: string; error: { code: string } }[]
-}): string {
-  const { attempts } = args
-  const tried = attempts
-    .map((a) => `${a.provider} (${describeFailureCode(a.error.code)})`)
-    .join(', ')
-  const count = attempts.length
-  return `🤖 AI unavailable after trying ${count} ${count === 1 ? 'provider' : 'providers'}: ${tried} — transferred automatically.`
-}
-
-/**
- * Build the internal note left when the per-conversation auto-reply
- * cap (`auto_reply_max_per_conversation`) is reached and auto-reply
- * hands the conversation to a human as a result — the third distinct
- * cause alongside `buildHandoffSummary` (model-initiated) and
- * `buildProviderFailureSummary` (every provider failed).
- */
-export function buildCapReachedSummary(args: { max: number }): string {
-  return `🤖 AI reply limit reached (${args.max} replies in this conversation) — transferred automatically.`
+  return meta
 }

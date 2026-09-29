@@ -529,6 +529,23 @@ BEGIN
     RAISE EXCEPTION 'push_subscriptions.endpoint is not UNIQUE — migration 071 did not apply';
   END IF;
 
+  -- 072 — AI handoff reason. The CHECK is what keeps a typo'd reason
+  -- from being stored; the columns are what the banner reads.
+  IF (SELECT count(*) FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'conversations'
+        AND column_name IN ('ai_handoff_reason', 'ai_handoff_meta',
+                            'ai_handoff_customer_notified',
+                            'ai_handoff_notice_skipped_reason')) <> 4 THEN
+    RAISE EXCEPTION 'conversations.ai_handoff_* columns are missing — migration 072 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.conversations'::regclass
+      AND conname = 'conversations_ai_handoff_reason_check'
+  ) THEN
+    RAISE EXCEPTION 'conversations_ai_handoff_reason_check is missing — migration 072 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

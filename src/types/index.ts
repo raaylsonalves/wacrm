@@ -217,12 +217,26 @@ export interface Conversation {
    *    over, or the model handed off). Sticky until re-enabled.
    *  - `ai_reply_count` — how many times the bot has auto-replied,
    *    checked against the account's per-conversation cap.
-   *  - `ai_handoff_summary` — short internal note the bot wrote when it
-   *    handed off, shown to whoever takes the thread over.
+   *  - `ai_handoff_summary` — legacy free-text note (English, written
+   *    before migration 072); new handoffs leave it null.
+   *  - `ai_handoff_reason` / `ai_handoff_meta` — why the bot stopped and
+   *    the structured facts, rendered localized by the banner.
+   *  - `ai_handoff_customer_notified` — whether the customer was told a
+   *    person is taking over (null = no handoff / not attempted yet);
+   *    `ai_handoff_notice_skipped_reason` says why not when false.
    */
   ai_autoreply_disabled?: boolean;
   ai_reply_count?: number;
   ai_handoff_summary?: string | null;
+  ai_handoff_reason?: string | null;
+  ai_handoff_meta?: {
+    replyCount?: number;
+    max?: number;
+    lastCustomerMessage?: string;
+    attempts?: { provider: string; code: string }[];
+  } | null;
+  ai_handoff_customer_notified?: boolean | null;
+  ai_handoff_notice_skipped_reason?: string | null;
   /**
    * WAHA channel this conversation is pinned to (migration 056). `null`
    * (the default, and the only value that existed before this column)

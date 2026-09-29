@@ -16,7 +16,14 @@ const h = vi.hoisted(() => ({
     conv: null as Record<string, unknown> | null,
     autoResponders: [] as { id: string }[],
     claim: true as boolean,
+    /** The first conversations UPDATE — the handoff write itself. */
     updatePayload: null as Record<string, unknown> | null,
+    /** Every conversations UPDATE, in order (handoff, notice claim, outcome). */
+    updates: [] as Record<string, unknown>[],
+    /** Does the "notice not yet sent" claim win? */
+    noticeClaim: true as boolean,
+    claimError: null as { message: string } | null,
+    rateLimited: false as boolean,
     rpcCalls: [] as { name: string; args: unknown }[],
     contact: null as { name: string | null } | null,
   },
@@ -41,6 +48,18 @@ vi.mock('@/lib/flows/meta-send', () => ({
   engineSendText: h.engineSendText,
   loadAccountMetaCredentials: h.loadAccountMetaCredentials,
 }))
+vi.mock('@/lib/rate-limit', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/rate-limit')>(
+    '@/lib/rate-limit',
+  )
+  return {
+    ...actual,
+    checkRateLimit: (...a: Parameters<typeof actual.checkRateLimit>) =>
+      h.state.rateLimited
+        ? { success: false, remaining: 0, resetAt: Date.now() + 1000 }
+        : actual.checkRateLimit(...a),
+  }
+})
 vi.mock('@/lib/whatsapp/meta-api', () => ({
   sendTypingIndicator: h.sendTypingIndicator,
 }))
@@ -77,14 +96,33 @@ vi.mock('./admin-client', () => ({
           }),
         }),
         update: (payload: Record<string, unknown>) => {
-          h.state.updatePayload = payload
-          return { eq: () => Promise.resolve({ error: null }) }
+          h.state.updates.push(payload)
+          if (h.state.updatePayload === null) h.state.updatePayload = payload
+          // Awaitable after .eq() (plain writes) and chainable through
+          // .is().select() (the "claim the notice" write).
+          const chain: Record<string, unknown> = {
+            eq: () => chain,
+            is: () => ({
+              select: () =>
+                Promise.resolve({
+                  data: h.state.noticeClaim ? [{ id: 'conv-1' }] : [],
+                  error: null,
+                }),
+            }),
+            then: (resolve: (v: unknown) => unknown) =>
+              Promise.resolve({ error: null }).then(resolve),
+          }
+          return chain
         },
       }
     },
     rpc: (name: string, args: unknown) => {
       h.state.rpcCalls.push({ name, args })
-      return Promise.resolve({ data: h.state.claim, error: null })
+      return Promise.resolve(
+        h.state.claimError
+          ? { data: null, error: h.state.claimError }
+          : { data: h.state.claim, error: null },
+      )
     },
   }),
 }))
@@ -125,6 +163,10 @@ beforeEach(() => {
   h.state.autoResponders = []
   h.state.claim = true
   h.state.updatePayload = null
+  h.state.updates = []
+  h.state.noticeClaim = true
+  h.state.claimError = null
+  h.state.rateLimited = false
   h.state.rpcCalls = []
   h.state.contact = null
   h.loadAiConfig.mockResolvedValue(aiConfig())
@@ -202,9 +244,13 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     // conversation is handed off rather than silently dropped — the
     // reply was already generated (and paid for) at this point.
     expect(h.state.rpcCalls).toHaveLength(1)
-    expect(h.engineSendText).not.toHaveBeenCalled()
-    expect(h.state.updatePayload).toMatchObject({ ai_autoreply_disabled: true })
-    expect(h.state.updatePayload?.ai_handoff_summary).toContain('limit reached')
+    // The AI's own reply is never sent — only the handoff notice is.
+    expect(h.engineSendText).toHaveBeenCalledTimes(1)
+    expect(h.engineSendText.mock.calls[0][0].text).not.toBe('Hello!')
+    expect(h.state.updatePayload).toMatchObject({
+      ai_autoreply_disabled: true,
+      ai_handoff_reason: 'reply_cap',
+    })
   })
 
   it('skips when AI is off / not configured', async () => {
@@ -249,12 +295,17 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     }
     await dispatchInboundToAiReply(ARGS)
     expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
-    expect(h.engineSendText).not.toHaveBeenCalled()
     // Reaching the cap must not go silent — the settings copy promises
     // a handoff here, and previously this path just returned with no
-    // notification, silently stranding the conversation.
-    expect(h.state.updatePayload).toMatchObject({ ai_autoreply_disabled: true })
-    expect(h.state.updatePayload?.ai_handoff_summary).toContain('limit reached')
+    // notification, silently stranding the conversation. The customer
+    // now hears about it too (one notice, no AI reply).
+    expect(h.engineSendText).toHaveBeenCalledTimes(1)
+    expect(h.state.updatePayload).toMatchObject({
+      ai_autoreply_disabled: true,
+      ai_handoff_reason: 'reply_cap',
+      ai_handoff_meta: { replyCount: 3, max: 3 },
+      ai_handoff_summary: null,
+    })
   })
 
   it('routes the reply-cap handoff to the configured agent', async () => {
@@ -345,15 +396,16 @@ describe('dispatchInboundToAiReply — typing indicator (#527)', () => {
 })
 
 describe('dispatchInboundToAiReply — handoff', () => {
-  it('disables auto-reply, writes a summary, and does not send on handoff', async () => {
+  it('disables auto-reply and records the reason instead of an English sentence', async () => {
     h.generateReplyWithFallback.mockResolvedValue({ text: '', handoff: true })
     await dispatchInboundToAiReply(ARGS)
-    expect(h.engineSendText).not.toHaveBeenCalled()
     expect(h.state.rpcCalls).toHaveLength(0)
-    expect(h.state.updatePayload).toMatchObject({ ai_autoreply_disabled: true })
-    expect(h.state.updatePayload?.ai_handoff_summary).toContain(
-      'AI agent handed off',
-    )
+    expect(h.state.updatePayload).toMatchObject({
+      ai_autoreply_disabled: true,
+      ai_handoff_reason: 'model_requested',
+      ai_handoff_meta: { replyCount: 0, lastCustomerMessage: 'hi' },
+      ai_handoff_summary: null,
+    })
     // No handoff target configured → conversation left unassigned.
     expect(h.state.updatePayload).not.toHaveProperty('assigned_agent_id')
   })
@@ -369,6 +421,117 @@ describe('dispatchInboundToAiReply — handoff', () => {
   })
 })
 
+describe('dispatchInboundToAiReply — customer notice on handoff (specs/handoff-customer-notice.md)', () => {
+  const handOff = () =>
+    h.generateReplyWithFallback.mockResolvedValue({ text: '', handoff: true })
+
+  it('sends the customer exactly one AI-flagged notice, after the handoff is written', async () => {
+    handOff()
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).toHaveBeenCalledTimes(1)
+    expect(h.engineSendText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: 'acct-1',
+        conversationId: 'conv-1',
+        contactId: 'contact-1',
+        aiGenerated: true,
+      }),
+    )
+    expect(h.engineSendText.mock.calls[0][0].text).toEqual(expect.any(String))
+    // handoff first, then claim the notice, then record the outcome
+    expect(h.state.updates[0]).toMatchObject({ ai_autoreply_disabled: true })
+    expect(h.state.updates[1]).toEqual({ ai_handoff_customer_notified: false })
+    expect(h.state.updates[2]).toEqual({
+      ai_handoff_customer_notified: true,
+      ai_handoff_notice_skipped_reason: null,
+    })
+  })
+
+  it('does not send a second notice when another handoff already claimed it', async () => {
+    handOff()
+    h.state.noticeClaim = false
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.state.updatePayload).toMatchObject({ ai_autoreply_disabled: true })
+    expect(h.engineSendText).not.toHaveBeenCalled()
+  })
+
+  it('keeps the conversation handed off and records why when the send fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    handOff()
+    h.engineSendText.mockRejectedValue(new Error('Meta API error: 131047'))
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.state.updatePayload).toMatchObject({
+      ai_autoreply_disabled: true,
+      ai_handoff_reason: 'model_requested',
+    })
+    expect(h.state.updates.at(-1)).toEqual({
+      ai_handoff_notice_skipped_reason: 'send_failed',
+    })
+    warn.mockRestore()
+  })
+
+  it('stays quiet toward a contact who opted out earlier', async () => {
+    handOff()
+    h.state.contact = { name: null, opted_out_at: '2026-09-01T00:00:00Z' } as never
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).not.toHaveBeenCalled()
+    expect(h.state.updates.at(-1)).toEqual({
+      ai_handoff_notice_skipped_reason: 'opted_out',
+    })
+  })
+
+  it('confirms the opt-out to a customer whose message was the opt-out', async () => {
+    handOff()
+    h.buildConversationContext.mockResolvedValue([
+      { role: 'user', content: 'parar' },
+    ])
+    h.state.contact = { name: null, opted_out_at: '2026-09-29T00:00:00Z' } as never
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).toHaveBeenCalledTimes(1)
+    // The opt-out copy never says a person is coming.
+    expect(h.engineSendText.mock.calls[0][0].text).not.toMatch(/team|equipe|equipo/i)
+  })
+
+  it('hands off — instead of silently dropping — when the account rate limit trips', async () => {
+    h.state.rateLimited = true
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+    expect(h.state.updatePayload).toMatchObject({
+      ai_autoreply_disabled: true,
+      ai_handoff_reason: 'rate_limited',
+    })
+    expect(h.engineSendText).toHaveBeenCalledTimes(1)
+  })
+
+  it('hands off when reserving the reply slot errors, keeping the loud log', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    h.state.claimError = { message: 'permission denied for function' }
+    await dispatchInboundToAiReply(ARGS)
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[ai auto-reply] claim_ai_reply_slot failed:',
+      expect.anything(),
+    )
+    expect(h.state.updatePayload).toMatchObject({
+      ai_autoreply_disabled: true,
+      ai_handoff_reason: 'system_error',
+    })
+    // The generated reply is not sent; only the notice is.
+    expect(h.engineSendText).toHaveBeenCalledTimes(1)
+    expect(h.engineSendText.mock.calls[0][0].text).not.toBe('Hello!')
+    errorSpy.mockRestore()
+  })
+
+  it('does not notify a customer whose thread a human already owns', async () => {
+    // The dispatch gate stands down for assigned threads, so this only
+    // matters for the helper's own guard — assert via the public path:
+    // no handoff, no notice.
+    h.state.conv = { assigned_agent_id: 'agent-9', ai_autoreply_disabled: false, ai_reply_count: 0 }
+    handOff()
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).not.toHaveBeenCalled()
+  })
+})
+
 describe('dispatchInboundToAiReply — provider fallback exhaustion (#specs/ai-provider-fallback-chain)', () => {
   it('hands off to a human when every configured provider tier fails', async () => {
     const attempts = [
@@ -376,10 +539,15 @@ describe('dispatchInboundToAiReply — provider fallback exhaustion (#specs/ai-p
     ]
     h.generateReplyWithFallback.mockRejectedValue(new AllProvidersFailedError(attempts))
     await dispatchInboundToAiReply(ARGS)
-    expect(h.engineSendText).not.toHaveBeenCalled()
-    expect(h.state.updatePayload).toMatchObject({ ai_autoreply_disabled: true })
-    expect(h.state.updatePayload?.ai_handoff_summary).toContain('AI unavailable')
-    expect(h.state.updatePayload?.ai_handoff_summary).toContain('openai')
+    expect(h.state.updatePayload).toMatchObject({
+      ai_autoreply_disabled: true,
+      ai_handoff_reason: 'provider_failure',
+      ai_handoff_meta: {
+        attempts: [{ provider: 'openai', code: 'provider_error' }],
+      },
+    })
+    // The customer is told even though no provider could answer.
+    expect(h.engineSendText).toHaveBeenCalledTimes(1)
     // No handoff target configured → conversation left unassigned.
     expect(h.state.updatePayload).not.toHaveProperty('assigned_agent_id')
   })
