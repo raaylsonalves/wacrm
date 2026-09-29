@@ -453,6 +453,12 @@
       }
     }
   },
+  "AiAckNotice": {
+    "thanks": {
+      "v1": "De nada! Se precisar de mais alguma coisa, é só chamar.",
+      "v2": "Por nada! Qualquer coisa, estou por aqui."
+    }
+  },
   "AiAudioNotice": {
     "retry": {
       "v1": "Não consegui ouvir seu áudio direito. Pode me escrever o que precisa, por favor?",

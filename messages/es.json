@@ -453,6 +453,12 @@
       }
     }
   },
+  "AiAckNotice": {
+    "thanks": {
+      "v1": "¡De nada! Si necesitas algo más, escríbeme.",
+      "v2": "¡Con gusto! Aquí estoy para lo que necesites."
+    }
+  },
   "AiAudioNotice": {
     "retry": {
       "v1": "No pude escuchar bien tu audio. ¿Puedes escribirme lo que necesitas, por favor?",

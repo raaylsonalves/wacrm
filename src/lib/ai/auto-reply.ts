@@ -1,11 +1,13 @@
 import { supabaseAdmin } from './admin-client'
 import { loadAiConfig } from './config'
 import { loadActiveRouterForChannel, resolveAgentViaRouter } from './router'
-import { buildConversationContext } from './context'
+import { buildConversationContext, AUDIO_MARK } from './context'
 import { loadChannelAgentId } from './channel-agent'
 import { matchHandoffKeyword } from './handoff-keywords'
 import { splitLongText } from './split-long'
 import { observeBeforeSend } from './guardrails/observe'
+import { classifyAcknowledgment, shouldSkipAcknowledgment } from './ack'
+import { loadNoticeText } from './notice-text'
 import {
   loadAudioRetryText,
   transcribeInboundAudio,
@@ -477,6 +479,53 @@ export async function dispatchInboundToAiReply(
         noticeCtx,
       )
       return
+    }
+
+    // A bare "ok" / "👍" / "obrigado" has nothing left to be answered, and
+    // every reply is paid tokens. Checked before any model call; a thank
+    // you gets a canned line (no tokens), the rest gets nothing. Never
+    // applies to an "ok" that answers a question or a prompt — see
+    // `shouldSkipAcknowledgment`.
+    {
+      const heard = (lastCustomerMessage(messages) ?? '').replace(AUDIO_MARK, '').trim()
+      if (classifyAcknowledgment(heard)) {
+        const { data: lastBusiness } = await db
+          .from('messages')
+          .select('content_type, content_text')
+          .eq('conversation_id', conversationId)
+          .neq('sender_type', 'customer')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        const kind = shouldSkipAcknowledgment({
+          text: heard,
+          aiReplyCount: conv.ai_reply_count ?? 0,
+          lastBusinessMessage: lastBusiness
+            ? { contentType: lastBusiness.content_type, text: lastBusiness.content_text }
+            : null,
+        })
+        if (kind) {
+          console.info(`${tag} skipped: the customer only acknowledged (${kind}) — no AI call`)
+          if (kind === 'thanks') {
+            const reply = await loadNoticeText('AiAckNotice', 'thanks', conversationId)
+            if (reply) {
+              try {
+                await engineSendText({
+                  accountId,
+                  userId: configOwnerUserId,
+                  conversationId,
+                  contactId,
+                  text: reply,
+                  aiGenerated: true,
+                })
+              } catch (sendErr) {
+                console.error(`${tag} could not send the thanks reply:`, sendErr)
+              }
+            }
+          }
+          return
+        }
+      }
     }
 
     // Account-wide throttle on the shared BYO key. The per-conversation

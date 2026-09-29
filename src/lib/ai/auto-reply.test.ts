@@ -13,10 +13,13 @@ const h = vi.hoisted(() => ({
   loadAccountMetaCredentials: vi.fn(),
   sendTypingIndicator: vi.fn(),
   transcribeInboundAudio: vi.fn(),
+  loadNoticeText: vi.fn(),
   loadAudioRetryText: vi.fn(),
   state: {
     /** The customer's two latest messages' transcript_status, newest first. */
     recentCustomer: [] as { transcript_status: string | null }[],
+    /** The business's latest message (for the acknowledgment skip). */
+    lastBusiness: null as { content_type: string; content_text: string } | null,
     conv: null as Record<string, unknown> | null,
     autoResponders: [] as { id: string }[],
     claim: true as boolean,
@@ -40,7 +43,11 @@ vi.mock('./audio-inbound', () => ({
   transcribeInboundAudio: h.transcribeInboundAudio,
   loadAudioRetryText: h.loadAudioRetryText,
 }))
-vi.mock('./context', () => ({ buildConversationContext: h.buildConversationContext }))
+vi.mock('./context', () => ({
+  buildConversationContext: h.buildConversationContext,
+  AUDIO_MARK: '[áudio transcrito]',
+}))
+vi.mock('./notice-text', () => ({ loadNoticeText: h.loadNoticeText }))
 vi.mock('./knowledge', () => ({ retrieveKnowledge: h.retrieveKnowledge }))
 // `AllProvidersFailedError` is imported by auto-reply.ts alongside the
 // mocked function — re-export the real class so `instanceof` checks in
@@ -109,8 +116,10 @@ vi.mock('./admin-client', () => ({
         const chain = {
           select: () => chain,
           eq: () => chain,
+          neq: () => chain,
           order: () => chain,
-          limit: () => Promise.resolve({ data: h.state.recentCustomer, error: null }),
+          limit: () => Object.assign(Promise.resolve({ data: h.state.recentCustomer, error: null }), chain),
+          maybeSingle: () => Promise.resolve({ data: h.state.lastBusiness, error: null }),
         }
         return chain
       }
@@ -208,6 +217,8 @@ beforeEach(() => {
   h.state.rpcCalls = []
   h.state.contact = null
   h.state.recentCustomer = []
+  h.state.lastBusiness = null
+  h.loadNoticeText.mockReset()
   h.transcribeInboundAudio.mockReset()
   h.loadAudioRetryText.mockReset()
   h.loadAiConfig.mockResolvedValue(aiConfig())
@@ -670,6 +681,46 @@ describe('dispatchInboundToAiReply — deterministic handoff keywords', () => {
     h.buildConversationContext.mockResolvedValue([
       { role: 'user', content: 'os atendentes-modelo daí são ótimos' },
     ])
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('dispatchInboundToAiReply — acknowledgments', () => {
+  const asks = (text: string, aiReplyCount = 2) => {
+    h.state.conv = { assigned_agent_id: null, ai_autoreply_disabled: false, ai_reply_count: aiReplyCount }
+    h.buildConversationContext.mockResolvedValue([{ role: 'user', content: text }])
+  }
+
+  it('an "ok" after a statement costs no AI call and sends nothing', async () => {
+    asks('ok')
+    h.state.lastBusiness = { content_type: 'text', content_text: 'Pedido registrado.' }
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+    expect(h.engineSendText).not.toHaveBeenCalled()
+    expect(h.state.updatePayload).toBeNull()
+  })
+
+  it('a thank you gets the canned line, still no AI call', async () => {
+    asks('obrigado!')
+    h.state.lastBusiness = { content_type: 'text', content_text: 'Pedido registrado.' }
+    h.loadNoticeText.mockResolvedValue('De nada!')
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+    expect(h.engineSendText).toHaveBeenCalledTimes(1)
+    expect(h.engineSendText.mock.calls[0][0].text).toBe('De nada!')
+  })
+
+  it('an "ok" that answers a question IS answered', async () => {
+    asks('ok')
+    h.state.lastBusiness = { content_type: 'text', content_text: 'Confirma às 15h?' }
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).toHaveBeenCalledTimes(1)
+  })
+
+  it('the first message of a conversation is answered even if it is "ok"', async () => {
+    asks('ok', 0)
+    h.state.lastBusiness = { content_type: 'text', content_text: 'Olá' }
     await dispatchInboundToAiReply(ARGS)
     expect(h.generateReplyWithFallback).toHaveBeenCalledTimes(1)
   })

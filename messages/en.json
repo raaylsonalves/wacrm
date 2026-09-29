@@ -453,6 +453,12 @@
       }
     }
   },
+  "AiAckNotice": {
+    "thanks": {
+      "v1": "You're welcome! If you need anything else, just message me.",
+      "v2": "Anytime! I'm here if you need anything."
+    }
+  },
   "AiAudioNotice": {
     "retry": {
       "v1": "I couldn't quite make out your voice message. Could you type what you need, please?",
