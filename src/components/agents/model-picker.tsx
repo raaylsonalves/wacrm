@@ -11,7 +11,7 @@ import type { ModelOption } from '@/lib/ai/models';
 
 type State =
   | { status: 'loading' }
-  | { status: 'ok'; models: ModelOption[] }
+  | { status: 'ok'; models: ModelOption[]; suggested: boolean }
   | { status: 'error'; code: string };
 
 function formatWindow(n: number): string {
@@ -35,6 +35,7 @@ export function ModelPicker({
   provider,
   apiKey,
   agentId,
+  tier = 'primary',
   value,
   onChange,
   disabled,
@@ -43,6 +44,8 @@ export function ModelPicker({
   /** Candidate key being typed; blank uses the agent's stored key. */
   apiKey: string;
   agentId?: string;
+  /** 'fallback' = the alternative provider, whose key is stored apart. */
+  tier?: 'primary' | 'fallback';
   value: string;
   onChange: (id: string) => void;
   disabled?: boolean;
@@ -66,11 +69,13 @@ export function ModelPicker({
           provider,
           api_key: apiKey || undefined,
           agent_id: agentId,
+          tier,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (mine !== seq.current) return; // a newer request superseded this one
-      if (data?.ok) setState({ status: 'ok', models: data.models ?? [] });
+      if (data?.ok)
+        setState({ status: 'ok', models: data.models ?? [], suggested: data.suggested === true });
       else setState({ status: 'error', code: data?.code ?? 'unreachable' });
     } catch {
       if (mine === seq.current) setState({ status: 'error', code: 'unreachable' });
@@ -78,7 +83,7 @@ export function ModelPicker({
     // The key is deliberately NOT a dependency of `load`: it changes on
     // every keystroke. It gets its own debounced refresh below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provider, agentId]);
+  }, [provider, agentId, tier]);
 
   useEffect(() => {
     void load();
@@ -190,9 +195,11 @@ export function ModelPicker({
         )}
         {state.status === 'ok' && (
           <span>
-            {models.length > 0
-              ? t('available', { count: models.length })
-              : t('empty')}
+            {state.suggested
+              ? t('suggested')
+              : models.length > 0
+                ? t('available', { count: models.length })
+                : t('empty')}
             {value && models.length > 0 && !known && ` · ${t('customId')}`}
           </span>
         )}

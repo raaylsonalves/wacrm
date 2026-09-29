@@ -564,12 +564,13 @@ export function AiConfig({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="ai-fallback-model">{t('fallbackModel')}</Label>
-                    <Input
-                      id="ai-fallback-model"
+                    <Label>{t('fallbackModel')}</Label>
+                    <ModelPicker
+                      provider={fallbackProvider}
+                      tier="fallback"
+                      apiKey={fallbackKeyEdited ? fallbackApiKey.trim() : ''}
                       value={fallbackModel}
-                      onChange={(e) => setFallbackModel(e.target.value)}
-                      placeholder={AI_PROVIDER_DEFAULT_MODEL[fallbackProvider]}
+                      onChange={setFallbackModel}
                       disabled={disabled}
                     />
                   </div>

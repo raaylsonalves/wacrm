@@ -2555,6 +2555,7 @@
         "available": "사용 가능한 모델 {count}개",
         "empty": "제공자가 모델을 반환하지 않았습니다.",
         "customId": "직접 입력한 ID",
+        "suggested": "추천 모델입니다 — 이 제공업체의 키를 붙여넣으면 전체 목록이 표시됩니다.",
         "typeTheId": "위에 모델 ID를 직접 입력할 수 있습니다.",
         "refresh": "새로고침",
         "window": "컨텍스트 {size}",

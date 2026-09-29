@@ -192,3 +192,27 @@ describe('fetchModelList', () => {
     ).rejects.toMatchObject({ code: 'unreachable', message: 'Could not reach the provider' })
   })
 })
+
+describe('SUGGESTED_MODELS', () => {
+  it('covers every provider with ids only — never a price, window or tool flag', async () => {
+    const { SUGGESTED_MODELS } = await import('./models')
+    for (const provider of ['openai', 'anthropic', 'gemini', 'openrouter'] as const) {
+      const list = SUGGESTED_MODELS[provider]
+      expect(list.length).toBeGreaterThan(0)
+      expect(new Set(list.map((m) => m.id)).size).toBe(list.length)
+      for (const m of list) {
+        expect(Object.keys(m).sort()).toEqual(['id', 'label'])
+      }
+    }
+  })
+
+  it('includes each provider default so a fresh agent shows its own model', async () => {
+    const { SUGGESTED_MODELS } = await import('./models')
+    const { AI_PROVIDER_DEFAULT_MODEL } = await import('./defaults')
+    for (const provider of ['openai', 'anthropic', 'gemini', 'openrouter'] as const) {
+      expect(SUGGESTED_MODELS[provider].map((m) => m.id)).toContain(
+        AI_PROVIDER_DEFAULT_MODEL[provider],
+      )
+    }
+  })
+})

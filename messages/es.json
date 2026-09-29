@@ -2543,6 +2543,7 @@
         "available": "{count, plural, =1 {1 modelo disponible} other {# modelos disponibles}}",
         "empty": "El proveedor no devolvió ningún modelo.",
         "customId": "id personalizado",
+        "suggested": "Modelos sugeridos — pega la clave de este proveedor para ver la lista completa.",
         "typeTheId": "Aún puedes escribir el id del modelo arriba.",
         "refresh": "Actualizar",
         "window": "{size} de contexto",

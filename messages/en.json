@@ -2555,6 +2555,7 @@
         "available": "{count, plural, =1 {1 model available} other {# models available}}",
         "empty": "The provider returned no models.",
         "customId": "custom id",
+        "suggested": "Suggested models — paste this provider's key to see the full list.",
         "typeTheId": "You can still type the model id above.",
         "refresh": "Refresh",
         "window": "{size} context",

@@ -34,6 +34,31 @@ export interface ModelOption {
   supportsTools?: boolean
 }
 
+/**
+ * Ids shown while there is no key to ask the provider with. OpenAI,
+ * Anthropic and Gemini only list models for a key, so without one the
+ * picker offers these as SUGGESTIONS (ids only — no price, window or tool
+ * flag, per the rule above) and says so; the real list replaces them the
+ * moment a key is present. Not exhaustive and it can age, which is why it
+ * is never used as the truth: the input stays free text.
+ */
+export const SUGGESTED_MODELS: Record<AiProvider, ModelOption[]> = {
+  openai: ['gpt-5.4-mini', 'gpt-4o-mini', 'gpt-4o'].map(toOption),
+  anthropic: [
+    'claude-haiku-4-5-20251001',
+    'claude-sonnet-5-5',
+    'claude-opus-5-5',
+    'claude-fable-5-1',
+  ].map(toOption),
+  gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3.1-flash-lite'].map(toOption),
+  // OpenRouter lists without a key; this is only a last resort.
+  openrouter: ['openrouter/free'].map(toOption),
+}
+
+function toOption(id: string): ModelOption {
+  return { id, label: id }
+}
+
 export type ModelListErrorCode = 'invalid_key' | 'rate_limited' | 'unreachable'
 
 export class ModelListError extends Error {

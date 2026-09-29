@@ -6,6 +6,7 @@ import { decrypt } from '@/lib/whatsapp/encryption'
 import type { AiProvider } from '@/lib/ai/types'
 import {
   ModelListError,
+  SUGGESTED_MODELS,
   fetchModelList,
   type ModelOption,
 } from '@/lib/ai/models'
@@ -64,12 +65,34 @@ export async function POST(request: Request) {
     let apiKey = typeof body.api_key === 'string' ? body.api_key.trim() : ''
     if (!apiKey) {
       const agentId = typeof body.agent_id === 'string' ? body.agent_id.trim() : ''
-      let query = supabase.from('ai_configs').select('api_key').eq('account_id', accountId)
-      query = agentId ? query.eq('id', agentId) : query.eq('is_default', true)
-      const { data: stored } = await query.maybeSingle()
-      if (stored?.api_key) {
+      // 'fallback' = the alternative provider's own key, not the primary's.
+      const tier = body.tier === 'fallback' ? 'fallback' : 'primary'
+      // A stored key only helps if it belongs to the provider being asked
+      // about. After a provider switch the stored key is the OLD provider's;
+      // sending it made every switch open with "provider refused this key".
+      const readConfig = (cols: string) => {
+        const q = supabase.from('ai_configs').select(cols).eq('account_id', accountId)
+        return (agentId ? q.eq('id', agentId) : q.eq('is_default', true)).maybeSingle()
+      }
+      const first = await readConfig('provider, api_key, fallbacks')
+      // `fallbacks` (migration 052) may not exist yet.
+      const stored = first.error
+        ? (await readConfig('provider, api_key')).data
+        : first.data
+      const row = stored as {
+        provider?: string
+        api_key?: string
+        fallbacks?: { provider: string; api_key: string }[] | null
+      } | null
+      const storedCipher =
+        tier === 'fallback'
+          ? row?.fallbacks?.find((f) => f.provider === provider)?.api_key
+          : row?.provider === provider
+            ? row?.api_key
+            : undefined
+      if (storedCipher) {
         try {
-          apiKey = decrypt(stored.api_key)
+          apiKey = decrypt(storedCipher)
         } catch {
           // OpenRouter's catalogue needs no key, so an unreadable stored
           // key must not hide the list; every other provider does need it.
@@ -88,10 +111,12 @@ export async function POST(request: Request) {
     // OpenRouter's catalogue is public, so it lists without a key; the
     // others need one.
     if (!apiKey && provider !== 'openrouter') {
+      // No key to ask with: offer suggestions, flagged so the picker can
+      // say the full list needs the key. Not cached (nothing was fetched).
       return NextResponse.json({
-        ok: false,
-        code: 'invalid_key',
-        error: 'Enter an API key to list its models.',
+        ok: true,
+        suggested: true,
+        models: SUGGESTED_MODELS[provider],
       })
     }
 
