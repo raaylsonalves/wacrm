@@ -2602,6 +2602,7 @@
       "autoReplyEnabledField": "자동 응답 활성화",
       "cancelBtn": "취소",
       "createBtn": "생성",
+      "createHint": "지금은 이름만 입력하세요. 에이전트 페이지가 열리면 키, 모델, 프롬프트를 채울 수 있으며, 그때까지는 꺼져 있습니다.",
       "saveBtn": "저장",
       "deleteConfirm": "에이전트 \"{name}\"을 삭제할까요? 이를 가리키는 라우터는 기본 에이전트로 대체됩니다.",
       "routersTitle": "의도 라우터",

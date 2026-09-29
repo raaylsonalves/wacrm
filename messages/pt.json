@@ -2590,6 +2590,7 @@
       "autoReplyEnabledField": "Resposta automática habilitada",
       "cancelBtn": "Cancelar",
       "createBtn": "Criar",
+      "createHint": "Só o nome por enquanto. O agente abre na própria página para você preencher a chave, o modelo e o prompt — até lá ele fica desligado.",
       "saveBtn": "Salvar",
       "deleteConfirm": "Excluir o agente \"{name}\"? Qualquer roteador que apontar para ele cai no agente padrão.",
       "routersTitle": "Roteador de intenção",

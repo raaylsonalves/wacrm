@@ -122,10 +122,9 @@ export async function PUT(
     const agent = await loadAgent(supabase, accountId, id);
     if (!agent)
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
-    // The default agent already answers every number that has no binding;
-    // binding it explicitly would only hide that.
-    if (agent.is_default)
-      return bad('The default agent answers every number that has no other agent');
+    // The default agent may be bound too: it still answers every number
+    // nobody claims, and binding it to a number makes that explicit (and
+    // lets the number keep it when another agent is added later).
 
     const body = await request.json().catch(() => null);
     const raw: unknown = body?.channel_ids;

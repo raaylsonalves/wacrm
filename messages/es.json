@@ -2590,6 +2590,7 @@
       "autoReplyEnabledField": "Respuesta automática habilitada",
       "cancelBtn": "Cancelar",
       "createBtn": "Crear",
+      "createHint": "Solo el nombre por ahora. El agente se abre en su propia página para añadir la clave, el modelo y el prompt; hasta entonces queda apagado.",
       "saveBtn": "Guardar",
       "deleteConfirm": "¿Eliminar el agente \"{name}\"? Cualquier router que lo referencie caerá al agente predeterminado.",
       "routersTitle": "Router de intención",

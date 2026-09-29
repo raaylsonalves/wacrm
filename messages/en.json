@@ -2602,6 +2602,7 @@
       "autoReplyEnabledField": "Auto-reply enabled",
       "cancelBtn": "Cancel",
       "createBtn": "Create",
+      "createHint": "Only the name for now. The agent opens on its own page so you can add the key, model and prompt — until then it stays off.",
       "saveBtn": "Save",
       "deleteConfirm": "Delete agent \"{name}\"? Any router pointing to it falls back to the default agent.",
       "routersTitle": "Intent router",

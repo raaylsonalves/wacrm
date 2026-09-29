@@ -153,6 +153,8 @@ export async function PATCH(
 
       const rawKey =
         typeof body.api_key === 'string' ? body.api_key.trim() : '';
+      // An agent created with just a name has no stored key yet.
+      if (!rawKey && !existing.api_key) return bad('api_key is required');
       if (rawKey) {
         apiKeyPlain = rawKey;
       } else {

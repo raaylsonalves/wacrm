@@ -314,3 +314,26 @@ Deviations / not built yet:
   `by_agent`, the UI does not use it yet.
 - Handoff keywords have no per-language defaults beyond the "use suggestions"
   starter list (pt/en/es).
+
+### Update: one editor, no "Configuração" tab (user request, 2026-09-29)
+
+The Settings-style form for the default agent is gone from the Agents page.
+**Every agent — the default included — now has its own page** (`/agents/[id]`),
+reached from the list:
+
+- **Create with just a name.** `POST /api/ai/agents` needs only `name`; the
+  agent is born *incomplete* (no key, switched off — `loadAiConfig` treats an
+  empty key as not configured, so it cannot answer anyone) and its page opens
+  to fill in key, model and prompt. The account's FIRST agent created this way
+  becomes the default (the fallback for numbers nobody claims).
+- **The default agent** keeps its full form there (fallback provider, agenda
+  tools, embeddings key, knowledge base — account-wide items that live on its
+  row) plus the "numbers" card, and can be **renamed and bound to a number**
+  like any other. The onboarding step still uses the same `AiConfig` form.
+- The user's own account was migrated through the UI: the default agent is now
+  "Nordia Tech" and is bound to the official Meta API number.
+- The model box in that form is now the provider-fed picker too.
+
+Still open: the knowledge base is still rendered inside the default agent's
+page (it is account-wide, and a standalone tab is the cleaner home); the
+playground still tests the default agent.

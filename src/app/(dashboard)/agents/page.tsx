@@ -2,16 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Bot, Sparkles, Settings2, BarChart3, Users } from 'lucide-react';
+import { Bot, Sparkles, BarChart3, Users } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AiPlayground } from '@/components/agents/ai-playground';
 import { AiUsageCard } from '@/components/agents/ai-usage';
 import { AiMultiAgent } from '@/components/agents/ai-multi-agent';
-import { AiConfig } from '@/components/settings/ai-config';
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
 
-type Tab = 'playground' | 'setup' | 'multiAgent' | 'usage';
+type Tab = 'playground' | 'multiAgent' | 'usage';
 
 export default function AgentsPage() {
   const t = useTranslations('Agents');
@@ -27,9 +26,10 @@ export default function AgentsPage() {
       try {
         const res = await fetch('/api/ai/config');
         const data = await res.json().catch(() => ({}));
-        if (!cancelled) setTab(data?.configured ? 'playground' : 'setup');
+        // No agent yet → land on the agents list to create the first one.
+        if (!cancelled) setTab(data?.configured ? 'playground' : 'multiAgent');
       } catch {
-        if (!cancelled) setTab('setup');
+        if (!cancelled) setTab('multiAgent');
       } finally {
         if (!cancelled) setDecided(true);
       }
@@ -59,9 +59,6 @@ export default function AgentsPage() {
             <TabsTrigger value="playground">
               <Sparkles className="mr-1.5 h-4 w-4" /> {t('tabPlayground')}
             </TabsTrigger>
-            <TabsTrigger value="setup">
-              <Settings2 className="mr-1.5 h-4 w-4" /> {t('tabSetup')}
-            </TabsTrigger>
             {canViewUsage && (
               <TabsTrigger value="multiAgent">
                 <Users className="mr-1.5 h-4 w-4" /> {t('tabMultiAgent')}
@@ -75,11 +72,7 @@ export default function AgentsPage() {
           </TabsList>
 
           <TabsContent value="playground" className="mt-4">
-            <AiPlayground onGoToSetup={() => setTab('setup')} />
-          </TabsContent>
-
-          <TabsContent value="setup" className="mt-4">
-            <AiConfig />
+            <AiPlayground onGoToSetup={() => setTab('multiAgent')} />
           </TabsContent>
 
           {canViewUsage && (

@@ -30,6 +30,7 @@ import { AI_PROVIDER_DEFAULT_MODEL } from '@/lib/ai/defaults';
 import type { AiProvider } from '@/lib/ai/types';
 import type { AccountMember } from '@/types';
 import { fetchAccountMembers, memberLabel } from '@/lib/account/members';
+import { ModelPicker } from '@/components/agents/model-picker';
 import {
   HandoffKeywordsField,
   keywordsToList,
@@ -56,11 +57,21 @@ const KEY_PLACEHOLDER: Record<AiProvider, string> = {
   openrouter: 'sk-or-...',
 };
 
-export function AiConfig() {
+export function AiConfig({
+  hideHeader = false,
+  showName = false,
+}: {
+  /** The agent page brings its own header. */
+  hideHeader?: boolean;
+  /** Show the agent's name (the agent page); onboarding doesn't. */
+  showName?: boolean;
+} = {}) {
   const { accountId, accountRole, profileLoading } = useAuth();
   const canEdit = accountRole ? canEditSettings(accountRole) : false;
   const t = useTranslations('Settings.aiConfig');
   const tKeywords = useTranslations('Agents.detail.keywords');
+  const tDetail = useTranslations('Agents.detail');
+  const [name, setName] = useState('');
   const [handoffKeywordsText, setHandoffKeywordsText] = useState('');
 
   const [loading, setLoading] = useState(true);
@@ -122,6 +133,7 @@ export function AiConfig() {
       }
       if (data.configured) {
         setConfigured(true);
+        setName(data.name ?? '');
         setProvider(data.provider);
         setModel(data.model);
         setSystemPrompt(data.system_prompt ?? '');
@@ -184,6 +196,7 @@ export function AiConfig() {
     embeddingsKeyEdited ? embeddingsKey.trim() || null : undefined;
 
   const buildBody = () => ({
+    name: showName ? name.trim() || undefined : undefined,
     provider,
     model: model.trim(),
     api_key: keyPayload(),
@@ -336,10 +349,12 @@ export function AiConfig() {
 
   return (
     <div>
-      <SettingsPanelHead
-        title={t('title')}
-        description={t('description')}
-      />
+      {!hideHeader && (
+        <SettingsPanelHead
+          title={t('title')}
+          description={t('description')}
+        />
+      )}
 
       {!canEdit && (
         <p className="mb-4 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
@@ -358,6 +373,17 @@ export function AiConfig() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {showName && (
+              <div className="space-y-2">
+                <Label htmlFor="ai-name">{tDetail('name')}</Label>
+                <Input
+                  id="ai-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={disabled}
+                />
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>{t('provider')}</Label>
@@ -384,13 +410,17 @@ export function AiConfig() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="ai-model">{t('model')}</Label>
-                <Input
-                  id="ai-model"
+                {/* Fed by the provider (specs/ai-agents-management.md §1);
+                    the id stays free text, so a failed list never blocks
+                    a save. A key typed here is used to list; blank uses
+                    the stored one. */}
+                <ModelPicker
+                  provider={provider}
+                  apiKey={keyEdited ? apiKey.trim() : ''}
                   value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder={AI_PROVIDER_DEFAULT_MODEL[provider]}
+                  onChange={setModel}
                   disabled={disabled}
                 />
               </div>

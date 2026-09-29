@@ -1,9 +1,65 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { AgentDetail } from '@/components/agents/agent-detail';
+import { AgentChannels } from '@/components/agents/agent-channels';
+import { AiConfig } from '@/components/settings/ai-config';
+import { useAuth } from '@/hooks/use-auth';
+import { canEditSettings } from '@/lib/auth/roles';
 
-export default function AgentDetailPage() {
+/**
+ * One page per agent. The account's default agent (the fallback for every
+ * number nobody claims) has extra account-wide settings — fallback
+ * provider, agenda tools, embeddings key, knowledge base — that the lean
+ * agents don't, so it keeps its full form; every agent shares the
+ * "numbers" card.
+ */
+export default function AgentPage() {
   const params = useParams<{ id: string }>();
-  return <AgentDetail agentId={params.id} />;
+  const t = useTranslations('Agents.detail');
+  const { accountRole } = useAuth();
+  const canEdit = accountRole ? canEditSettings(accountRole) : false;
+  const [kind, setKind] = useState<'loading' | 'default' | 'extra'>('loading');
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/ai/agents', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!alive) return;
+        const a = (d?.agents ?? []).find((x: { id: string }) => x.id === params.id);
+        setKind(a?.isDefault ? 'default' : 'extra');
+      })
+      .catch(() => alive && setKind('extra'));
+    return () => {
+      alive = false;
+    };
+  }, [params.id]);
+
+  if (kind === 'loading') {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="text-muted-foreground size-6 animate-spin" />
+      </div>
+    );
+  }
+  if (kind === 'extra') return <AgentDetail agentId={params.id} />;
+
+  return (
+    <div className="space-y-6">
+      <Link
+        href="/agents"
+        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
+      >
+        <ArrowLeft className="size-3.5" />
+        {t('back')}
+      </Link>
+      <AgentChannels agentId={params.id} canEdit={canEdit} />
+      <AiConfig hideHeader showName />
+    </div>
+  );
 }

@@ -4,12 +4,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Loader2, Plus, Trash2, Star, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import {
   Card,
   CardContent,
@@ -17,13 +16,6 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -63,6 +55,7 @@ export function AiAgentsList({
   onAgentsChanged?: () => void;
 }) {
   const t = useTranslations('Agents.multi');
+  const router = useRouter();
 
   const [agents, setAgents] = useState<AiAgentSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,13 +64,6 @@ export function AiAgentsList({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [name, setName] = useState('');
-  const [provider, setProvider] =
-    useState<AiAgentSummary['provider']>('openai');
-  const [model, setModel] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [systemPrompt, setSystemPrompt] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [autoReplyEnabled, setAutoReplyEnabled] = useState(true);
 
   const load = useCallback(async () => {
     try {
@@ -98,16 +84,14 @@ export function AiAgentsList({
 
   function resetForm() {
     setName('');
-    setProvider('openai');
-    setModel('');
-    setApiKey('');
-    setSystemPrompt('');
-    setIsActive(true);
-    setAutoReplyEnabled(true);
   }
 
+  // Only the name is asked up front. The agent is created incomplete and
+  // its own page opens to fill in the key, model and prompt — so naming
+  // several agents (one per number / client) doesn't start with a wall of
+  // required fields.
   async function handleCreate() {
-    if (!name.trim() || !model.trim() || !apiKey.trim()) {
+    if (!name.trim()) {
       toast.error(t('toastFieldsRequired'));
       return;
     }
@@ -116,15 +100,7 @@ export function AiAgentsList({
       const res = await fetch('/api/ai/agents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          provider,
-          model: model.trim(),
-          api_key: apiKey.trim(),
-          system_prompt: systemPrompt.trim() || undefined,
-          is_active: isActive,
-          auto_reply_enabled: autoReplyEnabled,
-        }),
+        body: JSON.stringify({ name: name.trim() }),
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error || 'failed');
@@ -133,6 +109,7 @@ export function AiAgentsList({
       resetForm();
       toast.success(t('toastCreated'));
       onAgentsChanged?.();
+      router.push(`/agents/${payload.agent.id}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('toastCreateFailed'));
     } finally {
@@ -196,9 +173,18 @@ export function AiAgentsList({
                 </p>
               </div>
               {agent.isDefault ? (
-                <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium">
-                  {t('defaultBadge')}
-                </span>
+                <div className="flex shrink-0 items-center gap-1">
+                  <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
+                    {t('defaultBadge')}
+                  </span>
+                  <Link
+                    href={`/agents/${agent.id}`}
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium"
+                  >
+                    <Pencil className="size-3.5" />
+                    {t('editBtn')}
+                  </Link>
+                </div>
               ) : (
                 <div className="flex shrink-0 items-center gap-1">
                   {!agent.isActive && (
@@ -247,74 +233,7 @@ export function AiAgentsList({
                 placeholder={t('namePlaceholder')}
               />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>{t('providerField')}</Label>
-                <Select
-                  value={provider}
-                  onValueChange={(v) =>
-                    setProvider(v as AiAgentSummary['provider'])
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="openai">
-                      {PROVIDER_LABEL.openai}
-                    </SelectItem>
-                    <SelectItem value="anthropic">
-                      {PROVIDER_LABEL.anthropic}
-                    </SelectItem>
-                    <SelectItem value="gemini">
-                      {PROVIDER_LABEL.gemini}
-                    </SelectItem>
-                    <SelectItem value="openrouter">
-                      {PROVIDER_LABEL.openrouter}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t('modelField')}</Label>
-                <Input
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t('apiKeyField')}</Label>
-              <Input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t('systemPromptField')}</Label>
-              <Textarea
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-                rows={3}
-                placeholder={t('systemPromptPlaceholder')}
-              />
-            </div>
-            <div className="border-border flex items-center justify-between gap-4 rounded-md border p-3">
-              <p className="text-foreground text-sm font-medium">
-                {t('isActiveField')}
-              </p>
-              <Switch checked={isActive} onCheckedChange={setIsActive} />
-            </div>
-            <div className="border-border flex items-center justify-between gap-4 rounded-md border p-3">
-              <p className="text-foreground text-sm font-medium">
-                {t('autoReplyEnabledField')}
-              </p>
-              <Switch
-                checked={autoReplyEnabled}
-                onCheckedChange={setAutoReplyEnabled}
-              />
-            </div>
+            <p className="text-muted-foreground text-xs">{t('createHint')}</p>
           </div>
           <DialogFooter>
             <Button

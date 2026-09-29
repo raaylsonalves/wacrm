@@ -105,7 +105,7 @@ export async function GET() {
     const { supabase, accountId } = await getCurrentAccount()
 
     const BASE_COLUMNS =
-      'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, api_key, embeddings_api_key'
+      'id, name, provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, api_key, embeddings_api_key'
 
     // `api_key` is selected only to derive `has_key` — it is stripped
     // out below and never returned to the client.
@@ -396,6 +396,11 @@ export async function POST(request: Request) {
     // Only touch the handoff target when the form actually sent the field,
     // so a partial save (e.g. flipping a toggle) doesn't wipe it.
     if (handoffProvided) shared.handoff_agent_id = handoffAgentId
+    // The default agent can be renamed like any other (the edit page is
+    // the same for all of them).
+    if (typeof body.name === 'string' && body.name.trim()) {
+      shared.name = body.name.trim().slice(0, 120)
+    }
     // Phrases that hand off to a person before any model call
     // (specs/ai-agents-management.md §4). Only touched when sent, like the
     // handoff target above.

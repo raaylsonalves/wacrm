@@ -26,6 +26,7 @@ import { validateAiCredentials } from '@/lib/ai/validate';
 import { listAiAgents } from '@/lib/ai/config';
 import { AiError, type AiProvider } from '@/lib/ai/types';
 import { audit } from '@/lib/audit';
+import { AI_PROVIDER_DEFAULT_MODEL } from '@/lib/ai/defaults';
 
 const VALID_PROVIDERS: AiProvider[] = [
   'openai',
@@ -64,17 +65,24 @@ export async function POST(request: Request) {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name) return bad('name is required');
 
-    const provider = body.provider as AiProvider;
+    // Only the NAME is required. An agent is created "incomplete" — the
+    // provider key and model are filled in on its edit page — so setting
+    // up several agents (one per number, one per client) starts with
+    // naming them, not with hunting for keys. Until a key is saved the
+    // agent is switched off and `loadAiConfig` treats it as not
+    // configured (an empty key), so it can never answer anyone.
+    const provider = (body.provider ?? 'openai') as AiProvider;
     if (!VALID_PROVIDERS.includes(provider)) {
       return bad(
         'provider must be "openai", "anthropic", "gemini", or "openrouter"'
       );
     }
-    const model = typeof body.model === 'string' ? body.model.trim() : '';
-    if (!model) return bad('model is required');
+    const model =
+      typeof body.model === 'string' && body.model.trim()
+        ? body.model.trim()
+        : AI_PROVIDER_DEFAULT_MODEL[provider];
 
     const apiKey = typeof body.api_key === 'string' ? body.api_key.trim() : '';
-    if (!apiKey) return bad('api_key is required');
 
     const systemPrompt =
       typeof body.system_prompt === 'string' && body.system_prompt.trim()
@@ -104,30 +112,41 @@ export async function POST(request: Request) {
       handoffAgentId = rawHandoff;
     }
 
-    try {
-      await validateAiCredentials({
-        provider,
-        model,
-        apiKey,
-        systemPrompt,
-        isActive,
-        autoReplyEnabled,
-        autoReplyMaxPerConversation: maxPer,
-        handoffAgentId: null,
-        embeddingsApiKey: null,
-        fallbacks: [],
-        agendaEnabled: false,
-      });
-    } catch (err) {
-      if (err instanceof AiError) {
-        return NextResponse.json(
-          { error: err.message, code: err.code },
-          { status: 400 }
-        );
+    // A key that IS supplied is validated with the provider, as before.
+    if (apiKey) {
+      try {
+        await validateAiCredentials({
+          provider,
+          model,
+          apiKey,
+          systemPrompt,
+          isActive,
+          autoReplyEnabled,
+          autoReplyMaxPerConversation: maxPer,
+          handoffAgentId: null,
+          embeddingsApiKey: null,
+          fallbacks: [],
+          agendaEnabled: false,
+        });
+      } catch (err) {
+        if (err instanceof AiError) {
+          return NextResponse.json(
+            { error: err.message, code: err.code },
+            { status: 400 }
+          );
+        }
+        console.error('[ai/agents POST] validation error:', err);
+        return bad('Could not validate the API key with the provider.');
       }
-      console.error('[ai/agents POST] validation error:', err);
-      return bad('Could not validate the API key with the provider.');
     }
+
+    // The account's FIRST agent is its default one (the fallback for every
+    // number nobody else claims); later ones are additional.
+    const { count: existingCount } = await supabase
+      .from('ai_configs')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId);
+    const isFirst = (existingCount ?? 0) === 0;
 
     const { data: created, error: insErr } = await supabase
       .from('ai_configs')
@@ -135,13 +154,14 @@ export async function POST(request: Request) {
         account_id: accountId,
         created_by: userId,
         name,
-        is_default: false,
+        is_default: isFirst,
         provider,
         model,
-        api_key: encrypt(apiKey),
+        api_key: apiKey ? encrypt(apiKey) : '',
         system_prompt: systemPrompt,
-        is_active: isActive,
-        auto_reply_enabled: autoReplyEnabled,
+        // No key yet → off, whatever was asked for.
+        is_active: apiKey ? isActive : false,
+        auto_reply_enabled: apiKey ? autoReplyEnabled : false,
         auto_reply_max_per_conversation: maxPer,
         handoff_agent_id: handoffAgentId,
       })
