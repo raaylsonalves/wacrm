@@ -86,7 +86,14 @@ export async function transcribeInboundAudio(
   }
 
   try {
-    const transcript = await transcribe({ apiKey: key, bytes, mimeType, model })
+    const transcript = await transcribe({
+      apiKey: key,
+      bytes,
+      mimeType,
+      model,
+      // The deployment's locale (build-time, single-locale app).
+      language: process.env.NEXT_PUBLIC_APP_LOCALE || null,
+    })
     return record({ status: 'done', transcript })
   } catch (err) {
     console.warn('[ai audio] transcription failed:', err instanceof Error ? err.message : err)

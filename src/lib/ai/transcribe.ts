@@ -44,6 +44,9 @@ export async function transcribeAudio(args: {
   mimeType: string | null
   /** The agent's choice; anything unknown falls back to the default. */
   model?: string | null
+  /** ISO-639-1 hint ('pt'). Without it a short Portuguese note came back
+   *  in Cyrillic. Omitted when unknown, letting the model detect. */
+  language?: string | null
   timeoutMs?: number
 }): Promise<string> {
   const { apiKey, bytes, mimeType, timeoutMs = TRANSCRIBE_TIMEOUT_MS } = args
@@ -57,6 +60,8 @@ export async function transcribeAudio(args: {
   )
   form.append('model', model)
   form.append('response_format', 'json')
+  const lang = (args.language ?? '').trim().toLowerCase().slice(0, 2)
+  if (/^[a-z]{2}$/.test(lang)) form.append('language', lang)
 
   let res: Response
   try {

@@ -56,3 +56,16 @@ describe('transcribeAudio', () => {
     ).rejects.toMatchObject({ code: 'empty_response' })
   })
 })
+
+describe('transcribeAudio — language hint', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  it('sends a two-letter language hint when given, none otherwise', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ text: 'oi' }) })
+    vi.stubGlobal('fetch', fetchMock)
+    const bytes = new Uint8Array([1])
+    await transcribeAudio({ apiKey: 'k', bytes, mimeType: 'audio/ogg', language: 'pt' })
+    await transcribeAudio({ apiKey: 'k', bytes, mimeType: 'audio/ogg' })
+    expect((fetchMock.mock.calls[0][1].body as FormData).get('language')).toBe('pt')
+    expect((fetchMock.mock.calls[1][1].body as FormData).get('language')).toBeNull()
+  })
+})

@@ -51,3 +51,7 @@ describe('buildSystemPrompt — unknown terms', () => {
     expect(p).toContain('[áudio transcrito]')
   })
 })
+
+it('tells the model its own earlier messages are not a source', () => {
+  expect(buildSystemPrompt({ userPrompt: 'x', mode: 'auto_reply' })).toContain('NOT a source of truth')
+})
