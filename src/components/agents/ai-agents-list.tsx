@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
-import { Loader2, Plus, Trash2, Star } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, Plus, Trash2, Star, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -199,19 +200,33 @@ export function AiAgentsList({
                   {t('defaultBadge')}
                 </span>
               ) : (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={deletingId === agent.id}
-                  onClick={() => handleDelete(agent)}
-                  className="text-muted-foreground hover:text-red-600"
-                >
-                  {deletingId === agent.id ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="size-3.5" />
+                <div className="flex shrink-0 items-center gap-1">
+                  {!agent.isActive && (
+                    <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
+                      {t('inactiveBadge')}
+                    </span>
                   )}
-                </Button>
+                  <Link
+                    href={`/agents/${agent.id}`}
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium"
+                  >
+                    <Pencil className="size-3.5" />
+                    {t('editBtn')}
+                  </Link>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={deletingId === agent.id}
+                    onClick={() => handleDelete(agent)}
+                    className="text-muted-foreground hover:text-red-600"
+                  >
+                    {deletingId === agent.id ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-3.5" />
+                    )}
+                  </Button>
+                </div>
               )}
             </div>
           ))

@@ -24,6 +24,8 @@ const h = vi.hoisted(() => ({
     noticeClaim: true as boolean,
     claimError: null as { message: string } | null,
     rateLimited: false as boolean,
+    /** ai_channel_agents lookup result: the agent bound to this number. */
+    boundAgentId: null as string | null,
     rpcCalls: [] as { name: string; args: unknown }[],
     contact: null as { name: string | null } | null,
   },
@@ -74,6 +76,20 @@ vi.mock('./admin-client', () => ({
           in: () => chain,
           limit: () =>
             Promise.resolve({ data: h.state.autoResponders, error: null }),
+        }
+        return chain
+      }
+      if (table === 'ai_channel_agents') {
+        // .select().eq().is()|eq().maybeSingle() → the bound agent, if any
+        const chain = {
+          select: () => chain,
+          eq: () => chain,
+          is: () => chain,
+          maybeSingle: () =>
+            Promise.resolve({
+              data: h.state.boundAgentId ? { agent_id: h.state.boundAgentId } : null,
+              error: null,
+            }),
         }
         return chain
       }
@@ -167,6 +183,7 @@ beforeEach(() => {
   h.state.noticeClaim = true
   h.state.claimError = null
   h.state.rateLimited = false
+  h.state.boundAgentId = null
   h.state.rpcCalls = []
   h.state.contact = null
   h.loadAiConfig.mockResolvedValue(aiConfig())
@@ -529,6 +546,108 @@ describe('dispatchInboundToAiReply — customer notice on handoff (specs/handoff
     handOff()
     await dispatchInboundToAiReply(ARGS)
     expect(h.engineSendText).not.toHaveBeenCalled()
+  })
+})
+
+describe('dispatchInboundToAiReply — agent per number (specs/ai-agents-management.md)', () => {
+  const DEFAULT = aiConfig({ id: 'agent-default', model: 'default-model' })
+  const BOUND = aiConfig({ id: 'agent-barber', model: 'barber-model' })
+
+  beforeEach(() => {
+    h.loadAiConfig.mockImplementation(
+      async (_db: unknown, _acct: string, opts?: { agentId?: string }) =>
+        opts?.agentId === 'agent-barber' ? BOUND : DEFAULT,
+    )
+  })
+
+  it('answers with the agent bound to the number instead of the default', async () => {
+    h.state.boundAgentId = 'agent-barber'
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.loadAiConfig).toHaveBeenCalledWith(expect.anything(), 'acct-1', {
+      agentId: 'agent-barber',
+    })
+    expect(h.generateReplyWithFallback.mock.calls[0][0].config.model).toBe('barber-model')
+  })
+
+  it('uses the default agent when the number has no binding', async () => {
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback.mock.calls[0][0].config.model).toBe('default-model')
+  })
+
+  it('does not reload when the binding IS the default agent', async () => {
+    h.state.boundAgentId = 'agent-default'
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.loadAiConfig).toHaveBeenCalledTimes(1)
+    expect(h.generateReplyWithFallback.mock.calls[0][0].config.model).toBe('default-model')
+  })
+
+  it('stays silent — never falls back to another client’s agent — when the bound agent is unavailable', async () => {
+    h.state.boundAgentId = 'agent-barber'
+    h.loadAiConfig.mockImplementation(
+      async (_db: unknown, _acct: string, opts?: { agentId?: string }) =>
+        opts?.agentId ? null : DEFAULT,
+    )
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+    expect(h.engineSendText).not.toHaveBeenCalled()
+  })
+
+  it('stays silent when the bound agent has auto-reply switched off', async () => {
+    h.state.boundAgentId = 'agent-barber'
+    h.loadAiConfig.mockImplementation(
+      async (_db: unknown, _acct: string, opts?: { agentId?: string }) =>
+        opts?.agentId ? { ...BOUND, autoReplyEnabled: false } : DEFAULT,
+    )
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+  })
+
+  it('stays silent when the bound agent cannot be loaded (e.g. undecryptable key)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    h.state.boundAgentId = 'agent-barber'
+    h.loadAiConfig.mockImplementation(
+      async (_db: unknown, _acct: string, opts?: { agentId?: string }) => {
+        if (opts?.agentId) throw new Error('decrypt failed')
+        return DEFAULT
+      },
+    )
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+})
+
+describe('dispatchInboundToAiReply — deterministic handoff keywords', () => {
+  it('hands off before any model call when the customer asks for a person', async () => {
+    h.loadAiConfig.mockResolvedValue(aiConfig({ handoffKeywords: ['atendente'] }))
+    h.buildConversationContext.mockResolvedValue([
+      { role: 'user', content: 'Quero falar com um ATENDENTE, por favor' },
+    ])
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled() // no tokens spent
+    expect(h.state.updatePayload).toMatchObject({
+      ai_autoreply_disabled: true,
+      ai_handoff_reason: 'customer_requested_human',
+    })
+    // ...and the customer is told, as with every handoff.
+    expect(h.engineSendText).toHaveBeenCalledTimes(1)
+  })
+
+  it('does nothing special when no keywords are configured', async () => {
+    h.buildConversationContext.mockResolvedValue([
+      { role: 'user', content: 'quero um atendente' },
+    ])
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores a keyword that only appears inside a longer word', async () => {
+    h.loadAiConfig.mockResolvedValue(aiConfig({ handoffKeywords: ['atendente'] }))
+    h.buildConversationContext.mockResolvedValue([
+      { role: 'user', content: 'os atendentes-modelo daí são ótimos' },
+    ])
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).toHaveBeenCalledTimes(1)
   })
 })
 

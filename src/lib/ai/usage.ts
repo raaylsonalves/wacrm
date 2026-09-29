@@ -6,6 +6,9 @@ export interface LogAiUsageArgs {
   /** Null for a draft not tied to one thread, or when the row was
    *  deleted between generation and logging. */
   conversationId: string | null
+  /** The agent (`ai_configs.id`) whose config produced the call, so usage
+   *  can be read per agent. Null for rows we can't attribute. */
+  agentId?: string | null
   mode: 'auto_reply' | 'draft'
   provider: AiProvider
   model: string
@@ -35,6 +38,7 @@ export async function logAiUsage(
     const { error } = await db.from('ai_usage_log').insert({
       account_id: args.accountId,
       conversation_id: args.conversationId,
+      agent_id: args.agentId ?? null,
       mode: args.mode,
       provider: args.provider,
       model: args.model,

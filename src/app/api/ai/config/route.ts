@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { cleanHandoffKeywords } from '@/lib/ai/handoff-keywords'
 import {
   getCurrentAccount,
   requireRole,
@@ -113,7 +114,7 @@ export async function GET() {
     // /api/ai/agents.
     let { data, error } = await supabase
       .from('ai_configs')
-      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled`)
+      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled, handoff_keywords`)
       .eq('account_id', accountId)
       .eq('is_default', true)
       .maybeSingle()
@@ -395,6 +396,12 @@ export async function POST(request: Request) {
     // Only touch the handoff target when the form actually sent the field,
     // so a partial save (e.g. flipping a toggle) doesn't wipe it.
     if (handoffProvided) shared.handoff_agent_id = handoffAgentId
+    // Phrases that hand off to a person before any model call
+    // (specs/ai-agents-management.md §4). Only touched when sent, like the
+    // handoff target above.
+    if ('handoff_keywords' in body) {
+      shared.handoff_keywords = cleanHandoffKeywords(body.handoff_keywords)
+    }
     if (rawEmbeddingsKey) {
       shared.embeddings_api_key = encrypt(rawEmbeddingsKey)
     } else if (clearEmbeddingsKey) {
@@ -421,9 +428,15 @@ export async function POST(request: Request) {
             'Fallback providers require a pending database migration (052) to be applied first. Ask your administrator to run it, or save without a fallback provider for now.',
           )
         }
-        const { fallbacks: _omit, agenda_enabled: _omit2, ...payloadWithoutFallbacks } = payload
+        const {
+          fallbacks: _omit,
+          agenda_enabled: _omit2,
+          handoff_keywords: _omit3,
+          ...payloadWithoutFallbacks
+        } = payload
         void _omit
         void _omit2
+        void _omit3
         ;({ error: upErr } = await supabase
           .from('ai_configs')
           .update(payloadWithoutFallbacks)
@@ -456,10 +469,15 @@ export async function POST(request: Request) {
             'Fallback providers require a pending database migration (052) to be applied first. Ask your administrator to run it, or save without a fallback provider for now.',
           )
         }
-        const { fallbacks: _omit, agenda_enabled: _omit2, ...insertWithoutFallbacks } =
-          insertPayload as Record<string, unknown>
+        const {
+          fallbacks: _omit,
+          agenda_enabled: _omit2,
+          handoff_keywords: _omit3,
+          ...insertWithoutFallbacks
+        } = insertPayload as Record<string, unknown>
         void _omit
         void _omit2
+        void _omit3
         ;({ error: insErr } = await supabase
           .from('ai_configs')
           .insert(insertWithoutFallbacks))

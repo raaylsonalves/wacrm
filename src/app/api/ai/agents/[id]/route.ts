@@ -17,6 +17,7 @@ import { encrypt, decrypt } from '@/lib/whatsapp/encryption';
 import { validateAiCredentials } from '@/lib/ai/validate';
 import { AiError, type AiProvider } from '@/lib/ai/types';
 import { audit } from '@/lib/audit';
+import { cleanHandoffKeywords } from '@/lib/ai/handoff-keywords';
 
 const VALID_PROVIDERS: AiProvider[] = [
   'openai',
@@ -109,6 +110,9 @@ export async function PATCH(
         20,
         Math.max(1, Math.floor(maxPer))
       );
+    }
+    if ('handoff_keywords' in body) {
+      update.handoff_keywords = cleanHandoffKeywords(body.handoff_keywords);
     }
     if ('handoff_agent_id' in body) {
       const raw =

@@ -595,6 +595,37 @@ BEGIN
     RAISE EXCEPTION 'follow-up stop triggers are missing — migration 073 did not apply';
   END IF;
 
+  -- 074 — manageable AI agents. The expression UNIQUE index is what makes
+  -- "one agent per number" true INCLUDING the Cloud API slot (channel_id
+  -- NULL — a plain UNIQUE treats NULLs as distinct); the scope trigger is
+  -- what stops a forged agent_id from binding another account's agent (and
+  -- key) to this account's number.
+  IF to_regclass('public.ai_channel_agents') IS NULL THEN
+    RAISE EXCEPTION 'ai_channel_agents is missing — migration 074 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public' AND indexname = 'idx_ai_channel_agents_channel'
+      AND indexdef LIKE '%UNIQUE%' AND indexdef LIKE '%coalesce%'
+  ) THEN
+    RAISE EXCEPTION 'ai_channel_agents one-agent-per-number index is missing — migration 074 did not apply';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_ai_channel_agent_scope') THEN
+    RAISE EXCEPTION 'ai_channel_agents scope trigger is missing — migration 074 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'ai_usage_log' AND column_name = 'agent_id'
+  ) THEN
+    RAISE EXCEPTION 'ai_usage_log.agent_id is missing — migration 074 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'ai_configs' AND column_name = 'handoff_keywords'
+  ) THEN
+    RAISE EXCEPTION 'ai_configs.handoff_keywords is missing — migration 074 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

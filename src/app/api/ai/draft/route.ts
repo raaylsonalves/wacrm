@@ -117,6 +117,7 @@ export async function POST(request: Request) {
       void logAiUsage(supabaseAdmin(), {
         accountId,
         conversationId,
+        agentId: config.id ?? null,
         mode: 'draft',
         provider: config.provider,
         model: config.model,

@@ -30,6 +30,10 @@ import { AI_PROVIDER_DEFAULT_MODEL } from '@/lib/ai/defaults';
 import type { AiProvider } from '@/lib/ai/types';
 import type { AccountMember } from '@/types';
 import { fetchAccountMembers, memberLabel } from '@/lib/account/members';
+import {
+  HandoffKeywordsField,
+  keywordsToList,
+} from '@/components/agents/handoff-keywords-field';
 import { useTranslations } from 'next-intl';
 
 const MASKED_KEY = '••••••••••••••••';
@@ -56,6 +60,8 @@ export function AiConfig() {
   const { accountId, accountRole, profileLoading } = useAuth();
   const canEdit = accountRole ? canEditSettings(accountRole) : false;
   const t = useTranslations('Settings.aiConfig');
+  const tKeywords = useTranslations('Agents.detail.keywords');
+  const [handoffKeywordsText, setHandoffKeywordsText] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -124,6 +130,7 @@ export function AiConfig() {
         setAgendaEnabled(Boolean(data.agenda_enabled));
         setMaxPerConversation(data.auto_reply_max_per_conversation ?? 3);
         setHandoffAgentId(data.handoff_agent_id ?? '');
+        setHandoffKeywordsText(((data.handoff_keywords ?? []) as string[]).join('\n'));
         setHasStoredKey(Boolean(data.has_key));
         setApiKey(data.has_key ? MASKED_KEY : '');
         setKeyEdited(false);
@@ -187,6 +194,7 @@ export function AiConfig() {
     agenda_enabled: agendaEnabled,
     auto_reply_max_per_conversation: maxPerConversation,
     handoff_agent_id: handoffAgentId || null,
+    handoff_keywords: keywordsToList(handoffKeywordsText),
     fallbacks: fallbackEnabled
       ? [
           {
@@ -710,6 +718,18 @@ export function AiConfig() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{tKeywords('title')}</Label>
+              <p className="text-xs text-muted-foreground">
+                {tKeywords('description')}
+              </p>
+              <HandoffKeywordsField
+                value={handoffKeywordsText}
+                onChange={setHandoffKeywordsText}
+                disabled={disabled || !autoReplyEnabled}
+              />
             </div>
           </CardContent>
         </Card>

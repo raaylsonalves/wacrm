@@ -14,6 +14,7 @@ describe('logAiUsage', () => {
     await logAiUsage(db, {
       accountId: 'acct-1',
       conversationId: 'conv-1',
+      agentId: 'agent-1',
       mode: 'auto_reply',
       provider: 'anthropic',
       model: 'claude-x',
@@ -23,6 +24,7 @@ describe('logAiUsage', () => {
     expect(insert).toHaveBeenCalledWith({
       account_id: 'acct-1',
       conversation_id: 'conv-1',
+      agent_id: 'agent-1',
       mode: 'auto_reply',
       provider: 'anthropic',
       model: 'claude-x',
@@ -58,5 +60,20 @@ describe('logAiUsage', () => {
         usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
       }),
     ).resolves.toBeUndefined()
+  })
+})
+
+describe('logAiUsage — agent attribution', () => {
+  it('writes a NULL agent when the caller cannot attribute the call', async () => {
+    const { db, insert } = fakeDb()
+    await logAiUsage(db, {
+      accountId: 'acct-1',
+      conversationId: null,
+      mode: 'draft',
+      provider: 'openai',
+      model: 'gpt-x',
+      usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+    })
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ agent_id: null }))
   })
 })

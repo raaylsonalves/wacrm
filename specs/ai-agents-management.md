@@ -269,3 +269,48 @@ key, the fallback-provider chain, global cap) in Settings. Removes the
   that don't reveal spend — derive them from `conversations`/`messages`
   (`ai_generated`) or expose a counts-only RPC rather than loosening that
   RLS.
+
+## Implementation notes (2026-09-29)
+
+**Decision recorded (user): agent management is per NUMBER and per CLIENT.**
+The product owner will operate micro-businesses (a barbershop, a clinic), so
+"which agent answers where" cannot be an account-wide setting only.
+
+- *Per client* is the account boundary that already exists: each client is an
+  account with its own agents, keys and usage (operator mode is
+  `operator-multi-account.md`).
+- *Per number* is new: `ai_channel_agents` (migration 074) binds one agent to
+  one number (`channel_id NULL` = the Cloud API number). Resolution order in
+  `dispatchInboundToAiReply`: **active router → agent bound to the number →
+  default agent**. A bound agent that is off / has no key / cannot be loaded
+  makes the AI **stay silent on that number** rather than fall back to the
+  default agent (answering one client's customers with another persona is
+  worse than not answering). Enforced in Postgres: a trigger refuses an agent
+  or channel from another account.
+
+Built (phase 1): model picker fed by the provider (`POST /api/ai/models`,
+per-provider normalizers, 10-min cache keyed by hash, key never echoed,
+"type the id" always available); `/agents/[id]` edit page (config, numbers,
+30-day usage); per-agent usage (`ai_usage_log.agent_id`, `?agent_id=` and
+`by_agent` on `/api/ai/usage`); deterministic handoff phrases (default agent
+in Settings → AI, others on the edit page), reason
+`customer_requested_human`, no tokens spent.
+
+Deviations / not built yet:
+
+- **OpenRouter is listed without sending the key** (the catalogue is public):
+  a wrong or unreadable stored key must not hide the list.
+- The "blocking warning when the model is known to lack tools" is shown as an
+  inline warning, not a save blocker: non-default agents have no agenda tools
+  today, so there is nothing for it to break yet.
+- **Testar tab** (playground bound to this agent) — the playground still
+  targets the default agent.
+- Phase 2 (history / restore) and phase 3 (one editor for the default agent)
+  — not started. The default agent is still edited under Settings → AI; the
+  edit page and the numbers card are for non-default agents (a number with no
+  binding is the default agent's by definition).
+- Per-agent card details on the list (replies/tokens 7d, last reply, routers
+  pointing at it) and a per-agent table on the Uso tab — the API returns
+  `by_agent`, the UI does not use it yet.
+- Handoff keywords have no per-language defaults beyond the "use suggestions"
+  starter list (pt/en/es).

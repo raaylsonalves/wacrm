@@ -2,6 +2,8 @@ import { supabaseAdmin } from './admin-client'
 import { loadAiConfig } from './config'
 import { loadActiveRouterForChannel, resolveAgentViaRouter } from './router'
 import { buildConversationContext } from './context'
+import { loadChannelAgentId } from './channel-agent'
+import { matchHandoffKeyword } from './handoff-keywords'
 import { retrieveKnowledge } from './knowledge'
 import {
   generateReplyWithFallback,
@@ -10,6 +12,7 @@ import {
 import { buildSystemPrompt } from './defaults'
 import {
   buildHandoffMeta,
+  lastCustomerMessage,
   type HandoffMeta,
   type HandoffReason,
 } from './handoff'
@@ -287,6 +290,8 @@ export async function dispatchInboundToAiReply(
       return // handed off / turned off here
     }
 
+    let routed = false
+
     // Multi-agent router (specs/multi-agent-router.md) — inert for any
     // account with no active router (the common case today): resolves
     // to null and `config` stays the account's default agent, exactly
@@ -317,12 +322,48 @@ export async function dispatchInboundToAiReply(
           currentAgentId: conv.active_ai_agent_id ?? null,
           messageText: latestInbound?.content_text ?? '',
         })
+        routed = true
       }
     } catch (err) {
       // Doctrine (spec's "erro no classificador nunca derruba o
       // turno"): any failure resolving the router falls back to the
       // default agent already loaded above, not a dropped reply.
       console.warn(`${tag} router resolution failed, using default agent:`, err)
+    }
+
+    // The agent bound to THIS number (specs/ai-agents-management.md;
+    // migration 074) — for a small business with two numbers, or an
+    // operator running several clients' numbers, "this number → this
+    // agent" without building a classifier. A router that took over above
+    // wins (it is the more specific instruction); otherwise a binding
+    // beats the account's default agent.
+    //
+    // A bound agent that is off, has no key, or can't be loaded means the
+    // AI stays SILENT on that number rather than falling back to the
+    // default agent: answering a barbershop's customers with another
+    // client's persona is worse than not answering (a human still sees the
+    // message).
+    if (!routed) {
+      const boundId = await loadChannelAgentId(
+        db,
+        accountId,
+        conv.whatsapp_channel_id ?? null,
+      )
+      if (boundId && boundId !== config.id) {
+        let bound: AiConfig | null = null
+        try {
+          bound = await loadAiConfig(db, accountId, { agentId: boundId })
+        } catch (err) {
+          console.warn(`${tag} bound agent could not be loaded:`, err)
+        }
+        if (!bound || !bound.autoReplyEnabled) {
+          console.info(
+            `${tag} skipped: the agent bound to this number is off or unavailable`,
+          )
+          return
+        }
+        config = bound
+      }
     }
 
     // Cheap early-out; the authoritative cap check is the atomic claim
@@ -351,6 +392,27 @@ export async function dispatchInboundToAiReply(
     const messages = await buildConversationContext(db, conversationId)
     if (messages.length === 0) {
       console.info(`${tag} skipped: no text/interactive messages to build context from`)
+      return
+    }
+
+    // Deterministic "get me a person": the account listed phrases that
+    // hand off before any model call — no tokens spent, no model
+    // discretion (specs/ai-agents-management.md §4).
+    const keyword = matchHandoffKeyword(
+      lastCustomerMessage(messages) ?? '',
+      config.handoffKeywords ?? [],
+    )
+    if (keyword) {
+      console.info(`${tag} hands off: customer asked for a person (keyword match)`)
+      await handOffToHuman(
+        db,
+        conversationId,
+        config,
+        conv.assigned_agent_id,
+        'customer_requested_human',
+        buildHandoffMeta({ messages, replyCount: conv.ai_reply_count ?? 0 }),
+        noticeCtx,
+      )
       return
     }
 
@@ -512,6 +574,7 @@ export async function dispatchInboundToAiReply(
     void logAiUsage(db, {
       accountId,
       conversationId,
+      agentId: config.id ?? null,
       mode: 'auto_reply',
       provider: generation.provider,
       model: generation.model,

@@ -54,6 +54,10 @@ export interface AiConfig {
    *  no `appointment_settings` configured shouldn't have its bot
    *  offering to book things. Never used by draft/playground. */
   agendaEnabled: boolean
+  /** Phrases that hand a conversation to a human BEFORE any model call
+   *  (specs/ai-agents-management.md §4). Empty/absent = off. Optional so
+   *  the ad-hoc configs built for key validation needn't carry it. */
+  handoffKeywords?: string[]
 }
 
 /** A JSON-schema tool definition, provider-neutral — each adapter maps

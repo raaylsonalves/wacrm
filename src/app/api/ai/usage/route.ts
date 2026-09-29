@@ -12,6 +12,7 @@ const DEFAULT_WINDOW_DAYS = 30
 
 interface UsageRow {
   created_at: string
+  agent_id: string | null
   mode: 'auto_reply' | 'draft'
   provider: string
   model: string
@@ -51,15 +52,25 @@ export async function GET(request: Request) {
     // chart (see lib/dashboard/date-utils).
     const since = daysAgoStart(days - 1)
 
-    const { data, error } = await supabase
+    // Optional single-agent view (`?agent_id=<uuid>`). The account filter
+    // stays explicit alongside RLS, so an id from another account can
+    // only ever return nothing.
+    const rawAgent = url.searchParams.get('agent_id')
+    const agentFilter =
+      rawAgent && /^[0-9a-f-]{36}$/i.test(rawAgent) ? rawAgent : null
+
+    const base = supabase
       .from('ai_usage_log')
       .select(
-        'created_at, mode, provider, model, prompt_tokens, completion_tokens, total_tokens',
+        'created_at, agent_id, mode, provider, model, prompt_tokens, completion_tokens, total_tokens',
       )
       .eq('account_id', accountId)
       .gte('created_at', since.toISOString())
       .order('created_at', { ascending: false })
       .limit(MAX_ROWS + 1)
+    const { data, error } = await (agentFilter
+      ? base.eq('agent_id', agentFilter)
+      : base)
 
     if (error) {
       console.error('[ai/usage GET] fetch error:', error)
@@ -88,6 +99,14 @@ export async function GET(request: Request) {
       { model: string; provider: string; calls: number; tokens: number }
     >()
 
+    // Per-agent tally. Rows written before migration 074 (or whose agent
+    // was later deleted) have a NULL agent — surfaced as its own bucket
+    // ("agente anterior" in the UI) so the totals still add up.
+    const agentMap = new Map<
+      string | null,
+      { agent_id: string | null; calls: number; tokens: number; last_at: string }
+    >()
+
     // Zero-filled daily buckets so the chart shows quiet days as gaps,
     // not missing points. Local-day keys, oldest → newest — the same
     // helper every other dashboard chart uses, so day boundaries agree.
@@ -113,6 +132,14 @@ export async function GET(request: Request) {
       m.tokens += r.total_tokens
       modelMap.set(mk, m)
 
+      const ak = r.agent_id ?? null
+      const a =
+        agentMap.get(ak) ?? { agent_id: ak, calls: 0, tokens: 0, last_at: r.created_at }
+      a.calls += 1
+      a.tokens += r.total_tokens
+      // Rows are newest-first, so the first one seen is the latest.
+      agentMap.set(ak, a)
+
       const bucket = daily.get(localDayKey(r.created_at))
       if (bucket) {
         bucket.tokens += r.total_tokens
@@ -133,6 +160,7 @@ export async function GET(request: Request) {
       },
       by_mode: byMode,
       by_model: byModel,
+      by_agent: [...agentMap.values()].sort((a, b) => b.tokens - a.tokens),
       daily: [...daily.values()],
     })
   } catch (err) {
