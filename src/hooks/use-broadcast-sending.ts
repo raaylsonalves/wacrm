@@ -219,6 +219,10 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     // opted-out contact.
     contacts = contacts.filter((c) => !c.opted_out_at);
 
+    // Contacts imported from a third-party / bought list are kept in the
+    // CRM but never broadcast to (specs/prospecting-csv-import.md §3).
+    contacts = contacts.filter((c) => c.consent_basis !== 'third_party_list');
+
     return contacts;
   }
 

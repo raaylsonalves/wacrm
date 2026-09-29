@@ -632,6 +632,73 @@
         "toastAnonymizeFailed": "연락처를 익명화하지 못했습니다"
       }
     },
+    "importWizard": {
+      "title": "연락처 가져오기 (CSV)",
+      "description": "Excel로 저장한 시트(; 또는 , 구분)를 지원합니다. 각 행마다 결과가 표시됩니다.",
+      "pickFile": "CSV 파일 선택",
+      "fileHint": "인식되는 열: 전화/휴대폰/whatsapp, 이름, 이메일, 회사, 태그. 최대 5,000행.",
+      "preview": "연락처 {rows}개 준비됨, 문제 있는 행 {skipped}개. 열: {columns}.",
+      "ignored": "무시됨: {columns}.",
+      "listName": "목록 이름",
+      "listNameHint": "연락처에 \"lista:\" 뒤에 목록 이름이 붙은 태그가 추가되어 필터와 발송에 사용됩니다.",
+      "basis": {
+        "question": "이 연락처를 어떻게 얻으셨나요?",
+        "opt_in": {
+          "label": "연락을 요청했거나 수신 동의함",
+          "effect": "일괄 발송을 받을 수 있습니다."
+        },
+        "existing_customer": {
+          "label": "이미 제 고객입니다",
+          "effect": "일괄 발송을 받을 수 있습니다."
+        },
+        "legitimate_interest": {
+          "label": "직접 수집한 리드",
+          "effect": "1:1 영업용. 법적 근거를 적어 주세요."
+        },
+        "third_party_list": {
+          "label": "제3자 / 구매한 목록",
+          "effect": "CRM에는 저장되지만 발송과 영업에서 차단됩니다."
+        },
+        "unknown": {
+          "label": "모르겠음",
+          "effect": "CRM에 저장되며, 메시지 전 출처를 확인하세요."
+        },
+        "legalRefPlaceholder": "예: 공개 연락처가 있는 X 업종 업체에 Y를 제안.",
+        "disclaimer": "이는 보호 장치이며 법률 자문이 아닙니다. 법적 근거와 Meta의 수신 동의 요건은 계정의 책임입니다."
+      },
+      "policy": {
+        "label": "연락처가 이미 있으면",
+        "skip": "기존 연락처 유지",
+        "fill_empty": "빈 필드만 채우기",
+        "overwrite": "시트 데이터로 덮어쓰기"
+      },
+      "import": "가져오기",
+      "close": "닫기",
+      "result": {
+        "summary": "생성 {created}, 업데이트 {updated}, 건너뜀 {skipped}.",
+        "tag": "가져온 모든 연락처에 {tag} 태그가 붙었습니다.",
+        "thirdParty": "제3자 목록: 이 연락처는 발송과 영업 대상에서 제외됩니다.",
+        "line": "행",
+        "reason": "사유",
+        "content": "내용"
+      },
+      "reasons": {
+        "invalid_phone": "잘못된 전화번호",
+        "landline": "유선 전화 (WhatsApp 없음)",
+        "duplicate_in_file": "파일 내 중복",
+        "bad_email": "잘못된 이메일",
+        "opted_out": "수신 거부함",
+        "exists": "이미 있음 (변경 없음)",
+        "failed": "저장 실패"
+      },
+      "errors": {
+        "file_too_large": "5MB보다 큰 파일입니다.",
+        "too_many_rows": "5,000행 초과 — 파일을 나눠 주세요.",
+        "empty_file": "파일에 행이 없습니다.",
+        "phone_column_missing": "전화번호 열을 찾을 수 없습니다.",
+        "generic": "가져오지 못했습니다."
+      }
+    },
     "importModal": {
       "title": "연락처 가져오기",
       "desc": "필수 <phoneCode>phone</phoneCode> 열이 포함된 CSV를 업로드하세요. 선택 항목: <nameCode>name</nameCode>, <emailCode>email</emailCode>, <companyCode>company</companyCode>, <tagsCode>tags</tagsCode> (쉼표로 구분; 여러 태그가 있는 셀은 따옴표로 묶으세요).",

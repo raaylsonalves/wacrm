@@ -658,6 +658,16 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'ai_usage_log.speech_chars is missing — migration 080 did not apply';
   END IF;
+  IF to_regclass('public.contact_imports') IS NULL
+     OR to_regclass('public.contact_import_errors') IS NULL THEN
+    RAISE EXCEPTION 'contact_imports tables are missing — migration 081 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'contacts' AND column_name = 'consent_basis'
+  ) THEN
+    RAISE EXCEPTION 'contacts.consent_basis is missing — migration 081 did not apply';
+  END IF;
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
     WHERE conname = 'conversations_ai_handoff_reason_check'

@@ -632,6 +632,73 @@
         "toastAnonymizeFailed": "Error al anonimizar el contacto"
       }
     },
+    "importWizard": {
+      "title": "Importar contactos (CSV)",
+      "description": "Acepta hojas guardadas por Excel (separadas por ; o ,). Cada fila recibe un resultado.",
+      "pickFile": "Elegir archivo CSV",
+      "fileHint": "Columnas reconocidas: teléfono/celular/whatsapp, nombre, email, empresa, etiquetas. Hasta 5.000 filas.",
+      "preview": "{rows} contactos listos, {skipped} filas con problemas. Columnas: {columns}.",
+      "ignored": "Ignoradas: {columns}.",
+      "listName": "Nombre de la lista",
+      "listNameHint": "Los contactos reciben una etiqueta \"lista:\" seguida del nombre, para filtrar y enviar difusiones.",
+      "basis": {
+        "question": "¿Cómo obtuviste estos contactos?",
+        "opt_in": {
+          "label": "Pidieron contacto / dieron opt-in",
+          "effect": "Pueden recibir difusiones."
+        },
+        "existing_customer": {
+          "label": "Ya son mis clientes",
+          "effect": "Pueden recibir difusiones."
+        },
+        "legitimate_interest": {
+          "label": "Leads que capté por mi cuenta",
+          "effect": "Para prospección 1 a 1. Describe la base legal (interés legítimo)."
+        },
+        "third_party_list": {
+          "label": "Lista de terceros / comprada",
+          "effect": "Quedan en el CRM, bloqueados en difusiones y prospección."
+        },
+        "unknown": {
+          "label": "No lo sé",
+          "effect": "Quedan en el CRM; confirma el origen antes de enviar mensajes."
+        },
+        "legalRefPlaceholder": "Ej.: negocios del segmento X con contacto público, abordados para ofrecer Y.",
+        "disclaimer": "Es una protección, no asesoría legal: la base legal y el opt-in que exige Meta son responsabilidad de la cuenta."
+      },
+      "policy": {
+        "label": "Si el contacto ya existe",
+        "skip": "No tocar el contacto existente",
+        "fill_empty": "Completar solo campos vacíos",
+        "overwrite": "Sobrescribir con los datos de la hoja"
+      },
+      "import": "Importar",
+      "close": "Cerrar",
+      "result": {
+        "summary": "{created} creados, {updated} actualizados, {skipped} omitidos.",
+        "tag": "Todos los contactos importados recibieron la etiqueta {tag}.",
+        "thirdParty": "Lista de terceros: estos contactos no recibirán difusiones ni prospección.",
+        "line": "Fila",
+        "reason": "Motivo",
+        "content": "Contenido"
+      },
+      "reasons": {
+        "invalid_phone": "Teléfono inválido",
+        "landline": "Teléfono fijo (sin WhatsApp)",
+        "duplicate_in_file": "Repetido en el archivo",
+        "bad_email": "Email inválido",
+        "opted_out": "Pidió no recibir mensajes",
+        "exists": "Ya existía (sin cambios)",
+        "failed": "No se pudo guardar"
+      },
+      "errors": {
+        "file_too_large": "Archivo mayor de 5 MB.",
+        "too_many_rows": "Más de 5.000 filas: divide el archivo.",
+        "empty_file": "El archivo no tiene filas.",
+        "phone_column_missing": "No encontré la columna de teléfono.",
+        "generic": "No se pudo importar."
+      }
+    },
     "importModal": {
       "title": "Importar contactos",
       "desc": "Sube un CSV con una columna <phoneCode>phone</phoneCode> obligatoria. Opcionales: <nameCode>name</nameCode>, <emailCode>email</emailCode>, <companyCode>company</companyCode>, <tagsCode>tags</tagsCode> (separadas por comas; pon entre comillas las celdas con varias etiquetas).",

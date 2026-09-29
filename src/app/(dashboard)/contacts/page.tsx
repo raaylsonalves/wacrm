@@ -52,7 +52,7 @@ import {
 } from 'lucide-react';
 import { ContactForm } from '@/components/contacts/contact-form';
 import { ContactDetailView } from '@/components/contacts/contact-detail-view';
-import { ImportModal } from '@/components/contacts/import-modal';
+import { ImportWizard } from '@/components/contacts/import-wizard';
 import { CustomFieldsManager } from '@/components/contacts/custom-fields-manager';
 import { useCan } from '@/hooks/use-can';
 import { GatedButton } from '@/components/ui/gated-button';
@@ -777,7 +777,7 @@ export default function ContactsPage() {
       />
 
       {/* Import Modal */}
-      <ImportModal
+      <ImportWizard
         open={importOpen}
         onOpenChange={setImportOpen}
         onImported={fetchContacts}

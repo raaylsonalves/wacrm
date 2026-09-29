@@ -632,6 +632,73 @@
         "toastAnonymizeFailed": "Failed to anonymize contact"
       }
     },
+    "importWizard": {
+      "title": "Import contacts (CSV)",
+      "description": "Accepts spreadsheets saved by Excel (; or , separated). Every row gets an outcome.",
+      "pickFile": "Choose CSV file",
+      "fileHint": "Recognised columns: phone/mobile/whatsapp, name, email, company, tags. Up to 5,000 rows.",
+      "preview": "{rows} contacts ready, {skipped} rows with problems. Columns: {columns}.",
+      "ignored": "Ignored: {columns}.",
+      "listName": "List name",
+      "listNameHint": "Contacts get a \"lista:\" tag followed by the list name, used to filter and to broadcast.",
+      "basis": {
+        "question": "How did you obtain these contacts?",
+        "opt_in": {
+          "label": "They asked to be contacted / opted in",
+          "effect": "Can receive broadcasts."
+        },
+        "existing_customer": {
+          "label": "They are already my customers",
+          "effect": "Can receive broadcasts."
+        },
+        "legitimate_interest": {
+          "label": "Leads I captured myself",
+          "effect": "For 1:1 prospecting. Describe the legal basis (legitimate interest)."
+        },
+        "third_party_list": {
+          "label": "Third-party / bought list",
+          "effect": "Kept in the CRM, blocked from broadcasts and prospecting."
+        },
+        "unknown": {
+          "label": "I don't know",
+          "effect": "Kept in the CRM; confirm the source before messaging."
+        },
+        "legalRefPlaceholder": "E.g. businesses in segment X with a public contact, approached to offer Y.",
+        "disclaimer": "This is a safeguard, not legal advice: the legal basis and Meta's opt-in requirement are the account's responsibility."
+      },
+      "policy": {
+        "label": "If the contact already exists",
+        "skip": "Leave the existing contact alone",
+        "fill_empty": "Fill only empty fields",
+        "overwrite": "Overwrite with the spreadsheet data"
+      },
+      "import": "Import",
+      "close": "Close",
+      "result": {
+        "summary": "{created} created, {updated} updated, {skipped} skipped.",
+        "tag": "Every imported contact got the tag {tag}.",
+        "thirdParty": "Third-party list: these contacts won't receive broadcasts or prospecting.",
+        "line": "Line",
+        "reason": "Reason",
+        "content": "Content"
+      },
+      "reasons": {
+        "invalid_phone": "Invalid phone",
+        "landline": "Landline (no WhatsApp)",
+        "duplicate_in_file": "Repeated in the file",
+        "bad_email": "Invalid email",
+        "opted_out": "Asked not to be messaged",
+        "exists": "Already existed (unchanged)",
+        "failed": "Could not save"
+      },
+      "errors": {
+        "file_too_large": "File larger than 5 MB.",
+        "too_many_rows": "More than 5,000 rows — split the file.",
+        "empty_file": "The file has no rows.",
+        "phone_column_missing": "No phone column found (phone, mobile or whatsapp).",
+        "generic": "The import failed."
+      }
+    },
     "importModal": {
       "title": "Import Contacts",
       "desc": "Upload a CSV with a required <phoneCode>phone</phoneCode> column. Optional: <nameCode>name</nameCode>, <emailCode>email</emailCode>, <companyCode>company</companyCode>, <tagsCode>tags</tagsCode> (comma-separated; quote multi-tag cells).",

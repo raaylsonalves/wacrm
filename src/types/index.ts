@@ -122,6 +122,8 @@ export interface Contact {
   /** Set once a STOP-style reply is detected (migration 053); never
    *  cleared automatically. `null`/absent means still subscribed. */
   opted_out_at?: string | null;
+  /** How the contact was obtained (migration 081); null = before imports tracked it. */
+  consent_basis?: string | null;
   /** Set by `POST /api/contacts/[id]/anonymize` (migration 054), the
    *  LGPD "right to be forgotten" action. `null`/absent means the
    *  contact's PII is intact. */

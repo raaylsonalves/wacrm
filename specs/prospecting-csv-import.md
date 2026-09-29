@@ -519,3 +519,26 @@ Prospecting campaign (Part B):
 - **Tag-as-list is a shortcut.** It reuses audiences for free but tags are
   user-editable; if lists need to be immutable/auditable a first-class
   membership table is the alternative. Start with tags.
+
+## Part A — implementation notes (v1)
+
+Built: `src/lib/csv/parse.ts` (RFC 4180, `,`/`;`/tab detection, UTF-8 →
+Windows-1252 fallback, pt/en/es header synonyms), `src/lib/contacts/br-phone.ts`
+(masks, DDI 55, ninth digit on old 8-digit mobiles, landlines skipped),
+`src/lib/contacts/import-plan.ts` (per-row plan, consent-basis upgrade-only,
+update policies), `POST /api/contacts/imports` (server-side, per-line report,
+`lista:<name>` tag, audit), migration 081, `ImportWizard` replacing the old
+browser-side modal, and third-party-list contacts excluded from broadcasts.
+Verified live: `;` file, landline / duplicate / bad e-mail reported by line,
+re-import filling empty fields and upgrading the basis.
+
+Not built yet:
+- Custom-field mapping for extra columns (they are listed as "ignored").
+- Existing-contact match is exact on the normalized phone; a contact stored
+  without DDI or without the ninth digit is not matched (the unique index
+  still refuses a true duplicate).
+- The `unknown` acknowledgement in the Broadcast wizard; the blocked-count
+  message ("N contatos bloqueados").
+- The old `parse-contact-csv.ts` / broadcast CSV parser still exist
+  (adapters over `lib/csv` not done); `import-modal.tsx` is no longer used.
+- Imports list / re-open a past report; staged durable import (phase 2).
