@@ -211,6 +211,20 @@
       "unknownAuthor": "Excompañero"
     },
     "conversationList": {
+      "command": {
+        "human": "Una persona está atendiendo",
+        "ai": "La IA está atendiendo",
+        "waiting": "Esperando a una persona (la IA se detuvo)",
+        "nobody": "Nadie está atendiendo",
+        "closed": "Cerrada"
+      },
+      "window": {
+        "closing": "La ventana cierra en {span}",
+        "closed": "Ventana cerrada hace {span} · solo plantilla",
+        "never": "El cliente nunca escribió · solo plantilla",
+        "title": "En el número oficial, 24h después del último mensaje del cliente solo se puede enviar una plantilla aprobada."
+      },
+      "lastByBot": "Último mensaje enviado por la automatización",
       "filterSnoozed": "Pospuestas",
       "snooze": "Posponer",
       "unsnooze": "Cancelar posposición",

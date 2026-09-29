@@ -211,6 +211,20 @@
       "unknownAuthor": "이전 팀원"
     },
     "conversationList": {
+      "command": {
+        "human": "상담원이 응대 중",
+        "ai": "AI가 응대 중",
+        "waiting": "상담원 대기 중 (AI 중단)",
+        "nobody": "응대하는 사람 없음",
+        "closed": "종료됨"
+      },
+      "window": {
+        "closing": "{span} 후 창 닫힘",
+        "closed": "{span} 전 창 닫힘 · 템플릿만 가능",
+        "never": "고객이 메시지를 보낸 적 없음 · 템플릿만 가능",
+        "title": "공식 번호에서는 고객의 마지막 메시지 후 24시간이 지나면 승인된 템플릿만 보낼 수 있습니다."
+      },
+      "lastByBot": "자동화가 보낸 마지막 메시지",
       "filterSnoozed": "보류됨",
       "snooze": "보류",
       "unsnooze": "보류 해제",

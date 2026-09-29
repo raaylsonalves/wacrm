@@ -22,6 +22,7 @@ import {
 } from '@/lib/channels/routing';
 import type { Conversation, ConversationStatus, Profile, Tag } from '@/types';
 import {
+  Bot,
   Search,
   ChevronDown,
   X,
@@ -52,6 +53,13 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  COMMAND_DOT,
+  commandOf,
+  formatSpan,
+  initialsOf,
+  windowState,
+} from '@/lib/inbox/signals';
 import {
   Dialog,
   DialogContent,
@@ -100,12 +108,6 @@ const STATUS_LABEL_KEY: Record<ConversationStatus, string> = {
   closed: 'statusClosed',
 };
 
-const STATUS_COLORS: Record<ConversationStatus, string> = {
-  open: 'bg-primary',
-  pending: 'bg-amber-500',
-  closed: 'bg-muted-foreground',
-};
-
 type InboxFilter = ConversationStatus | 'all' | 'unread' | 'snoozed';
 
 const SNOOZE_PRESETS: SnoozePreset[] = ['1h', '3h', 'tomorrow'];
@@ -128,7 +130,29 @@ export function ConversationList({
 }: ConversationListProps) {
   const t = useTranslations('Inbox.conversationList');
   const tThread = useTranslations('Inbox.messageThread');
-  const { responseTimeTargetMinutes } = useAuth();
+  const { responseTimeTargetMinutes, accountId } = useAuth();
+
+  // Whether the account has an AI answering at all, asked ONCE for the
+  // whole list (not per row). Unknown until it loads, and a row then
+  // doesn't claim the AI is answering (see commandOf).
+  const [aiOn, setAiOn] = useState<boolean | undefined>(undefined);
+  useEffect(() => {
+    if (!accountId) return;
+    let alive = true;
+    createClient()
+      .from('ai_configs')
+      .select('id')
+      .eq('account_id', accountId)
+      .eq('is_active', true)
+      .eq('auto_reply_enabled', true)
+      .limit(1)
+      .then(({ data, error }) => {
+        if (alive && !error) setAiOn((data ?? []).length > 0);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [accountId]);
 
   // specs/inbox-response-time-sla.md — the per-row "waiting Xm" badge
   // needs to advance even when nothing else re-renders the list (no
@@ -857,6 +881,7 @@ export function ConversationList({
                 onToggleConversationTag={handleRowToggleConversationTag}
                 onClearHistory={handleRowClearHistory}
                 now={nowTick}
+                aiOn={aiOn}
                 responseTimeTargetMinutes={responseTimeTargetMinutes}
                 channelLabel={
                   wahaChannels.length === 0
@@ -939,6 +964,8 @@ const SHORTCUT_ROWS: [string[], string][] = [
 ];
 
 interface ConversationItemProps {
+  /** Account-wide: is an AI auto-replying? undefined = not known yet. */
+  aiOn?: boolean;
   conversation: Conversation;
   isActive: boolean;
   onSelect: (conversation: Conversation) => void;
@@ -1004,6 +1031,7 @@ function ConversationItem({
   onSnooze,
   onToggleConversationTag,
   now,
+  aiOn,
   responseTimeTargetMinutes,
   channelLabel,
 }: ConversationItemProps) {
@@ -1018,7 +1046,34 @@ function ConversationItem({
     ? profiles.filter((p) => eligibleAssigneeIds.includes(p.user_id))
     : profiles;
   const displayName = contact?.name || contact?.phone || t('unknown');
-  const initials = displayName.charAt(0).toUpperCase();
+  const initials = initialsOf(displayName);
+  const unread = conversation.unread_count > 0;
+  // Who answers this thread, as a coloured dot on the avatar — the colour
+  // follows who is in charge, not the status field (see commandOf).
+  const command = commandOf({
+    status: conversation.status,
+    assignedAgentId: conversation.assigned_agent_id,
+    aiAutoreplyDisabled: conversation.ai_autoreply_disabled,
+    aiOn,
+  });
+  // 24h window: only worth a badge when it matters — about to close, or
+  // closed (then only a template goes out).
+  const win = windowState({
+    isOfficialApi: !conversation.whatsapp_channel_id,
+    lastCustomerMessageAt: (conversation as { last_customer_message_at?: string | null })
+      .last_customer_message_at,
+    now: new Date(now),
+  });
+  const windowBadge =
+    conversation.status === 'closed'
+      ? null
+      : win.kind === 'closed'
+        ? win.closedForMs === null
+          ? t('window.never')
+          : t('window.closed', { span: formatSpan(win.closedForMs) })
+        : win.kind === 'open' && win.urgent
+          ? t('window.closing', { span: formatSpan(win.remainingMs) })
+          : null;
   const contactTags = contact?.tags ?? [];
 
   // Every context-menu mutation is fire-and-forget from the caller's
@@ -1058,28 +1113,51 @@ function ConversationItem({
     <button
       onClick={handleClick}
       className={cn(
-        'hover:bg-muted/50 flex w-full items-start gap-3 px-3 py-3 text-left transition-colors',
-        isActive && 'border-primary bg-muted/70 border-l-2'
+        'hover:bg-muted/50 relative flex w-full items-start gap-3 px-3 py-3 text-left transition-colors',
+        isActive && 'bg-muted/70'
       )}
+      aria-current={isActive ? 'true' : undefined}
     >
-      {/* Avatar */}
-      <div className="bg-muted text-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-medium">
-        {contact?.avatar_url ? (
-          <img
-            src={contact.avatar_url}
-            alt={displayName}
-            className="h-10 w-10 rounded-full object-cover"
-          />
-        ) : (
-          initials
-        )}
+      {isActive && (
+        <span className="bg-primary absolute inset-y-0 left-0 w-0.5" aria-hidden />
+      )}
+      {/* Avatar — the photo when we have one (WAHA numbers), initials
+          otherwise; the dot says who is answering. */}
+      <div className="relative shrink-0">
+        <div className="bg-muted text-muted-foreground flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-xs font-semibold">
+          {contact?.avatar_url ? (
+            <img
+              src={contact.avatar_url}
+              alt=""
+              className="h-10 w-10 rounded-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : (
+            initials
+          )}
+        </div>
+        <span
+          className={cn(
+            'border-background absolute -bottom-0.5 -left-0.5 h-3 w-3 rounded-full border-2',
+            COMMAND_DOT[command]
+          )}
+          title={t(`command.${command}`)}
+          aria-label={t(`command.${command}`)}
+        />
       </div>
 
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className="text-foreground truncate text-sm font-medium">
+            <span
+              className={cn(
+                'text-foreground truncate text-sm',
+                unread ? 'font-semibold' : 'font-medium'
+              )}
+            >
               {displayName}
             </span>
             {channelLabel && (
@@ -1096,7 +1174,18 @@ function ConversationItem({
           </span>
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">
-          <p className="text-muted-foreground truncate text-xs">
+          <p
+            className={cn(
+              'truncate text-xs',
+              unread ? 'text-foreground' : 'text-muted-foreground'
+            )}
+          >
+            {conversation.last_message_sender_type === 'bot' && (
+              <Bot
+                className="mr-1 inline h-3 w-3 align-[-2px]"
+                aria-label={t('lastByBot')}
+              />
+            )}
             {conversation.last_message_text || t('noMessagesYet')}
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
@@ -1119,20 +1208,27 @@ function ConversationItem({
                 {conversation.unread_count}
               </span>
             )}
-            <span
-              className={cn(
-                'h-2 w-2 rounded-full',
-                STATUS_COLORS[conversation.status]
-              )}
-              title={conversation.status}
-            />
           </div>
         </div>
         {((contact?.tags && contact.tags.length > 0) ||
           contact?.dealStage ||
           conversationTags.length > 0 ||
-          snoozed) && (
+          snoozed ||
+          windowBadge) && (
           <div className="mt-1 flex flex-wrap items-center gap-1">
+            {windowBadge && (
+              <span
+                className={cn(
+                  'rounded-full border px-1.5 py-0.5 text-[10px] leading-none font-medium',
+                  win.kind === 'closed'
+                    ? 'border-amber-400 text-amber-700 dark:border-amber-700 dark:text-amber-300'
+                    : 'border-red-400 text-red-700 dark:border-red-700 dark:text-red-300'
+                )}
+                title={t('window.title')}
+              >
+                {windowBadge}
+              </span>
+            )}
             {snoozed && conversation.snoozed_until && (
               <span
                 className="flex items-center gap-0.5 rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] leading-none font-medium text-sky-700 dark:text-sky-400"

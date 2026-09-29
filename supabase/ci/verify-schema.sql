@@ -660,6 +660,12 @@ BEGIN
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'contacts' AND column_name = 'avatar_updated_at'
+  ) THEN
+    RAISE EXCEPTION 'contacts.avatar_updated_at is missing — migration 084 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'prospecting_candidates' AND column_name = 'followups_sent'
   ) THEN
     RAISE EXCEPTION 'prospecting_candidates.followups_sent is missing — migration 083 did not apply';

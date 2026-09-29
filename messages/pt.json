@@ -211,6 +211,20 @@
       "unknownAuthor": "Ex-membro da equipe"
     },
     "conversationList": {
+      "command": {
+        "human": "Uma pessoa está atendendo",
+        "ai": "A IA está atendendo",
+        "waiting": "Aguardando uma pessoa (a IA parou)",
+        "nobody": "Ninguém atendendo",
+        "closed": "Encerrada"
+      },
+      "window": {
+        "closing": "Janela fecha em {span}",
+        "closed": "Janela fechada há {span} · só template",
+        "never": "Cliente nunca escreveu · só template",
+        "title": "No número oficial, passadas 24h da última mensagem do cliente só um template aprovado pode ser enviado."
+      },
+      "lastByBot": "Última mensagem enviada pelo automático",
       "filterSnoozed": "Adiadas",
       "snooze": "Adiar",
       "unsnooze": "Cancelar adiamento",

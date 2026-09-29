@@ -211,6 +211,20 @@
       "unknownAuthor": "Former teammate"
     },
     "conversationList": {
+      "command": {
+        "human": "A person is handling it",
+        "ai": "The AI is handling it",
+        "waiting": "Waiting for a person (the AI stopped)",
+        "nobody": "Nobody is handling it",
+        "closed": "Closed"
+      },
+      "window": {
+        "closing": "Window closes in {span}",
+        "closed": "Window closed {span} ago · template only",
+        "never": "Customer never wrote · template only",
+        "title": "On the official number, 24h after the customer's last message only an approved template can be sent."
+      },
+      "lastByBot": "Last message sent by automation",
       "filterSnoozed": "Snoozed",
       "snooze": "Snooze",
       "unsnooze": "Unsnooze",

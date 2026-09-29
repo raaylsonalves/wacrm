@@ -5,6 +5,7 @@ import { resumePendingExecution } from '@/lib/automations/engine'
 import type { AutomationContext } from '@/lib/automations/engine'
 import { runFollowupSweep } from '@/lib/automations/followup-sweep'
 import { runProspectingTick } from '@/lib/prospecting/tick'
+import { syncContactAvatars } from '@/lib/contacts/avatar-sync'
 
 /**
  * Drain due `automation_pending_executions` rows. Meant to be hit
@@ -117,5 +118,11 @@ export async function GET(request: Request) {
     return null
   })
 
-  return NextResponse.json({ processed, followups, prospecting })
+  // Contact profile photos (WAHA numbers only), a few per tick.
+  const avatars = await syncContactAvatars(supabaseAdmin()).catch((err) => {
+    console.error('[cron] avatar sync failed:', err)
+    return null
+  })
+
+  return NextResponse.json({ processed, followups, prospecting, avatars })
 }

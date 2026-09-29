@@ -343,3 +343,23 @@ export function toWahaChatId(phone: string): string {
 export function fromWahaChatId(chatId: string): string {
   return chatId.replace(/@(c|g)\.us$/, '');
 }
+
+/**
+ * The contact's WhatsApp profile picture URL, or null when there is none
+ * (no photo, or privacy settings hide it — a normal state, not an error).
+ * The URL is a signed WhatsApp CDN link that expires in days: callers must
+ * store the FILE, never this URL.
+ */
+export async function getWahaProfilePictureUrl(
+  baseUrl: string,
+  apiKey: string,
+  sessionName: string,
+  chatId: string
+): Promise<string | null> {
+  const body = await wahaFetch<{ profilePictureURL?: string | null } | null>(
+    baseUrl,
+    apiKey,
+    `/api/contacts/profile-picture?contactId=${encodeURIComponent(chatId)}&session=${encodeURIComponent(sessionName)}`
+  );
+  return body?.profilePictureURL ?? null;
+}
