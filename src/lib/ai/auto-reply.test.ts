@@ -56,10 +56,13 @@ vi.mock('@/lib/rate-limit', async () => {
   )
   return {
     ...actual,
-    checkRateLimit: (...a: Parameters<typeof actual.checkRateLimit>) =>
+    // Never the real in-memory counter: it accumulates across every
+    // dispatch in this file and would start tripping mid-suite. Tests that
+    // care flip `state.rateLimited`.
+    checkRateLimit: () =>
       h.state.rateLimited
         ? { success: false, remaining: 0, resetAt: Date.now() + 1000 }
-        : actual.checkRateLimit(...a),
+        : { success: true, remaining: 99, resetAt: Date.now() + 60_000 },
   }
 })
 vi.mock('@/lib/whatsapp/meta-api', () => ({
@@ -648,6 +651,52 @@ describe('dispatchInboundToAiReply — deterministic handoff keywords', () => {
     ])
     await dispatchInboundToAiReply(ARGS)
     expect(h.generateReplyWithFallback).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('dispatchInboundToAiReply — long replies and failed sends', () => {
+  const longText = `${'Esta é uma frase de exemplo com bastante conteúdo. '.repeat(90).trim()}`
+
+  it('splits a reply over the WhatsApp limit into several messages (the 4,402-char production case)', async () => {
+    expect(longText.length).toBeGreaterThan(4096)
+    h.generateReplyWithFallback.mockResolvedValue({
+      text: longText,
+      segments: [longText],
+      handoff: false,
+      usage: null,
+      provider: 'openai',
+      model: 'gpt-test',
+      attempts: [],
+    })
+    vi.useFakeTimers()
+    const run = dispatchInboundToAiReply(ARGS)
+    await vi.runAllTimersAsync()
+    await run
+    vi.useRealTimers()
+
+    expect(h.engineSendText.mock.calls.length).toBeGreaterThan(1)
+    for (const [call] of h.engineSendText.mock.calls) {
+      expect(call.text.length).toBeLessThanOrEqual(4000)
+    }
+    const rejoined = h.engineSendText.mock.calls.map(([c]) => c.text).join(' ')
+    expect(rejoined.split(/\s+/).filter(Boolean)).toEqual(
+      longText.split(/\s+/).filter(Boolean),
+    )
+  })
+
+  it('hands off — instead of staying silent — when Meta refuses the send', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    h.engineSendText
+      .mockRejectedValueOnce(new Error('Param text.body must be at most 4096 characters long.'))
+      .mockResolvedValue({ whatsapp_message_id: 'm-notice' })
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.state.updatePayload).toMatchObject({
+      ai_autoreply_disabled: true,
+      ai_handoff_reason: 'system_error',
+    })
+    // second call is the customer notice
+    expect(h.engineSendText).toHaveBeenCalledTimes(2)
+    errorSpy.mockRestore()
   })
 })
 

@@ -4,6 +4,7 @@ import { loadActiveRouterForChannel, resolveAgentViaRouter } from './router'
 import { buildConversationContext } from './context'
 import { loadChannelAgentId } from './channel-agent'
 import { matchHandoffKeyword } from './handoff-keywords'
+import { splitLongText } from './split-long'
 import { retrieveKnowledge } from './knowledge'
 import {
   generateReplyWithFallback,
@@ -658,7 +659,15 @@ export async function dispatchInboundToAiReply(
     // they actually land on WhatsApp), with a short pause + a fresh
     // "typing…" between them so a multi-part reply reads like someone
     // sending a few messages in a row rather than a wall of text.
-    const segments = generation.segments.length > 0 ? generation.segments : [text]
+    //
+    // Every bubble is also kept under WhatsApp's 4096-character limit:
+    // Meta refuses a longer body outright, so a long answer used to be
+    // lost whole and the customer got nothing (a 4,402-character reply
+    // from a free model, seen in production). The prompt asks for short
+    // messages; this doesn't depend on the model obeying.
+    const segments = (generation.segments.length > 0 ? generation.segments : [text]).flatMap(
+      (segment) => splitLongText(segment),
+    )
     for (let i = 0; i < segments.length; i++) {
       if (i > 0) {
         await new Promise((resolve) => setTimeout(resolve, SEGMENT_DELAY_MS))
@@ -666,14 +675,35 @@ export async function dispatchInboundToAiReply(
           await showTypingIndicator(db, accountId, inboundMessageId)
         }
       }
-      await engineSendText({
-        accountId,
-        userId: configOwnerUserId,
-        conversationId,
-        contactId,
-        text: segments[i],
-        aiGenerated: true,
-      })
+      try {
+        await engineSendText({
+          accountId,
+          userId: configOwnerUserId,
+          conversationId,
+          contactId,
+          text: segments[i],
+          aiGenerated: true,
+        })
+      } catch (sendErr) {
+        // The reply was generated, paid for and its slot claimed, but Meta
+        // refused it. Letting this fall to the outer catch left the
+        // customer in silence with only a log line; hand the conversation
+        // to a person instead (the customer notice goes out if it can).
+        console.error(
+          `${tag} sending bubble ${i + 1}/${segments.length} failed — handing off:`,
+          sendErr,
+        )
+        await handOffToHuman(
+          db,
+          conversationId,
+          config,
+          conv.assigned_agent_id,
+          'system_error',
+          buildHandoffMeta({ messages, replyCount: (conv.ai_reply_count ?? 0) + 1 }),
+          noticeCtx,
+        )
+        return
+      }
     }
     console.info(`${tag} sent ${segments.length} message(s) to the customer`)
   } catch (err) {
