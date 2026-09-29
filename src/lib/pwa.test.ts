@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   PWA_ICON_VARIANTS,
+  brandingQuery,
+  brandingVersion,
   buildManifest,
   detectPushSupport,
   isIosDevice,
@@ -83,5 +85,46 @@ describe('detectPushSupport', () => {
         isStandalone: false,
       })
     ).toBe('unsupported');
+  });
+});
+
+describe('per-account manifest', () => {
+  const id = '3f1c2b4a-1d2e-4f5a-8b9c-0d1e2f3a4b5c';
+
+  it('uses the account name and points icons at that account', () => {
+    const m = buildManifest({
+      accountId: id,
+      name: 'Clínica X',
+      version: 'v1',
+    });
+    expect(m.name).toBe('Clínica X');
+    expect(m.short_name).toBe('Clínica X');
+    for (const icon of m.icons ?? []) {
+      expect(icon.src).toContain(`a=${id}`);
+      expect(icon.src).toContain('v=v1');
+    }
+    // Same app identity regardless of account.
+    expect(m.id).toBe('/dashboard');
+  });
+
+  it('shortens a long name for the home-screen label', () => {
+    const m = buildManifest({
+      accountId: id,
+      name: 'Clínica Odontológica Sorriso',
+    });
+    expect(m.name).toBe('Clínica Odontológica Sorriso');
+    expect((m.short_name ?? '').length).toBeLessThanOrEqual(12);
+  });
+
+  it('ignores a non-uuid account id (no query injection)', () => {
+    expect(brandingQuery({ accountId: 'x&a=evil' })).toBe('');
+    const m = buildManifest({ accountId: '../../etc', name: 'X' });
+    expect((m.icons ?? [])[0].src).toBe('/pwa-icon/192');
+  });
+
+  it('brandingVersion changes when the branding does', () => {
+    const a = brandingVersion(['X', 'https://l/1.png', '#000000']);
+    expect(brandingVersion(['X', 'https://l/1.png', '#000000'])).toBe(a);
+    expect(brandingVersion(['X', 'https://l/2.png', '#000000'])).not.toBe(a);
   });
 });

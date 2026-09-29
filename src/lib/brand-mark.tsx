@@ -10,7 +10,7 @@ export const BRAND_PURPLE = '#7c3aed';
 
 export function brandMarkResponse(
   size: number,
-  opts: { maskable?: boolean; headers?: HeadersInit } = {}
+  opts: { maskable?: boolean; headers?: HeadersInit; color?: string } = {}
 ): ImageResponse {
   // Maskable: the OS crops to its own shape (circle, squircle…), and only
   // the central 80% "safe zone" is guaranteed visible — so fill the whole
@@ -26,7 +26,7 @@ export function brandMarkResponse(
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: BRAND_PURPLE,
+        background: opts.color ?? BRAND_PURPLE,
         borderRadius: radius,
       }}
     >
@@ -42,6 +42,42 @@ export function brandMarkResponse(
       >
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
+    </div>,
+    { width: size, height: size, headers: opts.headers }
+  );
+}
+
+/**
+ * An account logo (already inlined as a data URL) centered on a solid
+ * square, for the installed app's icon. Logos come in any aspect ratio,
+ * so it's contained within a padded box rather than stretched; maskable
+ * variants pad further so the OS's crop never clips it.
+ */
+export function logoIconResponse(
+  size: number,
+  logoDataUrl: string,
+  opts: { maskable?: boolean; headers?: HeadersInit; background?: string } = {}
+): ImageResponse {
+  const box = Math.round(size * (opts.maskable ? 0.6 : 0.8));
+  return new ImageResponse(
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: opts.background ?? '#ffffff',
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- rendered by satori into a PNG, not the DOM */}
+      <img
+        src={logoDataUrl}
+        alt=""
+        width={box}
+        height={box}
+        style={{ objectFit: 'contain' }}
+      />
     </div>,
     { width: size, height: size, headers: opts.headers }
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
@@ -10,22 +10,35 @@ import {
   faviconHrefForAccount,
   sectionKeyForPath,
 } from '@/lib/branding/tab';
+import { brandingQuery, brandingVersion } from '@/lib/pwa';
 
-const ORIGINAL_HREF = 'accountBrandingOriginalHref';
+const ORIGINAL = 'accountBrandingOriginal';
+
+interface HeadOverride {
+  selector: string;
+  attr: 'href' | 'content';
+  value: string;
+  /** Attributes to drop when overriding (e.g. a PNG `type` on an SVG). */
+  strip?: string[];
+}
 
 /**
- * Headless — renders nothing. Brands the browser tab with the current
- * account (Settings → Branding): title "Section — Display name", and the
- * account logo (or the default mark in the brand color) as favicon.
+ * Headless — renders nothing. Applies the current account's branding
+ * (Settings → Branding) to the page head after login:
  *
- * Only after login, by design: the login page, the installed PWA's
- * name/icon (fixed by the OS at install time) and push titles keep the
- * deploy-level brand.
+ *  - tab title "Section — Display name" and the favicon;
+ *  - <link rel="manifest"> → /api/pwa/manifest?a=<account>, so the
+ *    browser's "Install app" uses the account's name and logo;
+ *  - apple-touch-icon + apple-mobile-web-app-title, which iOS reads
+ *    from the page at "Add to Home Screen" time.
  *
- * Next's metadata owns <title> and the icon <link>s and may rewrite them
- * on navigation, so a MutationObserver re-applies ours whenever they
- * drift. Each write is guarded by an equality check, so our own writes
- * don't re-trigger it into a loop.
+ * Installing from the login page still gets the deploy-level brand —
+ * there's no account there yet. And an app installed before this keeps
+ * its old icon until reinstalled (iOS never refreshes it).
+ *
+ * Next's metadata owns these head tags and may rewrite them on
+ * navigation, so a MutationObserver re-applies ours whenever they
+ * drift. Every write is equality-guarded, so ours don't loop.
  */
 export function AccountTabBranding() {
   const { account } = useAuth();
@@ -37,28 +50,72 @@ export function AccountTabBranding() {
     sectionKey ? t(sectionKey) : null,
     account?.display_name
   );
-  const faviconHref = faviconHrefForAccount(account);
+
+  const overrides = useMemo<HeadOverride[]>(() => {
+    if (!account) return [];
+    const list: HeadOverride[] = [];
+
+    const favicon = faviconHrefForAccount(account);
+    if (favicon) {
+      list.push({
+        selector: 'link[rel~="icon"]',
+        attr: 'href',
+        value: favicon,
+        strip: ['type', 'sizes'],
+      });
+    }
+
+    const q = brandingQuery({
+      accountId: account.id,
+      version: brandingVersion([
+        account.display_name,
+        account.logo_url,
+        account.brand_color,
+      ]),
+    });
+    if (q) {
+      list.push(
+        {
+          selector: 'link[rel="manifest"]',
+          attr: 'href',
+          value: `/api/pwa/manifest${q}`,
+        },
+        {
+          selector: 'link[rel="apple-touch-icon"]',
+          attr: 'href',
+          value: `/pwa-icon/apple${q}`,
+        }
+      );
+    }
+
+    const appName = account.display_name?.trim();
+    if (appName) {
+      list.push({
+        selector: 'meta[name="apple-mobile-web-app-title"]',
+        attr: 'content',
+        value: appName,
+      });
+    }
+    return list;
+  }, [account]);
 
   useEffect(() => {
     const originalTitle = document.title;
 
     const apply = () => {
       if (document.title !== title) document.title = title;
-      if (!faviconHref) return;
-      document
-        .querySelectorAll<HTMLLinkElement>('link[rel~="icon"]')
-        .forEach((link) => {
-          if (link.dataset[ORIGINAL_HREF] === undefined) {
-            link.dataset[ORIGINAL_HREF] = link.getAttribute('href') ?? '';
+      for (const o of overrides) {
+        const key = `${ORIGINAL}${o.attr === 'href' ? 'Href' : 'Content'}`;
+        document.querySelectorAll<HTMLElement>(o.selector).forEach((el) => {
+          if (el.dataset[key] === undefined) {
+            el.dataset[key] = el.getAttribute(o.attr) ?? '';
           }
-          if (link.getAttribute('href') !== faviconHref) {
-            link.setAttribute('href', faviconHref);
-            // Next's icon links may declare a PNG type/size; ours can be
-            // an SVG data URL or any logo format.
-            link.removeAttribute('type');
-            link.removeAttribute('sizes');
+          if (el.getAttribute(o.attr) !== o.value) {
+            el.setAttribute(o.attr, o.value);
+            o.strip?.forEach((a) => el.removeAttribute(a));
           }
         });
+      }
     };
 
     apply();
@@ -68,23 +125,24 @@ export function AccountTabBranding() {
       subtree: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ['href'],
+      attributeFilter: ['href', 'content'],
     });
 
     return () => {
       observer.disconnect();
       document.title = originalTitle;
-      document
-        .querySelectorAll<HTMLLinkElement>('link[rel~="icon"]')
-        .forEach((link) => {
-          const original = link.dataset[ORIGINAL_HREF];
+      for (const o of overrides) {
+        const key = `${ORIGINAL}${o.attr === 'href' ? 'Href' : 'Content'}`;
+        document.querySelectorAll<HTMLElement>(o.selector).forEach((el) => {
+          const original = el.dataset[key];
           if (original !== undefined) {
-            link.setAttribute('href', original);
-            delete link.dataset[ORIGINAL_HREF];
+            el.setAttribute(o.attr, original);
+            delete el.dataset[key];
           }
         });
+      }
     };
-  }, [title, faviconHref]);
+  }, [title, overrides]);
 
   return null;
 }
