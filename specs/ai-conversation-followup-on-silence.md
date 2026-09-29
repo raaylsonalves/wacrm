@@ -1,5 +1,17 @@
 # Spec: AI follow-up message after customer silence
 
+> **Superseded by `specs/followup-sequences.md` (2026-09-29).** That spec
+> keeps this one's goal and its 24h-window and cost concerns but replaces
+> the mechanism: silence is detected from `last_message_sender_type` /
+> `last_message_at` (+ a new `last_customer_message_at`) instead of the
+> `ai_awaiting_reply_since` / `ai_followup_sent_at` columns proposed
+> below, sequences (several steps) are built on the existing automations
+> engine, and — the part this spec did not have — pending waits are
+> cancelled when the customer replies, a human takes over, the
+> conversation closes, or the contact opts out. The columns below are
+> **not** to be created. Kept for the reasoning; do not implement as
+> written.
+
 ## Problem
 
 Once the AI auto-reply bot sends a message and the customer doesn't

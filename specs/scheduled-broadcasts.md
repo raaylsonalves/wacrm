@@ -86,6 +86,45 @@ level and never finished.
    if it exists in that shape — confirm) should show `'scheduled'`
    broadcasts with their target time, distinct from `'draft'`/`'sent'`.
 
+## Update (2026-09-29): still unimplemented; additions after comparing with deskcomm
+
+Re-verified against the code: `scheduled_at` and `status = 'scheduled'`
+(migration 001) are still never written or read (`grep scheduled_at` in
+`src/` finds only the type). The user confirmed the gap from the UI
+("nos disparos ainda não tem schedule"). What has changed since this spec
+was written, and what to add:
+
+- **Broadcasts can now send via WAHA, with channel rotation**
+  (`broadcasts.primary_channel_id`, `broadcast_channel_pool`, migrations
+  068). A scheduled broadcast must persist those at creation (it already
+  does — `createBroadcast` takes them) and the cron drain must resume it
+  through `planBroadcastResume` (`broadcast-resume.ts`), which already
+  understands the WAHA branch. Do **not** hand-roll a second delivery
+  path in the cron route.
+- **Pause / resume**, from deskcomm's campaign state machine
+  (`lib/campanhas/maquina-de-estados.ts`: `draft → ready → scheduled →
+  running ⇄ paused → completed`, with `cancelled` reachable from every
+  non-terminal state — deskcomm learned in production that a prepared
+  campaign that *shouldn't* go out must be cancellable before it starts).
+  wacrm's `status` CHECK lacks `paused`/`cancelled`; extend it (text +
+  CHECK, additive) and keep the transition table in one pure module the
+  routes call before writing status.
+- **Sending window** (`send_window: {start_hour, end_hour, tz}` on the
+  broadcast, optional): when the cron finds a due broadcast outside its
+  window, leave it `scheduled` for the next window instead of sending at
+  night. deskcomm keeps the *number's* protection (interval, window, daily
+  cap) in one place (`channel_knobs`) and lets a campaign only be slower
+  than the number — for wacrm the number-level knob is the WAHA throttle
+  (`claim_waha_send_slot`), which already applies.
+- **Consent gate** from `specs/prospecting-csv-import.md`: the audience
+  resolver (used at schedule time *and* again when the cron fires, since
+  contacts can opt out in between) must drop `opted_out_at` contacts and
+  `third_party_list` contacts. Re-evaluating at fire time is the important
+  part — an audience frozen days ago is stale on opt-outs.
+- **Cron host**: fold the drain into the existing
+  `GET /api/automations/cron` (as `followup-sequences.md` does) so no new
+  external pinger is needed; keep the claim-then-process shape below.
+
 ## Acceptance criteria
 
 - [ ] From the wizard, scheduling a broadcast for a future time creates

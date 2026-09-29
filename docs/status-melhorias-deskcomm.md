@@ -241,8 +241,28 @@ Todas as specs da rodada anterior (PRD +
 `signup-onboarding-wizard.md`/`audit-log-endurecido.md`/
 `waha-anti-banimento-e-opt-out.md`) estão implementadas.
 
-Nenhuma spec pendente no momento — todas as specs desta rodada estão
-implementadas (ver seções abaixo).
+As specs da rodada anterior (PRD + as 3 abaixo do título) estão todas
+implementadas. **Nova rodada (2026-09-29)**, escrita depois de comparar
+com o deskcomm e de ouvir o caso da barbearia (o operador cuida do
+WhatsApp e da agenda do cliente): 8 specs, na ordem sugerida de
+implementação. Nenhuma tem código ainda.
+
+| # | Spec | O que resolve |
+|---|---|---|
+| 1 | [`handoff-customer-notice.md`](../specs/handoff-customer-notice.md) | Quando a IA repassa para humano o **cliente não recebe nada** (achado nos 4 caminhos de `handOffToHuman`, mais 2 que retornam calados) e a nota interna é uma frase em inglês fixa, cortada numa linha. Guarda o *motivo* e não a frase, renderiza traduzido e legível, e manda um aviso ao cliente (varia por motivo, por disponibilidade da equipe e por conversa). Pequena, e conserta um buraco que o usuário viu em produção. |
+| 2 | [`scheduled-broadcasts.md`](../specs/scheduled-broadcasts.md) | Disparo agendado — **já existia como spec e continua sem código** (`scheduled_at` existe desde a migration 001 e nada usa). Atualizada com pausa/retomada, janela de envio, compatibilidade com o rodízio WAHA e o filtro de consentimento. |
+| 3 | [`followup-sequences.md`](../specs/followup-sequences.md) | Follow-up em sequência quando o cliente esfria. Substitui `ai-conversation-followup-on-silence.md`. O achado central: hoje **uma espera já armada não pode ser cancelada**, então não dá para montar follow-up seguro com as peças atuais — a spec adiciona as condições de parada (cliente respondeu, humano assumiu, fechou, opt-out) em três camadas. |
+| 4 | [`human-cases.md`](../specs/human-cases.md) | "Casos": a IA continua falando com o cliente enquanto um colega resolve uma tarefa de retaguarda e responde *para a IA*. Não substitui o aviso do item 1 (situações diferentes). Tem uma restrição que o deskcomm não tem: a janela de 24h da API oficial. |
+| 5 | [`ai-agents-management.md`](../specs/ai-agents-management.md) | Agentes gerenciáveis: hoje um agente que não é o padrão só pode ser criado e apagado na tela (a API já edita, a UI não); modelo é campo de texto livre. Traz seletor de modelos vindo do provedor, página de edição, uso por agente e (fase 2) histórico com restauração. |
+| 6 | [`prospecting-csv-import.md`](../specs/prospecting-csv-import.md) | Prospecção por planilha no lugar da API de dados do deskcomm. Importador atual roda no navegador, só aceita cabeçalho em inglês e vírgula (o Excel BR exporta `;`). Traz importação no servidor com relatório por linha e um **portão de consentimento** (lista de terceiros não entra em disparo). |
+| 7 | [`google-calendar-sync.md`](../specs/google-calendar-sync.md) | Agendamentos vão para o Google Agenda do dono e eventos do Google bloqueiam horários para a IA. A maior incerteza não é código: é a verificação do app pelo Google. |
+| 8 | [`operator-multi-account.md`](../specs/operator-multi-account.md) | Modo operador: uma pessoa cuidando de vários clientes (a barbearia). Hoje o convite **recusa** quem já está numa conta. Traz memberships com conta ativa, carteira de saúde por cliente, experiência "essencial" e links para o cliente conectar QR/Google sem passar senha. |
+
+Ordem: 1 é pequena e urgente; 2 e 3 dependem da mesma decisão sobre a
+frequência do cron; 4 usa os códigos de motivo do 1; 7 e 8 são o que
+transforma o produto no serviço "eu opero o WhatsApp do cliente". Onde
+duas specs se cruzam elas se citam pelo nome (ex.: o cron único, o
+consentimento, os links de conexão).
 
 ### PWA + Web Push — ✅ implementado (falta configurar as chaves VAPID)
 - **Instalável**: `src/app/manifest.ts` (`/manifest.webmanifest`,
