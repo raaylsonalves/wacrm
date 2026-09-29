@@ -577,6 +577,21 @@ function InboxPageInner() {
     [activeContact]
   );
 
+  // Snooze / conversation-tag writes from the list's context menu or
+  // the keyboard shortcuts (migration 070) — same local-patch shape as
+  // the handlers above.
+  const handleConversationPatch = useCallback(
+    (conversationId: string, patch: Partial<Conversation>) => {
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, ...patch } : c))
+      );
+      if (activeConversation?.id === conversationId) {
+        setActiveConversation((prev) => (prev ? { ...prev, ...patch } : prev));
+      }
+    },
+    [activeConversation]
+  );
+
   // On mobile (<lg) we show a SINGLE pane — either the list or the
   // thread — rather than cramming both side-by-side. Selecting a
   // conversation slides the thread in; the thread's back button pops
@@ -616,6 +631,7 @@ function InboxPageInner() {
             onStatusChange={handleStatusChange}
             onAssignChange={handleAssignChange}
             onContactTagsChange={handleContactTagsChange}
+            onConversationPatch={handleConversationPatch}
           />
         </div>
 
@@ -658,7 +674,10 @@ function InboxPageInner() {
             toggle — which is itself desktop-only — never affects it. */}
         {contactPanelOpen && (
           <div className="hidden lg:block">
-            <ContactSidebar contact={activeContact} />
+            <ContactSidebar
+              contact={activeContact}
+              conversationId={activeConversation?.id ?? null}
+            />
           </div>
         )}
       </div>

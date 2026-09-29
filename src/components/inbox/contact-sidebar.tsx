@@ -23,9 +23,12 @@ import { format } from "date-fns";
 import { useTranslations } from "next-intl";
 import { dateFnsLocale } from "@/lib/date-fns-locale";
 import { contactHandle } from "@/lib/whatsapp/wa-identity";
+import { ConversationNotes } from "./conversation-notes";
 
 interface ContactSidebarProps {
   contact: Contact | null;
+  /** Active thread — enables the internal-notes section (migration 070). */
+  conversationId?: string | null;
 }
 
 // Drag-resizable width (spec: inbox-contact-panel-sizing.md). 280px
@@ -51,7 +54,7 @@ function readInitialPanelWidth(): number {
   return DEFAULT_PANEL_WIDTH;
 }
 
-export function ContactSidebar({ contact }: ContactSidebarProps) {
+export function ContactSidebar({ contact, conversationId }: ContactSidebarProps) {
   const tSidebar = useTranslations("Inbox.sidebar");
   const tThread = useTranslations("Inbox.messageThread");
 
@@ -341,6 +344,16 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
               )}
             </div>
           </div>
+
+          {conversationId && (
+            <>
+              <div className="my-4 border-t border-border" />
+              <ConversationNotes
+                key={conversationId}
+                conversationId={conversationId}
+              />
+            </>
+          )}
 
           {/* Divider */}
           <div className="my-4 border-t border-border" />

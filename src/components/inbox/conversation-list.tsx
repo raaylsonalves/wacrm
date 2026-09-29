@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
   CONVERSATION_SELECT,
+  isSnoozed,
   matchesContactFilters,
+  snoozePresetUntil,
+  type SnoozePreset,
   normalizeConversations,
 } from '@/lib/inbox/conversations';
 import { cn } from '@/lib/utils';
@@ -18,7 +21,16 @@ import {
   type ChannelPolicyEntry,
 } from '@/lib/channels/routing';
 import type { Conversation, ConversationStatus, Profile, Tag } from '@/types';
-import { Search, ChevronDown, X, Check, Loader2, Clock } from 'lucide-react';
+import {
+  Search,
+  ChevronDown,
+  X,
+  Check,
+  Loader2,
+  Clock,
+  AlarmClock,
+  Hash,
+} from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { dateFnsLocale } from '@/lib/date-fns-locale';
 import { useTranslations } from 'next-intl';
@@ -40,6 +52,14 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { neighborId, useInboxShortcuts } from '@/hooks/use-inbox-shortcuts';
 
 interface ConversationListProps {
   activeConversationId: string | null;
@@ -67,6 +87,11 @@ interface ConversationListProps {
     assignedAgentId: string | null
   ) => void;
   onContactTagsChange?: (contactId: string, tags: Tag[]) => void;
+  /** Local-state patch for snooze / conversation tags (migration 070). */
+  onConversationPatch?: (
+    conversationId: string,
+    patch: Partial<Conversation>
+  ) => void;
 }
 
 const STATUS_LABEL_KEY: Record<ConversationStatus, string> = {
@@ -81,7 +106,9 @@ const STATUS_COLORS: Record<ConversationStatus, string> = {
   closed: 'bg-muted-foreground',
 };
 
-type InboxFilter = ConversationStatus | 'all' | 'unread';
+type InboxFilter = ConversationStatus | 'all' | 'unread' | 'snoozed';
+
+const SNOOZE_PRESETS: SnoozePreset[] = ['1h', '3h', 'tomorrow'];
 
 interface WahaChannelOption {
   id: string;
@@ -97,6 +124,7 @@ export function ConversationList({
   onStatusChange,
   onAssignChange,
   onContactTagsChange,
+  onConversationPatch,
 }: ConversationListProps) {
   const t = useTranslations('Inbox.conversationList');
   const tThread = useTranslations('Inbox.messageThread');
@@ -121,6 +149,7 @@ export function ConversationList({
       { label: t('filterOpen'), value: 'open' },
       { label: t('filterPending'), value: 'pending' },
       { label: t('filterClosed'), value: 'closed' },
+      { label: t('filterSnoozed'), value: 'snoozed' },
     ],
     [t]
   );
@@ -322,6 +351,52 @@ export function ConversationList({
     [onAssignChange, tThread]
   );
 
+  const handleRowSnooze = useCallback(
+    async (conversationId: string, until: Date | null) => {
+      const snoozed_until = until ? until.toISOString() : null;
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('conversations')
+        .update({ snoozed_until })
+        .eq('id', conversationId);
+      if (error) {
+        console.error('Failed to snooze:', error);
+        toast.error(t('snoozeFailed'));
+        return;
+      }
+      onConversationPatch?.(conversationId, { snoozed_until });
+      if (until) toast.success(t('snoozed'));
+    },
+    [onConversationPatch, t]
+  );
+
+  const handleRowToggleConversationTag = useCallback(
+    async (conversationId: string, currentTags: Tag[], tag: Tag) => {
+      const supabase = createClient();
+      const hasTag = currentTags.some((ct) => ct.id === tag.id);
+      const { error } = hasTag
+        ? await supabase
+            .from('conversation_tags')
+            .delete()
+            .eq('conversation_id', conversationId)
+            .eq('tag_id', tag.id)
+        : await supabase
+            .from('conversation_tags')
+            .insert({ conversation_id: conversationId, tag_id: tag.id });
+      if (error) {
+        console.error('Failed to update conversation tag:', error);
+        toast.error(t('tagUpdateFailed'));
+        return;
+      }
+      onConversationPatch?.(conversationId, {
+        tags: hasTag
+          ? currentTags.filter((ct) => ct.id !== tag.id)
+          : [...currentTags, tag],
+      });
+    },
+    [onConversationPatch, t]
+  );
+
   const handleRowClearHistory = useCallback(
     async (conversationId: string) => {
       const res = await fetch(
@@ -389,9 +464,17 @@ export function ConversationList({
   const filtered = useMemo(() => {
     let result = conversations;
 
+    // Snoozed threads live only under their own filter. `nowTick`
+    // advancing is what makes an expired snooze reappear, no cron.
+    if (filter === 'snoozed') {
+      result = result.filter((c) => isSnoozed(c, nowTick));
+    } else {
+      result = result.filter((c) => !isSnoozed(c, nowTick));
+    }
+
     if (filter === 'unread') {
       result = result.filter((c) => c.unread_count > 0);
-    } else if (filter !== 'all') {
+    } else if (filter !== 'all' && filter !== 'snoozed') {
       result = result.filter((c) => c.status === filter);
     }
 
@@ -427,11 +510,45 @@ export function ConversationList({
   }, [
     conversations,
     filter,
+    nowTick,
     search,
     selectedTagIds,
     selectedCompany,
     selectedChannel,
   ]);
+
+  // Keyboard shortcuts act on the list exactly as filtered on screen.
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const [snoozeDialogOpen, setSnoozeDialogOpen] = useState(false);
+  const activeConv = useMemo(
+    () => conversations.find((c) => c.id === activeConversationId) ?? null,
+    [conversations, activeConversationId]
+  );
+  const stepConversation = (dir: 1 | -1) => {
+    const id = neighborId(
+      filtered.map((c) => c.id),
+      activeConversationId,
+      dir
+    );
+    const next = id ? filtered.find((c) => c.id === id) : undefined;
+    if (next && next.id !== activeConversationId) onSelect(next);
+  };
+  useInboxShortcuts({
+    next: () => stepConversation(1),
+    prev: () => stepConversation(-1),
+    close: () => {
+      if (activeConv && activeConv.status !== 'closed') {
+        void handleRowStatusChange(activeConv.id, 'closed');
+      }
+    },
+    reply: () => {
+      document.querySelector<HTMLTextAreaElement>('[data-inbox-composer]')?.focus();
+    },
+    snooze: () => {
+      if (activeConv && activeConv.status !== 'closed') setSnoozeDialogOpen(true);
+    },
+    help: () => setShortcutsHelpOpen(true),
+  });
 
   const toggleTag = useCallback((id: string) => {
     setSelectedTagIds((prev) =>
@@ -736,6 +853,8 @@ export function ConversationList({
                 onStatusChange={handleRowStatusChange}
                 onAssignChange={handleRowAssignChange}
                 onToggleTag={handleRowToggleTag}
+                onSnooze={handleRowSnooze}
+                onToggleConversationTag={handleRowToggleConversationTag}
                 onClearHistory={handleRowClearHistory}
                 now={nowTick}
                 responseTimeTargetMinutes={responseTimeTargetMinutes}
@@ -752,9 +871,72 @@ export function ConversationList({
           </div>
         )}
       </ScrollArea>
+
+      <Dialog open={snoozeDialogOpen} onOpenChange={setSnoozeDialogOpen}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>{t('snooze')}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            {SNOOZE_PRESETS.map((preset) => (
+              <Button
+                key={preset}
+                variant="outline"
+                onClick={() => {
+                  setSnoozeDialogOpen(false);
+                  if (activeConv) {
+                    void handleRowSnooze(
+                      activeConv.id,
+                      snoozePresetUntil(preset, new Date())
+                    );
+                  }
+                }}
+              >
+                {t(`snoozePreset.${preset}`)}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('shortcuts.title')}</DialogTitle>
+          </DialogHeader>
+          <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 text-sm">
+            {SHORTCUT_ROWS.map(([keys, labelKey]) => (
+              <div key={labelKey} className="contents">
+                <dt className="flex gap-1">
+                  {keys.map((k) => (
+                    <kbd
+                      key={k}
+                      className="border-border bg-muted rounded border px-1.5 py-0.5 font-mono text-xs"
+                    >
+                      {k}
+                    </kbd>
+                  ))}
+                </dt>
+                <dd className="text-muted-foreground">
+                  {t(`shortcuts.${labelKey}`)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+const SHORTCUT_ROWS: [string[], string][] = [
+  [['j', '↓'], 'next'],
+  [['k', '↑'], 'prev'],
+  [['e'], 'close'],
+  [['r'], 'reply'],
+  [['s'], 'snooze'],
+  [['?'], 'help'],
+];
 
 interface ConversationItemProps {
   conversation: Conversation;
@@ -779,6 +961,12 @@ interface ConversationItemProps {
     tag: Tag
   ) => Promise<void>;
   onClearHistory: (conversationId: string) => Promise<void>;
+  onSnooze: (conversationId: string, until: Date | null) => Promise<void>;
+  onToggleConversationTag: (
+    conversationId: string,
+    currentTags: Tag[],
+    tag: Tag
+  ) => Promise<void>;
   /** Current time, ticked periodically by the parent (see the interval
    *  comment above) — passed in rather than read via `Date.now()` at
    *  render time so the badge advances even when nothing else about
@@ -813,10 +1001,14 @@ function ConversationItem({
   onAssignChange,
   onToggleTag,
   onClearHistory,
+  onSnooze,
+  onToggleConversationTag,
   now,
   responseTimeTargetMinutes,
   channelLabel,
 }: ConversationItemProps) {
+  const conversationTags = conversation.tags ?? [];
+  const snoozed = isSnoozed(conversation, now);
   const contact = conversation.contact;
   const eligibleAssigneeIds = eligibleAssigneesFromMap(
     routingPolicyMap,
@@ -936,8 +1128,35 @@ function ConversationItem({
             />
           </div>
         </div>
-        {((contact?.tags && contact.tags.length > 0) || contact?.dealStage) && (
+        {((contact?.tags && contact.tags.length > 0) ||
+          contact?.dealStage ||
+          conversationTags.length > 0 ||
+          snoozed) && (
           <div className="mt-1 flex flex-wrap items-center gap-1">
+            {snoozed && conversation.snoozed_until && (
+              <span
+                className="flex items-center gap-0.5 rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] leading-none font-medium text-sky-700 dark:text-sky-400"
+                title={t('snoozedUntilTitle', {
+                  time: new Date(conversation.snoozed_until).toLocaleString(),
+                })}
+              >
+                <AlarmClock className="h-2.5 w-2.5" />
+                {t('snoozedBadge')}
+              </span>
+            )}
+            {/* Conversation tags get a # prefix and an outlined style so
+                they read as "this thread" vs. the filled contact tags. */}
+            {conversationTags.map((tag) => (
+              <span
+                key={`conv-${tag.id}`}
+                title={t('conversationTagTitle', { name: tag.name })}
+                className="inline-flex max-w-[100px] items-center gap-0.5 truncate rounded-full border px-1.5 py-0.5 text-[10px] leading-none font-medium"
+                style={{ borderColor: tag.color, color: tag.color }}
+              >
+                <Hash className="h-2.5 w-2.5 shrink-0" />
+                {tag.name}
+              </span>
+            ))}
             {contact?.dealStage && (
               <span
                 title={contact.dealStage.name}
@@ -1000,6 +1219,57 @@ function ConversationItem({
             }
           )}
         </ContextMenuGroup>
+
+        {/* Snooze only makes sense for a thread still in the active
+            queue — a closed one has nothing to "wake up" into. */}
+        {(conversation.status !== 'closed' || snoozed) && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuGroup>
+              <ContextMenuLabel>{t('snooze')}</ContextMenuLabel>
+              {snoozed ? (
+                <ContextMenuItem
+                  disabled={pendingKey !== null}
+                  closeOnClick={false}
+                  onClick={() =>
+                    runPending('snooze:clear', () =>
+                      onSnooze(conversation.id, null)
+                    )
+                  }
+                >
+                  {pendingKey === 'snooze:clear' && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  )}
+                  {t('unsnooze')}
+                </ContextMenuItem>
+              ) : (
+                SNOOZE_PRESETS.map((preset) => {
+                  const key = `snooze:${preset}`;
+                  return (
+                    <ContextMenuItem
+                      key={preset}
+                      disabled={pendingKey !== null}
+                      closeOnClick={false}
+                      onClick={() =>
+                        runPending(key, () =>
+                          onSnooze(
+                            conversation.id,
+                            snoozePresetUntil(preset, new Date())
+                          )
+                        )
+                      }
+                    >
+                      {pendingKey === key && (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      )}
+                      {t(`snoozePreset.${preset}`)}
+                    </ContextMenuItem>
+                  );
+                })
+              )}
+            </ContextMenuGroup>
+          </>
+        )}
 
         <ContextMenuSeparator />
 
@@ -1084,6 +1354,47 @@ function ConversationItem({
                     <span
                       className="h-2 w-2 shrink-0 rounded-full"
                       style={{ backgroundColor: tag.color }}
+                    />
+                    <span className="truncate">{tag.name}</span>
+                  </ContextMenuItem>
+                );
+              })}
+            </ContextMenuGroup>
+          </>
+        )}
+
+        {allTags.length > 0 && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuGroup>
+              <ContextMenuLabel>{t('conversationTags')}</ContextMenuLabel>
+              {allTags.map((tag) => {
+                const checked = conversationTags.some((ct) => ct.id === tag.id);
+                const key = `ctag:${tag.id}`;
+                const busy = pendingKey === key;
+                return (
+                  <ContextMenuItem
+                    key={tag.id}
+                    disabled={pendingKey !== null}
+                    closeOnClick={false}
+                    onClick={() =>
+                      runPending(key, () =>
+                        onToggleConversationTag(
+                          conversation.id,
+                          conversationTags,
+                          tag
+                        )
+                      )
+                    }
+                  >
+                    {busy ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      checked && <Check className="h-3.5 w-3.5" />
+                    )}
+                    <Hash
+                      className="h-3 w-3 shrink-0"
+                      style={{ color: tag.color }}
                     />
                     <span className="truncate">{tag.name}</span>
                   </ContextMenuItem>

@@ -184,7 +184,41 @@
     "page": {
       "whatsappNotConnected": "WhatsApp® is not connected. Go to Settings to connect your account."
     },
+    "conversationNotes": {
+      "title": "Internal notes",
+      "hint": "Only teammates see these — never sent to the customer.",
+      "placeholder": "Add an internal note…",
+      "add": "Add note",
+      "addFailed": "Failed to add note",
+      "delete": "Delete note",
+      "deleteConfirm": "Delete this note?",
+      "deleteFailed": "Failed to delete note",
+      "unknownAuthor": "Former teammate"
+    },
     "conversationList": {
+      "filterSnoozed": "Snoozed",
+      "snooze": "Snooze",
+      "unsnooze": "Unsnooze",
+      "snoozePreset": {
+        "1h": "For 1 hour",
+        "3h": "For 3 hours",
+        "tomorrow": "Until tomorrow, 9:00"
+      },
+      "snoozed": "Conversation snoozed",
+      "snoozeFailed": "Failed to snooze conversation",
+      "snoozedBadge": "Snoozed",
+      "snoozedUntilTitle": "Snoozed until {time}",
+      "conversationTags": "Conversation tags",
+      "conversationTagTitle": "Conversation tag: {name}",
+      "shortcuts": {
+        "title": "Keyboard shortcuts",
+        "next": "Next conversation",
+        "prev": "Previous conversation",
+        "close": "Close conversation",
+        "reply": "Focus reply box",
+        "snooze": "Snooze conversation",
+        "help": "Show this help"
+      },
       "searchPlaceholder": "Search conversations...",
       "filterAll": "All",
       "filterUnread": "Unread",

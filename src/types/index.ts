@@ -176,6 +176,16 @@ export interface ContactNote {
   created_at: string;
 }
 
+/** Internal, teammate-only note on one conversation (migration 070). */
+export interface ConversationNote {
+  id: string;
+  conversation_id: string;
+  account_id: string;
+  author_user_id: string | null;
+  body: string;
+  created_at: string;
+}
+
 export type ConversationStatus = 'open' | 'pending' | 'closed';
 
 export interface Conversation {
@@ -196,6 +206,11 @@ export interface Conversation {
   created_at: string;
   updated_at: string;
   contact?: Contact;
+  /** Hidden from the default inbox until this passes (migration 070).
+   *  Cleared by the next inbound message. */
+  snoozed_until?: string | null;
+  /** Tags on this thread, distinct from `contact.tags` (migration 070). */
+  tags?: Tag[];
   /**
    * AI auto-reply state for this thread (migration 029 + 033):
    *  - `ai_autoreply_disabled` — the bot is paused here (a human took

@@ -184,7 +184,41 @@
     "page": {
       "whatsappNotConnected": "O WhatsApp® não está conectado. Vá em Configurações para conectar sua conta."
     },
+    "conversationNotes": {
+      "title": "Notas internas",
+      "hint": "Só a equipe vê — nunca é enviado ao cliente.",
+      "placeholder": "Adicionar nota interna…",
+      "add": "Adicionar nota",
+      "addFailed": "Falha ao adicionar nota",
+      "delete": "Excluir nota",
+      "deleteConfirm": "Excluir esta nota?",
+      "deleteFailed": "Falha ao excluir nota",
+      "unknownAuthor": "Ex-membro da equipe"
+    },
     "conversationList": {
+      "filterSnoozed": "Adiadas",
+      "snooze": "Adiar",
+      "unsnooze": "Cancelar adiamento",
+      "snoozePreset": {
+        "1h": "Por 1 hora",
+        "3h": "Por 3 horas",
+        "tomorrow": "Até amanhã, 9:00"
+      },
+      "snoozed": "Conversa adiada",
+      "snoozeFailed": "Falha ao adiar a conversa",
+      "snoozedBadge": "Adiada",
+      "snoozedUntilTitle": "Adiada até {time}",
+      "conversationTags": "Tags da conversa",
+      "conversationTagTitle": "Tag da conversa: {name}",
+      "shortcuts": {
+        "title": "Atalhos de teclado",
+        "next": "Próxima conversa",
+        "prev": "Conversa anterior",
+        "close": "Fechar conversa",
+        "reply": "Focar a caixa de resposta",
+        "snooze": "Adiar conversa",
+        "help": "Mostrar esta ajuda"
+      },
       "searchPlaceholder": "Buscar conversas...",
       "filterAll": "Todas",
       "filterUnread": "Não lidas",

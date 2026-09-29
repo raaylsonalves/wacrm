@@ -490,6 +490,30 @@ BEGIN
       'trg_enforce_channel_routing is missing on conversations — migration 069 did not apply';
   END IF;
 
+  -- 070 — inbox power features. The un-snooze-on-inbound lives inside
+  -- a CREATE OR REPLACE of bump_conversation_on_inbound, which would
+  -- "succeed" silently if replaced by an older body — assert the
+  -- function actually references snoozed_until.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'conversations'
+      AND column_name = 'snoozed_until'
+  ) THEN
+    RAISE EXCEPTION 'conversations.snoozed_until is missing — migration 070 did not apply';
+  END IF;
+  IF to_regclass('public.conversation_tags') IS NULL THEN
+    RAISE EXCEPTION 'conversation_tags is missing — migration 070 did not apply';
+  END IF;
+  IF to_regclass('public.conversation_notes') IS NULL THEN
+    RAISE EXCEPTION 'conversation_notes is missing — migration 070 did not apply';
+  END IF;
+  IF position('snoozed_until' IN pg_get_functiondef(
+       'public.bump_conversation_on_inbound(uuid,text)'::regprocedure
+     )) = 0 THEN
+    RAISE EXCEPTION
+      'bump_conversation_on_inbound does not clear snoozed_until — migration 070 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  isSnoozed,
   matchesContactFilters,
   normalizeConversation,
+  snoozePresetUntil,
 } from "./conversations";
 import type { Conversation } from "@/types";
 
@@ -141,5 +143,50 @@ describe("normalizeConversation", () => {
     };
     // A contactless row passes through untouched (consumers use `?.`).
     expect(normalizeConversation(raw).contact).toBeNull();
+  });
+});
+
+describe("conversation-level tags (migration 070)", () => {
+  it("flattens conversation_tags onto conversation.tags, separate from contact tags", () => {
+    const raw = {
+      ...makeConversation(null),
+      conversation_tags: [{ tags: tag("t-conv") }, { tags: null }],
+    } as unknown as Parameters<typeof normalizeConversation>[0];
+    const conv = normalizeConversation(raw);
+    expect(conv.tags?.map((t) => t.id)).toEqual(["t-conv"]);
+    expect(conv).not.toHaveProperty("conversation_tags");
+  });
+
+  it("tag filter matches a tag sitting only on the conversation", () => {
+    const conv = { ...makeConversation({ tags: [] }), tags: [tag("t1")] };
+    expect(matchesContactFilters(conv, { tagIds: ["t1"], company: null })).toBe(true);
+    expect(matchesContactFilters(conv, { tagIds: ["t2"], company: null })).toBe(false);
+  });
+});
+
+describe("isSnoozed", () => {
+  const now = Date.parse("2026-09-29T12:00:00Z");
+  it("is false with no snoozed_until", () => {
+    expect(isSnoozed(makeConversation(null), now)).toBe(false);
+  });
+  it("is true while the snooze is in the future", () => {
+    const conv = { ...makeConversation(null), snoozed_until: "2026-09-29T13:00:00Z" };
+    expect(isSnoozed(conv, now)).toBe(true);
+  });
+  it("is false once the snooze has passed — the conversation reappears on its own", () => {
+    const conv = { ...makeConversation(null), snoozed_until: "2026-09-29T11:59:00Z" };
+    expect(isSnoozed(conv, now)).toBe(false);
+  });
+});
+
+describe("snoozePresetUntil", () => {
+  const now = new Date(2026, 8, 29, 22, 30); // local time
+  it("adds 1h / 3h", () => {
+    expect(snoozePresetUntil("1h", now).getTime() - now.getTime()).toBe(3_600_000);
+    expect(snoozePresetUntil("3h", now).getTime() - now.getTime()).toBe(10_800_000);
+  });
+  it("tomorrow is 09:00 local on the next day", () => {
+    const d = snoozePresetUntil("tomorrow", now);
+    expect([d.getDate(), d.getHours(), d.getMinutes()]).toEqual([30, 9, 0]);
   });
 });

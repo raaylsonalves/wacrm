@@ -7,9 +7,10 @@
 > for implementada ou uma nova for aberta.
 >
 > PRD-mãe: [`prd-melhorias-inspiradas-no-deskcomm.md`](prd-melhorias-inspiradas-no-deskcomm.md).
-> Última revisão: 2026-09-29 (responsáveis por canal implementado).
-> Migrations 064-069 (throttle WAHA, audit log, multi-agente,
-> onboarding, rodízio de broadcast, responsáveis por canal) foram
+> Última revisão: 2026-09-29 (inbox power features implementado).
+> Migrations 064-070 (throttle WAHA, audit log, multi-agente,
+> onboarding, rodízio de broadcast, responsáveis por canal, inbox
+> power features) foram
 > aplicadas ao banco real via MCP do Supabase — confirmado por
 > `list_migrations`. Qualquer migration nova a partir de agora precisa
 > do mesmo passo explícito antes de virar "funcionando em produção".
@@ -243,7 +244,6 @@ Todas as specs da rodada anterior (PRD +
 | Spec | O que falta |
 |---|---|
 | [`pwa-web-push-notifications.md`](../specs/pwa-web-push-notifications.md) | Tudo — sem manifest, sem service worker, sem tabela `push_subscriptions`. Motivada por um bug real relatado pelo usuário: notificação dá "navegador não suporta" no celular, porque a feature atual (`use-browser-notifications.ts`) é só `Notification` API síncrona com aba aberta — nunca funcionaria em mobile sem isso. |
-| [`inbox-power-features.md`](../specs/inbox-power-features.md) | Tudo — 4 features pequenas e independentes portadas do Inbox do deskcomm: snooze, tags de conversa (separadas de tags de contato), notas internas, atalhos de teclado. |
 
 ### Rodízio de números no broadcast — ✅ implementado
 - Migration 068: `broadcasts.primary_channel_id` (NULL = Cloud API,
@@ -326,6 +326,41 @@ Todas as specs da rodada anterior (PRD +
 - Testado: `src/lib/channels/routing.test.ts` (4 casos, lógica pura do
   lookup em Map).
 - Spec: [`channel-routing-responsibles.md`](../specs/channel-routing-responsibles.md).
+
+### Inbox power features — ✅ implementado
+- Migration 070: `conversations.snoozed_until`, `conversation_tags`
+  (reaproveita o catálogo `tags`; o `WITH CHECK` da RLS amarra a tag à
+  mesma conta da conversa), `conversation_notes` (tabela própria, nunca
+  linha em `messages` — nenhuma query do thread do cliente lê essa
+  tabela, então uma nota interna não tem como vazar).
+- **Snooze**: some da lista padrão e aparece num filtro novo
+  "Adiadas". Volta sozinho quando o horário passa, sem cron — a lista já
+  tinha um tick de 60s (do SLA), e `isSnoozed` é reavaliado nele. Uma
+  mensagem nova do cliente limpa o snooze na hora: foi colocado dentro
+  de `bump_conversation_on_inbound`, a função que os DOIS webhooks
+  (Meta e WAHA) já chamam. Presets 1h / 3h / amanhã 9:00 no menu de
+  contexto, só para conversas não-fechadas (recomendação do próprio
+  spec). **Ficou de fora**: "data personalizada" — só os três presets.
+- **Tags da conversa**: grupo novo no menu de contexto, separado das
+  tags de contato; na linha aparecem com `#` e estilo contornado (as de
+  contato continuam preenchidas). O filtro de tags do inbox passou a
+  casar tag de contato OU de conversa. Deliberadamente **não** entram no
+  filtro de audiência do Broadcast (broadcast mira pessoas).
+- **Notas internas**: seção "Notas internas" no painel do contato
+  (acima das notas do contato), cartão âmbar. Escrever: agent+, sempre
+  como você mesmo (RLS confere `author_user_id = auth.uid()`). Apagar:
+  a própria nota, ou admin+ qualquer uma. Sem edição — apaga e reescreve.
+  **Limitação**: o painel do contato é só desktop, então no celular as
+  notas não aparecem ainda.
+- **Atalhos**: `src/hooks/use-inbox-shortcuts.ts` — `j`/`k`/setas
+  navegam, `e` fecha, `r` foca a caixa de resposta, `s` abre o diálogo
+  de snooze, `?` mostra a ajuda. Nunca disparam dentro de input/textarea,
+  com IME compondo, com Ctrl/Cmd/Alt, nem com menu/diálogo aberto.
+- Testado: `use-inbox-shortcuts.test.ts` (mapa de teclas, guarda de
+  digitação, navegação) + `conversations.test.ts` (tags de conversa,
+  `isSnoozed`, presets). **Não testado no navegador**: o app local
+  aponta pro Supabase real e exige login — não entrei com credencial.
+- Spec: [`inbox-power-features.md`](../specs/inbox-power-features.md).
 
 ## Gap conhecido — multi-número fora do Inbox
 

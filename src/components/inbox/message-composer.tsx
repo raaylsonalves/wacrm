@@ -728,6 +728,7 @@ export function MessageComposer({
 
           <textarea
             ref={textareaRef}
+            data-inbox-composer=""
             value={text}
             onChange={handleChange}
             onKeyDown={handleKeyDown}

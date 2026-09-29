@@ -184,7 +184,41 @@
     "page": {
       "whatsappNotConnected": "WhatsApp® no está conectado. Ve a Configuración para conectar tu cuenta."
     },
+    "conversationNotes": {
+      "title": "Notas internas",
+      "hint": "Solo el equipo las ve — nunca se envían al cliente.",
+      "placeholder": "Añadir nota interna…",
+      "add": "Añadir nota",
+      "addFailed": "Error al añadir la nota",
+      "delete": "Eliminar nota",
+      "deleteConfirm": "¿Eliminar esta nota?",
+      "deleteFailed": "Error al eliminar la nota",
+      "unknownAuthor": "Excompañero"
+    },
     "conversationList": {
+      "filterSnoozed": "Pospuestas",
+      "snooze": "Posponer",
+      "unsnooze": "Cancelar posposición",
+      "snoozePreset": {
+        "1h": "Durante 1 hora",
+        "3h": "Durante 3 horas",
+        "tomorrow": "Hasta mañana, 9:00"
+      },
+      "snoozed": "Conversación pospuesta",
+      "snoozeFailed": "Error al posponer la conversación",
+      "snoozedBadge": "Pospuesta",
+      "snoozedUntilTitle": "Pospuesta hasta {time}",
+      "conversationTags": "Etiquetas de la conversación",
+      "conversationTagTitle": "Etiqueta de la conversación: {name}",
+      "shortcuts": {
+        "title": "Atajos de teclado",
+        "next": "Siguiente conversación",
+        "prev": "Conversación anterior",
+        "close": "Cerrar conversación",
+        "reply": "Enfocar el cuadro de respuesta",
+        "snooze": "Posponer conversación",
+        "help": "Mostrar esta ayuda"
+      },
       "searchPlaceholder": "Buscar conversaciones...",
       "filterAll": "Todas",
       "filterUnread": "Sin leer",

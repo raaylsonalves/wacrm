@@ -8,7 +8,7 @@ import type { Conversation, Contact, Tag, Deal, PipelineStage } from "@/types";
  * {@link normalizeConversation} flattens both onto `contact`.
  */
 export const CONVERSATION_SELECT =
-  "*, contact:contacts(*, contact_tags(tags(*)), deals(id, status, updated_at, stage:pipeline_stages(*)))";
+  "*, conversation_tags(tags(*)), contact:contacts(*, contact_tags(tags(*)), deals(id, status, updated_at, stage:pipeline_stages(*)))";
 
 /** Raw shape returned by {@link CONVERSATION_SELECT} before flattening. */
 type RawDeal = Pick<Deal, "id" | "status" | "updated_at"> & {
@@ -20,7 +20,12 @@ type RawContact = Contact & {
 };
 type RawConversation = Omit<Conversation, "contact"> & {
   contact?: RawContact | null;
+  conversation_tags?: { tags: Tag | null }[];
 };
+
+function flattenTags(rows: { tags: Tag | null }[] | undefined): Tag[] {
+  return (rows ?? []).map((r) => r.tags).filter((t): t is Tag => t != null);
+}
 
 /**
  * Pick the stage to display for a contact: the most recently updated open
@@ -45,20 +50,50 @@ function pickDealStage(deals: RawDeal[]): PipelineStage | undefined {
  * conversation) passes through untouched.
  */
 export function normalizeConversation(raw: RawConversation): Conversation {
-  const rawContact = raw.contact;
-  if (!rawContact) return raw as Conversation;
+  const { conversation_tags, ...rest } = raw;
+  // Only overwrite `tags` when the embed was actually selected — a row
+  // from a narrower select (or a realtime payload) keeps what it had.
+  const base =
+    conversation_tags !== undefined
+      ? { ...rest, tags: flattenTags(conversation_tags) }
+      : rest;
+
+  const rawContact = base.contact;
+  if (!rawContact) return base as Conversation;
 
   const { contact_tags, deals, ...contact } = rawContact;
   return {
-    ...raw,
+    ...base,
     contact: {
       ...contact,
-      tags: (contact_tags ?? [])
-        .map((ct) => ct.tags)
-        .filter((t): t is Tag => t != null),
+      tags: flattenTags(contact_tags),
       dealStage: pickDealStage(deals ?? []),
     },
   };
+}
+
+/**
+ * Whether a conversation is currently snoozed (migration 070). An
+ * expired snooze reads as not-snoozed, which is the whole "reappears
+ * on its own, no cron" mechanism: the inbox re-evaluates this on its
+ * periodic tick.
+ */
+export function isSnoozed(conversation: Conversation, now: number): boolean {
+  if (!conversation.snoozed_until) return false;
+  const until = new Date(conversation.snoozed_until).getTime();
+  return Number.isFinite(until) && until > now;
+}
+
+export type SnoozePreset = "1h" | "3h" | "tomorrow";
+
+/** Resolve a snooze preset to an absolute time. "tomorrow" = 09:00 local. */
+export function snoozePresetUntil(preset: SnoozePreset, now: Date): Date {
+  if (preset === "1h") return new Date(now.getTime() + 60 * 60_000);
+  if (preset === "3h") return new Date(now.getTime() + 3 * 60 * 60_000);
+  const d = new Date(now);
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  return d;
 }
 
 export function normalizeConversations(
@@ -84,8 +119,13 @@ export function matchesContactFilters(
   { tagIds, company }: ContactFilters,
 ): boolean {
   if (tagIds.length > 0) {
-    const contactTagIds = conversation.contact?.tags ?? [];
-    if (!contactTagIds.some((t) => tagIds.includes(t.id))) return false;
+    // A tag filter matches whether the tag sits on the contact or on
+    // this specific thread — one vocabulary, either attachment point.
+    const anyTags = [
+      ...(conversation.contact?.tags ?? []),
+      ...(conversation.tags ?? []),
+    ];
+    if (!anyTags.some((t) => tagIds.includes(t.id))) return false;
   }
 
   if (company !== null && conversation.contact?.company?.trim() !== company) {

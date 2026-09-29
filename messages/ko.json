@@ -184,7 +184,41 @@
     "page": {
       "whatsappNotConnected": "WhatsApp®이 연결되어 있지 않습니다. 설정으로 이동해 계정을 연결하세요."
     },
+    "conversationNotes": {
+      "title": "내부 메모",
+      "hint": "팀원만 볼 수 있으며 고객에게 절대 전송되지 않습니다.",
+      "placeholder": "내부 메모 추가…",
+      "add": "메모 추가",
+      "addFailed": "메모 추가에 실패했습니다",
+      "delete": "메모 삭제",
+      "deleteConfirm": "이 메모를 삭제할까요?",
+      "deleteFailed": "메모 삭제에 실패했습니다",
+      "unknownAuthor": "이전 팀원"
+    },
     "conversationList": {
+      "filterSnoozed": "보류됨",
+      "snooze": "보류",
+      "unsnooze": "보류 해제",
+      "snoozePreset": {
+        "1h": "1시간 동안",
+        "3h": "3시간 동안",
+        "tomorrow": "내일 오전 9시까지"
+      },
+      "snoozed": "대화가 보류되었습니다",
+      "snoozeFailed": "대화 보류에 실패했습니다",
+      "snoozedBadge": "보류됨",
+      "snoozedUntilTitle": "{time}까지 보류됨",
+      "conversationTags": "대화 태그",
+      "conversationTagTitle": "대화 태그: {name}",
+      "shortcuts": {
+        "title": "키보드 단축키",
+        "next": "다음 대화",
+        "prev": "이전 대화",
+        "close": "대화 종료",
+        "reply": "답장 입력창으로 이동",
+        "snooze": "대화 보류",
+        "help": "이 도움말 보기"
+      },
       "searchPlaceholder": "대화 검색...",
       "filterAll": "전체",
       "filterUnread": "읽지 않음",
