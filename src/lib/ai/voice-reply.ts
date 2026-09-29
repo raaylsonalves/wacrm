@@ -10,6 +10,7 @@ import { AiError } from './types'
 import { providerHttpError, toNetworkError } from './providers/shared'
 import { buildMediaPath } from '@/lib/storage/upload-media'
 import { engineSendMedia } from '@/lib/flows/meta-send'
+import { toSpeechText } from './whatsapp-format'
 
 const OPENAI_SPEECH_URL = 'https://api.openai.com/v1/audio/speech'
 export const TTS_MODEL = 'gpt-4o-mini-tts'
@@ -103,7 +104,12 @@ export async function sendVoiceReply(
 ): Promise<void> {
   const synthesize = args.synthesize ?? synthesizeSpeech
   const send = args.send ?? engineSendMedia
-  const bytes = await synthesize({ apiKey: args.apiKey, text: args.text, voice: args.voice })
+  // Spoken without formatting symbols or URLs; the row keeps the text.
+  const bytes = await synthesize({
+    apiKey: args.apiKey,
+    text: toSpeechText(args.text),
+    voice: args.voice,
+  })
 
   const path = buildMediaPath(args.accountId, 'voice-reply.ogg', Date.now(), 'ai-voice')
   const bucket = db.storage.from('chat-media')

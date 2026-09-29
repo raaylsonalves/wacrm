@@ -18,6 +18,7 @@ import { generateAnthropic } from './providers/anthropic'
 import { generateGemini } from './providers/gemini'
 import { generateOpenRouter } from './providers/openrouter'
 import { looksLikeReasoningLeak, stripThinkBlocks } from './reasoning-leak'
+import { toWhatsAppFormat } from './whatsapp-format'
 
 export interface GenerateArgs {
   config: AiConfig
@@ -128,7 +129,8 @@ export function parseGeneration(
   // A model that answered with its own reasoning: send nothing. An empty
   // text makes auto-reply hand the conversation to a person (empty_reply)
   // rather than show the customer a monologue.
-  const stripped = looksLikeReasoningLeak(cleaned) ? '' : cleaned
+  // Markdown → WhatsApp formatting (`**x**` showed its asterisks).
+  const stripped = looksLikeReasoningLeak(cleaned) ? '' : toWhatsAppFormat(cleaned)
 
   let rawSegments = stripped
     .split(MULTI_MESSAGE_DELIMITER)
