@@ -26,11 +26,27 @@ per call and per agent.
    prompt (an "ok" there IS the answer); never on the conversation's first
    AI reply; allow-listed emoji only (😡 and ❓ are answered); any unknown
    word means "not an acknowledgment".
-2. **Coalesce bursts.** Customers send 3 short messages in 10 seconds;
-   each can trigger its own paid reply. Wait a few seconds after the last
-   inbound and answer once. Biggest likely win *and* a better experience;
-   needs a delayed job (the follow-up cron/sweep machinery can carry it)
-   and care with the reply-slot claim.
+2. **Coalesce bursts** — BUILT (`src/lib/ai/burst.ts`). Every dispatch
+   waits a quiet period (default 4 s, env `AI_REPLY_DEBOUNCE_MS`, `0`
+   turns it off, capped at 15 s); only the dispatch of the NEWEST customer
+   message answers, with the whole burst in its context. No queue or cron:
+   the wait is the webhook's own `after()` work.
+   - A dispatch identifies its own message by wamid, so a message that
+     arrived before it even looked still counts as newer.
+   - A voice note superseded by a later message is still transcribed, so
+     the surviving dispatch reads it.
+   - A button/list tap answers immediately (`immediate`).
+   - After the wait it re-reads the thread: a person assigned, or a
+     handoff, in the meantime means it stands down.
+   - Fails open: a broken lookup answers rather than dropping the
+     customer.
+   - Cost of the feature: every reply is delayed by the quiet period
+     (which also reads as more human), and a process that dies during the
+     wait leaves that message unanswered until the customer writes again.
+   - A message landing in the instant between the check and the send can
+     still produce two replies — the same exposure as before this
+     existed, now much rarer.
+   - Not built: a per-agent setting for the delay (env only).
 3. **Make the prompt cacheable.** Providers discount a repeated prompt
    prefix (Anthropic needs explicit `cache_control` markers; OpenAI and
    Gemini cache stable prefixes automatically). Order the prompt
@@ -61,8 +77,8 @@ per call and per agent.
    price table — show tokens, and cost only where the provider supplies
    the price).
 
-## Suggested order
-2 (bursts) → 3 (prompt order/cache) → 4 (history) → 5 (output cap) →
+## Suggested order (2 is built)
+3 (prompt order/cache) → 4 (history) → 5 (output cap) →
 6 → 8. Build 7 only if usage data shows the big model dominates.
 
 ## Not doing

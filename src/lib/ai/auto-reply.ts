@@ -8,6 +8,7 @@ import { splitLongText } from './split-long'
 import { observeBeforeSend } from './guardrails/observe'
 import { classifyAcknowledgment, shouldSkipAcknowledgment } from './ack'
 import { loadNoticeText } from './notice-text'
+import { waitForQuietPeriod } from './burst'
 import {
   loadAudioRetryText,
   transcribeInboundAudio,
@@ -209,6 +210,9 @@ interface DispatchArgs {
    *  the eligibility gates, so an account with the AI off never pays to
    *  transcribe (specs/ai-audio-inbound.md). */
   audio?: InboundAudio
+  /** Answer right away instead of waiting out a burst — a button/list tap
+   *  is one deliberate action, never the first of several messages. */
+  immediate?: boolean
 }
 
 /**
@@ -452,6 +456,31 @@ export async function dispatchInboundToAiReply(
         }
         return
       }
+    }
+
+    // Burst coalescing (specs/ai-token-economy.md): wait a few seconds and
+    // let only the dispatch of the NEWEST customer message answer, with the
+    // whole burst in context. After the audio block on purpose: a voice
+    // note that a later message supersedes is still transcribed, so the
+    // surviving dispatch can read it.
+    if (!args.immediate) {
+      const quiet = await waitForQuietPeriod(db, { conversationId, inboundMessageId })
+      if (quiet === 'superseded') {
+        console.info(`${tag} skipped: a newer message arrived — its dispatch answers the whole burst`)
+        return
+      }
+      // The world may have changed while we waited (a person took over, a
+      // handoff paused the bot, another reply landed).
+      const { data: fresh } = await db
+        .from('conversations')
+        .select('assigned_agent_id, ai_autoreply_disabled, ai_reply_count')
+        .eq('id', conversationId)
+        .maybeSingle()
+      if (!fresh || fresh.assigned_agent_id || fresh.ai_autoreply_disabled) {
+        console.info(`${tag} skipped: the thread changed hands while waiting for the burst to end`)
+        return
+      }
+      Object.assign(conv, fresh)
     }
 
     const messages = await buildConversationContext(db, conversationId)

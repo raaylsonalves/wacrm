@@ -14,6 +14,7 @@ const h = vi.hoisted(() => ({
   sendTypingIndicator: vi.fn(),
   transcribeInboundAudio: vi.fn(),
   loadNoticeText: vi.fn(),
+  waitForQuietPeriod: vi.fn(),
   loadAudioRetryText: vi.fn(),
   state: {
     /** The customer's two latest messages' transcript_status, newest first. */
@@ -48,6 +49,7 @@ vi.mock('./context', () => ({
   AUDIO_MARK: '[áudio transcrito]',
 }))
 vi.mock('./notice-text', () => ({ loadNoticeText: h.loadNoticeText }))
+vi.mock('./burst', () => ({ waitForQuietPeriod: h.waitForQuietPeriod }))
 vi.mock('./knowledge', () => ({ retrieveKnowledge: h.retrieveKnowledge }))
 // `AllProvidersFailedError` is imported by auto-reply.ts alongside the
 // mocked function — re-export the real class so `instanceof` checks in
@@ -219,6 +221,8 @@ beforeEach(() => {
   h.state.recentCustomer = []
   h.state.lastBusiness = null
   h.loadNoticeText.mockReset()
+  h.waitForQuietPeriod.mockReset()
+  h.waitForQuietPeriod.mockResolvedValue('proceed')
   h.transcribeInboundAudio.mockReset()
   h.loadAudioRetryText.mockReset()
   h.loadAiConfig.mockResolvedValue(aiConfig())
@@ -683,6 +687,41 @@ describe('dispatchInboundToAiReply — deterministic handoff keywords', () => {
     ])
     await dispatchInboundToAiReply(ARGS)
     expect(h.generateReplyWithFallback).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('dispatchInboundToAiReply — bursts', () => {
+  it('a superseded dispatch makes no AI call and sends nothing', async () => {
+    h.waitForQuietPeriod.mockResolvedValue('superseded')
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+    expect(h.engineSendText).not.toHaveBeenCalled()
+    expect(h.state.updatePayload).toBeNull()
+  })
+
+  it('the surviving dispatch answers once', async () => {
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.waitForQuietPeriod).toHaveBeenCalledTimes(1)
+    expect(h.generateReplyWithFallback).toHaveBeenCalledTimes(1)
+  })
+
+  it('a button/list tap answers immediately, without waiting', async () => {
+    await dispatchInboundToAiReply({ ...ARGS, immediate: true })
+    expect(h.waitForQuietPeriod).not.toHaveBeenCalled()
+    expect(h.generateReplyWithFallback).toHaveBeenCalledTimes(1)
+  })
+
+  it('stands down if a person took the thread while it waited', async () => {
+    // The conversation read after the wait shows a human assigned.
+    let reads = 0
+    h.waitForQuietPeriod.mockImplementation(async () => {
+      reads++
+      h.state.conv = { assigned_agent_id: 'agent-9', ai_autoreply_disabled: false, ai_reply_count: 0 }
+      return 'proceed'
+    })
+    await dispatchInboundToAiReply(ARGS)
+    expect(reads).toBe(1)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
   })
 })
 
