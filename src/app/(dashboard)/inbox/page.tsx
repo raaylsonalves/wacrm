@@ -19,6 +19,7 @@ import { useRealtime } from '@/hooks/use-realtime';
 import { ConversationList } from '@/components/inbox/conversation-list';
 import { MessageThread } from '@/components/inbox/message-thread';
 import { ContactSidebar } from '@/components/inbox/contact-sidebar';
+import { PushNudgeBanner } from '@/components/notifications/push-nudge-banner';
 import { toast } from 'sonner';
 import { WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -611,6 +612,10 @@ function InboxPageInner() {
           </p>
         </div>
       )}
+
+      {/* "Turn on notifications" nudge — in the flex column like the
+          banner above, dismissible per device. */}
+      <PushNudgeBanner />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left panel: Conversation list.

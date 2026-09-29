@@ -23,6 +23,7 @@ export const STEPS: readonly OnboardingStep[] = [
   { segment: 'channel', labelKey: 'stepChannel' },
   { segment: 'ai-agent', labelKey: 'stepAiAgent' },
   { segment: 'test', labelKey: 'stepTest' },
+  { segment: 'notifications', labelKey: 'stepNotifications' },
   { segment: 'team', labelKey: 'stepTeam' },
 ] as const;
 

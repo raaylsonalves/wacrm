@@ -69,6 +69,13 @@
     "menuSignOut": "Sign out"
   },
   "Header": {
+    "push": {
+      "labelOn": "Notifications on for this device",
+      "labelOff": "Turn on notifications for this device",
+      "title": "Notifications on this device",
+      "descriptionOn": "You'll be alerted about new customer messages, even with the app closed.",
+      "descriptionOff": "Turn on alerts so you don't miss customer messages — even with the app closed or the phone locked."
+    },
     "dashboard": "Dashboard",
     "inbox": "Inbox",
     "notifications": "Notifications",
@@ -181,6 +188,13 @@
     }
   },
   "Inbox": {
+    "pushNudge": {
+      "text": "Turn on notifications so you don't miss customer messages, even with the app closed.",
+      "iosText": "To get notifications on iPhone, tap Share",
+      "iosText2": "→ \"Add to Home Screen\" and open the app from there.",
+      "enableBtn": "Turn on",
+      "dismiss": "Dismiss"
+    },
     "page": {
       "whatsappNotConnected": "WhatsApp® is not connected. Go to Settings to connect your account."
     },
@@ -2621,6 +2635,12 @@
     }
   },
   "Onboarding": {
+    "stepNotifications": "Notifications",
+    "notifications": {
+      "title": "Get notified about new messages",
+      "description": "Turn on alerts on this device so no customer waits — they arrive even with the app closed or the phone locked. Your teammates can turn it on later from the bell icon at the top.",
+      "notConfigured": "Push notifications aren't set up on this server yet — you can continue and turn them on later from the bell icon at the top."
+    },
     "stepWelcome": "Welcome",
     "stepChannel": "Channel",
     "stepAiAgent": "AI Agent",

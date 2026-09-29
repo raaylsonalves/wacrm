@@ -69,6 +69,13 @@
     "menuSignOut": "Cerrar sesión"
   },
   "Header": {
+    "push": {
+      "labelOn": "Notificaciones activadas en este dispositivo",
+      "labelOff": "Activar notificaciones en este dispositivo",
+      "title": "Notificaciones en este dispositivo",
+      "descriptionOn": "Recibirás avisos de nuevos mensajes de clientes, incluso con la app cerrada.",
+      "descriptionOff": "Activa las alertas para no perder mensajes de clientes — incluso con la app cerrada o el teléfono bloqueado."
+    },
     "dashboard": "Panel",
     "inbox": "Bandeja de entrada",
     "notifications": "Notificaciones",
@@ -181,6 +188,13 @@
     }
   },
   "Inbox": {
+    "pushNudge": {
+      "text": "Activa las notificaciones para no perder mensajes de clientes, incluso con la app cerrada.",
+      "iosText": "Para recibir notificaciones en iPhone, toca Compartir",
+      "iosText2": "→ \"Añadir a pantalla de inicio\" y abre la app desde ahí.",
+      "enableBtn": "Activar",
+      "dismiss": "Descartar"
+    },
     "page": {
       "whatsappNotConnected": "WhatsApp® no está conectado. Ve a Configuración para conectar tu cuenta."
     },
@@ -2609,6 +2623,12 @@
     }
   },
   "Onboarding": {
+    "stepNotifications": "Notificaciones",
+    "notifications": {
+      "title": "Recibe avisos de nuevos mensajes",
+      "description": "Activa las alertas en este dispositivo para que ningún cliente espere — llegan incluso con la app cerrada o el teléfono bloqueado. Tu equipo puede activarlas después desde el icono de campana arriba.",
+      "notConfigured": "Las notificaciones push aún no están configuradas en este servidor — puedes continuar y activarlas después desde el icono de campana arriba."
+    },
     "stepWelcome": "Bienvenida",
     "stepChannel": "Canal",
     "stepAiAgent": "Agente de IA",
