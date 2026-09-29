@@ -5,6 +5,7 @@ import { buildConversationContext } from './context'
 import { loadChannelAgentId } from './channel-agent'
 import { matchHandoffKeyword } from './handoff-keywords'
 import { splitLongText } from './split-long'
+import { observeBeforeSend } from './guardrails/observe'
 import { retrieveKnowledge } from './knowledge'
 import {
   generateReplyWithFallback,
@@ -596,6 +597,23 @@ export async function dispatchInboundToAiReply(
         noticeCtx,
       )
       return
+    }
+
+    // Before-send guardrails, OBSERVE mode (specs/ai-output-guardrails.md):
+    // record what the chain would have blocked, send regardless. Judged
+    // once on the joined text, never per bubble.
+    {
+      const { data: gateContact } = await db
+        .from('contacts')
+        .select('opted_out_at')
+        .eq('id', contactId)
+        .maybeSingle()
+      observeBeforeSend(db, {
+        accountId,
+        conversationId,
+        text,
+        ctx: { optedOut: !!gateContact?.opted_out_at, handingOff: false },
+      })
     }
 
     // Atomically claim a reply slot: the cap check + increment happen in

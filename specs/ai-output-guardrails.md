@@ -219,3 +219,21 @@ deskcomm.
   `send_message` tool. Same seam (before the send), different shape —
   confirm no other code path sends AI text (agenda tools send their own
   messages: `offer_slots`).
+
+## Implementation notes (v1, observe mode)
+
+Built: `src/lib/ai/guardrails/gates.ts` (chain v1, order locked by test:
+`opt_out` → `reasoning_leak` → `human_promise` → `internal_vocabulary`),
+`observe.ts` (records what the chain WOULD veto into `ai_guardrail_traces`,
+migration 075, and sends anyway), wired in `auto-reply.ts` on the joined
+text right after the handoff check.
+
+- **`reasoning_leak` added** (not in the original five): a model that
+  answered with its own chain of thought. `generate.ts` already blanks an
+  obvious leak (→ `empty_reply` handoff); the gate is the second net and
+  its traces show how often it happens.
+- Not built yet: `price_promise` and `disclosure` (need per-account
+  config tables), enforce mode + regenerate-once, `guardrail_veto`
+  handoff reason, the settings card listing recent traces, phase 2.
+- Next step is to read a week of traces per account, tune the regexes,
+  then flip to enforce.

@@ -625,6 +625,9 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'ai_configs.handoff_keywords is missing — migration 074 did not apply';
   END IF;
+  IF to_regclass('public.ai_guardrail_traces') IS NULL THEN
+    RAISE EXCEPTION 'ai_guardrail_traces is missing — migration 075 did not apply';
+  END IF;
 
   RAISE NOTICE 'schema verification passed';
 END
