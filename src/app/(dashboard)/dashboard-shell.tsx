@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { AccountAccessAlert } from "@/components/layout/account-access-alert";
 import { BrandColorEffect } from "@/components/layout/brand-color-effect";
+import { AccountTabBranding } from "@/components/layout/account-tab-branding";
 import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
 import { BrowserNotificationsListener } from "@/components/notifications/browser-notifications-listener";
 
@@ -55,6 +56,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       {/* Applies the account's brand color, if set (Settings → Branding).
           Headless — renders nothing. */}
       <BrandColorEffect />
+      {/* Tab title + favicon from the account's branding. Headless. */}
+      <AccountTabBranding />
       <Sidebar open={sidebarOpen} onClose={closeSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
