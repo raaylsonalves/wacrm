@@ -1,4 +1,8 @@
-import { brandMarkResponse, logoIconResponse } from '@/lib/brand-mark';
+import {
+  badgeResponse,
+  brandMarkResponse,
+  logoIconResponse,
+} from '@/lib/brand-mark';
 import {
   fetchLogoDataUrl,
   loadAccountBranding,
@@ -33,6 +37,10 @@ export async function GET(
   // corner radius, glyph/logo kept inside the safe zone.
   const maskable = variant === 'maskable' || variant === 'apple';
   const headers = { 'Cache-Control': 'public, max-age=86400' };
+
+  // The badge is a shape mask, so a logo can't work there — same glyph
+  // for every account.
+  if (variant === 'badge') return badgeResponse(px, headers);
 
   const accountId = new URL(request.url).searchParams.get('a');
   const branding = await loadAccountBranding(accountId);

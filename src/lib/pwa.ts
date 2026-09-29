@@ -3,7 +3,13 @@ import type { MetadataRoute } from 'next';
 // PWA helpers (specs/pwa-web-push-notifications.md). Pure where possible
 // so the manifest shape and the push-key decoding are unit-tested.
 
-export const PWA_ICON_VARIANTS = ['192', '512', 'maskable', 'apple'] as const;
+export const PWA_ICON_VARIANTS = [
+  '192',
+  '512',
+  'maskable',
+  'apple',
+  'badge',
+] as const;
 export type PwaIconVariant = (typeof PWA_ICON_VARIANTS)[number];
 
 /** Pixel size each icon variant renders at. */
@@ -12,7 +18,12 @@ export const PWA_ICON_SIZE: Record<PwaIconVariant, number> = {
   '512': 512,
   maskable: 512,
   apple: 180,
+  // Android status-bar badge: only its alpha channel is used.
+  badge: 96,
 };
+
+/** Notification badge — a monochrome glyph, same for every account. */
+export const PUSH_BADGE_URL = '/pwa-icon/badge';
 
 /** Mirrors `viewport.themeColor` in src/app/layout.tsx. */
 export const PWA_THEME_COLOR = '#020617';
@@ -51,6 +62,13 @@ export function brandingVersion(parts: (string | null | undefined)[]): string {
     h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0;
   }
   return h.toString(36);
+}
+
+/** The account-branded notification icon (logo, or mark in its color). */
+export function accountNotificationIconUrl(
+  branding?: ManifestBranding | null
+): string {
+  return `/pwa-icon/192${brandingQuery(branding)}`;
 }
 
 export function buildManifest(

@@ -20,6 +20,7 @@ import {
   type NotifiableMessage,
   type NotificationLabels,
 } from '@/lib/notifications/browser-notify';
+import { accountNotificationIcon } from '@/lib/branding/pwa-branding';
 
 export interface PushPayload {
   title: string;
@@ -27,6 +28,8 @@ export interface PushPayload {
   /** Doubles as the notification `tag` — one alert per conversation. */
   conversationId: string;
   url: string;
+  /** Account-branded icon; the service worker falls back to the default. */
+  icon?: string;
 }
 
 export interface VapidConfig {
@@ -241,6 +244,7 @@ export async function pushInboundMessage(
         body,
         conversationId: message.conversation_id,
         url: conversationHref(message.conversation_id),
+        icon: await accountNotificationIcon(accountId),
       },
       {
         onlyUserId: (conv as { assigned_agent_id?: string | null })

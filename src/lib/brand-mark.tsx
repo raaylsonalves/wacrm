@@ -48,6 +48,41 @@ export function brandMarkResponse(
 }
 
 /**
+ * Android status-bar badge. Android keeps only the alpha channel and
+ * tints it, so this must be a glyph on transparency — an opaque square
+ * (like the brand mark) renders as an empty box.
+ */
+export function badgeResponse(size: number, headers?: HeadersInit) {
+  const glyph = Math.round(size * 0.8);
+  return new ImageResponse(
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'transparent',
+      }}
+    >
+      <svg
+        width={glyph}
+        height={glyph}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    </div>,
+    { width: size, height: size, headers }
+  );
+}
+
+/**
  * An account logo (already inlined as a data URL) centered on a solid
  * square, for the installed app's icon. Logos come in any aspect ratio,
  * so it's contained within a padded box rather than stretched; maskable

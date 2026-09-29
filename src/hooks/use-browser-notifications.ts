@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import type { Message } from "@/types";
 import { showNotificationViaWorker } from "@/hooks/use-push-registration";
+import { useAccountNotificationIcon } from "@/hooks/use-account-notification-icon";
+import { PUSH_BADGE_URL } from "@/lib/pwa";
 import {
   DEFAULT_NOTIFICATION_LABELS,
   buildNotificationContent,
@@ -75,6 +77,14 @@ export function useBrowserNotifications(): void {
   // pruned by shouldNotifyForMessage.
   const seenRef = useRef<Map<string, number>>(new Map());
 
+  // Account logo for the alert icon; a ref for the same no-resubscribe
+  // reason as the labels above.
+  const accountIcon = useAccountNotificationIcon();
+  const iconRef = useRef(accountIcon);
+  useEffect(() => {
+    iconRef.current = accountIcon;
+  });
+
   useEffect(() => {
     if (!enabled) return;
     if (getNotificationPermission() === "unsupported") return;
@@ -107,7 +117,8 @@ export function useBrowserNotifications(): void {
           // One alert per conversation: a second message from the same
           // customer replaces the first instead of stacking.
           tag: msg.conversation_id,
-          icon: "/icon",
+          icon: iconRef.current,
+          badge: PUSH_BADGE_URL,
         });
         notification.onclick = () => {
           window.focus();
@@ -122,7 +133,8 @@ export function useBrowserNotifications(): void {
         const shown = await showNotificationViaWorker(title, {
           body,
           tag: msg.conversation_id,
-          icon: "/icon",
+          icon: iconRef.current,
+          badge: PUSH_BADGE_URL,
           data: { url: conversationHref(msg.conversation_id) },
         });
         if (!shown) {

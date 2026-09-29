@@ -3,7 +3,7 @@
 // in src/lib/pwa.ts for why it can't come from the session.
 
 import { supabaseAdmin } from '@/lib/flows/admin-client';
-import { isUuid } from '@/lib/pwa';
+import { accountNotificationIconUrl, brandingVersion, isUuid } from '@/lib/pwa';
 import { safeLogoUrl } from '@/lib/branding/tab';
 import { isValidHexColor } from '@/lib/color-contrast';
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf';
@@ -66,4 +66,23 @@ export async function fetchLogoDataUrl(url: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Notification icon URL for an account (its logo, or the mark in its
+ * color). Versioned so a changed logo isn't served stale from cache.
+ */
+export async function accountNotificationIcon(
+  accountId: string
+): Promise<string> {
+  const branding = await loadAccountBranding(accountId);
+  if (!branding) return accountNotificationIconUrl(null);
+  return accountNotificationIconUrl({
+    accountId,
+    version: brandingVersion([
+      branding.displayName,
+      branding.logoUrl,
+      branding.brandColor,
+    ]),
+  });
 }

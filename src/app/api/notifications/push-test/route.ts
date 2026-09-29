@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentAccount, toErrorResponse } from '@/lib/auth/account';
 import { supabaseAdmin } from '@/lib/flows/admin-client';
 import { getVapidConfig, sendPushToAccount } from '@/lib/push/send';
+import { accountNotificationIcon } from '@/lib/branding/pwa-branding';
 import {
   checkRateLimit,
   rateLimitResponse,
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
         body: text,
         conversationId: 'wacrm-test-push',
         url: '/settings?tab=profile',
+        icon: await accountNotificationIcon(ctx.accountId),
       },
       { onlyUserId: ctx.userId }
     );

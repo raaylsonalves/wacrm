@@ -30,8 +30,16 @@ self.addEventListener('push', (event) => {
       // customer replaces the first, same as the tab-open alert.
       tag: data.conversationId || undefined,
       renotify: Boolean(data.conversationId),
-      icon: '/pwa-icon/192',
-      badge: '/pwa-icon/192',
+      // The account's logo (sent by the server); only our own icon route
+      // is accepted, falling back to the default mark.
+      icon:
+        typeof data.icon === 'string' && data.icon.startsWith('/pwa-icon/')
+          ? data.icon
+          : '/pwa-icon/192',
+      // Android shows the status-bar badge as a silhouette (alpha only),
+      // so it needs a transparent glyph — an opaque square shows as an
+      // empty box.
+      badge: '/pwa-icon/badge',
       data: { url: data.url || '/inbox' },
     })
   );

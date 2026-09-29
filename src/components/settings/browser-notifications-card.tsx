@@ -16,6 +16,8 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useBrowserNotifyPref } from '@/hooks/use-browser-notifications';
 import { showNotificationViaWorker } from '@/hooks/use-push-registration';
+import { useAccountNotificationIcon } from '@/hooks/use-account-notification-icon';
+import { PUSH_BADGE_URL } from '@/lib/pwa';
 import { PushNotificationsSection } from './push-notifications-section';
 import {
   BROWSER_NOTIFY_CHANGE_EVENT,
@@ -56,6 +58,7 @@ export function BrowserNotificationsCard({ className }: { className?: string }) 
     serverPermission,
   );
   const [requesting, setRequesting] = useState(false);
+  const accountIcon = useAccountNotificationIcon();
 
   const supported = permission !== 'unsupported';
   const checked = enabled && permission === 'granted';
@@ -89,7 +92,8 @@ export function BrowserNotificationsCard({ className }: { className?: string }) 
   const sendTest = async () => {
     const options = {
       body: t('testBody'),
-      icon: '/icon',
+      icon: accountIcon,
+      badge: PUSH_BADGE_URL,
       tag: 'wacrm-test-notification',
     };
     try {
