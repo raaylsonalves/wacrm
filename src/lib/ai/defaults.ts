@@ -129,14 +129,6 @@ export function buildSystemPrompt(args: {
     )
   }
 
-  if (mode === 'auto_reply') {
-    parts.push(
-      contactName && contactName.trim()
-        ? `This customer's name in the CRM is "${contactName.trim()}". Use it naturally when it fits — don't force it into every message.`
-        : "You don't know this customer's name yet. Early in the conversation, ask for it in a natural, low-pressure way (part of your greeting, not an interrogation). As soon as they tell you, call save_contact_name so future conversations already know it — don't ask again after that. Skip asking if the conversation is a one-off/transactional exchange where it wouldn't feel natural.",
-    )
-  }
-
   if (mode === 'auto_reply' && agendaToolsEnabled) {
     parts.push(
       'You can check, book, and reschedule real appointments with the offer_slots, book_appointment, and reschedule_appointment tools. ' +
@@ -150,6 +142,22 @@ export function buildSystemPrompt(args: {
 
   if (userPrompt && userPrompt.trim()) {
     parts.push(`Business context and instructions:\n${userPrompt.trim()}`)
+  }
+
+  // Most-static first, most-variable last. Providers discount a repeated
+  // prompt PREFIX (OpenAI and Gemini automatically, and OpenRouter via the
+  // model behind it), and a prefix only repeats until the first byte that
+  // differs. The scaffold, agenda text and business context are the same
+  // for every customer; the contact's name differs per customer and the
+  // knowledge excerpts per question, so both go last. The name line used
+  // to sit before the business context and made every customer's prompt
+  // diverge early (specs/ai-token-economy.md, lever 3).
+  if (mode === 'auto_reply') {
+    parts.push(
+      contactName && contactName.trim()
+        ? `This customer's name in the CRM is "${contactName.trim()}". Use it naturally when it fits — don't force it into every message.`
+        : "You don't know this customer's name yet. Early in the conversation, ask for it in a natural, low-pressure way (part of your greeting, not an interrogation). As soon as they tell you, call save_contact_name so future conversations already know it — don't ask again after that. Skip asking if the conversation is a one-off/transactional exchange where it wouldn't feel natural.",
+    )
   }
 
   if (knowledge && knowledge.length > 0) {

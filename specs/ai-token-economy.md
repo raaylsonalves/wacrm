@@ -47,14 +47,21 @@ per call and per agent.
      still produce two replies — the same exposure as before this
      existed, now much rarer.
    - Not built: a per-agent setting for the delay (env only).
-3. **Make the prompt cacheable.** Providers discount a repeated prompt
-   prefix (Anthropic needs explicit `cache_control` markers; OpenAI and
-   Gemini cache stable prefixes automatically). Order the prompt
-   most-static-first: scaffold → business context → agenda text →
-   *then* the per-customer name → *then* retrieved excerpts. Today the
-   contact-name line sits before the business context, which makes the
-   prefix differ per customer and defeats cross-conversation caching.
-   Cheap change; verify with the usage rows.
+3. **Make the prompt cacheable** — BUILT for the automatic caches
+   (`buildSystemPrompt`, locked by `defaults.test.ts`). Order is now
+   scaffold → agenda text → business context → contact name → knowledge
+   excerpts: everything that is the same for every customer comes first,
+   so the repeated prefix is as long as possible (OpenAI and Gemini cache
+   a stable prefix on their own; OpenRouter passes it to the model behind).
+   - NOT done: Anthropic needs explicit `cache_control` markers and a
+     system prompt split into a stable block and a volatile one, which
+     means threading two strings through generate → fallback → adapter.
+     Worth doing only for an account on Anthropic, and only if the stable
+     part clears the model's minimum cacheable size (about 1-2k tokens).
+   - NOT verified: whether it saves anything is visible only if the
+     cached-token count is recorded; `ai_usage_log` keeps prompt and
+     completion tokens, not the cached share. Add that column before
+     promising a number.
 4. **Shorter history.** 20 turns is generous for WhatsApp. A per-agent
    setting (default ~12) or a character budget instead of a message count;
    summarising older turns is the heavier option.
@@ -77,8 +84,8 @@ per call and per agent.
    price table — show tokens, and cost only where the provider supplies
    the price).
 
-## Suggested order (2 is built)
-3 (prompt order/cache) → 4 (history) → 5 (output cap) →
+## Suggested order (1-3 are built)
+4 (history) → 5 (output cap) →
 6 → 8. Build 7 only if usage data shows the big model dominates.
 
 ## Not doing
