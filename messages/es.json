@@ -2068,6 +2068,23 @@
       "description": "Cambia tu contraseña y cierra sesión en tus dispositivos. Esto mantiene tu cuenta segura."
     },
     "browserNotifications": {
+      "push": {
+        "toggleLabel": "Notificaciones push",
+        "toggleDesc": "Funciona incluso con el navegador cerrado o el teléfono bloqueado.",
+        "enabledToast": "Notificaciones push activadas en este dispositivo",
+        "deniedToast": "Las notificaciones de este sitio están bloqueadas en la configuración del navegador",
+        "notConfigured": "Las notificaciones push aún no están configuradas en este servidor",
+        "enableFailed": "No se pudieron activar las notificaciones push",
+        "unsupported": "Este navegador no admite notificaciones push.",
+        "iosInstallTitle": "En iPhone/iPad, instala la app primero",
+        "iosInstallStep1": "En Safari, toca Compartir",
+        "iosInstallStep2": "→ \"Añadir a pantalla de inicio\", abre wacrm desde la pantalla de inicio y vuelve aquí para activar el push.",
+        "sendTest": "Enviar push de prueba",
+        "testTitle": "wacrm",
+        "testBody": "Las notificaciones push funcionan en este dispositivo.",
+        "testSent": "Push de prueba enviado — puede tardar unos segundos en llegar",
+        "testFailed": "Error al enviar el push de prueba"
+      },
       "title": "Notificaciones del navegador",
       "description": "Recibe una alerta de escritorio por cada nuevo mensaje de cliente, incluso cuando estés en otra página. Se guarda en este dispositivo.",
       "toggleLabel": "Avisarme de nuevos mensajes de clientes",

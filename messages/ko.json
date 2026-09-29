@@ -2080,6 +2080,23 @@
       "description": "비밀번호를 변경하고 기기에서 로그아웃하세요. 계정을 안전하게 유지하는 데 도움이 됩니다."
     },
     "browserNotifications": {
+      "push": {
+        "toggleLabel": "푸시 알림",
+        "toggleDesc": "브라우저를 닫거나 휴대폰이 잠겨 있어도 작동합니다.",
+        "enabledToast": "이 기기에서 푸시 알림이 켜졌습니다",
+        "deniedToast": "브라우저 설정에서 이 사이트의 알림이 차단되어 있습니다",
+        "notConfigured": "이 서버에는 아직 푸시 알림이 설정되지 않았습니다",
+        "enableFailed": "푸시 알림을 켜지 못했습니다",
+        "unsupported": "이 브라우저는 푸시 알림을 지원하지 않습니다.",
+        "iosInstallTitle": "iPhone/iPad에서는 먼저 앱을 설치하세요",
+        "iosInstallStep1": "Safari에서 공유를 누르고",
+        "iosInstallStep2": "→ \"홈 화면에 추가\"를 선택한 뒤, 홈 화면에서 wacrm을 열고 여기로 돌아와 푸시를 켜세요.",
+        "sendTest": "테스트 푸시 보내기",
+        "testTitle": "wacrm",
+        "testBody": "이 기기에서 푸시 알림이 작동합니다.",
+        "testSent": "테스트 푸시를 보냈습니다 — 도착까지 몇 초 걸릴 수 있습니다",
+        "testFailed": "테스트 푸시 전송에 실패했습니다"
+      },
       "title": "브라우저 알림",
       "description": "다른 페이지를 보고 있어도 새 고객 메시지마다 데스크톱 알림을 받습니다. 이 기기에 저장됩니다.",
       "toggleLabel": "새 고객 메시지 알림 받기",

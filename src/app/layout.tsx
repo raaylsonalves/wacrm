@@ -32,6 +32,15 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [{ url: "/icon" }],
+    apple: [{ url: "/apple-icon" }],
+  },
+  // iOS "Add to Home Screen" launches full-screen with this (the
+  // manifest alone isn't read for this on older iOS versions) — and
+  // Web Push on iOS only works from the installed app at all.
+  appleWebApp: {
+    capable: true,
+    title: "wacrm",
+    statusBarStyle: "black-translucent",
   },
   formatDetection: {
     email: false,

@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { useBrowserNotifyPref } from '@/hooks/use-browser-notifications';
+import { showNotificationViaWorker } from '@/hooks/use-push-registration';
+import { PushNotificationsSection } from './push-notifications-section';
 import {
   BROWSER_NOTIFY_CHANGE_EVENT,
   getNotificationPermission,
@@ -84,15 +86,18 @@ export function BrowserNotificationsCard({ className }: { className?: string }) 
     }
   };
 
-  const sendTest = () => {
+  const sendTest = async () => {
+    const options = {
+      body: t('testBody'),
+      icon: '/icon',
+      tag: 'wacrm-test-notification',
+    };
     try {
-      new Notification(t('testTitle'), {
-        body: t('testBody'),
-        icon: '/icon',
-        tag: 'wacrm-test-notification',
-      });
+      new Notification(t('testTitle'), options);
     } catch {
-      toast.error(t('unsupported'));
+      // Android Chrome only allows notifications from a service worker.
+      const shown = await showNotificationViaWorker(t('testTitle'), options);
+      if (!shown) toast.error(t('unsupported'));
     }
   };
 
@@ -153,7 +158,7 @@ export function BrowserNotificationsCard({ className }: { className?: string }) 
               type="button"
               variant="outline"
               size="sm"
-              onClick={sendTest}
+              onClick={() => void sendTest()}
               disabled={!checked}
             >
               <BellRing className="size-4" />
@@ -161,6 +166,7 @@ export function BrowserNotificationsCard({ className }: { className?: string }) 
             </Button>
           </>
         )}
+        <PushNotificationsSection />
       </CardContent>
     </Card>
   );

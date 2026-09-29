@@ -2080,6 +2080,23 @@
       "description": "Change your password and sign out of your devices. These keep your account safe."
     },
     "browserNotifications": {
+      "push": {
+        "toggleLabel": "Push notifications",
+        "toggleDesc": "Works even with this browser closed or the phone locked.",
+        "enabledToast": "Push notifications enabled on this device",
+        "deniedToast": "Notifications are blocked for this site in your browser settings",
+        "notConfigured": "Push notifications are not configured on this server yet",
+        "enableFailed": "Could not enable push notifications",
+        "unsupported": "This browser doesn't support push notifications.",
+        "iosInstallTitle": "On iPhone/iPad, install the app first",
+        "iosInstallStep1": "In Safari, tap Share",
+        "iosInstallStep2": "→ \"Add to Home Screen\", open wacrm from the Home Screen, then come back here to enable push.",
+        "sendTest": "Send test push",
+        "testTitle": "wacrm",
+        "testBody": "Push notifications are working on this device.",
+        "testSent": "Test push sent — it may take a few seconds to arrive",
+        "testFailed": "Test push failed"
+      },
       "title": "Browser notifications",
       "description": "Get a desktop alert for every new customer message, even while you're on another page. Saved to this device.",
       "toggleLabel": "Notify me about new customer messages",

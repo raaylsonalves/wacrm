@@ -27,6 +27,8 @@ import { reopenClosedConversation } from '@/lib/conversations/reopen';
 import { runAutomationsForTrigger } from '@/lib/automations/engine';
 import { dispatchInboundToFlows } from '@/lib/flows/engine';
 import { dispatchInboundToAiReply } from '@/lib/ai/auto-reply';
+import { pushInboundMessage } from '@/lib/push/send';
+import type { ContentType } from '@/types';
 import { dispatchWebhookEvent } from '@/lib/webhooks/deliver';
 import { supabaseAdmin } from '@/lib/whatsapp/waha-admin-client';
 
@@ -220,6 +222,15 @@ async function handleMessage(
     p_last_message_text: contentText || `[${contentType}]`,
   });
   await reopenClosedConversation(db, conversation);
+
+  // Web Push — same placement and reasoning as the Cloud API webhook.
+  await pushInboundMessage(db, accountId, {
+    id: insertedMsg[0].id,
+    conversation_id: conversation.id,
+    sender_type: 'customer',
+    content_type: contentType as ContentType,
+    content_text: contentText || null,
+  });
 
   if (isOptOutMessage(contentText)) {
     await db

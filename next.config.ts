@@ -141,7 +141,18 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "no-store" }],
       },
       {
-        source: "/:path((?!_next/static|_next/image|api).*)",
+        // The Web Push service worker. Never cached (edge or browser):
+        // a stale worker would keep an old push/click handler alive
+        // indefinitely. Excluded from the rule below so its long
+        // stale-while-revalidate can't apply here.
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+        ],
+      },
+      {
+        source: "/:path((?!_next/static|_next/image|api|sw\\.js$).*)",
         headers: [
           {
             key: "Cache-Control",

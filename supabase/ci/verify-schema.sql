@@ -514,6 +514,21 @@ BEGIN
       'bump_conversation_on_inbound does not clear snoozed_until — migration 070 did not apply';
   END IF;
 
+  -- 071 — Web Push subscriptions. `endpoint` UNIQUE is the upsert key
+  -- the subscribe route's ON CONFLICT depends on; without it every
+  -- re-save would insert a duplicate and the device gets N pushes.
+  IF to_regclass('public.push_subscriptions') IS NULL THEN
+    RAISE EXCEPTION 'push_subscriptions is missing — migration 071 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.push_subscriptions'::regclass
+      AND contype = 'u'
+      AND pg_get_constraintdef(oid) = 'UNIQUE (endpoint)'
+  ) THEN
+    RAISE EXCEPTION 'push_subscriptions.endpoint is not UNIQUE — migration 071 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

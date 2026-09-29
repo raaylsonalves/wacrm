@@ -7,10 +7,10 @@
 > for implementada ou uma nova for aberta.
 >
 > PRD-mãe: [`prd-melhorias-inspiradas-no-deskcomm.md`](prd-melhorias-inspiradas-no-deskcomm.md).
-> Última revisão: 2026-09-29 (inbox power features implementado).
-> Migrations 064-070 (throttle WAHA, audit log, multi-agente,
+> Última revisão: 2026-09-29 (PWA + Web Push implementado).
+> Migrations 064-071 (throttle WAHA, audit log, multi-agente,
 > onboarding, rodízio de broadcast, responsáveis por canal, inbox
-> power features) foram
+> power features, push subscriptions) foram
 > aplicadas ao banco real via MCP do Supabase — confirmado por
 > `list_migrations`. Qualquer migration nova a partir de agora precisa
 > do mesmo passo explícito antes de virar "funcionando em produção".
@@ -241,9 +241,48 @@ Todas as specs da rodada anterior (PRD +
 `signup-onboarding-wizard.md`/`audit-log-endurecido.md`/
 `waha-anti-banimento-e-opt-out.md`) estão implementadas.
 
-| Spec | O que falta |
-|---|---|
-| [`pwa-web-push-notifications.md`](../specs/pwa-web-push-notifications.md) | Tudo — sem manifest, sem service worker, sem tabela `push_subscriptions`. Motivada por um bug real relatado pelo usuário: notificação dá "navegador não suporta" no celular, porque a feature atual (`use-browser-notifications.ts`) é só `Notification` API síncrona com aba aberta — nunca funcionaria em mobile sem isso. |
+Nenhuma spec pendente no momento — todas as specs desta rodada estão
+implementadas (ver seções abaixo).
+
+### PWA + Web Push — ✅ implementado (falta configurar as chaves VAPID)
+- **Instalável**: `src/app/manifest.ts` (`/manifest.webmanifest`,
+  `display: standalone`, `start_url: /dashboard`), ícones 192/512 +
+  maskable em `/pwa-icon/[size]`, `apple-icon` 180×180 pro iOS e
+  `appleWebApp` no layout. Os três ícones e o favicon saem de um único
+  `src/lib/brand-mark.tsx`, então não divergem.
+- **Service worker** `public/sw.js`: só `push` + `notificationclick`,
+  sem handler de `fetch` nem cache (não-objetivo do spec: inbox velho
+  offline engana o atendente). Servido com `no-cache` e fora do
+  matcher do middleware.
+- **Migration 071** `push_subscriptions` (uma linha por
+  aparelho/navegador, `endpoint` UNIQUE). Escrita só pela rota
+  `/api/notifications/push-subscription` com service role — o mesmo
+  endpoint pode trocar de dono num aparelho compartilhado. O endpoint
+  passa pelo mesmo guard de SSRF dos webhooks de saída.
+- **Envio** `src/lib/push/send.ts`: chamado pelos DOIS webhooks de
+  entrada (Meta e WAHA), logo depois do ponto de idempotência (replay
+  nunca dispara push duas vezes). Conversa atribuída → só o
+  responsável recebe; não atribuída → todos da conta com push ligado.
+  Assinatura que volta 404/410 é apagada na hora.
+- **Settings → Perfil → Notificações**: toggle "Notificações push" +
+  botão "Enviar push de teste" (`/api/notifications/push-test`, só pros
+  seus aparelhos). No iPhone/iPad em aba do Safari aparece a instrução
+  "Compartilhar → Adicionar à Tela de Início" em vez do toggle.
+- **Corrige o bug original de Android** também no alerta de aba
+  aberta: quando `new Notification()` lança exceção (Android Chrome), o
+  alerta agora sai pelo service worker.
+- **Para ligar em produção**: gerar um par de chaves uma vez
+  (`npx web-push generate-vapid-keys`) e definir
+  `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` e `VAPID_SUBJECT`
+  (documentado em `.env.local.example`). Sem elas, push fica desligado
+  e o resto funciona igual.
+- Testado: `send.test.ts` (limpeza 404/410, erro transitório não apaga,
+  só o responsável recebe, sem VAPID = no-op) + `pwa.test.ts`
+  (manifest, ícones, detecção de iOS). Verificado no navegador: manifest,
+  ícones nos tamanhos certos, headers do `sw.js`, tags no `<head>`, o
+  worker instala e ativa, API recusa sem login. `npm run build` ok.
+  **Não testado**: a entrega real de um push num celular — precisa das
+  chaves VAPID configuradas e de HTTPS (produção ou túnel).
 
 ### Rodízio de números no broadcast — ✅ implementado
 - Migration 068: `broadcasts.primary_channel_id` (NULL = Cloud API,

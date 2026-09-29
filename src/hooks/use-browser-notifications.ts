@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import type { Message } from "@/types";
+import { showNotificationViaWorker } from "@/hooks/use-push-registration";
 import {
   DEFAULT_NOTIFICATION_LABELS,
   buildNotificationContent,
@@ -45,8 +46,9 @@ export function useBrowserNotifyPref(): boolean {
  * Own channel name so it coexists with the inbox page's subscription
  * and the sidebar's unread counters.
  *
- * Fires only while a dashboard tab is open — there is no service worker
- * or Web Push here, so a closed browser stays quiet.
+ * Fires only while a dashboard tab is open. Alerts for a closed browser
+ * or locked phone come from Web Push instead (src/lib/push/send.ts +
+ * public/sw.js); both coexist by design.
  */
 export function useBrowserNotifications(): void {
   const enabled = useBrowserNotifyPref();
@@ -112,10 +114,20 @@ export function useBrowserNotifications(): void {
           router.push(conversationHref(msg.conversation_id));
           notification.close();
         };
-      } catch (err) {
-        // Some browsers throw from the constructor (e.g. Android Chrome
-        // requires a service worker). Non-fatal.
-        console.error("[useBrowserNotifications] failed to show:", err);
+      } catch {
+        // Android Chrome throws from the constructor — page-created
+        // notifications need a service worker there. Show it through
+        // the push worker instead; its notificationclick opens the same
+        // conversation.
+        const shown = await showNotificationViaWorker(title, {
+          body,
+          tag: msg.conversation_id,
+          icon: "/icon",
+          data: { url: conversationHref(msg.conversation_id) },
+        });
+        if (!shown) {
+          console.error("[useBrowserNotifications] failed to show notification");
+        }
       }
     };
 

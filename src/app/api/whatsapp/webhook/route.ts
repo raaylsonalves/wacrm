@@ -18,6 +18,8 @@ import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature';
 import { runAutomationsForTrigger } from '@/lib/automations/engine';
 import { dispatchInboundToFlows } from '@/lib/flows/engine';
 import { dispatchInboundToAiReply } from '@/lib/ai/auto-reply';
+import { pushInboundMessage } from '@/lib/push/send';
+import type { ContentType } from '@/types';
 import { dispatchWebhookEvent } from '@/lib/webhooks/deliver';
 import {
   handleTemplateWebhookChange,
@@ -936,6 +938,19 @@ async function processMessage(
   // update above so the write can be gated on the row's CURRENT status in
   // SQL — see the helper for why that matters.
   await reopenClosedConversation(supabaseAdmin(), conversation);
+
+  // Web Push to subscribed devices (specs/pwa-web-push-notifications.md)
+  // — the only alert that reaches a closed tab or a locked phone. Placed
+  // after the idempotency boundary above, so a Meta replay never pushes
+  // twice. Awaited for the same after() reason as the fan-out below;
+  // never throws, and is a no-op without VAPID keys.
+  await pushInboundMessage(supabaseAdmin(), accountId, {
+    id: insertedRows[0].id,
+    conversation_id: conversation.id,
+    sender_type: 'customer',
+    content_type: contentType as ContentType,
+    content_text: contentText,
+  });
 
   // If this contact was a recent broadcast recipient, flag the reply
   // so the broadcast's `replied_count` advances (via the aggregate
