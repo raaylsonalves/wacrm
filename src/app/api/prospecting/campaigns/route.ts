@@ -37,14 +37,14 @@ export async function GET() {
     if (ids.length > 0) {
       const { data: cands } = await db
         .from('prospecting_candidates')
-        .select('campaign_id, status, sent_at, replied_at, qualified_at, opted_out_at')
+        .select('campaign_id, status, sent_at, replied_at, qualified_at, opted_out_at, followups_sent')
         .eq('account_id', accountId)
         .in('campaign_id', ids)
         .limit(20000)
       for (const c of cands ?? []) {
         const f =
           funnel.get(c.campaign_id as string) ??
-          { total: 0, queued: 0, sent: 0, replied: 0, qualified: 0, failed: 0, skipped: 0, opted_out: 0 }
+          { total: 0, queued: 0, sent: 0, replied: 0, qualified: 0, failed: 0, skipped: 0, opted_out: 0, followed_up: 0 }
         f.total++
         if (c.status === 'queued' || c.status === 'sending') f.queued++
         if (c.sent_at) f.sent++
@@ -53,6 +53,7 @@ export async function GET() {
         if (c.status === 'failed') f.failed++
         if (c.status === 'skipped') f.skipped++
         if (c.opted_out_at) f.opted_out++
+        if ((c.followups_sent ?? 0) > 0) f.followed_up++
         funnel.set(c.campaign_id as string, f)
       }
     }

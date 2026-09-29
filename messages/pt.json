@@ -483,7 +483,8 @@
       "sent": "Abordados",
       "replied": "Responderam",
       "qualified": "Qualificados",
-      "details": "{queued} na fila · {failed} com falha · {skipped} pulados · {optedOut} pediram para sair"
+      "details": "{queued} na fila · {failed} com falha · {skipped} pulados · {optedOut} pediram para sair",
+      "followedUp": "{count, plural, =1 {1 recebeu follow-up} other {# receberam follow-up}}"
     },
     "form": {
       "name": "Nome da campanha",
@@ -512,7 +513,25 @@
       "legalPlaceholder": "Ex.: oficinas com contato público no Google, abordadas para oferecer um serviço do segmento.",
       "dailyLimit": "Limite por dia",
       "interval": "Intervalo entre envios (minutos)",
-      "pacingHint": "Envia de segunda a sexta, das 9h às 18h (horário de Brasília), com uma variação no intervalo para não parecer robô."
+      "pacingHint": "Envia de segunda a sexta, das 9h às 18h (horário de Brasília), com uma variação no intervalo para não parecer robô.",
+      "startHour": "Enviar a partir de (hora)",
+      "endHour": "Até (hora)",
+      "weekdays": "Dias de envio",
+      "day": {
+        "0": "Dom",
+        "1": "Seg",
+        "2": "Ter",
+        "3": "Qua",
+        "4": "Qui",
+        "5": "Sex",
+        "6": "Sáb"
+      },
+      "followup": "Follow-up para quem não respondeu",
+      "followupWahaHint": "A IA manda um lembrete curto, sem insistir. O último avisa que não vai insistir mais.",
+      "followupCloudHint": "Passadas 24h, o número oficial só aceita template: escolha um template de follow-up aprovado.",
+      "followupDays": "Dias sem resposta antes do lembrete",
+      "followupMax": "Quantos lembretes (máx. 2)",
+      "followupTemplate": "Template de follow-up"
     },
     "errors": {
       "generic": "Não foi possível concluir.",
@@ -539,7 +558,35 @@
       "list_empty": "Nenhum lead da lista pôde ser abordado.",
       "not_running": "A campanha não está em andamento.",
       "not_paused": "A campanha não está pausada.",
-      "already_finished": "A campanha já terminou."
+      "already_finished": "A campanha já terminou.",
+      "followup_template_required": "Escolha o template de follow-up."
+    },
+    "leads": {
+      "toggle": "Ver leads",
+      "lead": "Lead",
+      "stage": "Situação",
+      "sent": "Abordado em",
+      "followups": "Follow-ups",
+      "open": "Abrir conversa",
+      "state": {
+        "queued": "Na fila",
+        "sent": "Abordado",
+        "replied": "Respondeu",
+        "qualified": "Qualificado",
+        "opted_out": "Pediu para sair",
+        "skipped": "Pulado",
+        "failed": "Falhou"
+      }
+    },
+    "reasons": {
+      "opted_out": "pediu para não receber mensagens",
+      "third_party_list": "lista de terceiros",
+      "invalid_phone": "telefone inválido",
+      "in_service": "já estava em atendimento",
+      "failed": "erro ao preparar",
+      "cancelled": "campanha cancelada",
+      "empty_reply": "a IA não escreveu a mensagem",
+      "unknown": "erro desconhecido"
     }
   },
   "AiAckNotice": {

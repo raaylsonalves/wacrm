@@ -10,8 +10,8 @@ import { resolveAuditUserId } from '@/lib/api/v1/contacts'
 import { normalizeImportPhone } from '@/lib/contacts/br-phone'
 import type { CampaignConfig } from './logic'
 
-/** v1 cap per activation: the pass runs inside one request. */
-export const MAX_CANDIDATES = 500
+/** Leads per campaign (enqueueing is bulk; the per-lead work happens at send time). */
+export const MAX_CANDIDATES = 5000
 
 export type ActivationError =
   | 'agent_missing'
@@ -93,139 +93,150 @@ export interface ActivationResult {
   capped: boolean
 }
 
+/**
+ * Enqueue every contact of the list. Cheap and bulk: no deal or
+ * conversation is created here — that happens when each lead's turn comes
+ * (`prepareCandidate`), so a 5,000-lead list neither times out the request
+ * nor floods the pipeline with cards nobody has contacted yet.
+ */
 export async function activateCampaign(
   db: SupabaseClient,
   args: { accountId: string; campaignId: string; campaignName: string; sourceTagId: string; config: CampaignConfig },
 ): Promise<ActivationResult> {
-  const { accountId, campaignId, config } = args
-  const ownerUserId = await resolveAuditUserId(db, accountId)
+  const { accountId, campaignId } = args
 
-  const { data: links } = await db
-    .from('contact_tags')
-    .select('contact_id')
-    .eq('tag_id', args.sourceTagId)
-    .limit(MAX_CANDIDATES + 1)
-  const ids = (links ?? []).map((l) => l.contact_id as string)
+  const ids: string[] = []
+  for (let from = 0; from <= MAX_CANDIDATES; from += 1000) {
+    const { data } = await db
+      .from('contact_tags')
+      .select('contact_id')
+      .eq('tag_id', args.sourceTagId)
+      .order('contact_id')
+      .range(from, from + 999)
+    const page = (data ?? []).map((l) => l.contact_id as string)
+    ids.push(...page)
+    if (page.length < 1000) break
+  }
   const capped = ids.length > MAX_CANDIDATES
   const contactIds = ids.slice(0, MAX_CANDIDATES)
 
-  const contacts: ListContact[] = []
-  for (let i = 0; i < contactIds.length; i += 200) {
+  let queued = 0
+  let skipped = 0
+  for (let i = 0; i < contactIds.length; i += 500) {
     const { data } = await db
       .from('contacts')
       .select('id, name, company, phone, opted_out_at, consent_basis')
       .eq('account_id', accountId)
-      .in('id', contactIds.slice(i, i + 200))
-    contacts.push(...((data ?? []) as ListContact[]))
-  }
-
-  let queued = 0
-  let skipped = 0
-  const skip = async (contactId: string, reason: string) => {
-    skipped++
-    await db.from('prospecting_candidates').upsert(
-      {
+      .in('id', contactIds.slice(i, i + 500))
+    const rows = ((data ?? []) as ListContact[]).map((c) => {
+      const reason = c.opted_out_at
+        ? 'opted_out'
+        : c.consent_basis === 'third_party_list'
+          ? 'third_party_list'
+          : !normalizeImportPhone(c.phone).ok
+            ? 'invalid_phone'
+            : null
+      if (reason) skipped++
+      else queued++
+      return {
         campaign_id: campaignId,
         account_id: accountId,
-        contact_id: contactId,
-        status: 'skipped',
+        contact_id: c.id,
+        status: reason ? 'skipped' : 'queued',
         error: reason,
-      },
-      { onConflict: 'campaign_id,contact_id', ignoreDuplicates: true },
-    )
-  }
-
-  for (const c of contacts) {
-    if (c.opted_out_at) {
-      await skip(c.id, 'opted_out')
-      continue
-    }
-    if (c.consent_basis === 'third_party_list') {
-      await skip(c.id, 'third_party_list')
-      continue
-    }
-    if (!normalizeImportPhone(c.phone).ok) {
-      await skip(c.id, 'invalid_phone')
-      continue
-    }
-
-    // One conversation per contact. A conversation with history is a
-    // customer in service: cold outreach never hijacks it.
-    const { data: conv } = await db
-      .from('conversations')
-      .select('id')
-      .eq('account_id', accountId)
-      .eq('contact_id', c.id)
-      .maybeSingle()
-    let conversationId = conv?.id as string | undefined
-    if (conversationId) {
-      const { count } = await db
-        .from('messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('conversation_id', conversationId)
-      if ((count ?? 0) > 0) {
-        await skip(c.id, 'in_service')
-        continue
       }
+    })
+    if (rows.length > 0) {
       await db
-        .from('conversations')
-        .update({ whatsapp_channel_id: config.channel_id, pinned_ai_agent_id: config.agent_id })
-        .eq('id', conversationId)
-    } else {
-      const { data: created, error } = await db
-        .from('conversations')
-        .insert({
-          account_id: accountId,
-          user_id: ownerUserId,
-          contact_id: c.id,
-          whatsapp_channel_id: config.channel_id,
-          pinned_ai_agent_id: config.agent_id,
-        })
-        .select('id')
-        .single()
-      if (error || !created) {
-        await skip(c.id, 'failed')
-        continue
-      }
-      conversationId = created.id as string
+        .from('prospecting_candidates')
+        .upsert(rows, { onConflict: 'campaign_id,contact_id', ignoreDuplicates: true })
     }
+  }
+  return { queued, skipped, capped }
+}
 
-    const { data: deal, error: dealErr } = await db
-      .from('deals')
+export type PrepareResult =
+  | { ok: true; conversationId: string; dealId: string }
+  | { ok: false; reason: 'in_service' | 'failed' | 'opted_out' }
+
+/**
+ * Right before a lead's first message: its conversation (pinned to the
+ * campaign's number and agent) and its deal in the entry stage. A
+ * conversation that already has history is a customer in service — cold
+ * outreach never hijacks it.
+ */
+export async function prepareCandidate(
+  db: SupabaseClient,
+  args: {
+    accountId: string
+    campaignName: string
+    candidateId: string
+    contactId: string
+    config: CampaignConfig
+  },
+): Promise<PrepareResult> {
+  const { accountId, config } = args
+  const { data: c } = await db
+    .from('contacts')
+    .select('id, name, company, phone, opted_out_at')
+    .eq('id', args.contactId)
+    .eq('account_id', accountId)
+    .maybeSingle()
+  if (!c || c.opted_out_at) return { ok: false, reason: 'opted_out' }
+  const ownerUserId = await resolveAuditUserId(db, accountId)
+
+  const { data: conv } = await db
+    .from('conversations')
+    .select('id')
+    .eq('account_id', accountId)
+    .eq('contact_id', c.id)
+    .maybeSingle()
+  let conversationId = conv?.id as string | undefined
+  if (conversationId) {
+    const { count } = await db
+      .from('messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('conversation_id', conversationId)
+    if ((count ?? 0) > 0) return { ok: false, reason: 'in_service' }
+    await db
+      .from('conversations')
+      .update({ whatsapp_channel_id: config.channel_id, pinned_ai_agent_id: config.agent_id })
+      .eq('id', conversationId)
+  } else {
+    const { data: created, error } = await db
+      .from('conversations')
       .insert({
         account_id: accountId,
         user_id: ownerUserId,
-        pipeline_id: config.pipeline_id,
-        stage_id: config.entry_stage_id,
         contact_id: c.id,
-        conversation_id: conversationId,
-        title: (c.company || c.name || c.phone).slice(0, 200),
-        notes: `${args.campaignName}\n\n${config.criteria}`.slice(0, 4000),
+        whatsapp_channel_id: config.channel_id,
+        pinned_ai_agent_id: config.agent_id,
       })
       .select('id')
       .single()
-    if (dealErr || !deal) {
-      await skip(c.id, 'failed')
-      continue
-    }
-
-    const { error: candErr } = await db.from('prospecting_candidates').upsert(
-      {
-        campaign_id: campaignId,
-        account_id: accountId,
-        contact_id: c.id,
-        deal_id: deal.id,
-        conversation_id: conversationId,
-        status: 'queued',
-      },
-      { onConflict: 'campaign_id,contact_id', ignoreDuplicates: true },
-    )
-    if (candErr) {
-      skipped++
-      continue
-    }
-    queued++
+    if (error || !created) return { ok: false, reason: 'failed' }
+    conversationId = created.id as string
   }
 
-  return { queued, skipped, capped }
+  const { data: deal, error: dealErr } = await db
+    .from('deals')
+    .insert({
+      account_id: accountId,
+      user_id: ownerUserId,
+      pipeline_id: config.pipeline_id,
+      stage_id: config.entry_stage_id,
+      contact_id: c.id,
+      conversation_id: conversationId,
+      title: (c.company || c.name || c.phone).slice(0, 200),
+      notes: `${args.campaignName}\n\n${config.criteria}`.slice(0, 4000),
+    })
+    .select('id')
+    .single()
+  if (dealErr || !deal) return { ok: false, reason: 'failed' }
+
+  await db
+    .from('prospecting_candidates')
+    .update({ conversation_id: conversationId, deal_id: deal.id })
+    .eq('id', args.candidateId)
+  return { ok: true, conversationId, dealId: deal.id as string }
 }

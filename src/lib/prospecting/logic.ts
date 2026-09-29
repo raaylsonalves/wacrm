@@ -32,6 +32,15 @@ export interface CampaignConfig {
   weekdays: number[]
   timezone: string
   legal_basis_ref: string
+  /** Nudge leads who didn't reply: up to `followup_max` touches, each
+   *  `followup_after_days` after the previous one. */
+  followup_enabled: boolean
+  followup_after_days: number
+  followup_max: number
+  /** Cloud only: past 24h the official API accepts only a template. */
+  followup_template_name: string | null
+  followup_template_language: string | null
+  followup_template_params: string[]
 }
 
 export const DEFAULTS = {
@@ -71,6 +80,11 @@ export function parseCampaignConfig(
   if (kind === 'cloud' && !templateName) return { ok: false, error: 'template_required' }
   const legal = str(raw.legal_basis_ref, 1000)
   if (legal.length < 10) return { ok: false, error: 'legal_basis_required' }
+  const followup = raw.followup_enabled === true
+  const followupTemplate = str(raw.followup_template_name, 200)
+  if (followup && kind === 'cloud' && !followupTemplate) {
+    return { ok: false, error: 'followup_template_required' }
+  }
 
   const start = clampInt(raw.window_start_hour, 0, 23, DEFAULTS.window_start_hour)
   const end = clampInt(raw.window_end_hour, 1, 24, DEFAULTS.window_end_hour)
@@ -103,8 +117,47 @@ export function parseCampaignConfig(
       weekdays,
       timezone: str(raw.timezone, 64) || DEFAULTS.timezone,
       legal_basis_ref: legal,
+      followup_enabled: followup,
+      followup_after_days: clampInt(raw.followup_after_days, 1, 14, 3),
+      followup_max: clampInt(raw.followup_max, 1, 2, 1),
+      followup_template_name: followup && kind === 'cloud' ? followupTemplate : null,
+      followup_template_language:
+        followup && kind === 'cloud' ? str(raw.followup_template_language, 20) || null : null,
+      followup_template_params: Array.isArray(raw.followup_template_params)
+        ? raw.followup_template_params.map((p) => str(p, 200)).slice(0, 10)
+        : [],
     },
   }
+}
+
+/** Cut-off: a lead last touched before this instant may get a follow-up. */
+export function followupCutoff(now: Date, afterDays: number): Date {
+  return new Date(now.getTime() - afterDays * 86_400_000)
+}
+
+/** The nudge for someone who didn't answer: short, no pressure, never
+ *  pretending they replied or showed interest. */
+export function buildFollowupPrompt(args: {
+  instruction: string
+  contact: ContactFields
+  previous: string | null
+  touch: number
+  businessContext: string | null
+}): string {
+  return [
+    'You write a SHORT follow-up WhatsApp message to a potential customer who has not replied to a first message from this business.',
+    'Rules: 1 or 2 sentences; friendly and low-pressure; do not repeat the first message; never claim they replied, asked or showed interest; ' +
+      (args.touch >= 2
+        ? 'this is the LAST message — say you will not insist and leave the door open; '
+        : 'end with one easy question; ') +
+      'write in the language of the business context; output only the message text; no opt-out line (it is added automatically).',
+    `What we offer:\n${args.instruction}`,
+    args.previous ? `The message they did not answer:\n${args.previous}` : '',
+    args.businessContext ? `Business context:\n${args.businessContext}` : '',
+    `Recipient: name=${args.contact.name ?? 'unknown'}; company=${args.contact.company ?? 'unknown'}.`,
+  ]
+    .filter(Boolean)
+    .join('\n\n')
 }
 
 /** Local hour + weekday of `now` in a timezone. */

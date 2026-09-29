@@ -102,3 +102,22 @@ describe('message content', () => {
     expect(failureScope('something_new')).toBe('campaign')
   })
 })
+
+describe('follow-up config', () => {
+  it('defaults off; when on, clamps days and touches', () => {
+    const off = parseCampaignConfig(base)
+    if (off.ok) expect(off.config.followup_enabled).toBe(false)
+    const on = parseCampaignConfig({ ...base, followup_enabled: true, followup_after_days: 99, followup_max: 5 })
+    if (on.ok) expect([on.config.followup_after_days, on.config.followup_max]).toEqual([14, 2])
+  })
+  it('the official API needs a follow-up template (past 24h only templates go out)', () => {
+    expect(
+      parseCampaignConfig({ ...base, channel_kind: 'cloud', channel_id: null, template_name: 't', followup_enabled: true }),
+    ).toEqual({ ok: false, error: 'followup_template_required' })
+  })
+  it('the last touch says it will not insist', async () => {
+    const { buildFollowupPrompt } = await import('./logic')
+    const p = buildFollowupPrompt({ instruction: 'x', contact: { name: null, company: null }, previous: 'oi', touch: 2, businessContext: null })
+    expect(p).toContain('LAST message')
+  })
+})

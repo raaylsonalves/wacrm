@@ -12,6 +12,29 @@ import type { CampaignConfig } from '@/lib/prospecting/logic'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+/** GET — the campaign's leads, one row each, with what happened to them. */
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { accountId } = await requireRole('admin')
+    const { id } = await params
+    if (!UUID.test(id)) return NextResponse.json({ error: 'not_found' }, { status: 404 })
+    const db = supabaseAdmin()
+    const { data, error } = await db
+      .from('prospecting_candidates')
+      .select(
+        'id, status, error, conversation_id, sent_at, replied_at, qualified_at, opted_out_at, followups_sent, contact:contacts(name, phone, company)',
+      )
+      .eq('campaign_id', id)
+      .eq('account_id', accountId)
+      .order('created_at', { ascending: true })
+      .limit(1000)
+    if (error) return NextResponse.json({ error: 'failed' }, { status: 500 })
+    return NextResponse.json({ leads: data ?? [] })
+  } catch (err) {
+    return toErrorResponse(err)
+  }
+}
+
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { accountId, userId } = await requireRole('admin')

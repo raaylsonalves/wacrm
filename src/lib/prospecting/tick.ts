@@ -1,19 +1,25 @@
 // ============================================================
 // One prospecting tick (called by the automations cron). For each running
-// campaign whose turn has come: at most ONE candidate is sent, and only
-// inside the sending window, under the daily cap and the WAHA warm-up
-// ceiling. Anything "not yet" just moves next_send_at.
+// campaign whose turn has come, at most ONE message goes out: a due
+// follow-up to someone who didn't reply, otherwise the next new lead.
+// Only inside the sending window, under the daily cap (first touches and
+// follow-ups together) and, on WAHA, the warm-up ceiling. Anything
+// "not yet" just moves next_send_at.
 // ============================================================
 
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { loadAiConfig } from '@/lib/ai/config'
 import { generateReplyWithFallback } from '@/lib/ai/generate-with-fallback'
 import { logAiUsage } from '@/lib/ai/usage'
 import { AiError } from '@/lib/ai/types'
 import { sendMessageToConversation, SendMessageError } from '@/lib/whatsapp/send-message'
+import { prepareCandidate } from './activate'
 import {
   buildApproachPrompt,
+  buildFollowupPrompt,
   failureScope,
+  followupCutoff,
   isInSendingWindow,
   nextSendAt,
   nextWindowOpening,
@@ -31,16 +37,26 @@ interface CampaignRow {
   next_send_at: string
 }
 
+interface CandidateRow {
+  id: string
+  contact_id: string
+  conversation_id: string | null
+  deal_id: string | null
+  sent_at: string | null
+  followups_sent: number
+}
+
 export interface TickSummary {
   campaigns: number
   sent: number
+  followups: number
   failed: number
   paused: number
 }
 
 export async function runProspectingTick(now: Date = new Date()): Promise<TickSummary> {
   const db = supabaseAdmin()
-  const summary: TickSummary = { campaigns: 0, sent: 0, failed: 0, paused: 0 }
+  const summary: TickSummary = { campaigns: 0, sent: 0, followups: 0, failed: 0, paused: 0 }
   const { data } = await db
     .from('prospecting_campaigns')
     .select('id, account_id, name, config, next_send_at')
@@ -51,8 +67,9 @@ export async function runProspectingTick(now: Date = new Date()): Promise<TickSu
   for (const c of (data ?? []) as CampaignRow[]) {
     summary.campaigns++
     try {
-      const r = await tickCampaign(c, now)
+      const r = await tickCampaign(db, c, now)
       if (r === 'sent') summary.sent++
+      if (r === 'followup') summary.followups++
       if (r === 'failed') summary.failed++
       if (r === 'paused') summary.paused++
     } catch (err) {
@@ -62,19 +79,16 @@ export async function runProspectingTick(now: Date = new Date()): Promise<TickSu
   return summary
 }
 
-type TickResult = 'waiting' | 'sent' | 'failed' | 'paused' | 'completed'
+type TickResult = 'waiting' | 'sent' | 'followup' | 'failed' | 'paused' | 'completed'
 
-async function tickCampaign(c: CampaignRow, now: Date): Promise<TickResult> {
-  const db = supabaseAdmin()
+async function tickCampaign(db: SupabaseClient, c: CampaignRow, now: Date): Promise<TickResult> {
   const cfg = c.config
   const tag = `[prospecting ${c.id}]`
+  const stamp = now.toISOString()
   const reschedule = (at: Date) =>
-    db.from('prospecting_campaigns').update({ next_send_at: at.toISOString(), updated_at: now.toISOString() }).eq('id', c.id)
+    db.from('prospecting_campaigns').update({ next_send_at: at.toISOString(), updated_at: stamp }).eq('id', c.id)
   const pause = async (error: string) => {
-    await db
-      .from('prospecting_campaigns')
-      .update({ status: 'paused', error, updated_at: now.toISOString() })
-      .eq('id', c.id)
+    await db.from('prospecting_campaigns').update({ status: 'paused', error, updated_at: stamp }).eq('id', c.id)
     console.warn(`${tag} paused: ${error}`)
     return 'paused' as const
   }
@@ -97,32 +111,114 @@ async function tickCampaign(c: CampaignRow, now: Date): Promise<TickResult> {
     connectedAt = ch.connected_at
   }
 
-  // Daily cap across ALL of the account's cold sends, not per campaign.
+  // Daily cap across ALL of the account's cold sends (first touches and
+  // follow-ups), not per campaign. A failed attempt still counts: the
+  // quota is spent whether or not the send was confirmed.
   const dayAgo = new Date(now.getTime() - 86_400_000).toISOString()
-  const { data: recent } = await db
+  const { count: touched } = await db
     .from('prospecting_candidates')
-    .select('attempted_at')
+    .select('id', { count: 'exact', head: true })
     .eq('account_id', c.account_id)
-    .gte('attempted_at', dayAgo)
-    .order('attempted_at', { ascending: true })
+    .or(`attempted_at.gte.${dayAgo},last_touch_at.gte.${dayAgo}`)
   const cap = Math.min(cfg.daily_limit, warmupCeiling(cfg.channel_kind, connectedAt, now))
-  if ((recent ?? []).length >= cap) {
-    const oldest = new Date(recent![0].attempted_at as string)
-    await reschedule(new Date(oldest.getTime() + 86_400_000 + 60_000))
+  if ((touched ?? 0) >= cap) {
+    await reschedule(new Date(now.getTime() + 3600_000))
     return 'waiting'
   }
 
+  const agent =
+    cfg.channel_kind === 'waha' || cfg.followup_enabled
+      ? await loadAiConfig(db, c.account_id, { agentId: cfg.agent_id })
+      : null
+  if (cfg.channel_kind === 'waha' && !agent) return pause('agent_missing')
+
+  // 1) A due follow-up first: warmer than a stranger.
+  if (cfg.followup_enabled) {
+    const { data: due } = await db
+      .from('prospecting_candidates')
+      .select('id, contact_id, conversation_id, deal_id, sent_at, followups_sent')
+      .eq('campaign_id', c.id)
+      .eq('status', 'sent')
+      .is('replied_at', null)
+      .is('opted_out_at', null)
+      .lt('followups_sent', cfg.followup_max)
+      .lte('last_touch_at', followupCutoff(now, cfg.followup_after_days).toISOString())
+      .order('last_touch_at', { ascending: true })
+      .limit(1)
+    const cand = (due as CandidateRow[] | null)?.[0]
+    if (cand) {
+      // Claim: only one tick may send this touch.
+      const { data: claimed } = await db
+        .from('prospecting_candidates')
+        .update({ followups_sent: cand.followups_sent + 1, last_touch_at: stamp })
+        .eq('id', cand.id)
+        .eq('followups_sent', cand.followups_sent)
+        .select('id')
+      if (claimed && claimed.length > 0) {
+        return sendTouch(db, { c, cand, agent, now, touch: cand.followups_sent + 1, reschedule, pause })
+      }
+    }
+  }
+
+  // 2) The next new lead.
   const { data: claimed } = await db.rpc('claim_prospecting_candidate', { p_campaign_id: c.id })
-  const cand = (claimed as { id: string; contact_id: string; conversation_id: string | null }[] | null)?.[0]
+  const cand = (claimed as CandidateRow[] | null)?.[0]
   if (!cand) {
-    await db
-      .from('prospecting_campaigns')
-      .update({ status: 'completed', updated_at: now.toISOString() })
-      .eq('id', c.id)
+    // Nothing queued. Keep running while follow-ups may still be due.
+    if (cfg.followup_enabled) {
+      const { count: pending } = await db
+        .from('prospecting_candidates')
+        .select('id', { count: 'exact', head: true })
+        .eq('campaign_id', c.id)
+        .eq('status', 'sent')
+        .is('replied_at', null)
+        .is('opted_out_at', null)
+        .lt('followups_sent', cfg.followup_max)
+      if ((pending ?? 0) > 0) {
+        await reschedule(new Date(now.getTime() + 3600_000))
+        return 'waiting'
+      }
+    }
+    await db.from('prospecting_campaigns').update({ status: 'completed', updated_at: stamp }).eq('id', c.id)
     return 'completed'
   }
-  const failCandidate = (error: string) =>
-    db.from('prospecting_candidates').update({ status: 'failed', error }).eq('id', cand.id)
+
+  if (!cand.conversation_id || !cand.deal_id) {
+    const prep = await prepareCandidate(db, {
+      accountId: c.account_id,
+      campaignName: c.name,
+      candidateId: cand.id,
+      contactId: cand.contact_id,
+      config: cfg,
+    })
+    if (!prep.ok) {
+      await db.from('prospecting_candidates').update({ status: 'skipped', error: prep.reason }).eq('id', cand.id)
+      await reschedule(now)
+      return 'waiting'
+    }
+    cand.conversation_id = prep.conversationId
+    cand.deal_id = prep.dealId
+  }
+  return sendTouch(db, { c, cand, agent, now, touch: 0, reschedule, pause })
+}
+
+/** touch 0 = first message; 1..n = follow-ups. */
+async function sendTouch(
+  db: SupabaseClient,
+  args: {
+    c: CampaignRow
+    cand: CandidateRow
+    agent: Awaited<ReturnType<typeof loadAiConfig>>
+    now: Date
+    touch: number
+    reschedule: (at: Date) => PromiseLike<unknown>
+    pause: (error: string) => Promise<'paused'>
+  },
+): Promise<TickResult> {
+  const { c, cand, agent, now, touch } = args
+  const cfg = c.config
+  const tag = `[prospecting ${c.id}]`
+  const isFollowup = touch > 0
 
   const { data: contact } = await db
     .from('contacts')
@@ -130,29 +226,67 @@ async function tickCampaign(c: CampaignRow, now: Date): Promise<TickResult> {
     .eq('id', cand.contact_id)
     .eq('account_id', c.account_id)
     .maybeSingle()
-  if (!contact || contact.opted_out_at || !cand.conversation_id) {
-    await db.from('prospecting_candidates').update({ status: 'skipped', error: 'opted_out' }).eq('id', cand.id)
-    await reschedule(now)
+  const { data: conv } = await db
+    .from('conversations')
+    .select('assigned_agent_id')
+    .eq('id', cand.conversation_id!)
+    .maybeSingle()
+  // Opted out, or a person took the conversation: never write to them.
+  if (!contact || contact.opted_out_at || conv?.assigned_agent_id) {
+    await db
+      .from('prospecting_candidates')
+      .update(isFollowup ? { followups_sent: cfg.followup_max } : { status: 'skipped', error: 'opted_out' })
+      .eq('id', cand.id)
+    await args.reschedule(now)
     return 'waiting'
   }
+  if (isFollowup) {
+    // Any reply at all (even after the 72h attribution window) ends the nudging.
+    const { count } = await db
+      .from('messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('conversation_id', cand.conversation_id!)
+      .eq('sender_type', 'customer')
+    if ((count ?? 0) > 0) {
+      await db.from('prospecting_candidates').update({ followups_sent: cfg.followup_max }).eq('id', cand.id)
+      await args.reschedule(now)
+      return 'waiting'
+    }
+  }
 
+  const fields = { name: contact.name as string | null, company: contact.company as string | null }
   try {
     let result
     if (cfg.channel_kind === 'waha') {
-      const agent = await loadAiConfig(db, c.account_id, { agentId: cfg.agent_id })
-      if (!agent) {
-        await failCandidate('agent_missing')
-        return pause('agent_missing')
+      let previous: string | null = null
+      if (isFollowup) {
+        const { data: last } = await db
+          .from('messages')
+          .select('content_text')
+          .eq('conversation_id', cand.conversation_id!)
+          .neq('sender_type', 'customer')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        previous = (last?.content_text as string | null) ?? null
       }
       const generation = await generateReplyWithFallback({
-        config: agent,
-        systemPrompt: buildApproachPrompt({
-          instruction: cfg.instruction,
-          criteria: cfg.criteria,
-          contact: { name: contact.name, company: contact.company },
-          businessContext: agent.systemPrompt,
-        }),
-        messages: [{ role: 'user', content: 'Write the first message now.' }],
+        config: agent!,
+        systemPrompt: isFollowup
+          ? buildFollowupPrompt({
+              instruction: cfg.instruction,
+              contact: fields,
+              previous,
+              touch,
+              businessContext: agent!.systemPrompt,
+            })
+          : buildApproachPrompt({
+              instruction: cfg.instruction,
+              criteria: cfg.criteria,
+              contact: fields,
+              businessContext: agent!.systemPrompt,
+            }),
+        messages: [{ role: 'user', content: 'Write the message now.' }],
       })
       void logAiUsage(db, {
         accountId: c.account_id,
@@ -164,47 +298,51 @@ async function tickCampaign(c: CampaignRow, now: Date): Promise<TickResult> {
         usage: generation.usage,
       })
       const text = generation.text.trim()
-      if (!text || generation.handoff) throw new AiError('The model wrote no approach.', { code: 'empty_reply' })
+      if (!text || generation.handoff) throw new AiError('The model wrote no message.', { code: 'empty_reply' })
       result = await sendMessageToConversation(db, c.account_id, {
-        conversationId: cand.conversation_id,
+        conversationId: cand.conversation_id!,
         messageType: 'text',
         contentText: `${text}\n\n${optOutLine(process.env.NEXT_PUBLIC_APP_LOCALE)}`,
       })
     } else {
       result = await sendMessageToConversation(db, c.account_id, {
-        conversationId: cand.conversation_id,
+        conversationId: cand.conversation_id!,
         messageType: 'template',
-        templateName: cfg.template_name,
-        templateLanguage: cfg.template_language,
-        templateParams: renderTemplateParams(cfg.template_params, {
-          name: contact.name,
-          company: contact.company,
-        }),
+        templateName: isFollowup ? cfg.followup_template_name : cfg.template_name,
+        templateLanguage: isFollowup ? cfg.followup_template_language : cfg.template_language,
+        templateParams: renderTemplateParams(
+          isFollowup ? cfg.followup_template_params : cfg.template_params,
+          fields,
+        ),
       })
     }
 
-    // Sent by the system, not by a person.
     await db
       .from('messages')
       .update({ sender_type: 'bot', ai_generated: cfg.channel_kind === 'waha' })
       .eq('id', result.messageId)
-    await db
-      .from('prospecting_candidates')
-      .update({ status: 'sent', sent_at: new Date().toISOString(), error: null })
-      .eq('id', cand.id)
-    await reschedule(nextSendAt(now, cfg.interval_minutes))
-    return 'sent'
+    if (!isFollowup) {
+      const at = new Date().toISOString()
+      await db
+        .from('prospecting_candidates')
+        .update({ status: 'sent', sent_at: at, last_touch_at: at, error: null })
+        .eq('id', cand.id)
+    }
+    await args.reschedule(nextSendAt(now, cfg.interval_minutes))
+    return isFollowup ? 'followup' : 'sent'
   } catch (err) {
     const code =
       err instanceof SendMessageError || err instanceof AiError
         ? String((err as { code?: string }).code ?? 'unknown')
         : 'unknown'
-    console.error(`${tag} send failed (${code}):`, err)
-    // Never retried automatically: a duplicate cold message is worse
-    // than a missing one. The candidate stays failed for a person to check.
-    await failCandidate(code)
-    if (failureScope(code) === 'campaign') return pause(code)
-    await reschedule(nextSendAt(now, cfg.interval_minutes))
+    console.error(`${tag} ${isFollowup ? 'follow-up' : 'send'} failed (${code}):`, err)
+    // Never retried automatically: a duplicate cold message is worse than
+    // a missing one. A failed follow-up keeps its count (no second try).
+    if (!isFollowup) {
+      await db.from('prospecting_candidates').update({ status: 'failed', error: code }).eq('id', cand.id)
+    }
+    if (failureScope(code) === 'campaign') return args.pause(code)
+    await args.reschedule(nextSendAt(now, cfg.interval_minutes))
     return 'failed'
   }
 }

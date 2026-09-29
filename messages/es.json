@@ -483,7 +483,8 @@
       "sent": "Abordados",
       "replied": "Respondieron",
       "qualified": "Calificados",
-      "details": "{queued} en cola · {failed} con fallo · {skipped} omitidos · {optedOut} pidieron salir"
+      "details": "{queued} en cola · {failed} con fallo · {skipped} omitidos · {optedOut} pidieron salir",
+      "followedUp": "{count, plural, =1 {1 recibió seguimiento} other {# recibieron seguimiento}}"
     },
     "form": {
       "name": "Campaign name",
@@ -512,7 +513,25 @@
       "legalPlaceholder": "E.g. shops with a public contact, approached to offer a service for their segment.",
       "dailyLimit": "Daily limit",
       "interval": "Interval between sends (minutes)",
-      "pacingHint": "Sends Monday to Friday, 9am to 6pm (São Paulo time), with a random delay so it doesn't look automated."
+      "pacingHint": "Sends Monday to Friday, 9am to 6pm (São Paulo time), with a random delay so it doesn't look automated.",
+      "startHour": "Send from (hour)",
+      "endHour": "Until (hour)",
+      "weekdays": "Días de envío",
+      "day": {
+        "0": "Dom",
+        "1": "Lun",
+        "2": "Mar",
+        "3": "Mié",
+        "4": "Jue",
+        "5": "Vie",
+        "6": "Sáb"
+      },
+      "followup": "Seguimiento para quien no respondió",
+      "followupWahaHint": "The AI sends a short, low-pressure reminder. The last one says it won't insist.",
+      "followupCloudHint": "After 24h the official number only accepts templates: choose an approved follow-up template.",
+      "followupDays": "Days without a reply before the reminder",
+      "followupMax": "How many reminders (max 2)",
+      "followupTemplate": "Follow-up template"
     },
     "errors": {
       "generic": "Could not complete.",
@@ -539,7 +558,35 @@
       "list_empty": "No lead in the list could be approached.",
       "not_running": "The campaign is not running.",
       "not_paused": "The campaign is not paused.",
-      "already_finished": "The campaign has already finished."
+      "already_finished": "The campaign has already finished.",
+      "followup_template_required": "Choose the follow-up template."
+    },
+    "leads": {
+      "toggle": "Ver leads",
+      "lead": "Lead",
+      "stage": "Estado",
+      "sent": "Abordado el",
+      "followups": "Seguimientos",
+      "open": "Abrir conversación",
+      "state": {
+        "queued": "En cola",
+        "sent": "Abordado",
+        "replied": "Respondió",
+        "qualified": "Calificado",
+        "opted_out": "Pidió salir",
+        "skipped": "Omitido",
+        "failed": "Falló"
+      }
+    },
+    "reasons": {
+      "opted_out": "asked not to be messaged",
+      "third_party_list": "third-party list",
+      "invalid_phone": "invalid phone",
+      "in_service": "already in a conversation",
+      "failed": "could not prepare",
+      "cancelled": "campaign cancelled",
+      "empty_reply": "the AI wrote no message",
+      "unknown": "unknown error"
     }
   },
   "AiAckNotice": {

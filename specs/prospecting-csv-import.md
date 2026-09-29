@@ -563,9 +563,15 @@ answering replies ahead of router and number binding, `qualify_lead` tool
 (only this deal, only to the campaign's qualified stage), `/prospecting`
 page with the funnel from stamps.
 
-Not built / not verified:
-- Not run end-to-end against a real number (it sends real messages).
-- Activation capped at 500 leads and runs inside the request.
-- Window/timezone not editable in the UI (defaults only).
-- Non-responder follow-up (use a follow-up sequence manually for now).
-- Reply attribution window fixed at 72h; campaign screen has no per-lead list.
+Follow-up round (2026-09-29): activation is now a bulk enqueue up to 5,000
+leads, with the conversation + deal created at send time (`prepareCandidate`,
+so the pipeline only holds leads actually contacted); sending window and
+weekdays editable; follow-ups for non-responders (migration 083: up to 2
+touches, N days apart; WAHA = short AI nudge, the last one says it won't
+insist; official API = an approved follow-up template, since only templates
+go out after 24h; any customer message, opt-out or human takeover stops
+them; first touches and follow-ups share the daily cap); per-lead list with
+a link to the conversation.
+
+Still not done: an end-to-end run against a real number; timezone is fixed
+to America/Sao_Paulo; the 72h reply-attribution window is not configurable.

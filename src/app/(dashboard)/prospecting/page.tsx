@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Loader2, Pause, Play, Plus, Target, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, Pause, Play, Plus, Target, X } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -12,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +39,19 @@ interface Funnel {
   failed: number;
   skipped: number;
   opted_out: number;
+  followed_up?: number;
+}
+interface Lead {
+  id: string;
+  status: string;
+  error: string | null;
+  conversation_id: string | null;
+  sent_at: string | null;
+  replied_at: string | null;
+  qualified_at: string | null;
+  opted_out_at: string | null;
+  followups_sent: number;
+  contact: { name: string | null; phone: string; company: string | null } | null;
 }
 interface Campaign {
   id: string;
@@ -203,10 +218,172 @@ function CampaignCard({
               skipped: f.skipped,
               optedOut: f.opted_out,
             })}
+            {(f.followed_up ?? 0) > 0 && ` · ${t('funnel.followedUp', { count: f.followed_up ?? 0 })}`}
           </p>
+          <LeadList campaignId={c.id} t={t} />
         </CardContent>
       )}
     </Card>
+  );
+}
+
+/** What happened to each lead of a campaign, loaded on demand. */
+function LeadList({ campaignId, t }: { campaignId: string; t: ReturnType<typeof useTranslations> }) {
+  const [open, setOpen] = useState(false);
+  const [leads, setLeads] = useState<Lead[] | null>(null);
+
+  useEffect(() => {
+    if (!open || leads) return;
+    let alive = true;
+    fetch(`/api/prospecting/campaigns/${campaignId}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { leads: [] }))
+      .then((d) => alive && setLeads(d.leads ?? []))
+      .catch(() => alive && setLeads([]));
+    return () => {
+      alive = false;
+    };
+  }, [open, leads, campaignId]);
+
+  const stageOf = (l: Lead) =>
+    l.qualified_at
+      ? 'qualified'
+      : l.opted_out_at
+        ? 'opted_out'
+        : l.replied_at
+          ? 'replied'
+          : l.sent_at
+            ? 'sent'
+            : l.status === 'skipped' || l.status === 'failed'
+              ? l.status
+              : 'queued';
+  const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : '—');
+
+  return (
+    <div>
+      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setOpen((v) => !v)}>
+        {open ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+        {t('leads.toggle')}
+      </Button>
+      {open &&
+        (leads === null ? (
+          <Loader2 className="text-muted-foreground mx-auto size-4 animate-spin" />
+        ) : (
+          <div className="max-h-80 overflow-auto rounded-md border">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/50 sticky top-0">
+                <tr>
+                  <th className="px-2 py-1 text-left">{t('leads.lead')}</th>
+                  <th className="px-2 py-1 text-left">{t('leads.stage')}</th>
+                  <th className="px-2 py-1 text-left">{t('leads.sent')}</th>
+                  <th className="px-2 py-1 text-left">{t('leads.followups')}</th>
+                  <th className="px-2 py-1" />
+                </tr>
+              </thead>
+              <tbody>
+                {leads.map((l) => {
+                  const st = stageOf(l);
+                  return (
+                    <tr key={l.id} className="border-t">
+                      <td className="px-2 py-1">
+                        <div className="font-medium">{l.contact?.company || l.contact?.name || l.contact?.phone}</div>
+                        <div className="text-muted-foreground">{l.contact?.phone}</div>
+                      </td>
+                      <td className="px-2 py-1">
+                        {t(`leads.state.${st}`)}
+                        {l.error && (st === 'skipped' || st === 'failed') && (
+                          <span className="text-muted-foreground"> · {t.has(`reasons.${l.error}`) ? t(`reasons.${l.error}`) : l.error}</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1">{day(l.sent_at)}</td>
+                      <td className="px-2 py-1">{l.followups_sent}</td>
+                      <td className="px-2 py-1 text-right">
+                        {l.conversation_id && l.sent_at && (
+                          <Link className="text-primary underline" href={`/inbox?c=${l.conversation_id}`}>
+                            {t('leads.open')}
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ))}
+    </div>
+  );
+}
+
+/** An approved template plus a source for each {{n}} body variable. */
+function TemplateFields({
+  templates,
+  value,
+  onChange,
+  params,
+  onParams,
+  t,
+}: {
+  templates: TemplateOption[];
+  value: string;
+  onChange: (v: string) => void;
+  params: string[];
+  onParams: (p: string[]) => void;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const template = templates.find((x) => `${x.name}|${x.language}` === value) ?? null;
+  const varCount = useMemo(() => {
+    const nums = [...(template?.body_text ?? '').matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1]));
+    return nums.length ? Math.max(...nums) : 0;
+  }, [template]);
+  const shown = Array.from({ length: varCount }, (_, i) => params[i] ?? 'first_name');
+  const setAt = (i: number, v: string) => onParams(shown.map((x, j) => (j === i ? v : x)));
+
+  return (
+    <div className="space-y-2">
+      <Select value={value || null} onValueChange={(v) => onChange(v ?? '')}>
+        <SelectTrigger>
+          <SelectValue placeholder={t('form.pick')}>
+            {(v: string) => v?.replace('|', ' · ') || t('form.pick')}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {templates.map((x) => (
+            <SelectItem key={`${x.name}|${x.language}`} value={`${x.name}|${x.language}`}>
+              {x.name} · {x.language}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {templates.length === 0 && (
+        <p className="text-xs text-amber-700 dark:text-amber-300">{t('form.noTemplates')}</p>
+      )}
+      {template && (
+        <p className="bg-muted/50 rounded-md p-2 text-xs whitespace-pre-wrap">{template.body_text}</p>
+      )}
+      {shown.map((p, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <span className="text-muted-foreground w-12 text-xs">{`{{${i + 1}}}`}</span>
+          <Select
+            value={(TOKENS as readonly string[]).includes(p) ? p : 'text'}
+            onValueChange={(v) => setAt(i, v === 'text' ? '' : (v ?? ''))}
+          >
+            <SelectTrigger className="w-44">
+              <SelectValue>{(v: string) => t(`form.token.${v}`)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {[...TOKENS, 'text'].map((tok) => (
+                <SelectItem key={tok} value={tok}>
+                  {t(`form.token.${tok}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {!(TOKENS as readonly string[]).includes(p) && (
+            <Input value={p} onChange={(e) => setAt(i, e.target.value)} />
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -256,6 +433,14 @@ function NewCampaignDialog({
   const [legal, setLegal] = useState('');
   const [dailyLimit, setDailyLimit] = useState(10);
   const [interval, setInterval] = useState(15);
+  const [startHour, setStartHour] = useState(9);
+  const [endHour, setEndHour] = useState(18);
+  const [weekdays, setWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [followup, setFollowup] = useState(false);
+  const [followupDays, setFollowupDays] = useState(3);
+  const [followupMax, setFollowupMax] = useState(1);
+  const [followupKey, setFollowupKey] = useState('');
+  const [followupParams, setFollowupParams] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -292,13 +477,12 @@ function NewCampaignDialog({
 
   const isCloud = channel === 'cloud';
   const template = templates.find((x) => `${x.name}|${x.language}` === templateKey) ?? null;
-  const varCount = useMemo(() => {
-    const nums = [...(template?.body_text ?? '').matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1]));
+  const followupTemplate = templates.find((x) => `${x.name}|${x.language}` === followupKey) ?? null;
+  const varsOf = (tpl: TemplateOption | null) => {
+    const nums = [...(tpl?.body_text ?? '').matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1]));
     return nums.length ? Math.max(...nums) : 0;
-  }, [template]);
-  useEffect(() => {
-    setParams((p) => Array.from({ length: varCount }, (_, i) => p[i] ?? 'first_name'));
-  }, [varCount]);
+  };
+  const fill = (p: string[], n: number) => Array.from({ length: n }, (_, i) => p[i] ?? 'first_name');
 
   const labelOf = (list: Option[], id: string) => list.find((x) => x.id === id)?.name ?? '';
 
@@ -322,10 +506,19 @@ function NewCampaignDialog({
             criteria,
             template_name: template?.name ?? null,
             template_language: template?.language ?? null,
-            template_params: params,
+            template_params: fill(params, varsOf(template)),
             legal_basis_ref: legal,
             daily_limit: dailyLimit,
             interval_minutes: interval,
+            window_start_hour: startHour,
+            window_end_hour: endHour,
+            weekdays,
+            followup_enabled: followup,
+            followup_after_days: followupDays,
+            followup_max: followupMax,
+            followup_template_name: followupTemplate?.name ?? null,
+            followup_template_language: followupTemplate?.language ?? null,
+            followup_template_params: fill(followupParams, varsOf(followupTemplate)),
           },
         }),
       });
@@ -410,54 +603,14 @@ function NewCampaignDialog({
           {isCloud ? (
             <div className="space-y-2 sm:col-span-2">
               <Label>{t('form.template')}</Label>
-              <Select value={templateKey || null} onValueChange={(v) => setTemplateKey(v ?? '')}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('form.pick')}>
-                    {(v: string) => v?.replace('|', ' · ') || t('form.pick')}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {templates.map((x) => (
-                    <SelectItem key={`${x.name}|${x.language}`} value={`${x.name}|${x.language}`}>
-                      {x.name} · {x.language}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {templates.length === 0 && (
-                <p className="text-xs text-amber-700 dark:text-amber-300">{t('form.noTemplates')}</p>
-              )}
-              {template && (
-                <p className="bg-muted/50 rounded-md p-2 text-xs whitespace-pre-wrap">{template.body_text}</p>
-              )}
-              {params.map((p, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-muted-foreground w-12 text-xs">{`{{${i + 1}}}`}</span>
-                  <Select
-                    value={(TOKENS as readonly string[]).includes(p) ? p : 'text'}
-                    onValueChange={(v) =>
-                      setParams((all) => all.map((x, j) => (j === i ? (v === 'text' ? '' : (v ?? '')) : x)))
-                    }
-                  >
-                    <SelectTrigger className="w-44">
-                      <SelectValue>{(v: string) => t(`form.token.${v}`)}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[...TOKENS, 'text'].map((tok) => (
-                        <SelectItem key={tok} value={tok}>
-                          {t(`form.token.${tok}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {!(TOKENS as readonly string[]).includes(p) && (
-                    <Input
-                      value={p}
-                      onChange={(e) => setParams((all) => all.map((x, j) => (j === i ? e.target.value : x)))}
-                    />
-                  )}
-                </div>
-              ))}
+              <TemplateFields
+                templates={templates}
+                value={templateKey}
+                onChange={setTemplateKey}
+                params={params}
+                onParams={setParams}
+                t={t}
+              />
             </div>
           ) : (
             <div className="space-y-1.5 sm:col-span-2">
@@ -509,7 +662,71 @@ function NewCampaignDialog({
               onChange={(e) => setInterval(Number(e.target.value))}
             />
           </div>
+          <div className="space-y-1.5">
+            <Label>{t('form.startHour')}</Label>
+            <Input type="number" min={0} max={23} value={startHour} onChange={(e) => setStartHour(Number(e.target.value))} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t('form.endHour')}</Label>
+            <Input type="number" min={1} max={24} value={endHour} onChange={(e) => setEndHour(Number(e.target.value))} />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>{t('form.weekdays')}</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {[1, 2, 3, 4, 5, 6, 0].map((d) => (
+                <Button
+                  key={d}
+                  type="button"
+                  size="sm"
+                  variant={weekdays.includes(d) ? 'default' : 'outline'}
+                  className="h-7 px-2 text-xs"
+                  onClick={() =>
+                    setWeekdays((w) => (w.includes(d) ? w.filter((x) => x !== d) : [...w, d]))
+                  }
+                >
+                  {t(`form.day.${d}`)}
+                </Button>
+              ))}
+            </div>
+          </div>
           <p className="text-muted-foreground text-xs sm:col-span-2">{t('form.pacingHint')}</p>
+
+          <div className="space-y-3 rounded-md border p-3 sm:col-span-2">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium">{t('form.followup')}</p>
+                <p className="text-muted-foreground text-xs">
+                  {isCloud ? t('form.followupCloudHint') : t('form.followupWahaHint')}
+                </p>
+              </div>
+              <Switch checked={followup} onCheckedChange={setFollowup} />
+            </div>
+            {followup && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>{t('form.followupDays')}</Label>
+                  <Input type="number" min={1} max={14} value={followupDays} onChange={(e) => setFollowupDays(Number(e.target.value))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t('form.followupMax')}</Label>
+                  <Input type="number" min={1} max={2} value={followupMax} onChange={(e) => setFollowupMax(Number(e.target.value))} />
+                </div>
+                {isCloud && (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>{t('form.followupTemplate')}</Label>
+                    <TemplateFields
+                      templates={templates}
+                      value={followupKey}
+                      onChange={setFollowupKey}
+                      params={followupParams}
+                      onParams={setFollowupParams}
+                      t={t}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <DialogFooter>

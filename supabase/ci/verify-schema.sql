@@ -658,6 +658,12 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'ai_usage_log.speech_chars is missing — migration 080 did not apply';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'prospecting_candidates' AND column_name = 'followups_sent'
+  ) THEN
+    RAISE EXCEPTION 'prospecting_candidates.followups_sent is missing — migration 083 did not apply';
+  END IF;
   IF to_regclass('public.prospecting_campaigns') IS NULL
      OR to_regclass('public.prospecting_candidates') IS NULL THEN
     RAISE EXCEPTION 'prospecting tables are missing — migration 082 did not apply';
