@@ -130,10 +130,20 @@ export function parseGeneration(
   // rather than show the customer a monologue.
   const stripped = looksLikeReasoningLeak(cleaned) ? '' : cleaned
 
-  const rawSegments = stripped
+  let rawSegments = stripped
     .split(MULTI_MESSAGE_DELIMITER)
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
+  // Many models ignore the delimiter and separate their "messages" with a
+  // blank line instead, which arrived as one bubble with gaps inside. When
+  // the delimiter is absent, a blank line is read as the split.
+  if (rawSegments.length === 1 && !stripped.includes(MULTI_MESSAGE_DELIMITER)) {
+    const paragraphs = rawSegments[0]
+      .split(/\n[ \t]*\n/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
+    if (paragraphs.length > 1) rawSegments = paragraphs
+  }
 
   let segments = rawSegments
   if (rawSegments.length > MAX_REPLY_SEGMENTS) {

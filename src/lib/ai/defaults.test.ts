@@ -43,3 +43,11 @@ describe('buildSystemPrompt — order (prefix caching)', () => {
     expect(p).not.toContain('Marina')
   })
 })
+
+describe('buildSystemPrompt — unknown terms', () => {
+  it('tells the model to ask about terms it does not know, and that transcripts can be wrong', () => {
+    const p = buildSystemPrompt({ userPrompt: 'x', mode: 'auto_reply' })
+    expect(p).toContain('do not describe or explain it')
+    expect(p).toContain('[áudio transcrito]')
+  })
+})

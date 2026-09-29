@@ -639,3 +639,20 @@ describe('generateReply — OpenRouter', () => {
     ).rejects.toBeInstanceOf(AiError)
   })
 })
+
+describe('parseGeneration — bubbles without the delimiter', () => {
+  it('splits on blank lines when the model skipped the delimiter', () => {
+    const r = parseGeneration('Oi, Raylson!\n\nPode me dizer o que precisa?')
+    expect(r.segments).toEqual(['Oi, Raylson!', 'Pode me dizer o que precisa?'])
+  })
+
+  it('keeps single line breaks inside one bubble', () => {
+    const r = parseGeneration('Horários:\nseg a sex 9h-18h\nsáb 9h-12h')
+    expect(r.segments).toHaveLength(1)
+  })
+
+  it('the delimiter still wins when present', () => {
+    const r = parseGeneration('Primeira\n\nainda primeira\n[[NEXT]]\nSegunda')
+    expect(r.segments).toEqual(['Primeira\n\nainda primeira', 'Segunda'])
+  })
+})
