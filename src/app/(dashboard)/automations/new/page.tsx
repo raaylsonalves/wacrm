@@ -30,6 +30,7 @@ export default function NewAutomationPage() {
 function NewAutomationPageInner() {
   const params = useSearchParams()
   const template = params.get("template") as TemplateSlug | null
+  const startAsFollowup = params.get("trigger") === "conversation_silence"
   // Namespace must be a valid slug unconditionally (hooks can't be
   // called conditionally) — "welcome_message" is an inert fallback for
   // the no-template case below, where tTemplates is never read.
@@ -61,6 +62,28 @@ function NewAutomationPageInner() {
         steps,
       }
     }
+    if (startAsFollowup) {
+      // A follow-up starts as a sensible skeleton — nudge, a day's wait,
+      // nudge — so nobody stares at an empty canvas. Texts stay empty on
+      // purpose: the activation check refuses to turn it on until the
+      // account has written what it wants to say.
+      return {
+        name: "",
+        description: "",
+        trigger_type: "conversation_silence" as AutomationTriggerType,
+        trigger_config: {
+          silence_after: { amount: 4, unit: "hours" },
+          audience: "ai_conversations",
+          handoff_policy: "cancel",
+        },
+        is_active: false,
+        steps: expandFromSeeds([
+          { index: 0, step_type: "send_message", step_config: { text: "" }, branch: null, parent_index: null },
+          { index: 1, step_type: "wait", step_config: { amount: 1, unit: "days" }, branch: null, parent_index: null },
+          { index: 2, step_type: "send_message", step_config: { text: "" }, branch: null, parent_index: null },
+        ]),
+      }
+    }
     return {
       name: "",
       description: "",
@@ -69,7 +92,7 @@ function NewAutomationPageInner() {
       is_active: false,
       steps: [],
     }
-  }, [template, tTemplates])
+  }, [template, tTemplates, startAsFollowup])
 
   return <AutomationBuilder initial={initial} />
 }

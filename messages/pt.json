@@ -1037,6 +1037,7 @@
       "title": "Automações",
       "subtitle": "Crie fluxos de trabalho que reagem automaticamente a eventos do WhatsApp®.",
       "create": "Criar automação",
+      "createFollowup": "Criar follow-up",
       "retry": "Tentar novamente",
       "templatesTitle": "Modelos para começar rápido",
       "emptyTitle": "Nenhuma automação ainda",

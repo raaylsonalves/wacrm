@@ -1037,6 +1037,7 @@
       "title": "Automatizaciones",
       "subtitle": "Crea flujos de trabajo que reaccionan automáticamente a eventos de WhatsApp®.",
       "create": "Crear automatización",
+      "createFollowup": "Crear seguimiento",
       "retry": "Reintentar",
       "templatesTitle": "Plantillas de inicio rápido",
       "emptyTitle": "Aún no hay automatizaciones",

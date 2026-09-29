@@ -1037,6 +1037,7 @@
       "title": "자동화",
       "subtitle": "WhatsApp® 이벤트에 자동으로 반응하는 워크플로를 만드세요.",
       "create": "자동화 만들기",
+      "createFollowup": "후속 메시지 만들기",
       "retry": "다시 시도",
       "templatesTitle": "빠른 시작 템플릿",
       "emptyTitle": "아직 자동화가 없습니다",

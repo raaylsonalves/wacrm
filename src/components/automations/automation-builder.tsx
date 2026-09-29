@@ -765,7 +765,17 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
             <TriggerCard
               type={state.trigger_type}
               config={state.trigger_config}
-              onTypeChange={(tVal) => patchTop("trigger_type", tVal)}
+              onTypeChange={(tVal) => {
+                patchTop("trigger_type", tVal)
+                // Picking the follow-up trigger fills sensible defaults so
+                // the silence field isn't a blank box.
+                if (tVal === "conversation_silence" && !state.trigger_config.silence_after) {
+                  patchTop("trigger_config", {
+                    ...state.trigger_config,
+                    silence_after: { amount: 4, unit: "hours" },
+                  })
+                }
+              }}
               onConfigChange={(c) => patchTop("trigger_config", c)}
               t={t}
             />

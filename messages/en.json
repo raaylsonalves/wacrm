@@ -1037,6 +1037,7 @@
       "title": "Automations",
       "subtitle": "Build workflows that react to WhatsApp® events automatically.",
       "create": "Create Automation",
+      "createFollowup": "Create follow-up",
       "retry": "Retry",
       "templatesTitle": "Quick-start templates",
       "emptyTitle": "No automations yet",
