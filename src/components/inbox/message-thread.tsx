@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "./message-bubble";
+import { startsRun, unseenCount } from "@/lib/inbox/bubble-runs";
 import { MessageActions } from "./message-actions";
 import { MediaLightbox } from "./media-lightbox";
 import { collectMediaGallery } from "@/lib/media/gallery";
@@ -174,6 +175,7 @@ export function MessageThread({
   const t = useTranslations("Inbox.messageThread");
   const tTimer = useTranslations("Inbox.sessionTimer");
   const tQuote = useTranslations("Inbox.replyQuote");
+  const tComposer = useTranslations("Inbox.composer");
 
   const { user } = useAuth();
   const { getPresence, getRow, now } = usePresence();
@@ -531,13 +533,35 @@ export function MessageThread({
       });
   }, [conversationId, hasUnread]);
 
-  // Auto-scroll to bottom on new messages
+  // Follow new messages only while the agent is at the bottom (or just
+  // sent one) — scrolled up reading history, they get the "jump to
+  // latest" button with a count instead of being yanked down.
+  const atBottomRef = useRef(true);
+  const [atBottom, setAtBottom] = useState(true);
+  const [seenCount, setSeenCount] = useState(0);
   useEffect(() => {
-    if (scrollRef.current) {
-      const el = scrollRef.current;
-      el.scrollTop = el.scrollHeight;
-    }
+    atBottomRef.current = true;
+  }, [conversationId]);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const last = messages[messages.length - 1];
+    const ownSend = !!last && last.id.startsWith("temp-");
+    if (atBottomRef.current || ownSend) el.scrollTop = el.scrollHeight;
   }, [messages]);
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const bottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    atBottomRef.current = bottom;
+    setAtBottom(bottom);
+    if (bottom) setSeenCount(messages.length);
+  }, [messages.length]);
+  const jumpToLatest = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, []);
+  const unseen = atBottom ? 0 : unseenCount(messages, seenCount);
 
   const handleSend = useCallback(
     async (text: string, replyToId?: string) => {
@@ -1189,7 +1213,12 @@ export function MessageThread({
       </div>
 
       {/* Messages Area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="chat-wallpaper flex-1 overflow-y-auto px-4 py-4 sm:px-10"
+      >
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -1206,14 +1235,15 @@ export function MessageThread({
             {messageGroups.map((group) => (
               <div key={group.date}>
                 {/* Date separator */}
-                <div className="mb-4 flex items-center justify-center">
-                  <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-muted-foreground">
+                <div className="sticky top-0 z-[1] mb-3 flex items-center justify-center">
+                  <span className="rounded-lg bg-card px-3 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
                     {formatDateSeparator(group.date, t)}
                   </span>
                 </div>
                 {/* Messages */}
-                <div className="space-y-2">
-                  {group.messages.map((msg) => {
+                <div>
+                  {group.messages.map((msg, i) => {
+                    const runStart = startsRun(group.messages[i - 1], msg);
                     const parent = msg.reply_to_message_id
                       ? messagesById.get(msg.reply_to_message_id)
                       : null;
@@ -1239,8 +1269,8 @@ export function MessageThread({
                       void postReaction(msg.id, next);
                     };
                     return (
+                      <div key={msg.id} className={i === 0 ? "" : runStart ? "mt-3" : "mt-0.5"}>
                       <MessageActions
-                        key={msg.id}
                         message={msg}
                         onReply={() => handleStartReply(msg)}
                         onReact={(emoji) => {
@@ -1254,8 +1284,10 @@ export function MessageThread({
                           currentUserId={user?.id}
                           onToggleReaction={handlePillToggle}
                           onOpenMedia={handleMediaChange}
+                          tail={runStart}
                         />
                       </MessageActions>
+                      </div>
                     );
                   })}
                 </div>
@@ -1263,6 +1295,23 @@ export function MessageThread({
             ))}
           </div>
         )}
+      </div>
+      {!atBottom && messages.length > 0 && (
+        <button
+          type="button"
+          onClick={jumpToLatest}
+          aria-label={tComposer("jumpToLatest")}
+          title={tComposer("jumpToLatest")}
+          className="absolute right-4 bottom-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-card text-muted-foreground shadow-md ring-1 ring-border hover:text-foreground"
+        >
+          <ChevronDown className="h-5 w-5" />
+          {unseen > 0 && (
+            <span className="absolute -top-1.5 -right-1 min-w-5 rounded-full bg-primary px-1 text-center text-[10px] font-semibold leading-5 text-primary-foreground tabular-nums">
+              {unseen > 99 ? "99+" : unseen}
+            </span>
+          )}
+        </button>
+      )}
       </div>
 
       {/* AI auto-reply banner — take over an active bot, or resume it

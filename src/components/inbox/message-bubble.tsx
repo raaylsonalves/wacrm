@@ -38,6 +38,26 @@ interface MessageBubbleProps {
    * stays inline and non-clickable.
    */
   onOpenMedia?: (messageId: string) => void;
+  /** First bubble of a run from one side — draws the WhatsApp tail. */
+  tail?: boolean;
+}
+
+/** The little hook on the first bubble of a run, in the bubble's colour. */
+function BubbleTail({ out }: { out: boolean }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 8 13"
+      width="8"
+      height="13"
+      className={cn(
+        "absolute top-0",
+        out ? "-right-2 text-primary" : "-left-2 -scale-x-100 text-card",
+      )}
+    >
+      <path fill="currentColor" d="M0 0h8L1.5 8.5C1 9.2 0 8.9 0 8V0z" />
+    </svg>
+  );
 }
 
 /**
@@ -275,6 +295,7 @@ export function MessageBubble({
   currentUserId,
   onToggleReaction,
   onOpenMedia,
+  tail = true,
 }: MessageBubbleProps) {
   const t = useTranslations("Inbox.bubble");
 
@@ -293,12 +314,14 @@ export function MessageBubble({
     >
       <div
         className={cn(
-          "relative rounded-2xl px-3 py-2",
+          "relative rounded-lg px-2.5 pt-1.5 pb-1 shadow-sm",
           isAgent
-            ? "rounded-br-md bg-primary text-primary-foreground"
-            : "rounded-bl-md bg-muted text-foreground",
+            ? "bg-primary text-primary-foreground"
+            : "bg-card text-card-foreground",
+          tail && (isAgent ? "rounded-tr-none" : "rounded-tl-none"),
         )}
       >
+        {tail && <BubbleTail out={isAgent} />}
         {reply && (
           <ReplyQuote
             authorLabel={reply.authorLabel}
@@ -314,7 +337,7 @@ export function MessageBubble({
         />
         <div
           className={cn(
-            "mt-1 flex items-center gap-1",
+            "-mt-0.5 flex items-center gap-1",
             isAgent ? "justify-end" : "justify-start",
           )}
         >

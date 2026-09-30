@@ -22,6 +22,7 @@ import {
   Plus,
   MessageSquareDashed,
   Zap,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GatedButton } from "@/components/ui/gated-button";
@@ -55,6 +56,8 @@ import {
 import { validateInteractivePayload } from "@/lib/whatsapp/interactive";
 import type { InteractiveMessagePayload, QuickReply } from "@/types";
 import { QuickReplyPicker } from "./quick-reply-picker";
+import { EmojiPicker } from "./emoji-picker";
+import { insertAtCaret, mediaKindForFile } from "@/lib/inbox/composer-files";
 
 /** Media content types an agent can send from the composer. */
 export type ComposerMediaKind = "image" | "video" | "document" | "audio";
@@ -411,6 +414,52 @@ export function MessageComposer({
     [removeStaged],
   );
 
+  // Pasted (Ctrl+V a screenshot) or dropped files go through the same
+  // staging as the picker. One attachment at a time, like the draft.
+  const stageFiles = useCallback(
+    (files: FileList | File[] | null | undefined) => {
+      const file = files ? Array.from(files)[0] : undefined;
+      if (!file || inputsDisabled || busy) return false;
+      const kind = mediaKindForFile(file);
+      if (!kind) {
+        toast.error(t("unsupportedFile"));
+        return true;
+      }
+      void stageUpload(kind, file);
+      return true;
+    },
+    [inputsDisabled, busy, stageUpload, t],
+  );
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (e.clipboardData.files.length > 0 && stageFiles(e.clipboardData.files)) {
+        e.preventDefault();
+      }
+    },
+    [stageFiles],
+  );
+
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
+
+  const insertEmoji = useCallback(
+    (emoji: string) => {
+      const el = textareaRef.current;
+      const next = insertAtCaret(text, el?.selectionStart, el?.selectionEnd, emoji);
+      setText(next.value);
+      requestAnimationFrame(() => {
+        adjustHeight();
+        const node = textareaRef.current;
+        if (node) {
+          node.focus();
+          node.setSelectionRange(next.caret, next.caret);
+        }
+      });
+    },
+    [text, adjustHeight],
+  );
+
   const handlePicked = useCallback(
     (kind: "image" | "video" | "document", file: File | undefined) => {
       if (file) void stageUpload(kind, file);
@@ -536,7 +585,34 @@ export function MessageComposer({
   // ---- Render --------------------------------------------------------
 
   return (
-    <div className="border-t border-border bg-card p-3">
+    <div
+      className="relative border-t border-border bg-card p-3"
+      onDragEnter={(e) => {
+        if (!e.dataTransfer.types.includes("Files") || inputsDisabled) return;
+        e.preventDefault();
+        dragDepth.current += 1;
+        setDragging(true);
+      }}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes("Files") && !inputsDisabled) e.preventDefault();
+      }}
+      onDragLeave={() => {
+        dragDepth.current = Math.max(0, dragDepth.current - 1);
+        if (dragDepth.current === 0) setDragging(false);
+      }}
+      onDrop={(e) => {
+        dragDepth.current = 0;
+        setDragging(false);
+        if (e.dataTransfer.files.length === 0) return;
+        e.preventDefault();
+        stageFiles(e.dataTransfer.files);
+      }}
+    >
+      {dragging && (
+        <div className="pointer-events-none absolute inset-1 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10 text-sm font-medium text-primary">
+          {t("dropToAttach")}
+        </div>
+      )}
       {replyTo && (
         <div className="mb-2">
           <ReplyQuote
@@ -608,17 +684,26 @@ export function MessageComposer({
       ) : recording ? (
         // Recording bar — replaces the composer while the mic is live.
         <div className="flex items-center gap-3 rounded-xl border border-border bg-muted px-4 py-2.5">
-          <span className="flex h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-red-500" />
-          <span className="flex-1 text-sm text-foreground">
-            {t("recording", { current: formatDuration(recordSeconds), max: formatDuration(MAX_RECORDING_SECONDS) })}
-          </span>
           <button
             type="button"
             onClick={cancelRecording}
-            className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-card hover:text-foreground"
+            title={t("cancel")}
+            aria-label={t("cancel")}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-card hover:text-destructive"
           >
-            {t("cancel")}
+            <Trash2 className="h-4 w-4" />
           </button>
+          <span className="flex h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-red-500" />
+          <span className="text-sm tabular-nums text-foreground">{formatDuration(recordSeconds)}</span>
+          <span className="flex flex-1 items-center gap-0.5 overflow-hidden" aria-hidden>
+            {Array.from({ length: 40 }, (_, i) => (
+              <span
+                key={i}
+                className="w-0.5 shrink-0 animate-pulse rounded-full bg-muted-foreground/50"
+                style={{ height: `${4 + ((i * 7 + recordSeconds * 3) % 14)}px`, animationDelay: `${(i % 8) * 90}ms` }}
+              />
+            ))}
+          </span>
           <Button
             size="sm"
             onClick={stopRecording}
@@ -726,12 +811,15 @@ export function MessageComposer({
             )}
           </GatedButton>
 
+          <EmojiPicker onPick={insertEmoji} disabled={inputsDisabled} />
+
           <textarea
             ref={textareaRef}
             data-inbox-composer=""
             value={text}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={
               readOnly
                 ? t("readOnlyPlaceholder")
@@ -751,16 +839,30 @@ export function MessageComposer({
             )}
           />
 
-          <GatedButton
-            size="sm"
-            canAct={!readOnly}
-            gateReason="sendMessages"
-            disabled={!text.trim() || sessionExpired || sending}
-            onClick={handleSend}
-            className="h-9 w-9 shrink-0 bg-primary p-0 hover:bg-primary/90 disabled:opacity-40"
-          >
-            <Send className="h-4 w-4" />
-          </GatedButton>
+          {/* WhatsApp: an empty box shows the mic, typing turns it into send. */}
+          {text.trim() || inputsDisabled ? (
+            <GatedButton
+              size="sm"
+              canAct={!readOnly}
+              gateReason="sendMessages"
+              disabled={!text.trim() || sessionExpired || sending}
+              onClick={handleSend}
+              className="h-9 w-9 shrink-0 rounded-full bg-primary p-0 hover:bg-primary/90 disabled:opacity-40"
+            >
+              <Send className="h-4 w-4" />
+            </GatedButton>
+          ) : (
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={() => void startRecording()}
+              title={t("voiceNote")}
+              aria-label={t("voiceNote")}
+              className="h-9 w-9 shrink-0 rounded-full bg-primary p-0 hover:bg-primary/90"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+            </Button>
+          )}
         </div>
       )}
 

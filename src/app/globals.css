@@ -240,3 +240,20 @@ html[data-theme="rose"] {
     @apply font-sans;
   }
 }
+
+      transparent 1.6px
+    ),
+    radial-gradient(
+      circle at 36px 30px,
+      color-mix(in oklch, var(--primary) 12%, transparent) 1.4px,
+      transparent 1.8px
+    );
+  background-size: 48px 48px;
+}
+html[data-mode='dark'] .chat-wallpaper {
+  background-color: color-mix(
+    in oklch,
+    var(--background) 92%,
+    var(--primary) 3%
+  );
+}
