@@ -689,6 +689,27 @@
       "handoff": "{count, plural, one {1 conversation waiting for a person} other {# conversations waiting for a person}}",
       "ownership": "You still own it — transfer to the client once they join"
     },
+    "modules": {
+      "label": "Plan:",
+      "saveFailed": "Could not save the modules.",
+      "preset": {
+        "full": "Full",
+        "attendance": "Attendance",
+        "automation": "Automation"
+      },
+      "key": {
+        "inbox": "Inbox",
+        "cases": "Cases",
+        "contacts": "Contacts",
+        "pipelines": "Pipeline",
+        "prospecting": "Prospecting",
+        "agenda": "Agenda",
+        "ai": "AI & automations",
+        "broadcasts": "Broadcasts",
+        "channels": "Channels",
+        "settings": "Settings"
+      }
+    },
     "banner": {
       "operating": "Operating:",
       "portfolio": "Portfolio",

@@ -679,6 +679,10 @@ BEGIN
      OR to_regprocedure('public.operator_portfolio()') IS NULL THEN
     RAISE EXCEPTION 'operator mode missing — migration 090 did not apply';
   END IF;
+  IF to_regprocedure('public.set_account_modules(uuid,text[])') IS NULL
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'accounts' AND column_name = 'modules') THEN
+    RAISE EXCEPTION 'account modules missing — migration 091 did not apply';
+  END IF;
   IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
     RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
   END IF;

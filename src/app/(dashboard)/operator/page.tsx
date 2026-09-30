@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { dateFnsLocale } from '@/lib/date-fns-locale';
 import { switchAccount, useOperator } from '@/hooks/use-operator';
 import { attentionScore, type PortfolioRow } from '@/lib/operator/portfolio';
+import { MODULES, MODULE_PRESETS } from '@/lib/account/modules';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,9 +26,19 @@ export default function OperatorPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [modules, setModules] = useState<Record<string, string[] | null>>({});
 
   const load = useCallback(async () => {
-    const { data } = await createClient().rpc('operator_portfolio');
+    const supabase = createClient();
+    const { data: mods } = await supabase.rpc('operator_account_modules');
+    setModules(
+      Object.fromEntries(
+        ((mods ?? []) as { account_id: string; modules: string[] | null }[]).map(
+          (m) => [m.account_id, m.modules]
+        )
+      )
+    );
+    const { data } = await supabase.rpc('operator_portfolio');
     setRows(
       ((data ?? []) as PortfolioRow[]).sort(
         (a, b) =>
@@ -168,6 +179,16 @@ export default function OperatorPage() {
                   </ul>
                 )}
 
+                {!r.is_home && r.account_id in modules && (
+                  <ModulesEditor
+                    accountId={r.account_id}
+                    value={modules[r.account_id]}
+                    onChange={(v) =>
+                      setModules((m) => ({ ...m, [r.account_id]: v }))
+                    }
+                  />
+                )}
+
                 <dl className="grid grid-cols-3 gap-2 text-center text-xs">
                   <Metric label={t('m.awaiting')} value={r.awaiting_reply} />
                   <Metric label={t('m.handoff')} value={r.handoff_waiting} />
@@ -221,6 +242,96 @@ function Metric({ label, value }: { label: string; value: number | string }) {
         {value}
       </dd>
       <dt className="text-muted-foreground">{label}</dt>
+    </div>
+  );
+}
+
+/**
+ * What this client bought (migration 091). The client's own users see
+ * only these; you, operating the account, always see everything.
+ */
+function ModulesEditor({
+  accountId,
+  value,
+  onChange,
+}: {
+  accountId: string;
+  value: string[] | null;
+  onChange: (v: string[] | null) => void;
+}) {
+  const t = useTranslations('Operator.modules');
+  const [saving, setSaving] = useState(false);
+
+  async function save(next: string[] | null) {
+    const prev = value;
+    onChange(next);
+    setSaving(true);
+    const { error } = await createClient().rpc('set_account_modules', {
+      p_account: accountId,
+      p_modules: next,
+    });
+    setSaving(false);
+    if (error) {
+      onChange(prev);
+      toast.error(t('saveFailed'));
+    }
+  }
+
+  const on = (k: string) => value === null || value.includes(k);
+  const toggle = (k: string) => {
+    const base = value ?? [...MODULES];
+    const next = base.includes(k) ? base.filter((x) => x !== k) : [...base, k];
+    void save(next.length === MODULES.length ? null : next);
+  };
+  const preset = Object.entries(MODULE_PRESETS).find(
+    ([, v]) =>
+      (v === null && value === null) ||
+      (v !== null &&
+        value !== null &&
+        v.length === value.length &&
+        v.every((k) => value.includes(k)))
+  )?.[0];
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-xs">
+        <span className="text-muted-foreground">{t('label')}</span>
+        {Object.entries(MODULE_PRESETS).map(([key, v]) => (
+          <button
+            key={key}
+            type="button"
+            disabled={saving}
+            onClick={() => void save(v)}
+            className={cn(
+              'rounded-full border px-2 py-0.5',
+              preset === key
+                ? 'border-primary bg-primary/10 text-foreground font-medium'
+                : 'text-muted-foreground hover:bg-muted'
+            )}
+          >
+            {t(`preset.${key}`)}
+          </button>
+        ))}
+        {saving && <Loader2 className="h-3 w-3 animate-spin" />}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {MODULES.map((k) => (
+          <button
+            key={k}
+            type="button"
+            disabled={saving}
+            onClick={() => toggle(k)}
+            className={cn(
+              'rounded-md border px-1.5 py-0.5 text-[11px]',
+              on(k)
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground/60 border-dashed line-through'
+            )}
+          >
+            {t(`key.${k}`)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

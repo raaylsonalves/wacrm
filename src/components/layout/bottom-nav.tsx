@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+import { useModules } from '@/hooks/use-modules';
 import { cn } from '@/lib/utils';
 
 const TABS = [
@@ -34,6 +35,7 @@ function BottomNavInner({ onMore }: { onMore: () => void }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const { accountId } = useAuth();
+  const { allowed } = useModules();
   const inThread = pathname.startsWith('/inbox') && params.has('c');
   const [unread, setUnread] = useState(0);
 
@@ -75,7 +77,7 @@ function BottomNavInner({ onMore }: { onMore: () => void }) {
       aria-label={t('label')}
       className="border-border bg-card/95 supports-backdrop-filter:bg-card/80 flex shrink-0 items-stretch border-t pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
     >
-      {TABS.map(({ href, key, icon: Icon }) => {
+      {TABS.filter((tab) => allowed(tab.href)).map(({ href, key, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link

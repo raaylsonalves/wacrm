@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { OperatorBanner } from "@/components/operator/operator-banner";
+import { ModuleGuard } from "@/components/layout/module-guard";
 import { AccountAccessAlert } from "@/components/layout/account-access-alert";
 import { BrandColorEffect } from "@/components/layout/brand-color-effect";
 import { AccountTabBranding } from "@/components/layout/account-tab-branding";
@@ -60,6 +61,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       <BrandColorEffect />
       {/* Tab title + favicon from the account's branding. Headless. */}
       <AccountTabBranding />
+      {/* Hides pages a client account did not buy (migration 091). */}
+      <ModuleGuard />
       <Sidebar open={sidebarOpen} onClose={closeSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Operators only: "Operando: <client>" + the stale-tab guard. */}

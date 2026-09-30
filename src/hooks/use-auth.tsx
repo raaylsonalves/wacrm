@@ -54,6 +54,8 @@ interface AccountSummary {
   /** Minutes the dashboard's response-time chart flags as the SLA
    *  target (migration 049). NOT NULL DEFAULT 5 in the DB. */
   response_time_target_minutes: number;
+  /** What an agency-managed client bought (migration 091). NULL = all. */
+  modules: string[] | null;
 }
 
 /**
@@ -256,7 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // display_name/logo_url/brand_color added in migration 044;
             // response_time_target_minutes added in migration 049.
             .select(
-              "id, name, default_currency, display_name, logo_url, brand_color, response_time_target_minutes",
+              "id, name, default_currency, display_name, logo_url, brand_color, response_time_target_minutes, modules",
             )
             .eq("id", data.account_id)
             .maybeSingle();
@@ -277,6 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               brand_color: account.brand_color ?? null,
               response_time_target_minutes:
                 account.response_time_target_minutes ?? DEFAULT_RESPONSE_TIME_TARGET_MINUTES,
+              modules: (account.modules as string[] | null) ?? null,
             };
           }
         }

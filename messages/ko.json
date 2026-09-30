@@ -689,6 +689,27 @@
       "handoff": "{count, plural, one {1 conversation waiting for a person} other {# conversations waiting for a person}}",
       "ownership": "You still own it — transfer to the client once they join"
     },
+    "modules": {
+      "label": "계약:",
+      "saveFailed": "Could not save the modules.",
+      "preset": {
+        "full": "전체",
+        "attendance": "상담",
+        "automation": "자동화"
+      },
+      "key": {
+        "inbox": "Inbox",
+        "cases": "Cases",
+        "contacts": "Contacts",
+        "pipelines": "Pipeline",
+        "prospecting": "Prospecting",
+        "agenda": "Agenda",
+        "ai": "AI & automations",
+        "broadcasts": "Broadcasts",
+        "channels": "Channels",
+        "settings": "Settings"
+      }
+    },
     "banner": {
       "operating": "운영 중:",
       "portfolio": "포트폴리오",

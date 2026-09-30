@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTotalUnread } from '@/hooks/use-total-unread';
 import { useUnreadNotifications } from '@/hooks/use-unread-notifications';
 import { useOperator } from '@/hooks/use-operator';
+import { useModules } from '@/hooks/use-modules';
 import { Briefcase, ClipboardList, Target,
   Bell,
   Bot,
@@ -176,6 +177,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
   const { isOperator } = useOperator();
+  const { allowed } = useModules();
 
   // Desktop-only icon-rail mode. Mobile always shows the full drawer
   // (collapsing a full-screen overlay drawer buys nothing), so every
@@ -315,7 +317,10 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
         {/* Main navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {navGroups.map((group, groupIndex) => (
+          {navGroups
+            .map((g) => ({ ...g, items: g.items.filter((i) => allowed(i.href)) }))
+            .filter((g) => g.items.length > 0)
+            .map((group, groupIndex) => (
             <div key={group.labelKey} className={cn(groupIndex > 0 && 'mt-4')}>
               {/* Group header — hidden in rail mode, same treatment
                   every other text label in the sidebar already gets. */}
@@ -422,7 +427,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           <div className="border-border my-4 border-t" />
 
           <ul className="flex flex-col gap-1">
-            {bottomNavItems.filter((item) => !item.operatorOnly || isOperator).map((item) => {
+            {bottomNavItems.filter((item) => (!item.operatorOnly || isOperator) && allowed(item.href)).map((item) => {
               const isActive = pathname.startsWith(item.href);
               return (
                 <li key={item.href}>

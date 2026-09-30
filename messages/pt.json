@@ -689,6 +689,27 @@
       "handoff": "{count, plural, one {1 conversa esperando uma pessoa} other {# conversas esperando uma pessoa}}",
       "ownership": "A propriedade ainda é sua — transfira para o cliente quando ele entrar"
     },
+    "modules": {
+      "label": "Contratado:",
+      "saveFailed": "Não foi possível salvar os módulos.",
+      "preset": {
+        "full": "Completo",
+        "attendance": "Atendimento",
+        "automation": "Automação"
+      },
+      "key": {
+        "inbox": "Conversas",
+        "cases": "Casos",
+        "contacts": "Contatos",
+        "pipelines": "Funil",
+        "prospecting": "Prospecção",
+        "agenda": "Agenda",
+        "ai": "IA e automações",
+        "broadcasts": "Disparos",
+        "channels": "Canais",
+        "settings": "Configurações"
+      }
+    },
     "banner": {
       "operating": "Operando:",
       "portfolio": "Carteira",

@@ -12,14 +12,18 @@ import { useAuth } from '@/hooks/use-auth';
 export function useOperator(): {
   isOperator: boolean;
   homeAccountId: string | null;
+  /** False until the lookup finished — gates must not act on the default. */
+  loaded: boolean;
 } {
   const { user } = useAuth();
   const [state, setState] = useState<{
     isOperator: boolean;
     homeAccountId: string | null;
+    loaded: boolean;
   }>({
     isOperator: false,
     homeAccountId: null,
+    loaded: false,
   });
 
   useEffect(() => {
@@ -36,6 +40,7 @@ export function useOperator(): {
             isOperator: !!data,
             homeAccountId:
               (data?.home_account_id as string | undefined) ?? null,
+            loaded: true,
           });
         }
       });
