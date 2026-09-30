@@ -72,7 +72,12 @@ export async function loadBusyRanges(
     start: new Date(r.starts_at),
     end: new Date(r.ends_at),
   }));
-  return [...ranges, ...(await loadGoogleBusy(db, accountId, assignedTo, from, to))];
+  // Best-effort: a failure here must never cost the customer a booking.
+  const google = await loadGoogleBusy(db, accountId, assignedTo, from, to).catch((err) => {
+    console.warn('[agenda] Google busy blocks unavailable:', err instanceof Error ? err.message : err);
+    return [] as BusyRange[];
+  });
+  return [...ranges, ...google];
 }
 
 /**
