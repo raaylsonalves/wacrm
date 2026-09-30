@@ -1,5 +1,7 @@
 # Spec: log de auditoria endurecido
 
+**Status (2026-09-30): implemented (migration 065, `src/lib/audit.ts`); operator actions also write to it (migrations 090–092).**
+
 ## Problem
 
 Nenhuma mutação relevante (criar/editar/excluir contato, disparar broadcast,

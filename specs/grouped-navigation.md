@@ -1,5 +1,7 @@
 # Spec: Navegação agrupada (Atendimento / CRM / Agente de IA / Canais)
 
+**Status (2026-09-30): implemented (`navGroups` in `src/components/layout/sidebar.tsx`); a phone bottom bar was added on top.**
+
 > Terceiro dos quatro specs desta rodada. Puramente apresentacional e de
 > baixo risco — mas colocado depois de WAHA e multi-agente de propósito:
 > agrupar 9 itens em 4 categorias hoje é uma reforma pequena; fazer

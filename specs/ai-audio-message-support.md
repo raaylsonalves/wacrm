@@ -1,5 +1,7 @@
 # Spec: AI understands customer audio (voice note) messages
 
+**Status (2026-09-30): covered by `ai-audio-inbound.md`, which is implemented. Kept for the original problem statement.**
+
 ## Problem
 
 A customer can send a WhatsApp voice note today, and it's stored fine

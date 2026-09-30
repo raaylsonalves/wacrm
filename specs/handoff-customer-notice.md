@@ -1,5 +1,7 @@
 # Spec: Tell the customer when the AI hands off, and make the handoff note readable
 
+**Status (2026-09-30): implemented (`src/lib/ai/handoff-notice.ts`).**
+
 > Ported in spirit from deskcomm's `lib/escalacao/aviso-ao-lead.ts`,
 > which was written after a measured production failure: the customer
 > asked for a person (or answered the AI's own question) and then got

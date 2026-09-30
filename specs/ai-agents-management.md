@@ -1,5 +1,7 @@
 # Spec: Manageable AI agents (edit page, model picker, per-agent usage)
 
+**Status (2026-09-30): implemented — see "Implementation notes" below.**
+
 > Ported in spirit from deskcomm's agents UI
 > (`docs/specs/12-spec-ai-agents-ui.md`, `app/app/ai/agents/*`: agents
 > list, per-agent tabs *Configuração / Testar / Execuções / Histórico*,

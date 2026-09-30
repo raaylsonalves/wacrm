@@ -1,5 +1,7 @@
 # Spec: AI assistant can check and book appointments (tool calling)
 
+**Status (2026-09-30): implemented (`src/lib/ai/tools/agenda.ts`, opt-in per agent).**
+
 ## Problem
 
 The AI auto-reply agent (`src/lib/ai/`) is pure text-in/text-out — none

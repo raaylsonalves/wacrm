@@ -1,5 +1,7 @@
 # Spec: Wizard de onboarding pós-cadastro
 
+**Status (2026-09-30): implemented (`src/app/onboarding`, migration 067).**
+
 > Explorat贸rio/arquitetural, pedido junto com o início da implementação
 > de `specs/waha-channel-connection.md` — os dois se cruzam: o passo de
 > "conectar WhatsApp" do wizard é a MESMA tela de conexão (Cloud API ou

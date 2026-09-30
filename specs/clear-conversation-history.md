@@ -1,5 +1,7 @@
 # Spec: Clear conversation history
 
+**Status (2026-09-30): implemented (`DELETE /api/conversations/[id]/messages`).**
+
 ## Problem
 
 There's no way to wipe a conversation's message history from the app.

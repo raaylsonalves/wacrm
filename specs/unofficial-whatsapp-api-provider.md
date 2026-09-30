@@ -1,5 +1,7 @@
 # Spec: Unofficial WhatsApp API as an alternative connection method
 
+**Status (2026-09-30): its narrow first slice shipped as WAHA channels — see `waha-channel-connection.md`. Full parity with an unofficial API was not attempted.**
+
 > Exploratory — sizing and architecture options, not a ready-to-build
 > plan. This is a genuinely large change; the "Proposed change" section
 > ends with a recommended *narrow* first slice rather than full parity,

@@ -1,5 +1,7 @@
 # Spec: one model per job — and answering in voice
 
+**Status (2026-09-30): phases 1 and 2 built (listening model; answering in voice). Phase 3 (native audio model) not built.**
+
 > Follows `specs/ai-audio-inbound.md` (the AI understands voice notes).
 > Three jobs, each with its own model and cost, instead of one model for
 > everything.

@@ -1,5 +1,7 @@
 # Spec: Recurring billing / subscriptions for the platform
 
+**Status (2026-09-30): exploratory, **not built**. A services catalogue for contracts exists as a document; no billing code.**
+
 > Exploratory — this captures the shape of the problem and the
 > tradeoffs, not a ready-to-implement plan. The "Risks / open
 > questions" section has more open items than usual on purpose; several

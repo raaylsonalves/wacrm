@@ -1,5 +1,7 @@
 # Spec: Where wacrm can differ from other WhatsApp CRMs
 
+**Status (2026-09-30): strategy note, not a build spec. Its pillars are tracked in the specs that implement them (guardrails, follow-ups, cases, operator mode).**
+
 > Strategy note with buildable pillars, written after comparing with
 > deskcomm and discussing the market with the product owner
 > (2026-09-29). It is **not a competitor study** — no market research was

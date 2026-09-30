@@ -1,5 +1,7 @@
 # Spec: the AI answers voice notes
 
+**Status (2026-09-30): implemented; see "Not built" for what was left out.**
+
 ## Problem
 A customer's voice note was stored and playable in the inbox, but the AI
 never saw it: the webhook only dispatched auto-reply for text, and the

@@ -1,5 +1,7 @@
 # Spec: Google Calendar sync for the agenda
 
+**Status (2026-09-30): **not built.** Waiting on Google Cloud OAuth credentials (client id and secret) from the owner.**
+
 > Ported in spirit from deskcomm's `lib/agenda/google/*` (`oauth.ts`,
 > `transport.ts`, `sync-executor.ts`, cron `agenda-google-sync`) — but
 > deliberately **smaller**: deskcomm built a full two-way sync with

@@ -1,5 +1,7 @@
 # Spec: Responsive layout audit across breakpoints
 
+**Status (2026-09-30): partially done. The inbox (composer, bottom bar, contact sheet) and the agenda were reworked for phones; the page-by-page breakpoint sweep this spec describes was never run as such.**
+
 ## Problem
 
 Several pages assume a fairly wide viewport and were built/verified at

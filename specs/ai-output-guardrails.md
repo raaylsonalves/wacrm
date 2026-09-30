@@ -1,5 +1,7 @@
 # Spec: Guardrails on what the AI sends (a `before_send` gate chain)
 
+**Status (2026-09-30): v1 built in **observe mode** only (traces, no veto). Enforce mode is held on purpose: `ai_guardrail_traces` has no rows yet, so there is nothing observed to justify blocking replies. Revisit when traces exist.**
+
 > Ported in spirit from deskcomm's `lib/agent-engine/guardrails/`
 > (`before-send.ts`, 1,450 lines). That chain is the difference between
 > "the prompt asks the model to behave" and "the system **checks** what

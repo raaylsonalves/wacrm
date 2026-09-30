@@ -1,5 +1,7 @@
 # Spec: Responsible agents per WhatsApp channel
 
+**Status (2026-09-30): implemented (migration 069 enforces it in a trigger).**
+
 > Ported from deskcomm's `channel_routing_policies` /
 > `channel_routing_responsibles` (`lib/routing/channel-policies.ts`,
 > `app/api/v1/settings/routing/channels/route.ts`), confirmed via

@@ -1,5 +1,7 @@
 # Spec: PWA + Web Push notifications
 
+**Status (2026-09-30): implemented (manifest, service worker, push subscriptions — migration 071 — and a dispatcher driven by the cron). The live push path can only be checked on a deployed server with VAPID keys.**
+
 > Triggered by a real bug report: a user on a mobile browser saw
 > "this browser doesn't support notifications." Investigated and
 > confirmed — wacrm has zero PWA infrastructure today (no manifest, no

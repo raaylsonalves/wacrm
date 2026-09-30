@@ -1,5 +1,7 @@
 # Spec: spending fewer tokens (pay-as-you-go)
 
+**Status (2026-09-30): levers 1–3 built (measure, debounce, cacheable prompt order). 4–6 (shorter history, output cap, …) not built; measured usage is ~98% prompt tokens, about 2.5k per call, at pennies — low priority until volume grows.**
+
 The AI runs on each account's own key, billed per token. Every turn sends
 the whole prompt again, so cost = (prompt size) × (number of turns) +
 output. Levers, ranked by saving ÷ risk. No numbers are quoted: measure

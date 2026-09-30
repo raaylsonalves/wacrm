@@ -1,5 +1,7 @@
 # Spec: Prospecting from a CSV — import, cold outreach by an AI agent, and follow-through in the pipeline
 
+**Status (2026-09-30): Part A (import and outreach) implemented — see "Part A — implementation notes". Sequences shipped separately as `followup-sequences.md`.**
+
 > deskcomm's prospecting (`lib/prospecting/`) is a whole **lead-capture and
 > approach flow**, not just an import: it searches a data provider (an
 > Apify Google-Maps scraper, by niche + city), turns each business found

@@ -1,5 +1,7 @@
 # Prompt do agente de IA — Agius Promotora (versão humanizada v2)
 
+**Status (2026-09-30): reference document — a prompt to paste into the agent's instructions, not a feature. No code.**
+
 Este é o prompt para colar no campo de instruções do agente de IA
 (Configurações > IA). Assume `ai-humanized-multi-message-replies.md`
 (implementado): o modelo separa respostas mais longas em mensagens

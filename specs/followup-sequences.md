@@ -1,5 +1,7 @@
 # Spec: Follow-up sequences (don't let a conversation go cold)
 
+**Status (2026-09-30): implemented — see "Implementation notes". A follow-up step can now be written by the AI from the conversation (`ai_followup`); a new follow-up starts as three AI steps, the last asking whether to stop. The per-account weekly cap is still a constant (3).**
+
 > Supersedes `specs/ai-conversation-followup-on-silence.md` (which
 > proposed a single nudge and explicitly ruled out sequences). Ported in
 > spirit from deskcomm's follow-up system (`followup_flow_*` +

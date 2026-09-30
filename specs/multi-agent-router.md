@@ -1,5 +1,7 @@
 # Spec: Múltiplos agentes de IA + Roteador de intenção
 
+**Status (2026-09-30): implemented (migration 066, `src/lib/ai/router.ts`).**
+
 > Explorat贸rio/arquitetural — segundo dos quatro specs desta rodada.
 > Depende conceitualmente de `specs/waha-channel-connection.md` (o
 > roteador escolhe por conversa/canal, então "canal" precisa existir

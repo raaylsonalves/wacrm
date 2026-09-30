@@ -1,5 +1,7 @@
 # Spec: Inbox power features (snooze, conversation tags, internal notes, keyboard shortcuts)
 
+**Status (2026-09-30): implemented (snooze, conversation tags, internal notes — migration 070 — and keyboard shortcuts).**
+
 > Four small, independent features spotted during an investigation of
 > deskcomm's Inbox (`components/inbox/*`) that wacrm's Inbox doesn't
 > have. Bundled into one spec because each is small enough that a

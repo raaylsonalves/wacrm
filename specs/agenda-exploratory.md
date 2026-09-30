@@ -1,5 +1,7 @@
 # Nota exploratória: Agenda
 
+**Status (2026-09-30): superseded by `agenda-appointments.md`, which is implemented. Kept as the original exploration note.**
+
 > Não é um spec completo — a pedido, é só um registro do que existe,
 > do que não existe, e do tamanho real do trabalho, para decidir DEPOIS
 > se vale abrir um spec de verdade. Quarto e último item desta rodada.

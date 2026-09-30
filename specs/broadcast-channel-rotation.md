@@ -1,5 +1,7 @@
 # Spec: Broadcast sends via WAHA, with channel rotation
 
+**Status (2026-09-30): implemented (migration 068, `channelPoolIds` in `broadcast-core.ts`).**
+
 > Ported from a real deskcomm feature (`campaign_channel_sessions` /
 > `campaign_recipients.channel_session_id`, migration
 > `20260921060200_0377_campanha_rodizio_de_numeros.sql`), confirmed via

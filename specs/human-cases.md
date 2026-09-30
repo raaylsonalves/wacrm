@@ -281,7 +281,8 @@ is open), `/api/cases` + `/api/cases/[id]`, the `/cases` page with the
 three views and a detail sheet, the per-agent toggle, and the inbox filter
 "Aguardando pessoa". Verified in the browser: claim + cancel on a test case.
 
-Not built: a chip in the thread header linking to the case; realtime on the
-cases page (it reloads on action); "send template" shortcut when the window
-is closed; auto-open tuning log beyond the `opened_by = 'system'` badge.
+Built later (2026-09-30): the thread-header chip that links to the case, and
+realtime on the cases page (migration 093).
+Not built: "send template" shortcut when the window is closed; auto-open
+tuning log beyond the `opened_by = 'system'` badge.
 Not exercised live: done / need_info (they message the customer).

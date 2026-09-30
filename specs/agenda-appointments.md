@@ -1,5 +1,7 @@
 # Spec: Agenda (agendamento com cliente)
 
+**Status (2026-09-30): implemented (calendar, reminders, AI booking tools; mobile layout added later). Google sync is not built — see `google-calendar-sync.md`.**
+
 Substitui a nota `agenda-exploratory.md`. Decisões tomadas com o usuário:
 
 - **Agendamento com cliente** (consulta/reunião/visita ligada a um

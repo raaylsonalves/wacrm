@@ -1,5 +1,7 @@
 # Spec: Conexão de canais via WAHA (multi-número)
 
+**Status (2026-09-30): implemented (`whatsapp_waha_channels`, unlimited WAHA numbers per account, anti-ban throttling in migration 064).**
+
 > Explorat贸rio/arquitetural — este é o primeiro dos quatro specs pedidos
 > nesta rodada (WAHA → multi-agente/roteador → menu agrupado → agenda),
 > nessa ordem porque os demais dependem ou ficam mais simples depois
