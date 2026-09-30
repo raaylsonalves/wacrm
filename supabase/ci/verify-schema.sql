@@ -695,6 +695,9 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'conversations' AND column_name = 'ai_summary') THEN
     RAISE EXCEPTION 'conversations.ai_summary missing — migration 094 did not apply';
   END IF;
+  IF to_regclass('public.message_stars') IS NULL THEN
+    RAISE EXCEPTION 'message_stars missing — migration 095 did not apply';
+  END IF;
   IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
     RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
   END IF;

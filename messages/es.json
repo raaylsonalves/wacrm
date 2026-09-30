@@ -328,6 +328,8 @@
       "caseCount": "{count} casos abiertos",
       "caseWaitingTeam": "La IA pasó una tarea al equipo",
       "caseWaitingCustomer": "Esperando la respuesta del cliente",
+      "starFailed": "No se pudo destacar.",
+      "searchStarredOnly": "Solo destacados",
       "searchInChat": "Buscar en la conversación",
       "searchPlaceholder": "Buscar en la conversación…",
       "searchNoResults": "Sin resultados",
@@ -480,6 +482,8 @@
       "delete": "Eliminar",
       "react": "Reaccionar",
       "reactWith": "Reaccionar con {emoji}",
+      "star": "Destacar",
+      "unstar": "Quitar destacado",
       "nothingToCopy": "Nada que copiar",
       "copied": "Copiado",
       "copyFailed": "Error al copiar"

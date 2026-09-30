@@ -328,6 +328,8 @@
       "caseCount": "{count} casos abertos",
       "caseWaitingTeam": "A IA passou uma tarefa para a equipe",
       "caseWaitingCustomer": "Esperando o cliente responder",
+      "starFailed": "Não foi possível favoritar.",
+      "searchStarredOnly": "Só favoritas",
       "searchInChat": "Buscar na conversa",
       "searchPlaceholder": "Buscar na conversa…",
       "searchNoResults": "Nada encontrado",
@@ -480,6 +482,8 @@
       "delete": "Excluir",
       "react": "Reagir",
       "reactWith": "Reagir com {emoji}",
+      "star": "Favoritar",
+      "unstar": "Remover dos favoritos",
       "nothingToCopy": "Nada para copiar",
       "copied": "Copiado",
       "copyFailed": "Falha ao copiar"

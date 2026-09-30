@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CornerUpLeft, Copy, SmilePlus } from "lucide-react";
+import { CornerUpLeft, Copy, SmilePlus, Star } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -20,6 +20,9 @@ interface MessageActionsProps {
   message: Message;
   onReply: () => void;
   onReact: (emoji: string) => void;
+  /** Personal bookmark (migration 095). Omitted = no star control. */
+  starred?: boolean;
+  onStar?: () => void;
   children: ReactNode;
 }
 
@@ -32,6 +35,8 @@ export function MessageActions({
   message,
   onReply,
   onReact,
+  starred,
+  onStar,
   children,
 }: MessageActionsProps) {
   const t = useTranslations("Inbox.actions");
@@ -95,6 +100,15 @@ export function MessageActions({
        *  area. See issue #165. */}
       <div className="group/actions relative min-w-0 max-w-[75%]">
         {children}
+        {starred && (
+          <Star
+            aria-hidden
+            className={cn(
+              "absolute -bottom-1.5 h-3.5 w-3.5 fill-amber-400 text-amber-500",
+              isAgent ? "-left-1.5" : "-right-1.5",
+            )}
+          />
+        )}
       <div
         data-touch-open={touchOpen || pickerOpen ? "true" : undefined}
         className={cn(
@@ -136,6 +150,25 @@ export function MessageActions({
         >
           <CornerUpLeft className="h-3.5 w-3.5" />
         </button>
+        {onStar && (
+          <button
+            type="button"
+            onClick={() => {
+              onStar();
+              setTouchOpen(false);
+            }}
+            className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
+            aria-label={starred ? t("unstar") : t("star")}
+            title={starred ? t("unstar") : t("star")}
+          >
+            <Star
+              className={cn(
+                "h-3.5 w-3.5",
+                starred && "fill-amber-400 text-amber-500",
+              )}
+            />
+          </button>
+        )}
         <button
           type="button"
           onClick={handleCopy}

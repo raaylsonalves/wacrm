@@ -26,6 +26,7 @@ import {
   ArrowLeft,
   RefreshCw,
   Search,
+  Star,
   X,
   PanelRightOpen,
   PanelRightClose,
@@ -186,7 +187,7 @@ export function MessageThread({
   const tQuote = useTranslations("Inbox.replyQuote");
   const tComposer = useTranslations("Inbox.composer");
 
-  const { user } = useAuth();
+  const { user, accountId } = useAuth();
   const { getPresence, getRow, now } = usePresence();
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -195,10 +196,20 @@ export function MessageThread({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchIdx, setSearchIdx] = useState(0);
-  const matchIds = useMemo(
-    () => (searchOpen ? findMatches(messages, searchQuery) : []),
-    [searchOpen, messages, searchQuery],
-  );
+  // Personal stars (migration 095) on this conversation's messages, and the
+  // "only starred" toggle of the search bar.
+  const [starred, setStarred] = useState<Set<string>>(new Set());
+  const [starOnly, setStarOnly] = useState(false);
+  const matchIds = useMemo(() => {
+    if (!searchOpen) return [];
+    if (!starOnly) return findMatches(messages, searchQuery);
+    const hits = searchQuery.trim().length < 2
+      ? null
+      : new Set(findMatches(messages, searchQuery));
+    return messages
+      .filter((m) => starred.has(m.id) && (!hits || hits.has(m.id)))
+      .map((m) => m.id);
+  }, [searchOpen, starOnly, starred, messages, searchQuery]);
   useEffect(() => {
     const id = matchIds[searchIdx];
     if (id) {
@@ -211,7 +222,62 @@ export function MessageThread({
   useEffect(() => {
     setSearchOpen(false);
     setSearchQuery("");
+    setStarOnly(false);
   }, [conversation?.id]);
+  useEffect(() => {
+    const cid = conversation?.id;
+    if (!cid || !user?.id) {
+      setStarred(new Set());
+      return;
+    }
+    let alive = true;
+    createClient()
+      .from("message_stars")
+      .select("message_id")
+      .eq("conversation_id", cid)
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        if (alive)
+          setStarred(new Set((data ?? []).map((r) => r.message_id as string)));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [conversation?.id, user?.id]);
+
+  async function toggleStar(messageId: string) {
+    const cid = conversation?.id;
+    if (!cid || !user?.id || !accountId) return;
+    const supabase = createClient();
+    const was = starred.has(messageId);
+    setStarred((prev) => {
+      const next = new Set(prev);
+      if (was) next.delete(messageId);
+      else next.add(messageId);
+      return next;
+    });
+    const { error } = was
+      ? await supabase
+          .from("message_stars")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("message_id", messageId)
+      : await supabase.from("message_stars").insert({
+          user_id: user.id,
+          message_id: messageId,
+          conversation_id: cid,
+          account_id: accountId,
+        });
+    if (error) {
+      setStarred((prev) => {
+        const next = new Set(prev);
+        if (was) next.add(messageId);
+        else next.delete(messageId);
+        return next;
+      });
+      toast.error(t("starFailed"));
+    }
+  }
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
@@ -1320,8 +1386,24 @@ export function MessageThread({
             placeholder={t("searchPlaceholder")}
             className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
+          <button
+            type="button"
+            onClick={() => {
+              setStarOnly((v) => !v);
+              setSearchIdx(0);
+            }}
+            aria-pressed={starOnly}
+            aria-label={t("searchStarredOnly")}
+            title={t("searchStarredOnly")}
+            className={cn(
+              "rounded p-1 hover:bg-muted",
+              starOnly ? "text-amber-500" : "text-muted-foreground",
+            )}
+          >
+            <Star className={cn("h-4 w-4", starOnly && "fill-amber-400")} />
+          </button>
           <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-            {searchQuery.trim().length < 2
+            {searchQuery.trim().length < 2 && !starOnly
               ? ""
               : matchIds.length === 0
                 ? t("searchNoResults")
@@ -1430,6 +1512,8 @@ export function MessageThread({
                         onReact={(emoji) => {
                           if (emoji) void postReaction(msg.id, emoji);
                         }}
+                        starred={starred.has(msg.id)}
+                        onStar={() => void toggleStar(msg.id)}
                       >
                         <MessageBubble
                           message={msg}

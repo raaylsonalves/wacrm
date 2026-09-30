@@ -328,6 +328,8 @@
       "caseCount": "열린 케이스 {count}건",
       "caseWaitingTeam": "AI가 팀에 작업을 넘겼습니다",
       "caseWaitingCustomer": "고객 답변 대기 중",
+      "starFailed": "즐겨찾기에 실패했습니다.",
+      "searchStarredOnly": "즐겨찾기만",
       "searchInChat": "대화 내 검색",
       "searchPlaceholder": "대화 내 검색…",
       "searchNoResults": "결과 없음",
@@ -480,6 +482,8 @@
       "delete": "삭제",
       "react": "반응 남기기",
       "reactWith": "{emoji}(으)로 반응하기",
+      "star": "즐겨찾기",
+      "unstar": "즐겨찾기 해제",
       "nothingToCopy": "복사할 내용이 없습니다",
       "copied": "복사됨",
       "copyFailed": "복사 실패"

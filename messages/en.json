@@ -328,6 +328,8 @@
       "caseCount": "{count} open cases",
       "caseWaitingTeam": "The AI handed a task to the team",
       "caseWaitingCustomer": "Waiting for the customer to reply",
+      "starFailed": "Could not star the message.",
+      "searchStarredOnly": "Starred only",
       "searchInChat": "Search in conversation",
       "searchPlaceholder": "Search in conversation…",
       "searchNoResults": "No results",
@@ -480,6 +482,8 @@
       "delete": "Delete",
       "react": "React",
       "reactWith": "React with {emoji}",
+      "star": "Star",
+      "unstar": "Remove star",
       "nothingToCopy": "Nothing to copy",
       "copied": "Copied",
       "copyFailed": "Copy failed"
