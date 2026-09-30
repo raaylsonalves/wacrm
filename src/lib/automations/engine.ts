@@ -33,6 +33,7 @@ import {
 import { validateInteractivePayload } from '@/lib/whatsapp/interactive';
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf';
 import { pickVariant } from '@/lib/variant';
+import { sendAiFollowup, type AiFollowupStepConfig } from '@/lib/ai/followup';
 import {
   endEnrollment,
   guardFollowupSend,
@@ -48,6 +49,7 @@ const FOLLOWUP_SEND_STEPS = new Set([
   'send_buttons',
   'send_list',
   'send_template',
+  'ai_followup',
 ]);
 
 // ------------------------------------------------------------
@@ -569,6 +571,26 @@ async function runStep(
         text,
       });
       return { key: 'sentViaMeta', params: { messageId: whatsapp_message_id } };
+    }
+
+    case 'ai_followup': {
+      // The agent writes the nudge from the conversation itself. Only
+      // meaningful inside a follow-up run: the enrollment is what makes
+      // the send re-checkable and the sequence stoppable.
+      const enrollmentId = args.context.followup_enrollment_id;
+      if (!args.contactId || !enrollmentId) {
+        throw new Error('ai_followup only runs inside a follow-up sequence');
+      }
+      const conversationId = await resolveConversationId(args);
+      const { messageId } = await sendAiFollowup({
+        accountId: args.automation.account_id,
+        userId: args.automation.user_id,
+        conversationId,
+        contactId: args.contactId,
+        enrollmentId,
+        cfg: step.step_config as AiFollowupStepConfig,
+      });
+      return { key: 'sentViaMeta', params: { messageId } };
     }
 
     case 'send_buttons':

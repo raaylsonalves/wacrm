@@ -63,10 +63,9 @@ function NewAutomationPageInner() {
       }
     }
     if (startAsFollowup) {
-      // A follow-up starts as a sensible skeleton — nudge, a day's wait,
-      // nudge — so nobody stares at an empty canvas. Texts stay empty on
-      // purpose: the activation check refuses to turn it on until the
-      // account has written what it wants to say.
+      // A follow-up starts as a sensible skeleton — the AI nudges with the
+      // conversation's context, a day later again, two days later a last
+      // try that offers to stop. Nothing to write; edit only if you want to.
       return {
         name: "",
         description: "",
@@ -78,9 +77,11 @@ function NewAutomationPageInner() {
         },
         is_active: false,
         steps: expandFromSeeds([
-          { index: 0, step_type: "send_message", step_config: { text: "" }, branch: null, parent_index: null },
+          { index: 0, step_type: "ai_followup", step_config: { instruction: "", final: false }, branch: null, parent_index: null },
           { index: 1, step_type: "wait", step_config: { amount: 1, unit: "days" }, branch: null, parent_index: null },
-          { index: 2, step_type: "send_message", step_config: { text: "" }, branch: null, parent_index: null },
+          { index: 2, step_type: "ai_followup", step_config: { instruction: "", final: false }, branch: null, parent_index: null },
+          { index: 3, step_type: "wait", step_config: { amount: 2, unit: "days" }, branch: null, parent_index: null },
+          { index: 4, step_type: "ai_followup", step_config: { instruction: "", final: true }, branch: null, parent_index: null },
         ]),
       }
     }

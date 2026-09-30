@@ -591,6 +591,7 @@ export type AutomationStepType =
   | 'send_buttons'
   | 'send_list'
   | 'send_template'
+  | 'ai_followup'
   | 'add_tag'
   | 'remove_tag'
   | 'assign_conversation'

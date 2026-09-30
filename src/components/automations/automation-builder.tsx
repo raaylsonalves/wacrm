@@ -33,6 +33,7 @@ import {
   ArrowUp,
   MousePointerClick,
   List,
+  Sparkles,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -111,6 +112,7 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
   send_buttons: { label: "send_buttons", icon: MousePointerClick, border: "border-l-primary" },
   send_list: { label: "send_list", icon: List, border: "border-l-primary" },
   send_template: { label: "send_template", icon: FileText, border: "border-l-primary" },
+  ai_followup: { label: "ai_followup", icon: Sparkles, border: "border-l-primary" },
   add_tag: { label: "add_tag", icon: Tag, border: "border-l-primary" },
   remove_tag: { label: "remove_tag", icon: TagIcon, border: "border-l-primary" },
   assign_conversation: { label: "assign_conversation", icon: UserCheck, border: "border-l-primary" },
@@ -127,6 +129,7 @@ const ADDABLE_STEPS: AutomationStepType[] = [
   "send_buttons",
   "send_list",
   "send_template",
+  "ai_followup",
   "add_tag",
   "remove_tag",
   "assign_conversation",
@@ -175,6 +178,8 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
   switch (type) {
     case "send_message":
       return { text: "" }
+    case "ai_followup":
+      return { instruction: "", final: false }
     case "send_buttons":
       return toStepConfig(blankButtonsPayload())
     case "send_list":
@@ -1470,6 +1475,44 @@ function StepEditor({
           />
         </FieldBlock>
       )
+    case "ai_followup":
+      return (
+        <>
+          <p className="mb-2 rounded-md bg-muted px-2 py-1.5 text-[11px] text-muted-foreground">
+            {t("config.aiFollowupHint")}
+          </p>
+          <FieldBlock label={t("config.aiFollowupInstruction")}>
+            <Textarea
+              value={(cfg.instruction as string) ?? ""}
+              onChange={(e) => set({ instruction: e.target.value })}
+              placeholder={t("config.aiFollowupInstructionPlaceholder")}
+              className="min-h-16 bg-muted text-foreground"
+            />
+          </FieldBlock>
+          <label className="mb-2 flex items-start gap-2 text-xs text-foreground">
+            <input
+              type="checkbox"
+              checked={!!cfg.final}
+              onChange={(e) => set({ final: e.target.checked })}
+              className="mt-0.5"
+            />
+            <span>
+              {t("config.aiFollowupFinal")}
+              <span className="block text-[11px] text-muted-foreground">
+                {t("config.aiFollowupFinalHint")}
+              </span>
+            </span>
+          </label>
+          <FieldBlock label={t("config.aiFollowupFallback")}>
+            <Textarea
+              value={(cfg.fallback_text as string) ?? ""}
+              onChange={(e) => set({ fallback_text: e.target.value })}
+              placeholder={t("config.aiFollowupFallbackPlaceholder")}
+              className="min-h-14 bg-muted text-foreground"
+            />
+          </FieldBlock>
+        </>
+      )
     case "send_buttons":
     case "send_list":
       // The whole step_config IS the interactive payload; the shared
@@ -1688,6 +1731,8 @@ function previewFor(step: BuilderStep): string {
   switch (step.step_type) {
     case "send_message":
       return (step.step_config.text as string) || "no text yet"
+    case "ai_followup":
+      return step.step_config.final ? "IA · última tentativa" : "IA escreve pelo contexto da conversa"
     case "send_buttons":
     case "send_list":
       return interactivePayloadPreviewText(asInteractive(step.step_config)) || "no body yet"

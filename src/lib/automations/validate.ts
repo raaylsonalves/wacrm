@@ -69,6 +69,10 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
         })
       }
       break
+    case 'ai_followup':
+      // Nothing to require: every field is optional. Where it may run
+      // (follow-up sequences only) is checked against the trigger.
+      break
     case 'send_buttons':
     case 'send_list': {
       // The whole step_config IS the interactive payload; validate it
