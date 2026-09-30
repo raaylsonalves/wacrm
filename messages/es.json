@@ -581,6 +581,18 @@
     "more": "Más"
   },
   "Today": {
+    "tabs": {
+      "overview": "Resumen",
+      "conversations": "Conversaciones"
+    },
+    "others": "Otras conversaciones sin responder",
+    "viewConversation": "Ver conversación",
+    "noAgenda": "Nada más en la agenda hoy.",
+    "reason": {
+      "handoff": "IA detenida",
+      "mine": "Tuya",
+      "fresh": "Nueva"
+    },
     "greeting": {
       "morning": "Buenos días, {name}",
       "afternoon": "Buenas tardes, {name}",

@@ -8,6 +8,7 @@ import { ChevronRight, CornerUpLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { dateFnsLocale } from '@/lib/date-fns-locale';
+import { cn } from '@/lib/utils';
 import {
   CONVERSATION_SELECT,
   isSnoozed,
@@ -20,6 +21,7 @@ import {
   type UpcomingAppointment,
 } from '@/lib/inbox/work-queue';
 import { firstName, greetingFor } from '@/lib/today/summary';
+import { splitByPriority, type PriorityReason } from '@/lib/today/priority';
 import type { Conversation } from '@/types';
 
 interface TodayAppointment {
@@ -30,35 +32,32 @@ interface TodayAppointment {
   contact: { name: string | null; phone: string } | null;
 }
 
-/**
- * Top of the dashboard: what needs the agent now — the greeting, how many
- * conversations owe a reply (the inbox's own Reply queue, so the two always
- * agree), the most recent of them with a Reply button, and what is still on
- * today's agenda. The numbers below it are the dashboard's own metrics.
- */
-export function TodayFocus() {
-  const t = useTranslations('Today');
-  const { profile, accountId } = useAuth();
-  const [now] = useState(() => new Date());
+export interface TodayData {
+  loaded: boolean;
+  priority: { item: Conversation; reasons: PriorityReason[] }[];
+  others: Conversation[];
+  todayAppts: TodayAppointment[];
+}
 
-  const [conversations, setConversations] = useState<Conversation[] | null>(
-    null
-  );
+/**
+ * The dashboard's "what now" data: the inbox's Reply queue (lib/inbox/
+ * work-queue, so the dashboard and the Reply tab always agree), split
+ * into priority and the rest (lib/today/priority), plus today's agenda.
+ * Loaded once and shared by the greeting and the Conversations tab.
+ */
+export function useTodayData(): TodayData {
+  const { accountId, user } = useAuth();
+  const [now] = useState(() => new Date());
+  const [conversations, setConversations] = useState<Conversation[] | null>(null);
   const [aiOn, setAiOn] = useState<boolean | undefined>(undefined);
-  const [upcoming, setUpcoming] = useState<Map<string, UpcomingAppointment>>(
-    () => new Map()
-  );
+  const [upcoming, setUpcoming] = useState<Map<string, UpcomingAppointment>>(() => new Map());
   const [todayAppts, setTodayAppts] = useState<TodayAppointment[]>([]);
 
   useEffect(() => {
     if (!accountId) return;
     let alive = true;
     const db = createClient();
-    const tomorrowStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() + 1
-    );
+    const tomorrowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 
     (async () => {
       const [convRes, aiRes, apptRes] = await Promise.all([
@@ -78,9 +77,7 @@ export function TodayFocus() {
           .limit(1),
         db
           .from('appointments')
-          .select(
-            'id, contact_id, title, starts_at, conversation_id, contact:contacts(name, phone)'
-          )
+          .select('id, contact_id, title, starts_at, conversation_id, contact:contacts(name, phone)')
           .eq('account_id', accountId)
           .in('status', ['scheduled', 'confirmed'])
           .gte('starts_at', now.toISOString())
@@ -88,209 +85,295 @@ export function TodayFocus() {
           .limit(500),
       ]);
       if (!alive) return;
-      const appts = (apptRes.data ?? []) as unknown as (TodayAppointment &
-        UpcomingAppointment)[];
+      const appts = (apptRes.data ?? []) as unknown as (TodayAppointment & UpcomingAppointment)[];
       setConversations(normalizeConversations((convRes.data ?? []) as never));
       setAiOn(!aiRes.error && (aiRes.data ?? []).length > 0);
       setUpcoming(earliestByContact(appts));
-      setTodayAppts(
-        appts.filter((a) => new Date(a.starts_at) < tomorrowStart).slice(0, 5)
-      );
+      setTodayAppts(appts.filter((a) => new Date(a.starts_at) < tomorrowStart).slice(0, 6));
     })();
     return () => {
       alive = false;
     };
   }, [accountId, now]);
 
-  // The Reply queue, most recent first — a lead who just wrote is the
-  // hottest; a weeks-old thread shouldn't crowd the top.
-  const toReply = useMemo(() => {
-    if (!conversations) return [];
+  return useMemo(() => {
+    if (!conversations) return { loaded: false, priority: [], others: [], todayAppts };
     const ts = now.getTime();
-    return conversations
-      .filter(
-        (c) =>
-          workQueueOf({
-            command: commandOf({
-              status: c.status,
-              assignedAgentId: c.assigned_agent_id,
-              aiAutoreplyDisabled: c.ai_autoreply_disabled,
-              aiOn,
-            }),
-            snoozed: isSnoozed(c, ts),
-            lastSenderType: c.last_message_sender_type,
-            lastMessageAt: c.last_message_at,
-            nextAppointmentAt: c.contact_id
-              ? upcoming.get(c.contact_id)?.starts_at
-              : null,
-            now: ts,
-          }) === 'reply'
-      )
-      .sort((a, b) =>
-        (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
-      );
-  }, [conversations, aiOn, upcoming, now]);
+    const commandFor = (c: Conversation) =>
+      commandOf({
+        status: c.status,
+        assignedAgentId: c.assigned_agent_id,
+        aiAutoreplyDisabled: c.ai_autoreply_disabled,
+        aiOn,
+      });
+    const toReply = conversations.filter(
+      (c) =>
+        workQueueOf({
+          command: commandFor(c),
+          snoozed: isSnoozed(c, ts),
+          lastSenderType: c.last_message_sender_type,
+          lastMessageAt: c.last_message_at,
+          nextAppointmentAt: c.contact_id ? upcoming.get(c.contact_id)?.starts_at : null,
+          now: ts,
+        }) === 'reply'
+    );
+    const split = splitByPriority(
+      toReply,
+      (c) => ({
+        lastMessageAt: c.last_message_at,
+        assignedAgentId: c.assigned_agent_id,
+        handoffWaiting: commandFor(c) === 'waiting',
+        hasOpenDeal: !!c.contact?.dealStage,
+      }),
+      user?.id,
+      ts
+    );
+    return { loaded: true, ...split, todayAppts };
+  }, [conversations, aiOn, upcoming, todayAppts, now, user?.id]);
+}
 
-  const name = firstName(profile?.full_name);
+export function TodayGreeting({ data }: { data: TodayData }) {
+  const t = useTranslations('Today');
+  const { profile } = useAuth();
+  const [hour] = useState(() => new Date().getHours());
+  const total = data.priority.length + data.others.length;
+  return (
+    <header className="space-y-1">
+      <h1 className="text-foreground text-2xl font-bold sm:text-3xl">
+        {t(`greeting.${greetingFor(hour)}`, { name: firstName(profile?.full_name) })} 👋
+      </h1>
+      {!data.loaded ? (
+        <div className="bg-muted h-5 w-64 animate-pulse rounded" />
+      ) : (
+        <p className="text-muted-foreground text-sm sm:text-base">
+          <span className="text-foreground font-semibold">
+            {total > 0 ? t('needReply', { count: total }) : t('allCaughtUp')}
+          </span>
+          {' · '}
+          {total > 0 ? t('needReplyHint') : t('allCaughtUpHint')}
+        </p>
+      )}
+    </header>
+  );
+}
+
+const REASON_STYLE: Record<PriorityReason, string> = {
+  handoff: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+  mine: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+  deal: '',
+  fresh: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+};
+
+/** Conversations tab: priority cards, the other unanswered, today's agenda. */
+export function PriorityPanel({ data }: { data: TodayData }) {
+  const t = useTranslations('Today');
+
+  if (!data.loaded) {
+    return (
+      <div className="space-y-3">
+        {[0, 1].map((i) => (
+          <div key={i} className="bg-muted/60 h-32 animate-pulse rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  const empty = data.priority.length === 0 && data.others.length === 0;
 
   return (
-    <div className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-foreground text-2xl font-bold sm:text-3xl">
-          {t(`greeting.${greetingFor(now.getHours())}`, { name })} 👋
-        </h1>
-        {conversations === null ? (
-          <div className="bg-muted h-6 w-64 animate-pulse rounded" />
-        ) : (
-          <p className="text-muted-foreground text-sm sm:text-base">
-            <span className="text-foreground font-semibold">
-              {toReply.length > 0
-                ? t('needReply', { count: toReply.length })
-                : t('allCaughtUp')}
-            </span>
-            {' · '}
-            {toReply.length > 0 ? t('needReplyHint') : t('allCaughtUpHint')}
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="space-y-6 lg:col-span-2">
+        {empty && (
+          <p className="text-muted-foreground rounded-xl border border-dashed p-8 text-center text-sm">
+            {t('noPriority')}
           </p>
         )}
-      </header>
 
-      {(toReply.length > 0 || todayAppts.length > 0) && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {toReply.length > 0 && (
-            <section
-              className={
-                todayAppts.length > 0
-                  ? 'space-y-3 lg:col-span-2'
-                  : 'space-y-3 lg:col-span-3'
-              }
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-foreground font-semibold">
-                  {t('priority')}
-                </h2>
-                <Link
-                  href="/inbox"
-                  className="text-primary flex items-center text-sm font-medium"
-                >
-                  {t('seeAll', { count: toReply.length })}
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {toReply.slice(0, 4).map((c) => (
-                  <PriorityCard key={c.id} conversation={c} t={t} />
-                ))}
-              </div>
-            </section>
-          )}
+        {data.priority.length > 0 && (
+          <section className="space-y-3">
+            <SectionTitle title={t('priority')} count={data.priority.length} />
+            {data.priority.map(({ item, reasons }) => (
+              <PriorityCard key={item.id} conversation={item} reasons={reasons} t={t} />
+            ))}
+          </section>
+        )}
 
-          {todayAppts.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-foreground font-semibold">
-                {t('agendaToday')}
-              </h2>
-              <div className="bg-card divide-y rounded-xl border">
-                {todayAppts.map((a) => (
-                  <Link
-                    key={a.id}
-                    href={
-                      a.conversation_id
-                        ? `/inbox?c=${a.conversation_id}`
-                        : '/agenda'
-                    }
-                    className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3"
-                  >
-                    <span className="text-primary w-12 shrink-0 text-sm font-semibold tabular-nums">
-                      {format(new Date(a.starts_at), 'HH:mm')}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="text-foreground block truncate text-sm font-medium">
-                        {a.title}
-                      </span>
-                      <span className="text-muted-foreground block truncate text-xs">
-                        {a.contact?.name || a.contact?.phone}
-                      </span>
-                    </span>
-                    <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
+        {data.others.length > 0 && (
+          <section className="space-y-3">
+            <SectionTitle title={t('others')} count={data.others.length} />
+            <div className="bg-card divide-border divide-y rounded-xl border">
+              {data.others.slice(0, 15).map((c) => (
+                <OtherRow key={c.id} conversation={c} />
+              ))}
+            </div>
+            {data.others.length > 15 && (
+              <Link href="/inbox" className="text-primary flex items-center justify-end text-sm font-medium">
+                {t('seeAll', { count: data.others.length })}
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            )}
+          </section>
+        )}
+      </div>
+
+      <section className="space-y-3">
+        <SectionTitle title={t('agendaToday')} count={data.todayAppts.length} />
+        {data.todayAppts.length === 0 ? (
+          <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">
+            {t('noAgenda')}
+          </p>
+        ) : (
+          <div className="bg-card divide-border divide-y rounded-xl border">
+            {data.todayAppts.map((a) => (
+              <Link
+                key={a.id}
+                href={a.conversation_id ? `/inbox?c=${a.conversation_id}` : '/agenda'}
+                className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3"
+              >
+                <span className="text-primary w-12 shrink-0 text-sm font-semibold tabular-nums">
+                  {format(new Date(a.starts_at), 'HH:mm')}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="text-foreground block truncate text-sm font-medium">{a.title}</span>
+                  <span className="text-muted-foreground block truncate text-xs">
+                    {a.contact?.name || a.contact?.phone}
+                  </span>
+                </span>
+                <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function SectionTitle({ title, count }: { title: string; count: number }) {
+  return (
+    <h2 className="text-foreground flex items-center gap-2 font-semibold">
+      {title}
+      {count > 0 && (
+        <span className="bg-muted text-muted-foreground rounded-full px-2 text-xs leading-5 tabular-nums">
+          {count}
+        </span>
+      )}
+    </h2>
+  );
+}
+
+function Avatar({ c, size }: { c: Conversation; size: 'md' | 'sm' }) {
+  const name = c.contact?.name || c.contact?.phone || '?';
+  const dim = size === 'md' ? 'h-10 w-10' : 'h-9 w-9';
+  return (
+    <div
+      className={cn(
+        'bg-primary/10 text-primary flex shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-semibold',
+        dim
+      )}
+    >
+      {c.contact?.avatar_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={c.contact.avatar_url} alt="" className={cn(dim, 'object-cover')} />
+      ) : (
+        name.slice(0, 2).toUpperCase()
       )}
     </div>
   );
 }
 
+function when(iso: string | null | undefined) {
+  return iso ? formatDistanceToNow(new Date(iso), { addSuffix: false, locale: dateFnsLocale }) : '';
+}
+
 function PriorityCard({
   conversation: c,
+  reasons,
   t,
 }: {
   conversation: Conversation;
+  reasons: PriorityReason[];
   t: ReturnType<typeof useTranslations>;
 }) {
   const contact = c.contact;
-  const name = contact?.name || contact?.phone || '?';
+  const stage = contact?.dealStage;
   return (
-    <div className="bg-card flex flex-col rounded-xl border p-4">
-      <div className="flex flex-1 items-start gap-3">
-        <div className="bg-primary/10 text-primary flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-semibold">
-          {contact?.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={contact.avatar_url}
-              alt=""
-              className="h-11 w-11 object-cover"
-            />
-          ) : (
-            name.slice(0, 2).toUpperCase()
-          )}
-        </div>
+    <div className="bg-card rounded-xl border p-4">
+      <div className="flex items-start gap-3">
+        <Avatar c={c} size="md" />
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex items-baseline justify-between gap-2">
             <span className="text-foreground truncate font-semibold">
-              {name}
+              {contact?.name || contact?.phone}
             </span>
-            {c.last_message_at && (
-              <span className="text-muted-foreground shrink-0 text-xs">
-                {formatDistanceToNow(new Date(c.last_message_at), {
-                  addSuffix: true,
-                  locale: dateFnsLocale,
-                })}
-              </span>
-            )}
+            <span className="text-muted-foreground shrink-0 text-xs">{when(c.last_message_at)}</span>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
             {contact?.company && (
-              <span className="text-muted-foreground truncate text-xs">
-                {contact.company}
-              </span>
+              <span className="text-muted-foreground truncate text-xs">{contact.company}</span>
             )}
-            {contact?.dealStage && (
-              <span
-                className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-                style={{
-                  backgroundColor: `${contact.dealStage.color}22`,
-                  color: contact.dealStage.color,
-                }}
-              >
-                {contact.dealStage.name}
-              </span>
+            {reasons.map((r) =>
+              r === 'deal' && stage ? (
+                <span
+                  key={r}
+                  className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                  style={{ backgroundColor: `${stage.color}22`, color: stage.color }}
+                >
+                  {stage.name}
+                </span>
+              ) : r !== 'deal' ? (
+                <span key={r} className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', REASON_STYLE[r])}>
+                  {t(`reason.${r}`)}
+                </span>
+              ) : null
             )}
           </div>
-          <p className="text-foreground mt-1 line-clamp-2 text-sm">
-            {c.last_message_text}
-          </p>
+          <p className="text-foreground/90 mt-1.5 line-clamp-2 text-sm">{c.last_message_text}</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Link
+              href={`/inbox?c=${c.id}&focus=1`}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-9 items-center justify-center gap-1.5 rounded-lg text-sm font-medium"
+            >
+              <CornerUpLeft className="h-4 w-4" />
+              {t('reply')}
+            </Link>
+            <Link
+              href={`/inbox?c=${c.id}`}
+              className="border-border text-foreground hover:bg-muted flex h-9 items-center justify-center rounded-lg border text-sm font-medium"
+            >
+              {t('viewConversation')}
+            </Link>
+          </div>
         </div>
       </div>
-      <Link
-        href={`/inbox?c=${c.id}`}
-        className="bg-primary text-primary-foreground hover:bg-primary/90 mt-3 flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold"
-      >
-        <CornerUpLeft className="h-4 w-4" />
-        {t('reply')}
-      </Link>
     </div>
+  );
+}
+
+function OtherRow({ conversation: c }: { conversation: Conversation }) {
+  const contact = c.contact;
+  const stage = contact?.dealStage;
+  return (
+    <Link href={`/inbox?c=${c.id}`} className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3">
+      <Avatar c={c} size="sm" />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2">
+          <span className="text-foreground truncate text-sm font-medium">
+            {contact?.name || contact?.phone}
+          </span>
+          {stage && (
+            <span
+              className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+              style={{ backgroundColor: `${stage.color}22`, color: stage.color }}
+            >
+              {stage.name}
+            </span>
+          )}
+        </span>
+        <span className="text-muted-foreground block truncate text-xs">{c.last_message_text}</span>
+      </span>
+      <span className="text-muted-foreground shrink-0 text-[11px]">{when(c.last_message_at)}</span>
+      <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
+    </Link>
   );
 }

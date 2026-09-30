@@ -581,6 +581,18 @@
     "more": "More"
   },
   "Today": {
+    "tabs": {
+      "overview": "Overview",
+      "conversations": "Conversations"
+    },
+    "others": "Other unanswered conversations",
+    "viewConversation": "View conversation",
+    "noAgenda": "Nothing else on the agenda today.",
+    "reason": {
+      "handoff": "AI stopped",
+      "mine": "Yours",
+      "fresh": "New"
+    },
     "greeting": {
       "morning": "Good morning, {name}",
       "afternoon": "Good afternoon, {name}",

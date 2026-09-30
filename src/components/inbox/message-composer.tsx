@@ -151,6 +151,14 @@ export function MessageComposer({
   const [drafting, setDrafting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // "Reply" from the dashboard opens the thread with ?focus=1 — land the
+  // cursor in the box so the agent can type straight away.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("focus") === "1") {
+      textareaRef.current?.focus();
+    }
+  }, [conversationId]);
+
   // Interactive-message builder dialog + quick-reply picker.
   const [interactiveOpen, setInteractiveOpen] = useState(false);
   const [interactivePayload, setInteractivePayload] =

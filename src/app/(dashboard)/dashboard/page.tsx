@@ -34,7 +34,8 @@ import { ConversationsChart } from '@/components/dashboard/conversations-chart'
 import { PipelineDonut } from '@/components/dashboard/pipeline-donut'
 import { ResponseTimeChart } from '@/components/dashboard/response-time-chart'
 import { ActivityFeed } from '@/components/dashboard/activity-feed'
-import { TodayFocus } from '@/components/dashboard/today-focus'
+import { PriorityPanel, TodayGreeting, useTodayData } from '@/components/dashboard/today-focus'
+import { cn } from '@/lib/utils'
 
 import { useTranslations } from 'next-intl'
 import { APP_LOCALE } from '@/lib/currency'
@@ -45,6 +46,10 @@ export default function DashboardPage() {
   const t = useTranslations('Dashboard.page')
   const tActivity = useTranslations('Dashboard.activityFeed')
   const { defaultCurrency, responseTimeTargetMinutes } = useAuth()
+  const tToday = useTranslations('Today')
+  const today = useTodayData()
+  // Overview (numbers, charts, activity) | Conversations (what to answer).
+  const [tab, setTab] = useState<'overview' | 'conversations'>('overview')
   const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [metricsError, setMetricsError] = useState(false)
@@ -193,8 +198,40 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      {/* What needs the agent now — greeting, the Reply queue, today's agenda. */}
-      <TodayFocus />
+      <TodayGreeting data={today} />
+
+      <div role="tablist" className="border-border flex gap-1 border-b">
+        {(['overview', 'conversations'] as const).map((key) => {
+          const count = key === 'conversations' ? today.priority.length : 0
+          return (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+              className={cn(
+                '-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+                tab === key
+                  ? 'border-primary text-foreground'
+                  : 'text-muted-foreground hover:text-foreground border-transparent',
+              )}
+            >
+              {tToday(`tabs.${key}`)}
+              {count > 0 && (
+                <span className="rounded-full bg-red-500 px-1.5 text-[11px] leading-5 font-semibold text-white tabular-nums">
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {tab === 'conversations' ? (
+        <PriorityPanel data={today} />
+      ) : (
+      <>
 
       {/* Metric cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -315,6 +352,8 @@ export default function DashboardPage() {
         <WidgetError onRetry={loadAll} t={t} />
       ) : (
         <ActivityFeed items={activity} loading={activityLoading} />
+      )}
+      </>
       )}
     </div>
   )

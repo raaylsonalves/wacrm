@@ -581,6 +581,18 @@
     "more": "Mais"
   },
   "Today": {
+    "tabs": {
+      "overview": "Visão geral",
+      "conversations": "Conversas"
+    },
+    "others": "Outras conversas não respondidas",
+    "viewConversation": "Ver conversa",
+    "noAgenda": "Nada mais na agenda hoje.",
+    "reason": {
+      "handoff": "IA parou",
+      "mine": "Sua",
+      "fresh": "Nova"
+    },
     "greeting": {
       "morning": "Bom dia, {name}",
       "afternoon": "Boa tarde, {name}",
