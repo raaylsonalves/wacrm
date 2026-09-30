@@ -11,6 +11,7 @@ import { switchAccount, useOperator } from '@/hooks/use-operator';
 import { attentionScore, type PortfolioRow } from '@/lib/operator/portfolio';
 import { MODULES, MODULE_PRESETS } from '@/lib/account/modules';
 import { AgencyTeam } from '@/components/operator/agency-team';
+import { GoogleOAuthSettings } from '@/components/operator/google-oauth-settings';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,6 +120,8 @@ export default function OperatorPage() {
           {t('newClient')}
         </Button>
       </form>
+
+      <GoogleOAuthSettings />
 
       <AgencyTeam
         clients={(rows ?? [])

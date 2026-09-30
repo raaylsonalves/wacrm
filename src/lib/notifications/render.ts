@@ -178,6 +178,12 @@ export function renderNotification(
         body: t('channel.body'),
       };
 
+    case 'calendar_disconnected':
+      return {
+        title: t('calendar.title', { email: str(d.email) }),
+        body: t('calendar.body'),
+      };
+
     case 'ai_provider_failed':
       return {
         title: t('aiFailed.title'),

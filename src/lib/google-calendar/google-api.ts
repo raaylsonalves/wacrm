@@ -1,4 +1,5 @@
 import { decrypt } from '@/lib/whatsapp/encryption';
+import { supabaseAdmin } from '@/lib/automations/admin-client';
 
 /**
  * Thin Google OAuth + Calendar v3 client over fetch (no SDK). Tokens never
@@ -11,18 +12,44 @@ const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 export const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const CAL = 'https://www.googleapis.com/calendar/v3';
 
-export function googleCalendarEnabled(): boolean {
-  return !!(
-    process.env.GOOGLE_OAUTH_CLIENT_ID?.trim() &&
-    process.env.GOOGLE_OAUTH_CLIENT_SECRET?.trim()
-  );
+export type GoogleCredentialSource = 'env' | 'database' | null;
+
+/**
+ * The installation's OAuth app: env vars win; otherwise the row saved from
+ * the portfolio screen (migration 097). Read on every call — a new secret
+ * pasted in the screen takes effect without a redeploy.
+ */
+export async function loadGoogleClient(): Promise<
+  { id: string; secret: string; source: 'env' | 'database' } | null
+> {
+  const envId = process.env.GOOGLE_OAUTH_CLIENT_ID?.trim();
+  const envSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET?.trim();
+  if (envId && envSecret) return { id: envId, secret: envSecret, source: 'env' };
+  try {
+    const { data } = await supabaseAdmin()
+      .from('platform_google_oauth')
+      .select('client_id, client_secret_enc')
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      id: data.client_id as string,
+      secret: decrypt(data.client_secret_enc as string),
+      source: 'database',
+    };
+  } catch (err) {
+    console.error('[google-calendar] stored credential unreadable:', err instanceof Error ? err.message : err);
+    return null;
+  }
 }
 
-export function googleClient(): { id: string; secret: string } {
-  const id = process.env.GOOGLE_OAUTH_CLIENT_ID?.trim();
-  const secret = process.env.GOOGLE_OAUTH_CLIENT_SECRET?.trim();
-  if (!id || !secret) throw new Error('Google Calendar is not configured');
-  return { id, secret };
+export async function googleCalendarEnabled(): Promise<boolean> {
+  return (await loadGoogleClient()) !== null;
+}
+
+export async function googleClient(): Promise<{ id: string; secret: string }> {
+  const c = await loadGoogleClient();
+  if (!c) throw new Error('Google Calendar is not configured');
+  return c;
 }
 
 /** The callback URL registered in Google Cloud. Must match exactly. */
@@ -81,7 +108,7 @@ export async function exchangeCode(args: {
   idToken: string | null;
   scope: string;
 }> {
-  const { id, secret } = googleClient();
+  const { id, secret } = await googleClient();
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -124,7 +151,7 @@ export function emailFromIdToken(idToken: string | null): string | null {
 }
 
 export async function accessTokenFor(refreshTokenEnc: string): Promise<string> {
-  const { id, secret } = googleClient();
+  const { id, secret } = await googleClient();
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

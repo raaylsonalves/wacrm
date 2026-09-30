@@ -37,7 +37,8 @@ export type NotificationType =
   | 'channel_disconnected'
   | 'ai_provider_failed'
   | 'template_status'
-  | 'broadcast_finished';
+  | 'broadcast_finished'
+  | 'calendar_disconnected';
 
 export interface NotifyArgs {
   accountId: string;

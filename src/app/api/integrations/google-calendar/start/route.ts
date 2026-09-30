@@ -27,7 +27,7 @@ const TEN_MIN = 10 * 60;
  */
 export async function GET(request: Request) {
   try {
-    if (!googleCalendarEnabled()) {
+    if (!(await googleCalendarEnabled())) {
       return NextResponse.json(
         { error: 'Google Calendar is not configured' },
         { status: 404 }
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     const origin = new URL(request.url).origin;
     const url = new URL(AUTH_URL);
     url.search = new URLSearchParams({
-      client_id: googleClient().id,
+      client_id: (await googleClient()).id,
       redirect_uri: redirectUri(origin),
       response_type: 'code',
       scope: GOOGLE_SCOPES.join(' '),

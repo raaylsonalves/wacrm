@@ -742,6 +742,28 @@
       "noClients": "No clients yet.",
       "failed": "Could not save."
     },
+    "googleOAuth": {
+      "title": "설치의 Google 캘린더",
+      "subtitle": "The Google OAuth app every account uses to connect its calendar. Only you (agency owner) see and change this.",
+      "fromEnv": "Set by the server (environment variables): {id}",
+      "fromDb": "Set here: {id}",
+      "none": "Not configured yet — the \"Connect Google Calendar\" button stays hidden for every account.",
+      "redirectLabel": "Redirect URI to register in Google Cloud Console:",
+      "copy": "복사",
+      "copied": "Copied.",
+      "clientId": "Client ID (….apps.googleusercontent.com)",
+      "clientSecret": "Client secret",
+      "save": "저장",
+      "replace": "Replace",
+      "remove": "Remove credential",
+      "confirmRemove": "Remove the credential? Accounts can no longer connect and connected ones stop syncing.",
+      "saved": "Credential saved.",
+      "errors": {
+        "invalid_client_id": "The Client ID must end in .apps.googleusercontent.com.",
+        "invalid_secret": "The client secret looks invalid.",
+        "save_failed": "Could not save."
+      }
+    },
     "banner": {
       "operating": "운영 중:",
       "portfolio": "포트폴리오",
@@ -3052,6 +3074,7 @@
       "deal_won": "Deal won",
       "deal_lost": "Deal lost",
       "deal_stage_changed": "Deal changed stage",
+      "calendar_disconnected": "Google 캘린더 연결 끊김",
       "channel_disconnected": "WhatsApp disconnected",
       "ai_provider_failed": "AI provider failure",
       "template_status": "Template approved or rejected",
@@ -3084,6 +3107,10 @@
       "lost": "Deal lost: {deal}",
       "moved": "{deal} changed stage",
       "by": "by {actor}"
+    },
+    "calendar": {
+      "title": "Google 캘린더 연결 끊김: {email}",
+      "body": "인증이 만료되었거나 취소되었습니다. 예약은 CRM에 남지만 아젠다 → 시간에서 다시 연결할 때까지 Google에 반영되지 않습니다."
     },
     "channel": {
       "title": "WhatsApp disconnected: {channel}",

@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     return res;
   };
 
-  if (!googleCalendarEnabled()) return back('unavailable');
+  if (!(await googleCalendarEnabled())) return back('unavailable');
   if (url.searchParams.get('error')) return back('denied');
 
   let ctx;

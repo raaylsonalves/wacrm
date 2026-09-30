@@ -10,6 +10,7 @@ import {
   ArrowRightLeft,
   Bell,
   CalendarClock,
+  CalendarX,
   CheckCheck,
   ClipboardList,
   Hand,
@@ -96,6 +97,10 @@ const TYPE_STYLE: Record<
   },
   channel_disconnected: {
     icon: WifiOff,
+    tint: 'bg-red-500/15 text-red-600 dark:text-red-400',
+  },
+  calendar_disconnected: {
+    icon: CalendarX,
     tint: 'bg-red-500/15 text-red-600 dark:text-red-400',
   },
   ai_provider_failed: {

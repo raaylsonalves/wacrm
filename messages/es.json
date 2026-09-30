@@ -742,6 +742,28 @@
       "noClients": "No clients yet.",
       "failed": "Could not save."
     },
+    "googleOAuth": {
+      "title": "Google Calendar de la instalación",
+      "subtitle": "The Google OAuth app every account uses to connect its calendar. Only you (agency owner) see and change this.",
+      "fromEnv": "Set by the server (environment variables): {id}",
+      "fromDb": "Set here: {id}",
+      "none": "Not configured yet — the \"Connect Google Calendar\" button stays hidden for every account.",
+      "redirectLabel": "Redirect URI to register in Google Cloud Console:",
+      "copy": "Copiar",
+      "copied": "Copied.",
+      "clientId": "Client ID (….apps.googleusercontent.com)",
+      "clientSecret": "Client secret",
+      "save": "Guardar",
+      "replace": "Replace",
+      "remove": "Remove credential",
+      "confirmRemove": "Remove the credential? Accounts can no longer connect and connected ones stop syncing.",
+      "saved": "Credential saved.",
+      "errors": {
+        "invalid_client_id": "The Client ID must end in .apps.googleusercontent.com.",
+        "invalid_secret": "The client secret looks invalid.",
+        "save_failed": "Could not save."
+      }
+    },
     "banner": {
       "operating": "Operando:",
       "portfolio": "Cartera",
@@ -3040,6 +3062,7 @@
       "deal_won": "Deal won",
       "deal_lost": "Deal lost",
       "deal_stage_changed": "Deal changed stage",
+      "calendar_disconnected": "Google Calendar desconectado",
       "channel_disconnected": "WhatsApp disconnected",
       "ai_provider_failed": "AI provider failure",
       "template_status": "Template approved or rejected",
@@ -3072,6 +3095,10 @@
       "lost": "Negocio perdido: {deal}",
       "moved": "{deal} cambió de etapa",
       "by": "por {actor}"
+    },
+    "calendar": {
+      "title": "Google Calendar desconectado: {email}",
+      "body": "La autorización expiró o fue revocada. Las citas siguen en el CRM, pero no llegan a Google hasta reconectar en Agenda → Horarios."
     },
     "channel": {
       "title": "WhatsApp desconectado: {channel}",

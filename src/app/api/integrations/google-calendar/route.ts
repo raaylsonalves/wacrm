@@ -19,7 +19,7 @@ import {
 export async function GET() {
   try {
     const { supabase, accountId } = await requireRole('viewer');
-    if (!googleCalendarEnabled())
+    if (!(await googleCalendarEnabled()))
       return NextResponse.json({ enabled: false, connection: null });
     const { data } = await supabase
       .from('calendar_connections')

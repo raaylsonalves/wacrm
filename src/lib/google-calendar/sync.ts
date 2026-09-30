@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { loadAppointmentSettings } from '@/lib/appointments/store';
+import { adminsFor, notifyUsers } from '@/lib/notifications/notify';
 import {
   accessTokenFor,
   deleteEvent,
@@ -39,6 +40,7 @@ interface Connection {
   account_id: string;
   user_id: string | null;
   status: string;
+  google_email: string;
   google_calendar_id: string;
   refresh_token_enc: string;
   include_customer_phone: boolean;
@@ -55,7 +57,7 @@ export async function runCalendarSync(
   db: SupabaseClient,
   now = new Date()
 ): Promise<CalendarSyncResult | null> {
-  if (!googleCalendarEnabled()) return null;
+  if (!(await googleCalendarEnabled())) return null;
   const result: CalendarSyncResult = { pushed: 0, failed: 0, pulled: 0 };
   const tokens = new Map<string, Promise<string>>();
   try {
@@ -93,13 +95,27 @@ async function markReauth(
     err instanceof GoogleApiError &&
     (err.code === 'invalid_grant' || err.status === 401)
   ) {
-    await db
+    // Only the active → needs_reauth transition notifies, so a paused
+    // connection doesn't alert the admins again on every cron tick.
+    const { data: flipped } = await db
       .from('calendar_connections')
       .update({
         status: 'needs_reauth',
         last_error: 'Autorização do Google expirou ou foi revogada.',
       })
-      .eq('id', conn.id);
+      .eq('id', conn.id)
+      .eq('status', 'active')
+      .select('id');
+    if (flipped && flipped.length > 0) {
+      await notifyUsers(db, {
+        accountId: conn.account_id,
+        userIds: await adminsFor(db, conn.account_id),
+        type: 'calendar_disconnected',
+        data: { email: conn.google_email },
+        link: '/agenda',
+        groupKey: `calendar:${conn.id}`,
+      });
+    }
     return true;
   }
   return false;
@@ -112,7 +128,7 @@ async function loadConnections(
   const { data } = await db
     .from('calendar_connections')
     .select(
-      'id, account_id, user_id, status, google_calendar_id, refresh_token_enc, include_customer_phone, last_synced_at'
+      'id, account_id, user_id, status, google_email, google_calendar_id, refresh_token_enc, include_customer_phone, last_synced_at'
     )
     .eq('account_id', accountId);
   return (data as Connection[] | null) ?? [];
@@ -303,7 +319,7 @@ async function pullBusyBlocks(
   const { data } = await db
     .from('calendar_connections')
     .select(
-      'id, account_id, user_id, status, google_calendar_id, refresh_token_enc, include_customer_phone, last_synced_at'
+      'id, account_id, user_id, status, google_email, google_calendar_id, refresh_token_enc, include_customer_phone, last_synced_at'
     )
     .eq('status', 'active')
     .or(`last_synced_at.is.null,last_synced_at.lt.${staleBefore}`)

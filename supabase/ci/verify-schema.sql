@@ -704,6 +704,10 @@ BEGIN
      OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_appointments_calendar_sync') THEN
     RAISE EXCEPTION 'google calendar sync missing — migration 096 did not apply';
   END IF;
+  IF to_regclass('public.platform_google_oauth') IS NULL
+     OR NOT EXISTS (SELECT 1 FROM notification_types WHERE type = 'calendar_disconnected') THEN
+    RAISE EXCEPTION 'platform google oauth / calendar notification missing — migrations 097/098 did not apply';
+  END IF;
   IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
     RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
   END IF;

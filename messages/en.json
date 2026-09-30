@@ -742,6 +742,28 @@
       "noClients": "No clients yet.",
       "failed": "Could not save."
     },
+    "googleOAuth": {
+      "title": "Installation's Google Calendar",
+      "subtitle": "The Google OAuth app every account uses to connect its calendar. Only you (agency owner) see and change this.",
+      "fromEnv": "Set by the server (environment variables): {id}",
+      "fromDb": "Set here: {id}",
+      "none": "Not configured yet — the \"Connect Google Calendar\" button stays hidden for every account.",
+      "redirectLabel": "Redirect URI to register in Google Cloud Console:",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "clientId": "Client ID (….apps.googleusercontent.com)",
+      "clientSecret": "Client secret",
+      "save": "Save",
+      "replace": "Replace",
+      "remove": "Remove credential",
+      "confirmRemove": "Remove the credential? Accounts can no longer connect and connected ones stop syncing.",
+      "saved": "Credential saved.",
+      "errors": {
+        "invalid_client_id": "The Client ID must end in .apps.googleusercontent.com.",
+        "invalid_secret": "The client secret looks invalid.",
+        "save_failed": "Could not save."
+      }
+    },
     "banner": {
       "operating": "Operating:",
       "portfolio": "Portfolio",
@@ -3052,6 +3074,7 @@
       "deal_won": "Deal won",
       "deal_lost": "Deal lost",
       "deal_stage_changed": "Deal changed stage",
+      "calendar_disconnected": "Google Calendar disconnected",
       "channel_disconnected": "WhatsApp disconnected",
       "ai_provider_failed": "AI provider failure",
       "template_status": "Template approved or rejected",
@@ -3084,6 +3107,10 @@
       "lost": "Deal lost: {deal}",
       "moved": "{deal} changed stage",
       "by": "by {actor}"
+    },
+    "calendar": {
+      "title": "Google Calendar disconnected: {email}",
+      "body": "The authorization expired or was revoked. Bookings stay in the CRM but won't reach Google until you reconnect in Agenda → Hours."
     },
     "channel": {
       "title": "WhatsApp disconnected: {channel}",

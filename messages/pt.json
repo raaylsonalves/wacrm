@@ -742,6 +742,28 @@
       "noClients": "Nenhum cliente ainda.",
       "failed": "Não foi possível salvar."
     },
+    "googleOAuth": {
+      "title": "Google Agenda da instalação",
+      "subtitle": "O app OAuth do Google que todas as contas usam para conectar a agenda. Só você (dono da agência) vê e altera isto.",
+      "fromEnv": "Configurado pelo servidor (variáveis de ambiente): {id}",
+      "fromDb": "Configurado aqui: {id}",
+      "none": "Ainda não configurado — o botão \"Conectar Google Agenda\" fica oculto para todas as contas.",
+      "redirectLabel": "URI de redirecionamento para cadastrar no Google Cloud Console:",
+      "copy": "Copiar",
+      "copied": "Copiado.",
+      "clientId": "Client ID (….apps.googleusercontent.com)",
+      "clientSecret": "Client secret",
+      "save": "Salvar",
+      "replace": "Substituir",
+      "remove": "Remover credencial",
+      "confirmRemove": "Remover a credencial? As contas deixam de conseguir conectar e as já conectadas param de sincronizar.",
+      "saved": "Credencial salva.",
+      "errors": {
+        "invalid_client_id": "O Client ID deve terminar em .apps.googleusercontent.com.",
+        "invalid_secret": "O Client secret parece inválido.",
+        "save_failed": "Não foi possível salvar."
+      }
+    },
     "banner": {
       "operating": "Operando:",
       "portfolio": "Carteira",
@@ -3040,6 +3062,7 @@
       "deal_won": "Negócio ganho",
       "deal_lost": "Negócio perdido",
       "deal_stage_changed": "Negócio mudou de etapa",
+      "calendar_disconnected": "Google Agenda desconectado",
       "channel_disconnected": "WhatsApp desconectado",
       "ai_provider_failed": "Falha no provedor de IA",
       "template_status": "Modelo aprovado ou recusado",
@@ -3072,6 +3095,10 @@
       "lost": "Negócio perdido: {deal}",
       "moved": "{deal} mudou de etapa",
       "by": "por {actor}"
+    },
+    "calendar": {
+      "title": "Google Agenda desconectado: {email}",
+      "body": "A autorização expirou ou foi revogada. Os agendamentos continuam no CRM, mas não vão para o Google até reconectar em Agenda → Horários."
     },
     "channel": {
       "title": "WhatsApp desconectado: {channel}",
