@@ -97,7 +97,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
                 disabled={!!unsupported}
                 onClick={() => onSelect(template)}
                 title={unsupported ? t(`chooseTemplate.unsupported.${unsupported}`) : undefined}
-                className={`flex flex-col gap-3 rounded-xl border p-4 text-left transition-all ${
+                className={`flex min-w-0 flex-col gap-3 rounded-xl border p-4 text-left transition-all ${
                   unsupported
                     ? 'cursor-not-allowed border-dashed border-border opacity-60'
                     : isSelected
@@ -105,10 +105,17 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
                       : 'border-border bg-card/50 hover:border-border hover:bg-card'
                 }`}
               >
-                <div className="flex items-start justify-between">
-                  <h3 className="text-sm font-medium text-foreground">{template.name}</h3>
+                <div className="flex items-start justify-between gap-2">
+                  {/* Long Meta names (jaspers_market_order_confirmation_v1)
+                      used to run under the category chip. */}
+                  <h3
+                    className="min-w-0 truncate text-sm font-medium text-foreground"
+                    title={template.name}
+                  >
+                    {template.name}
+                  </h3>
                   <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${catColor}`}
+                    className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${catColor}`}
                   >
                     {template.category}
                   </span>
