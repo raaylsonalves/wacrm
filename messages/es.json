@@ -288,6 +288,8 @@
       "slaWaitingTitle": "Esperando respuesta — objetivo de {minutes}min"
     },
     "messageThread": {
+      "dealStage": "Etapa del embudo",
+      "stageMoveFailed": "No se pudo cambiar la etapa.",
       "backToConversations": "Volver a las conversaciones",
       "hideContactPanel": "Ocultar panel del contacto",
       "showContactPanel": "Mostrar panel del contacto",

@@ -288,6 +288,8 @@
       "slaWaitingTitle": "Aguardando resposta — meta de {minutes}min"
     },
     "messageThread": {
+      "dealStage": "Etapa do funil",
+      "stageMoveFailed": "Não foi possível mudar a etapa.",
       "backToConversations": "Voltar às conversas",
       "hideContactPanel": "Ocultar painel do contato",
       "showContactPanel": "Mostrar painel do contato",

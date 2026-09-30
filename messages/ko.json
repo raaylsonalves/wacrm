@@ -288,6 +288,8 @@
       "slaWaitingTitle": "답변 대기 중 — 목표 {minutes}분"
     },
     "messageThread": {
+      "dealStage": "퍼널 단계",
+      "stageMoveFailed": "단계를 변경할 수 없습니다.",
       "backToConversations": "대화 목록으로 돌아가기",
       "hideContactPanel": "연락처 패널 숨기기",
       "showContactPanel": "연락처 패널 표시",

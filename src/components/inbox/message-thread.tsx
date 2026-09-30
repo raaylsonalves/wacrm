@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "./message-bubble";
+import { DealStageChip } from "./deal-stage-chip";
 import { startsRun, unseenCount } from "@/lib/inbox/bubble-runs";
 import { MessageActions } from "./message-actions";
 import { MediaLightbox } from "./media-lightbox";
@@ -1056,6 +1057,7 @@ export function MessageThread({
             </p>
           </div>
           </button>
+          <DealStageChip contactId={contact?.id} />
           {/* Session timer badge — hidden on the narrowest phones so
               the name + back arrow keep their room. This is Meta's own
               24h customer-service-window rule (once the window closes,
