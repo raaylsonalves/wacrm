@@ -714,107 +714,48 @@ export function MessageComposer({
           </Button>
         </div>
       ) : (
-        <div className="flex items-end gap-2">
-          {/* Attach menu — photo / video / document / voice. */}
+        <div className="flex items-end gap-1.5 sm:gap-2">
+          {/* One "+" for everything that writes or builds a message — AI
+              draft, template, interactive, quick reply — so on a phone the
+              text field keeps the width (WhatsApp keeps a single + too).
+              Templates stay reachable with the 24h window closed. */}
           <DropdownMenu>
             <DropdownMenuTrigger
-              disabled={inputsDisabled || busy}
-              title={
-                readOnly
-                  ? t("readOnlyTitle")
-                  : inputsDisabled
-                    ? undefined
-                    : t("attachMedia")
-              }
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md p-0 text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={readOnly}
+              title={readOnly ? t("readOnlyTitle") : t("moreActions")}
+              aria-label={t("moreActions")}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full p-0 text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+              {drafting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <Paperclip className="h-4 w-4" />
+                <Plus className="h-5 w-5" />
               )}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="border-border bg-popover">
-              <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
-                <ImageIcon className="mr-2 h-4 w-4" />
-                {t("photo")}
+            <DropdownMenuContent align="start" side="top" className="border-border bg-popover w-60">
+              <DropdownMenuItem disabled={inputsDisabled || drafting} onClick={() => void handleDraft()}>
+                <Sparkles className="mr-2 h-4 w-4 text-primary" />
+                {t("draftWithAI")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => videoInputRef.current?.click()}>
-                <Video className="mr-2 h-4 w-4" />
-                {t("video")}
+              <DropdownMenuItem onClick={onOpenTemplates}>
+                <LayoutTemplate className="mr-2 h-4 w-4" />
+                {t("sendTemplate")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => documentInputRef.current?.click()}>
-                <FileText className="mr-2 h-4 w-4" />
-                {t("document")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void startRecording()}>
-                <Mic className="mr-2 h-4 w-4" />
-                {t("voiceNote")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* + menu — interactive messages + quick replies. Gated on the
-              24h window like free-form text (interactive requires it). */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              disabled={inputsDisabled}
-              title={
-                readOnly
-                  ? t("readOnlyTitle")
-                  : inputsDisabled
-                    ? undefined
-                    : t("moreActions")
-              }
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md p-0 text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="border-border bg-popover">
-              <DropdownMenuItem onClick={() => openInteractiveBuilder()}>
+              <DropdownMenuItem disabled={inputsDisabled} onClick={() => openInteractiveBuilder()}>
                 <MessageSquareDashed className="mr-2 h-4 w-4" />
                 {t("interactiveMessage")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setQuickReplyOpen(true)}>
+              <DropdownMenuItem disabled={inputsDisabled} onClick={() => setQuickReplyOpen(true)}>
                 <Zap className="mr-2 h-4 w-4" />
                 {t("quickReplies")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <GatedButton
-            variant="ghost"
-            size="sm"
-            canAct={!readOnly}
-            gateReason="sendMessages"
-            title={readOnly ? undefined : t("sendTemplate")}
-            className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-foreground"
-            onClick={onOpenTemplates}
-          >
-            <LayoutTemplate className="h-4 w-4" />
-          </GatedButton>
-
-          <GatedButton
-            variant="ghost"
-            size="sm"
-            canAct={!readOnly}
-            gateReason="sendMessages"
-            disabled={drafting}
-            title={readOnly ? undefined : t("draftWithAI")}
-            className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-primary"
-            onClick={handleDraft}
-          >
-            {drafting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-          </GatedButton>
-
-          {/* WhatsApp-style pill: emoji + text in one rounded field. */}
+          {/* WhatsApp-style pill: emoji + text + attach in one rounded field. */}
           <div
             className={cn(
-              "flex min-w-0 flex-1 items-end rounded-3xl border border-border bg-muted pl-1 transition-colors focus-within:border-primary/50",
+              "flex min-w-0 flex-1 items-end rounded-3xl border border-border bg-muted px-1 transition-colors focus-within:border-primary/50",
               (sessionExpired || readOnly) && "opacity-50"
             )}
           >
@@ -841,10 +782,49 @@ export function MessageComposer({
             // The placeholder text also surfaces the read-only state.
             title={readOnly ? t("readOnlyTitle") : undefined}
             className={cn(
-              "min-w-0 flex-1 resize-none bg-transparent py-2.5 pr-4 pl-1 text-sm text-foreground placeholder-muted-foreground outline-none",
+              "min-w-0 flex-1 resize-none bg-transparent py-2.5 px-1 text-sm placeholder:truncate text-foreground placeholder-muted-foreground outline-none",
               (sessionExpired || readOnly) && "cursor-not-allowed"
             )}
           />
+          {/* Attach menu — photo / video / document / voice. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              disabled={inputsDisabled || busy}
+              title={
+                readOnly
+                  ? t("readOnlyTitle")
+                  : inputsDisabled
+                    ? undefined
+                    : t("attachMedia")
+              }
+              aria-label={t("attachMedia")}
+              className="inline-flex h-10 w-9 shrink-0 items-center justify-center rounded-full p-0 text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Paperclip className="h-5 w-5" />
+              )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="top" className="border-border bg-popover">
+              <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
+                <ImageIcon className="mr-2 h-4 w-4" />
+                {t("photo")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => videoInputRef.current?.click()}>
+                <Video className="mr-2 h-4 w-4" />
+                {t("video")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => documentInputRef.current?.click()}>
+                <FileText className="mr-2 h-4 w-4" />
+                {t("document")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void startRecording()}>
+                <Mic className="mr-2 h-4 w-4" />
+                {t("voiceNote")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           </div>
 
           {/* WhatsApp: an empty box shows the mic, typing turns it into send. */}
@@ -855,7 +835,7 @@ export function MessageComposer({
               gateReason="sendMessages"
               disabled={!text.trim() || sessionExpired || sending}
               onClick={handleSend}
-              className="h-9 w-9 shrink-0 rounded-full bg-primary p-0 hover:bg-primary/90 disabled:opacity-40"
+              className="h-10 w-10 shrink-0 rounded-full bg-primary p-0 hover:bg-primary/90 disabled:opacity-40"
             >
               <Send className="h-4 w-4" />
             </GatedButton>
@@ -866,7 +846,7 @@ export function MessageComposer({
               onClick={() => void startRecording()}
               title={t("voiceNote")}
               aria-label={t("voiceNote")}
-              className="h-9 w-9 shrink-0 rounded-full bg-primary p-0 hover:bg-primary/90"
+              className="h-10 w-10 shrink-0 rounded-full bg-primary p-0 hover:bg-primary/90"
             >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
             </Button>
@@ -878,7 +858,7 @@ export function MessageComposer({
           `items-end` buttons below the textarea. Indented to line up
           under the textarea left edge. */}
       {!draft && !recording && (
-        <p className="mt-1 pl-[5.5rem] text-[10px] text-muted-foreground">
+        <p className="mt-1 hidden pl-12 text-[10px] text-muted-foreground sm:block">
           {t("draftHint")}
         </p>
       )}
