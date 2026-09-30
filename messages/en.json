@@ -34,6 +34,7 @@
     "createAccount": "Create account"
   },
   "Sidebar": {
+    "operator": "Portfolio",
     "title": "CRM Template for WhatsApp",
     "primaryNav": "Primary",
     "dashboard": "Dashboard",
@@ -71,6 +72,7 @@
     "menuSignOut": "Sign out"
   },
   "Header": {
+    "operator": "Portfolio",
     "agenda": "Agenda",
     "push": {
       "labelOn": "Notifications on for this device",
@@ -656,6 +658,46 @@
     "noPriority": "No conversation waiting for a reply.",
     "reply": "Reply",
     "agendaToday": "Later today"
+  },
+  "Operator": {
+    "title": "Client portfolio",
+    "subtitle": "The accounts you operate. Only health and counts — never messages or contact data.",
+    "newPlaceholder": "New client's name",
+    "newClient": "New client account",
+    "created": "Account \"{name}\" created.",
+    "createFailed": "Could not create the account.",
+    "switchFailed": "Could not enter that account.",
+    "notOperator": "This area is for operators only.",
+    "home": "Your account",
+    "client": "Client",
+    "lastInbound": "last message {when}",
+    "active": "You are here",
+    "enter": "Enter",
+    "m": {
+      "awaiting": "Awaiting reply",
+      "handoff": "AI stopped",
+      "cases": "Cases",
+      "appointments": "Today",
+      "numbers": "Numbers ok",
+      "tokens": "Tokens 7d"
+    },
+    "alert": {
+      "wahaDown": "{count, plural, one {1 number disconnected} other {# numbers disconnected}}",
+      "metaDown": "Official number has a problem",
+      "noNumber": "No number connected",
+      "aiOff": "AI is off",
+      "handoff": "{count, plural, one {1 conversation waiting for a person} other {# conversations waiting for a person}}",
+      "ownership": "You still own it — transfer to the client once they join"
+    },
+    "banner": {
+      "operating": "Operating:",
+      "portfolio": "Portfolio",
+      "backHome": "Back to my account",
+      "switchFailed": "Could not switch back.",
+      "staleTitle": "The active account changed in another tab",
+      "staleBody": "You switched accounts in another tab. Reload so you don't act on the wrong account.",
+      "reload": "Reload"
+    }
   },
   "Prospecting": {
     "title": "Prospecting",

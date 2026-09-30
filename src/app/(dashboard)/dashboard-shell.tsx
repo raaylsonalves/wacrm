@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { OperatorBanner } from "@/components/operator/operator-banner";
 import { AccountAccessAlert } from "@/components/layout/account-access-alert";
 import { BrandColorEffect } from "@/components/layout/brand-color-effect";
 import { AccountTabBranding } from "@/components/layout/account-tab-branding";
@@ -61,6 +62,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       <AccountTabBranding />
       <Sidebar open={sidebarOpen} onClose={closeSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Operators only: "Operando: <client>" + the stale-tab guard. */}
+        <OperatorBanner />
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
         {/* Thinner horizontal padding on mobile so cards have room to breathe. */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">

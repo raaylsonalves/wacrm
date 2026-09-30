@@ -34,6 +34,7 @@
     "createAccount": "Crear cuenta"
   },
   "Sidebar": {
+    "operator": "Cartera",
     "title": "Plantilla de CRM para WhatsApp",
     "primaryNav": "Principal",
     "dashboard": "Panel",
@@ -71,6 +72,7 @@
     "menuSignOut": "Cerrar sesión"
   },
   "Header": {
+    "operator": "Cartera",
     "agenda": "Agenda",
     "push": {
       "labelOn": "Notificaciones activadas en este dispositivo",
@@ -656,6 +658,46 @@
     "noPriority": "Ninguna conversación esperando respuesta.",
     "reply": "Responder",
     "agendaToday": "Más tarde hoy"
+  },
+  "Operator": {
+    "title": "Cartera de clientes",
+    "subtitle": "The accounts you operate. Only health and counts — never messages or contact data.",
+    "newPlaceholder": "New client's name",
+    "newClient": "Nueva cuenta de cliente",
+    "created": "Account \"{name}\" created.",
+    "createFailed": "Could not create the account.",
+    "switchFailed": "Could not enter that account.",
+    "notOperator": "This area is for operators only.",
+    "home": "Tu cuenta",
+    "client": "Cliente",
+    "lastInbound": "last message {when}",
+    "active": "Estás aquí",
+    "enter": "Entrar",
+    "m": {
+      "awaiting": "Awaiting reply",
+      "handoff": "AI stopped",
+      "cases": "Cases",
+      "appointments": "Today",
+      "numbers": "Numbers ok",
+      "tokens": "Tokens 7d"
+    },
+    "alert": {
+      "wahaDown": "{count, plural, one {1 number disconnected} other {# numbers disconnected}}",
+      "metaDown": "Official number has a problem",
+      "noNumber": "No number connected",
+      "aiOff": "AI is off",
+      "handoff": "{count, plural, one {1 conversation waiting for a person} other {# conversations waiting for a person}}",
+      "ownership": "You still own it — transfer to the client once they join"
+    },
+    "banner": {
+      "operating": "Operando:",
+      "portfolio": "Cartera",
+      "backHome": "Volver a mi cuenta",
+      "switchFailed": "Could not switch back.",
+      "staleTitle": "The active account changed in another tab",
+      "staleBody": "You switched accounts in another tab. Reload so you don't act on the wrong account.",
+      "reload": "Recargar"
+    }
   },
   "Prospecting": {
     "title": "Prospección",

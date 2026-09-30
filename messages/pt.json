@@ -34,6 +34,7 @@
     "createAccount": "Criar conta"
   },
   "Sidebar": {
+    "operator": "Carteira",
     "title": "Modelo de CRM para WhatsApp",
     "primaryNav": "Principal",
     "dashboard": "Painel",
@@ -71,6 +72,7 @@
     "menuSignOut": "Sair"
   },
   "Header": {
+    "operator": "Carteira",
     "agenda": "Agenda",
     "push": {
       "labelOn": "Notificações ativadas neste dispositivo",
@@ -656,6 +658,46 @@
     "noPriority": "Nenhuma conversa aguardando resposta.",
     "reply": "Responder",
     "agendaToday": "Ainda hoje"
+  },
+  "Operator": {
+    "title": "Carteira de clientes",
+    "subtitle": "As contas que você opera. Só aparecem saúde e contagens, nunca mensagens ou dados de contatos.",
+    "newPlaceholder": "Nome do novo cliente",
+    "newClient": "Nova conta de cliente",
+    "created": "Conta \"{name}\" criada.",
+    "createFailed": "Não foi possível criar a conta.",
+    "switchFailed": "Não foi possível entrar nessa conta.",
+    "notOperator": "Esta área é só para operadores.",
+    "home": "Sua conta",
+    "client": "Cliente",
+    "lastInbound": "última mensagem {when}",
+    "active": "Você está aqui",
+    "enter": "Entrar",
+    "m": {
+      "awaiting": "Esperando resposta",
+      "handoff": "IA parou",
+      "cases": "Casos",
+      "appointments": "Agenda hoje",
+      "numbers": "Números ok",
+      "tokens": "Tokens 7d"
+    },
+    "alert": {
+      "wahaDown": "{count, plural, one {1 número desconectado} other {# números desconectados}}",
+      "metaDown": "Número oficial com problema",
+      "noNumber": "Nenhum número conectado",
+      "aiOff": "IA desligada",
+      "handoff": "{count, plural, one {1 conversa esperando uma pessoa} other {# conversas esperando uma pessoa}}",
+      "ownership": "A propriedade ainda é sua — transfira para o cliente quando ele entrar"
+    },
+    "banner": {
+      "operating": "Operando:",
+      "portfolio": "Carteira",
+      "backHome": "Voltar para minha conta",
+      "switchFailed": "Não foi possível voltar.",
+      "staleTitle": "A conta ativa mudou em outra aba",
+      "staleBody": "Você trocou de conta em outra aba. Recarregue para não agir na conta errada.",
+      "reload": "Recarregar"
+    }
   },
   "Prospecting": {
     "title": "Prospecção",

@@ -1,5 +1,7 @@
 # Spec: Operator mode — one person operating many client accounts
 
+**Status: v1 implemented (2026-09-30).** Migration 090: `platform_operators` (seeded with one operator), `operator_accounts`, `switch_account`, `create_client_account` (client accounts marked `managed_by`, so the one-account-per-owner index skips them), `operator_portfolio` (counts/health only). UI: `/operator` portfolio, "Operando: …" banner with back-home, stale-tab reload dialog. Not in v1: client-initiated grant/revoke, `essential` UI profile, connect links, `x-wacrm-account` header check, and handing ownership to a client who already owns a signup account (the owner index still blocks that transfer).
+
 > Ported in spirit from deskcomm's "Console de Agência"
 > (`docs/specs/19-spec-console-de-agencia.md`), adapted to what wacrm
 > already is: a multi-tenant app where a *user* belongs to exactly one

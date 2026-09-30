@@ -7,7 +7,8 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useTotalUnread } from '@/hooks/use-total-unread';
 import { useUnreadNotifications } from '@/hooks/use-unread-notifications';
-import { ClipboardList, Target,
+import { useOperator } from '@/hooks/use-operator';
+import { Briefcase, ClipboardList, Target,
   Bell,
   Bot,
   Cable,
@@ -155,7 +156,9 @@ const navGroups: NavGroup[] = [
 ];
 
 const bottomNavItems = [
-  { href: '/settings', labelKey: 'settings', icon: Settings },
+  // Platform operators only (migration 090) — filtered below.
+  { href: '/operator', labelKey: 'operator', icon: Briefcase, operatorOnly: true },
+  { href: '/settings', labelKey: 'settings', icon: Settings, operatorOnly: false },
 ];
 
 interface SidebarProps {
@@ -172,6 +175,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const { profile, profileLoading, account, accountRole, signOut } = useAuth();
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
+  const { isOperator } = useOperator();
 
   // Desktop-only icon-rail mode. Mobile always shows the full drawer
   // (collapsing a full-screen overlay drawer buys nothing), so every
@@ -418,7 +422,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           <div className="border-border my-4 border-t" />
 
           <ul className="flex flex-col gap-1">
-            {bottomNavItems.map((item) => {
+            {bottomNavItems.filter((item) => !item.operatorOnly || isOperator).map((item) => {
               const isActive = pathname.startsWith(item.href);
               return (
                 <li key={item.href}>

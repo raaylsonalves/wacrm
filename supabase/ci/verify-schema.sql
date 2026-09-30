@@ -674,6 +674,11 @@ BEGIN
      OR to_regprocedure('public.dashboard_team_since(uuid,timestamptz)') IS NULL THEN
     RAISE EXCEPTION 'dashboard ops functions missing — migration 089 did not apply';
   END IF;
+  IF to_regclass('public.platform_operators') IS NULL OR to_regclass('public.operator_accounts') IS NULL
+     OR to_regprocedure('public.switch_account(uuid)') IS NULL
+     OR to_regprocedure('public.operator_portfolio()') IS NULL THEN
+    RAISE EXCEPTION 'operator mode missing — migration 090 did not apply';
+  END IF;
   IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
     RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
   END IF;
