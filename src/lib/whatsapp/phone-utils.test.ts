@@ -4,6 +4,8 @@ import {
   isValidE164,
   normalizePhone,
   phoneVariants,
+  brNinthDigitVariant,
+  shouldPersistVariant,
   phonesMatch,
   sanitizePhoneForMeta,
 } from "./phone-utils";
@@ -133,6 +135,30 @@ describe("phoneVariants", () => {
   it("returns just the original when the number is too short for any CC slice", () => {
     // 1-char input is shorter than all ccLen values; both loops skip.
     expect(phoneVariants("1")).toEqual(["1"]);
+  });
+});
+
+describe("Brazilian ninth digit", () => {
+  it("adds the 9 to an 8-digit BR mobile and removes it from a 9-digit one", () => {
+    expect(brNinthDigitVariant("558592980806")).toBe("5585992980806");
+    expect(brNinthDigitVariant("5585992980806")).toBe("558592980806");
+  });
+
+  it("leaves landlines and other countries alone", () => {
+    expect(brNinthDigitVariant("558532241234")).toBeNull(); // landline (starts 3)
+    expect(brNinthDigitVariant("15551989056")).toBeNull();
+  });
+
+  it("is tried after the original when Meta rejects the recipient", () => {
+    const out = phoneVariants("558592980806");
+    expect(out[0]).toBe("558592980806");
+    expect(out).toContain("5585992980806");
+  });
+
+  it("is not written back to the contact (the next inbound would not match)", () => {
+    expect(shouldPersistVariant("558592980806", "5585992980806")).toBe(false);
+    expect(shouldPersistVariant("37063949836", "370063949836")).toBe(true);
+    expect(shouldPersistVariant("37063949836", "37063949836")).toBe(false);
   });
 });
 

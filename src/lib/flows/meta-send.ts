@@ -12,6 +12,7 @@ import { decrypt } from '@/lib/whatsapp/encryption';
 import {
   phoneVariants,
   isRecipientNotAllowedError,
+  shouldPersistVariant,
 } from '@/lib/whatsapp/phone-utils';
 import { resolveContactSendTarget } from '@/lib/whatsapp/wa-identity';
 import { supabaseAdmin } from './admin-client';
@@ -143,7 +144,7 @@ export async function engineSendText(
   }
   if (lastError) throw lastError;
 
-  if (sendTarget.isPhone && workingPhone !== sanitized) {
+  if (sendTarget.isPhone && shouldPersistVariant(sanitized, workingPhone)) {
     await db
       .from('contacts')
       .update({ phone: workingPhone })
@@ -261,7 +262,7 @@ export async function engineSendMedia(
   }
   if (lastError) throw lastError;
 
-  if (sendTarget.isPhone && workingPhone !== sanitized) {
+  if (sendTarget.isPhone && shouldPersistVariant(sanitized, workingPhone)) {
     await db
       .from('contacts')
       .update({ phone: workingPhone })
@@ -442,7 +443,7 @@ async function sendInteractiveViaMeta(
   }
   if (lastError) throw lastError;
 
-  if (sendTarget.isPhone && workingPhone !== sanitized) {
+  if (sendTarget.isPhone && shouldPersistVariant(sanitized, workingPhone)) {
     await db
       .from('contacts')
       .update({ phone: workingPhone })
