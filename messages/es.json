@@ -530,6 +530,8 @@
       "body": "Opted out {when}. Broadcasts, automations and follow-ups skip this contact. Replying when they write is still fine.",
       "reactivate": "Reactivar envíos",
       "confirm": "Re-enable sending to this contact? Only do it if the customer asked to receive messages again.",
+      "confirmYes": "Sí, reactivar",
+      "cancel": "Cancelar",
       "reactivated": "Sending re-enabled.",
       "failed": "Could not re-enable."
     },

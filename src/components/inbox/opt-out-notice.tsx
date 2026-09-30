@@ -31,6 +31,9 @@ export function OptOutNotice({
   const canEdit = useCan('send-messages');
   const [since, setSince] = useState<string | null>(optedOutAt ?? null);
   const [busy, setBusy] = useState(false);
+  // Two-step confirm inside the notice: a native window.confirm can be
+  // suppressed by the browser, and the click then did nothing at all.
+  const [confirming, setConfirming] = useState(false);
 
   // The conversation row can be older than the STOP; read the live value.
   useEffect(() => {
@@ -63,16 +66,26 @@ export function OptOutNotice({
   }
 
   async function reactivate() {
-    if (!window.confirm(t('confirm'))) return;
     setBusy(true);
-    const { error } = await createClient()
-      .from('contacts')
-      .update({ opted_out_at: null, opt_out_confirmed_at: null })
-      .eq('id', contactId);
-    setBusy(false);
-    if (error) return toast.error(t('failed'));
-    setSince(null);
-    toast.success(t('reactivated'));
+    try {
+      const { data, error } = await createClient()
+        .from('contacts')
+        .update({ opted_out_at: null, opt_out_confirmed_at: null })
+        .eq('id', contactId)
+        .select('id');
+      // No row back = RLS refused it silently; say so instead of pretending.
+      if (error || !data || data.length === 0) {
+        toast.error(t('failed'));
+        return;
+      }
+      setSince(null);
+      toast.success(t('reactivated'));
+    } catch {
+      toast.error(t('failed'));
+    } finally {
+      setBusy(false);
+      setConfirming(false);
+    }
   }
 
   return (
@@ -93,16 +106,38 @@ export function OptOutNotice({
           }),
         })}
       </p>
-      {canEdit && (
+      {canEdit && !confirming && (
         <button
           type="button"
-          disabled={busy}
-          onClick={() => void reactivate()}
+          onClick={() => setConfirming(true)}
           className="text-foreground mt-2 inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
         >
-          {busy && <Loader2 className="h-3 w-3 animate-spin" />}
           {t('reactivate')}
         </button>
+      )}
+      {canEdit && confirming && (
+        <div className="mt-2 space-y-2">
+          <p className="text-foreground">{t('confirm')}</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void reactivate()}
+              className="bg-primary text-primary-foreground inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium disabled:opacity-60"
+            >
+              {busy && <Loader2 className="h-3 w-3 animate-spin" />}
+              {t('confirmYes')}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setConfirming(false)}
+              className="text-muted-foreground hover:bg-muted rounded-md px-2.5 py-1"
+            >
+              {t('cancel')}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

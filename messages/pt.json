@@ -530,6 +530,8 @@
       "body": "Pediu para sair {when}. Disparos, automações e follow-ups pulam este contato. Responder quando ele escrever continua liberado.",
       "reactivate": "Reativar envios",
       "confirm": "Reativar os envios para este contato? Faça isso só se o próprio cliente pediu para voltar a receber mensagens.",
+      "confirmYes": "Sim, reativar",
+      "cancel": "Cancelar",
       "reactivated": "Envios reativados.",
       "failed": "Não foi possível reativar."
     },
