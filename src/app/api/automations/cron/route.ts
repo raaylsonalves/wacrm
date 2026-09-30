@@ -8,6 +8,7 @@ import { runProspectingTick } from '@/lib/prospecting/tick'
 import { syncContactAvatars } from '@/lib/contacts/avatar-sync'
 import { retryPendingRelays } from '@/lib/cases/relay'
 import { dispatchPendingPushes } from '@/lib/notifications/notify'
+import { runScheduledBroadcasts } from '@/lib/whatsapp/broadcast-schedule'
 import { sweepAppointmentReminders, sweepSlaBreaches } from '@/lib/notifications/sweeps'
 
 /**
@@ -135,11 +136,14 @@ export async function GET(request: Request) {
 
   // Notifications: time-based alerts, then push whatever DB triggers
   // wrote (they can't reach the push service themselves). Each never throws.
+  // Scheduled broadcasts whose time has come (specs/scheduled-broadcasts.md).
+  const broadcasts = await runScheduledBroadcasts(supabaseAdmin())
+
   const notifications = {
     sla: await sweepSlaBreaches(supabaseAdmin()),
     reminders: await sweepAppointmentReminders(supabaseAdmin()),
     push: await dispatchPendingPushes(supabaseAdmin()),
   }
 
-  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays, notifications })
+  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays, broadcasts, notifications })
 }

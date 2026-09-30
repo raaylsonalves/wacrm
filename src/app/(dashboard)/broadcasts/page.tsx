@@ -276,6 +276,14 @@ export default function BroadcastsPage() {
                         )}
                         {tStatus(status.label)}
                       </span>
+                      {broadcast.status === 'scheduled' && broadcast.scheduled_at && (
+                        <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                          {new Date(broadcast.scheduled_at).toLocaleString(APP_LOCALE, {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          })}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground sm:table-cell">
                       {new Date(broadcast.created_at).toLocaleDateString(APP_LOCALE)}

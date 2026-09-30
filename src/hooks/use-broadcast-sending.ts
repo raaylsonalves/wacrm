@@ -48,6 +48,12 @@ interface BroadcastPayload {
    * falls back to the template's stored URL only when this is empty.
    */
   headerMediaUrl?: string;
+  /**
+   * ISO instant to send at (specs/scheduled-broadcasts.md). Set → the
+   * broadcast and its recipients are created now, status 'scheduled',
+   * and the cron sends it; nothing is sent from this tab.
+   */
+  scheduledAt?: string;
 }
 
 interface UseBroadcastSendingReturn {
@@ -406,7 +412,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
             customField: payload.audience.customField,
             excludeTagIds: payload.audience.excludeTagIds,
           },
-          status: 'sending',
+          status: payload.scheduledAt ? 'scheduled' : 'sending',
+          scheduled_at: payload.scheduledAt ?? null,
           total_recipients: contacts.length,
           sent_count: 0,
           delivered_count: 0,
@@ -475,6 +482,13 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
             `Failed to insert recipient batch ${i / INSERT_BATCH_SIZE + 1}: ${recipientError.message}`
           );
         }
+      }
+
+      // Scheduled: the audience and params are frozen on the rows above;
+      // the cron sends when the time comes.
+      if (payload.scheduledAt) {
+        setProgress(100);
+        return broadcast.id;
       }
 
       // ── Step 4: Fetch recipients back (joined contact) ────────────

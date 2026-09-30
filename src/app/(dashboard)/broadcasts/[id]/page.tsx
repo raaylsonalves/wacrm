@@ -160,6 +160,26 @@ export default function BroadcastDetailPage() {
     'all',
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  // Only while still 'scheduled': once the cron claims it (status
+  // 'sending') the conditional update matches nothing and it goes out.
+  async function handleCancelSchedule() {
+    setCancelling(true);
+    const { data, error } = await createClient()
+      .from('broadcasts')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', broadcastId)
+      .eq('status', 'scheduled')
+      .select('id');
+    setCancelling(false);
+    if (error || !data || data.length === 0) {
+      toast.error(t('cancelScheduleFailed'));
+      return;
+    }
+    setBroadcast((b) => (b ? { ...b, status: 'cancelled' } : b));
+    toast.success(t('cancelScheduleDone'));
+  }
   const [deleting, setDeleting] = useState(false);
   const [resumingScope, setResumingScope] = useState<
     'pending' | 'failed' | null
@@ -370,6 +390,24 @@ export default function BroadcastDetailPage() {
             "Delete Pipeline" flow. Mid-send broadcasts can't be deleted
             because orphaning in-flight Meta messages would leave the
             funnel inconsistent. */}
+        {broadcast.status === 'scheduled' && (
+          <div className="flex items-center gap-2">
+            {broadcast.scheduled_at && (
+              <span className="text-sm text-muted-foreground">
+                {t('scheduledFor', {
+                  date: new Date(broadcast.scheduled_at).toLocaleString(APP_LOCALE, {
+                    dateStyle: 'short',
+                    timeStyle: 'short',
+                  }),
+                })}
+              </span>
+            )}
+            <Button variant="outline" size="sm" onClick={handleCancelSchedule} disabled={cancelling}>
+              {t('cancelSchedule')}
+            </Button>
+          </div>
+        )}
+
         {confirmDelete ? (
           <div className="flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm">
             <span className="text-red-700 dark:text-red-300">{t('deletePrompt')}</span>

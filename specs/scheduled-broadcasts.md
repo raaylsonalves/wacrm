@@ -1,5 +1,7 @@
 # Spec: Schedule a broadcast for a specific date/time
 
+**Status: implemented (2026-09-30).** Wizard "Agora / Agendar" (`step4-schedule-send.tsx`, rules in `lib/whatsapp/broadcast-schedule-rules.ts`), migration 087 (`cancelled` status + due index), cron drain `runScheduledBroadcasts` in `/api/automations/cron` reusing `planBroadcastResume` + `deliverBroadcast`, opt-outs re-checked at fire time, cancel on the detail page. Not done: send window, pause/resume, and media-header URL overrides for scheduled sends (the template's stored URL is used).
+
 ## Problem
 
 An account can only send a broadcast immediately — there's no way to

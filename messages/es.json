@@ -1195,6 +1195,7 @@
       "retry": "Reintentar"
     },
     "status": {
+      "cancelled": "Cancelado",
       "draft": "Borrador",
       "scheduled": "Programada",
       "sending": "Enviando",
@@ -1207,6 +1208,10 @@
       "unknown": "Desconocido"
     },
     "detail": {
+      "scheduledFor": "Programado para {date}",
+      "cancelSchedule": "Cancelar programación",
+      "cancelScheduleDone": "Programación cancelada. No se envió nada.",
+      "cancelScheduleFailed": "No se pudo cancelar: el envío ya empezó.",
       "backToBroadcasts": "Volver a difusiones",
       "notFound": "Difusión no encontrada",
       "template": "Plantilla: {name}",
@@ -1352,6 +1357,14 @@
         }
       },
       "scheduleSend": {
+        "whenLabel": "Cuándo enviar",
+        "optionNow": "Ahora",
+        "optionLater": "Programar",
+        "laterHint": "En tu hora local. El envío empieza unos minutos después de la hora elegida.",
+        "tooSoon": "Elige una hora al menos 5 minutos adelante.",
+        "schedule": "Programar envío",
+        "confirmScheduleTitle": "¿Programar este envío?",
+        "confirmScheduleAt": "Se envía el {date}. Quien se dé de baja antes no lo recibe.",
         "title": "Revisar y enviar",
         "subtitle": "Ponle un nombre a tu difusión y confirma el envío.",
         "broadcastName": "Nombre de la difusión",

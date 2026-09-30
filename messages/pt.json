@@ -1195,6 +1195,7 @@
       "retry": "Tentar novamente"
     },
     "status": {
+      "cancelled": "Cancelado",
       "draft": "Rascunho",
       "scheduled": "Agendado",
       "sending": "Enviando",
@@ -1207,6 +1208,10 @@
       "unknown": "Desconhecido"
     },
     "detail": {
+      "scheduledFor": "Agendado para {date}",
+      "cancelSchedule": "Cancelar agendamento",
+      "cancelScheduleDone": "Agendamento cancelado. Nada foi enviado.",
+      "cancelScheduleFailed": "Não deu para cancelar: o disparo já começou.",
       "backToBroadcasts": "Voltar aos disparos",
       "notFound": "Disparo não encontrado",
       "template": "Modelo: {name}",
@@ -1352,6 +1357,14 @@
         }
       },
       "scheduleSend": {
+        "whenLabel": "Quando enviar",
+        "optionNow": "Agora",
+        "optionLater": "Agendar",
+        "laterHint": "No seu horário local. O envio começa até alguns minutos depois do horário marcado.",
+        "tooSoon": "Escolha um horário pelo menos 5 minutos à frente.",
+        "schedule": "Agendar disparo",
+        "confirmScheduleTitle": "Agendar este disparo?",
+        "confirmScheduleAt": "Envio em {date}. Quem pedir para sair até lá não recebe.",
         "title": "Revisar e enviar",
         "subtitle": "Dê um nome ao seu disparo e confirme o envio.",
         "broadcastName": "Nome do disparo",

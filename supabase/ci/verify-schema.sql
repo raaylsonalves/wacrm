@@ -658,6 +658,12 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'ai_usage_log.speech_chars is missing — migration 080 did not apply';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'broadcasts_status_check' AND pg_get_constraintdef(oid) LIKE '%cancelled%'
+  ) THEN
+    RAISE EXCEPTION 'broadcast cancelled status missing — migration 087 did not apply';
+  END IF;
   IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
     RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
   END IF;

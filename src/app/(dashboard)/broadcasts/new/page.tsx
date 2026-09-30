@@ -46,7 +46,7 @@ export default function NewBroadcastPage() {
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
   const [name, setName] = useState('');
 
-  async function handleSend() {
+  async function handleSend(scheduledAt?: string) {
     if (!template) return;
 
     try {
@@ -62,6 +62,7 @@ export default function NewBroadcastPage() {
         },
         variables,
         headerMediaUrl,
+        scheduledAt,
       });
       router.push(`/broadcasts/${broadcastId}`);
     } catch (err) {

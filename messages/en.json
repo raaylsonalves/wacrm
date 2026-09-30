@@ -1195,6 +1195,7 @@
       "retry": "Retry"
     },
     "status": {
+      "cancelled": "Cancelled",
       "draft": "Draft",
       "scheduled": "Scheduled",
       "sending": "Sending",
@@ -1207,6 +1208,10 @@
       "unknown": "Unknown"
     },
     "detail": {
+      "scheduledFor": "Scheduled for {date}",
+      "cancelSchedule": "Cancel schedule",
+      "cancelScheduleDone": "Schedule cancelled. Nothing was sent.",
+      "cancelScheduleFailed": "Could not cancel: the broadcast has already started.",
       "backToBroadcasts": "Back to Broadcasts",
       "notFound": "Broadcast not found",
       "template": "Template: {name}",
@@ -1352,6 +1357,14 @@
         }
       },
       "scheduleSend": {
+        "whenLabel": "When to send",
+        "optionNow": "Now",
+        "optionLater": "Schedule",
+        "laterHint": "In your local time. Sending starts within a few minutes of the chosen time.",
+        "tooSoon": "Pick a time at least 5 minutes ahead.",
+        "schedule": "Schedule broadcast",
+        "confirmScheduleTitle": "Schedule this broadcast?",
+        "confirmScheduleAt": "Sends on {date}. Anyone who opts out before then won't receive it.",
         "title": "Review & Send",
         "subtitle": "Give your broadcast a name and confirm sending.",
         "broadcastName": "Broadcast Name",

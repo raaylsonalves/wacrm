@@ -1,5 +1,7 @@
 # Spec: anti-banimento no canal WAHA (throttle + opt-out no envio)
 
+**Status: implemented.** Migration 064 (`claim_waha_send_slot`) + `lib/whatsapp/waha-throttle.ts`, claimed by both WAHA send paths (`send-message.ts`, `broadcast-core.ts`); manual send refuses `opted_out_at` contacts (`send-message.ts`, code `contact_opted_out`).
+
 > Reescrita — a versão anterior desta spec propunha detecção de opt-out
 > como se não existisse. Ela já existe (migration 053,
 > `src/lib/contacts/opt-out.ts`, wireada no webhook WAHA, nas

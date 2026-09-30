@@ -505,7 +505,8 @@ export interface Deal {
 }
 
 export type BroadcastStatus =
-  'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
+  'draft' | 'scheduled' | 'sending' | 'sent' | 'failed'
+  | 'cancelled';
 export type RecipientStatus =
   'pending' | 'sent' | 'delivered' | 'read' | 'replied' | 'failed';
 
