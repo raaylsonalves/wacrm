@@ -12,7 +12,8 @@ import {
   type WaIdentity,
 } from '@/lib/whatsapp/wa-identity';
 import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe';
-import { isOptOutMessage } from '@/lib/contacts/opt-out';
+import { isOptOutMessage } from '@/lib/contacts/opt-out'
+import { confirmOptOut } from '@/lib/contacts/opt-out-confirm';
 import { reopenClosedConversation } from '@/lib/conversations/reopen';
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature';
 import { runAutomationsForTrigger } from '@/lib/automations/engine';
@@ -1021,6 +1022,15 @@ async function processMessage(
         if (error)
           console.error('[webhook] failed to flag contact opt-out:', error);
       });
+    // Confirm it to the customer whatever the AI's state (migration 101):
+    // this used to ride the AI handoff notice only, so a paused AI meant
+    // no confirmation. Claimed once per opt-out; never throws.
+    await confirmOptOut(supabaseAdmin(), {
+      accountId,
+      contactId: contactRecord.id,
+      conversationId: conversation.id,
+      userId: configOwnerUserId,
+    });
   }
 
   const automationTriggers: (

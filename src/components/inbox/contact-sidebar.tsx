@@ -25,6 +25,7 @@ import { dateFnsLocale } from "@/lib/date-fns-locale";
 import { contactHandle } from "@/lib/whatsapp/wa-identity";
 import { ConversationNotes } from "./conversation-notes";
 import { ConversationSummaryCard } from "./conversation-summary";
+import { OptOutNotice } from "./opt-out-notice";
 
 interface ContactSidebarProps {
   contact: Contact | null;
@@ -252,6 +253,11 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
             {contact.company && (
               <p className="text-xs text-muted-foreground">{contact.company}</p>
             )}
+            <OptOutNotice
+              key={contact.id}
+              contactId={contact.id}
+              optedOutAt={contact.opted_out_at}
+            />
           </div>
 
           {/* Phone */}

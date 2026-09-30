@@ -524,6 +524,15 @@
       "noMessages": "요약할 메시지가 아직 없습니다.",
       "failed": "요약을 생성할 수 없습니다."
     },
+    "optOut": {
+      "title": "메시지 수신 거부",
+      "chip": "발송 안 함",
+      "body": "Opted out {when}. Broadcasts, automations and follow-ups skip this contact. Replying when they write is still fine.",
+      "reactivate": "발송 다시 켜기",
+      "confirm": "Re-enable sending to this contact? Only do it if the customer asked to receive messages again.",
+      "reactivated": "Sending re-enabled.",
+      "failed": "Could not re-enable."
+    },
     "sidebar": {
       "contactInfo": "연락처 정보",
       "tags": "태그",

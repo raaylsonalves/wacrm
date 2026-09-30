@@ -715,6 +715,9 @@ BEGIN
      OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'message_templates' AND column_name = 'components') THEN
     RAISE EXCEPTION 'template components / carousel_media missing — migration 100 did not apply';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'contacts' AND column_name = 'opt_out_confirmed_at') THEN
+    RAISE EXCEPTION 'contacts.opt_out_confirmed_at missing — migration 101 did not apply';
+  END IF;
   IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
     RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
   END IF;

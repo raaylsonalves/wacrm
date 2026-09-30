@@ -524,6 +524,15 @@
       "noMessages": "Ainda não há mensagens para resumir.",
       "failed": "Não foi possível gerar o resumo."
     },
+    "optOut": {
+      "title": "Não recebe mensagens",
+      "chip": "Sem envios",
+      "body": "Pediu para sair {when}. Disparos, automações e follow-ups pulam este contato. Responder quando ele escrever continua liberado.",
+      "reactivate": "Reativar envios",
+      "confirm": "Reativar os envios para este contato? Faça isso só se o próprio cliente pediu para voltar a receber mensagens.",
+      "reactivated": "Envios reativados.",
+      "failed": "Não foi possível reativar."
+    },
     "sidebar": {
       "contactInfo": "Informações do contato",
       "tags": "Tags",

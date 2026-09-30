@@ -524,6 +524,15 @@
       "noMessages": "There are no messages to summarise yet.",
       "failed": "Could not generate the summary."
     },
+    "optOut": {
+      "title": "Doesn't receive messages",
+      "chip": "No sends",
+      "body": "Opted out {when}. Broadcasts, automations and follow-ups skip this contact. Replying when they write is still fine.",
+      "reactivate": "Re-enable sending",
+      "confirm": "Re-enable sending to this contact? Only do it if the customer asked to receive messages again.",
+      "reactivated": "Sending re-enabled.",
+      "failed": "Could not re-enable."
+    },
     "sidebar": {
       "contactInfo": "Contact info",
       "tags": "Tags",

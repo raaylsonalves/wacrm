@@ -36,6 +36,7 @@ import {
   loadHandoffNoticeDict,
 } from './handoff-notice'
 import { isOptOutMessage } from '@/lib/contacts/opt-out'
+import { confirmOptOut } from '@/lib/contacts/opt-out-confirm'
 import type { AiConfig } from './types'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
@@ -159,6 +160,9 @@ async function notifyHandoff(
   }
 }
 
+/** Pause before the single retry of a failed reply bubble. */
+const SEND_RETRY_DELAY_MS = 2000
+
 export interface NoticeContext {
   accountId: string
   contactId: string
@@ -213,6 +217,24 @@ async function notifyCustomerOfHandoff(
     const optOut = isOptOutMessage(meta.lastCustomerMessage ?? '')
     if (!optOut && contact?.opted_out_at) {
       await skip('opted_out')
+      return
+    }
+    // STOP: the webhook already confirmed it (or does it here, if it
+    // could not) — one shared claim, so the customer never gets two
+    // confirmations (migration 101).
+    if (optOut) {
+      const r = await confirmOptOut(db, {
+        accountId: ctx.accountId,
+        contactId: ctx.contactId,
+        conversationId,
+        userId: ctx.userId,
+      })
+      if (r === 'failed') return skip('send_failed')
+      if (r === 'no_text') return skip('no_notice_text')
+      await db
+        .from('conversations')
+        .update({ ai_handoff_customer_notified: true, ai_handoff_notice_skipped_reason: null })
+        .eq('id', conversationId)
       return
     }
 
@@ -1038,8 +1060,8 @@ export async function dispatchInboundToAiReply(
           await showTypingIndicator(db, accountId, inboundMessageId)
         }
       }
-      try {
-        await engineSendText({
+      const sendBubble = () =>
+        engineSendText({
           accountId,
           userId: configOwnerUserId,
           conversationId,
@@ -1047,6 +1069,17 @@ export async function dispatchInboundToAiReply(
           text: segments[i],
           aiGenerated: true,
         })
+      try {
+        try {
+          await sendBubble()
+        } catch (firstErr) {
+          // One retry before giving the thread to a person: a single
+          // transient refusal from Meta (seen live: #131005 once, then the
+          // next sends fine) shouldn't pause the AI and drop the reply.
+          console.warn(`${tag} bubble ${i + 1} failed, retrying once:`, firstErr)
+          await new Promise((resolve) => setTimeout(resolve, SEND_RETRY_DELAY_MS))
+          await sendBubble()
+        }
       } catch (sendErr) {
         // The reply was generated, paid for and its slot claimed, but Meta
         // refused it. Letting this fall to the outer catch left the

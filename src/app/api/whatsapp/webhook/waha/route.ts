@@ -23,6 +23,7 @@ import { fromWahaChatId } from '@/lib/whatsapp/waha-api';
 import { verifyWahaWebhookSignature } from '@/lib/whatsapp/waha-webhook-signature';
 import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe';
 import { isOptOutMessage } from '@/lib/contacts/opt-out';
+import { confirmOptOut } from '@/lib/contacts/opt-out-confirm';
 import { reopenClosedConversation } from '@/lib/conversations/reopen';
 import { runAutomationsForTrigger } from '@/lib/automations/engine';
 import { dispatchInboundToFlows } from '@/lib/flows/engine';
@@ -239,6 +240,14 @@ async function handleMessage(
       .eq('id', contact.id)
       .eq('account_id', accountId)
       .is('opted_out_at', null);
+    // Confirmed whatever the AI's state (migration 101) — same as the
+    // Cloud API webhook.
+    await confirmOptOut(db, {
+      accountId,
+      contactId: contact.id,
+      conversationId: conversation.id,
+      userId: ownerUserId,
+    });
   }
 
   const flowResult = await dispatchInboundToFlows({

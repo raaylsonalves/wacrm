@@ -51,6 +51,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "./message-bubble";
 import { DealStageChip } from "./deal-stage-chip";
 import { CaseChip } from "./case-chip";
+import { OptOutNotice } from "./opt-out-notice";
 import { findMatches } from "@/lib/inbox/thread-search";
 import { TransferDialog } from "./transfer-dialog";
 import { startsRun, unseenCount } from "@/lib/inbox/bubble-runs";
@@ -1160,6 +1161,14 @@ export function MessageThread({
             <div className="flex min-w-0 items-center gap-1.5">
               <DealStageChip contactId={contact?.id} />
               <CaseChip conversationId={conversation?.id} />
+              {contact?.id && (
+                <OptOutNotice
+                  key={contact.id}
+                  contactId={contact.id}
+                  optedOutAt={contact.opted_out_at}
+                  variant="chip"
+                />
+              )}
               <p className="truncate text-xs text-muted-foreground">
                 {contactHandle(contact)}
               </p>

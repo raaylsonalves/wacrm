@@ -51,6 +51,23 @@ vi.mock('./context', () => ({
   AUDIO_MARK: '[áudio transcrito]',
 }))
 vi.mock('./notice-text', () => ({ loadNoticeText: h.loadNoticeText }))
+// The STOP confirmation (migration 101) sends through the same engine;
+// its DB claim is covered where it lives, not in this fake.
+vi.mock('@/lib/contacts/opt-out-confirm', async () => {
+  const notice = await vi.importActual<typeof import('./handoff-notice')>('./handoff-notice')
+  return {
+    confirmOptOut: async (_db: unknown, a: { conversationId: string }) => {
+      const text = notice.handoffNoticeText({
+        optOut: true,
+        teamOnline: false,
+        leadKey: a.conversationId,
+        dict: await notice.loadHandoffNoticeDict(),
+      })
+      await h.engineSendText({ text })
+      return 'sent'
+    },
+  }
+})
 vi.mock('./burst', () => ({ waitForQuietPeriod: h.waitForQuietPeriod }))
 vi.mock('@/lib/cases/store', () => ({ openCase: h.openCase }))
 vi.mock('./tools/cases', () => ({
@@ -847,17 +864,32 @@ describe('dispatchInboundToAiReply — long replies and failed sends', () => {
 
   it('hands off — instead of staying silent — when Meta refuses the send', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const refused = new Error('Param text.body must be at most 4096 characters long.')
     h.engineSendText
-      .mockRejectedValueOnce(new Error('Param text.body must be at most 4096 characters long.'))
+      .mockRejectedValueOnce(refused) // the bubble
+      .mockRejectedValueOnce(refused) // its one retry
       .mockResolvedValue({ whatsapp_message_id: 'm-notice' })
     await dispatchInboundToAiReply(ARGS)
     expect(h.state.updatePayload).toMatchObject({
       ai_autoreply_disabled: true,
       ai_handoff_reason: 'system_error',
     })
-    // second call is the customer notice
-    expect(h.engineSendText).toHaveBeenCalledTimes(2)
+    // bubble, retry, then the customer notice
+    expect(h.engineSendText).toHaveBeenCalledTimes(3)
     errorSpy.mockRestore()
+    warnSpy.mockRestore()
+  })
+
+  it('retries a bubble once and keeps the AI on when the retry goes through', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    h.engineSendText
+      .mockRejectedValueOnce(new Error('(#131005) Access denied'))
+      .mockResolvedValue({ whatsapp_message_id: 'm-ok' })
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).toHaveBeenCalledTimes(2)
+    expect(h.state.updatePayload?.ai_autoreply_disabled).not.toBe(true)
+    warnSpy.mockRestore()
   })
 })
 
