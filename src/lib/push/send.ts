@@ -21,6 +21,11 @@ import {
   type NotificationLabels,
 } from '@/lib/notifications/browser-notify';
 import { accountNotificationIcon } from '@/lib/branding/pwa-branding';
+import {
+  notifyUsers,
+  pushEnabledUsers,
+  teamForChannel,
+} from '@/lib/notifications/notify';
 
 export interface PushPayload {
   title: string;
@@ -210,11 +215,10 @@ export async function pushInboundMessage(
 ): Promise<void> {
   try {
     if (message.sender_type !== 'customer') return;
-    if (!getVapidConfig()) return;
 
     const { data: conv } = await db
       .from('conversations')
-      .select('assigned_agent_id, contact:contacts(name, wa_username, phone)')
+      .select('assigned_agent_id, whatsapp_channel_id, contact_id, contact:contacts(name, wa_username, phone)')
       .eq('id', message.conversation_id)
       .eq('account_id', accountId)
       .maybeSingle();
@@ -230,27 +234,56 @@ export async function pushInboundMessage(
       | null
       | undefined;
 
+    const contactName = pickContactDisplayName(contact);
     const { title, body } = buildNotificationContent(
       message,
-      pickContactDisplayName(contact),
+      contactName,
       await loadLabels()
     );
+    const c = conv as {
+      assigned_agent_id?: string | null;
+      whatsapp_channel_id?: string | null;
+      contact_id?: string | null;
+    };
 
-    await sendPushToAccount(
-      db,
-      accountId,
-      {
-        title,
-        body,
+    // An owned conversation: the owner gets an in-app row (one per
+    // conversation while unread — "Ana sent 3 messages") and, per their
+    // preference, the push.
+    if (c.assigned_agent_id) {
+      await notifyUsers(db, {
+        accountId,
+        userIds: [c.assigned_agent_id],
+        type: 'customer_replied',
         conversationId: message.conversation_id,
-        url: conversationHref(message.conversation_id),
-        icon: await accountNotificationIcon(accountId),
-      },
-      {
-        onlyUserId: (conv as { assigned_agent_id?: string | null })
-          .assigned_agent_id,
-      }
-    );
+        contactId: c.contact_id ?? null,
+        contactName,
+        body,
+        link: conversationHref(message.conversation_id),
+        groupKey: `reply:${message.conversation_id}`,
+      });
+      return;
+    }
+
+    // Nobody owns it: push only (the inbox list already shows it), to the
+    // channel's team members who keep this push on.
+    if (!getVapidConfig()) return;
+    const team = await teamForChannel(db, accountId, c.whatsapp_channel_id ?? null);
+    const pushTo = await pushEnabledUsers(db, team, 'customer_replied');
+    const icon = await accountNotificationIcon(accountId);
+    for (const user of pushTo) {
+      await sendPushToAccount(
+        db,
+        accountId,
+        {
+          title,
+          body,
+          conversationId: message.conversation_id,
+          url: conversationHref(message.conversation_id),
+          icon,
+        },
+        { onlyUserId: user }
+      );
+    }
   } catch (err) {
     console.error(
       '[push] pushInboundMessage failed:',

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from './admin-client'
+import { adminsFor, notifyUsers, teamForConversation } from '@/lib/notifications/notify'
 import { loadAiConfig } from './config'
 import { loadActiveRouterForChannel, resolveAgentViaRouter } from './router'
 import { buildConversationContext, AUDIO_MARK } from './context'
@@ -106,11 +107,56 @@ export async function handOffToHuman(
   }
   await db.from('conversations').update(update).eq('id', conversationId)
 
+  // With nobody assigned, the assignment trigger fires no alert — tell the
+  // team the AI stopped. A provider outage also pages the admins, whose
+  // key / billing it usually is. Grouped, so an outage is one row.
+  await notifyHandoff(db, conversationId, reason, notice, !!(currentAssignedAgentId || update.assigned_agent_id))
+
   // Order matters: the handoff state is written FIRST and the notice is
   // best-effort after it. A failed send must never leave the
   // conversation half-handed-off — fail closed on the action, open on
   // the information (recorded on the row for the banner).
   await notifyCustomerOfHandoff(db, conversationId, currentAssignedAgentId, meta, notice)
+}
+
+async function notifyHandoff(
+  db: ReturnType<typeof supabaseAdmin>,
+  conversationId: string,
+  reason: HandoffReason,
+  notice: NoticeContext,
+  assigned: boolean,
+): Promise<void> {
+  try {
+    if (!assigned) {
+      const { data: contact } = await db
+        .from('contacts')
+        .select('name, phone')
+        .eq('id', notice.contactId)
+        .maybeSingle()
+      await notifyUsers(db, {
+        accountId: notice.accountId,
+        userIds: await teamForConversation(db, notice.accountId, conversationId),
+        type: 'handoff_waiting',
+        conversationId,
+        contactId: notice.contactId,
+        contactName: (contact?.name as string | null) || (contact?.phone as string | null) || null,
+        data: { handoff_reason: reason },
+        link: `/inbox?c=${conversationId}`,
+        groupKey: `handoff:${conversationId}`,
+      })
+    }
+    if (reason === 'provider_failure') {
+      await notifyUsers(db, {
+        accountId: notice.accountId,
+        userIds: await adminsFor(db, notice.accountId),
+        type: 'ai_provider_failed',
+        link: '/agents',
+        groupKey: `ai_fail:${notice.accountId}`,
+      })
+    }
+  } catch (err) {
+    console.warn('[auto-reply] hand-off notification failed:', err)
+  }
 }
 
 export interface NoticeContext {

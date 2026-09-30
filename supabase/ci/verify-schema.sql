@@ -658,6 +658,15 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'ai_usage_log.speech_chars is missing — migration 080 did not apply';
   END IF;
+  IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
+    RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'group_key'
+  ) OR to_regprocedure('public.upsert_notification(uuid,uuid,text,uuid,uuid,uuid,text,text,text,text,jsonb,text,text)') IS NULL THEN
+    RAISE EXCEPTION 'notification grouping missing — migration 086 did not apply';
+  END IF;
   IF to_regclass('public.human_cases') IS NULL OR to_regclass('public.human_case_events') IS NULL THEN
     RAISE EXCEPTION 'human_cases tables are missing — migration 085 did not apply';
   END IF;

@@ -2821,18 +2821,112 @@
   },
   "Notifications": {
     "title": "Notificaciones",
-    "description": "Las conversaciones que otros compañeros te asignan aparecen aquí.",
+    "description": "Lo que necesita tu atención: conversaciones, ventas y avisos del sistema.",
     "markAllRead": "Marcar todas como leídas",
-    "markReadFailed": "Error al marcar la notificación como leída",
-    "markAllFailed": "Error al marcar todas como leídas",
+    "markReadFailed": "No se pudo marcar como leída",
+    "markAllFailed": "No se pudieron marcar todas como leídas",
     "retry": "Reintentar",
     "emptyTitle": "Aún no hay notificaciones",
-    "emptyDesc": "Verás una alerta aquí cuando alguien te asigne una conversación.",
-    "unread": "Sin leer",
-    "assignedTitle": "Nueva conversación asignada",
-    "assignedBody": "{actor} te asignó una conversación con {contact}",
+    "emptyDesc": "Cuando un cliente responda, te pasen una conversación o algo necesite atención, aparecerá aquí.",
+    "emptyFiltered": "Nada por aquí.",
+    "unread": "No leída",
     "someone": "Alguien",
-    "aContact": "un contacto"
+    "aContact": "un contacto",
+    "fallbackTitle": "Notificación",
+    "preferences": "Preferencias",
+    "preferencesDesc": "Elige qué aparece aquí y qué llega al celular.",
+    "inApp": "En pantalla",
+    "push": "Celular",
+    "saveFailed": "No se pudo guardar la preferencia.",
+    "tabs": {
+      "all": "Todas",
+      "unread": "No leídas",
+      "conversations": "Conversaciones",
+      "sales": "Ventas y agenda",
+      "system": "Sistema"
+    },
+    "days": {
+      "today": "Hoy",
+      "yesterday": "Ayer",
+      "earlier": "Anteriores"
+    },
+    "types": {
+      "conversation_assigned": "Conversation handed to me",
+      "customer_replied": "Customer replied",
+      "handoff_waiting": "AI stopped and nobody took it",
+      "sla_breached": "Response target missed",
+      "new_unassigned": "New conversation without an owner",
+      "case_opened": "Case opened for the team",
+      "case_lead_replied": "Customer replied to a case",
+      "case_relay_failed": "Customer not told about a case",
+      "appointment_reminder": "Appointment in 15 minutes",
+      "deal_won": "Deal won",
+      "deal_lost": "Deal lost",
+      "deal_stage_changed": "Deal changed stage",
+      "channel_disconnected": "WhatsApp disconnected",
+      "ai_provider_failed": "AI provider failure",
+      "template_status": "Template approved or rejected",
+      "broadcast_finished": "Broadcast finished"
+    },
+    "assigned": {
+      "byPerson": "{actor} te pasó la conversación con {contact}",
+      "byAi": "La IA te transfirió a {contact}",
+      "byRule": "Nueva conversación con {contact} asignada a ti"
+    },
+    "replied": {
+      "one": "{contact} respondió",
+      "many": "{contact} envió {count} mensajes"
+    },
+    "handoffWaiting": {
+      "title": "{contact} está esperando a una persona"
+    },
+    "sla": {
+      "title": "{contact} lleva {minutes} min sin respuesta"
+    },
+    "newUnassigned": {
+      "title": "Nueva conversación: {contact}"
+    },
+    "appointment": {
+      "title": "{title} a las {time}",
+      "with": "Con {contact}"
+    },
+    "deal": {
+      "won": "Negocio ganado: {deal}",
+      "lost": "Negocio perdido: {deal}",
+      "moved": "{deal} cambió de etapa",
+      "by": "por {actor}"
+    },
+    "channel": {
+      "title": "WhatsApp desconectado: {channel}",
+      "body": "Reconecta el número para seguir recibiendo mensajes."
+    },
+    "aiFailed": {
+      "title": "La IA no pudo responder",
+      "body": "{count, plural, one {El proveedor de IA falló 1 vez.} other {El proveedor de IA falló # veces.}} Revisa la clave y el saldo en Agentes de IA."
+    },
+    "template": {
+      "approved": "Template {template} approved",
+      "rejected": "Template {template} rejected",
+      "paused": "Template {template} paused by Meta",
+      "disabled": "Template {template} disabled by Meta",
+      "changed": "Template {template} changed status"
+    },
+    "broadcast": {
+      "done": "Envío masivo completado: {broadcast}",
+      "failed": "Envío masivo con error: {broadcast}",
+      "body": "{sent} de {total} enviados · {failed} fallidos"
+    },
+    "reasons": {
+      "model_requested": "The AI asked for help",
+      "reply_cap": "AI reply limit reached",
+      "provider_failure": "AI provider failure",
+      "empty_reply": "The AI produced no reply",
+      "rate_limited": "Provider rate limit",
+      "system_error": "System error",
+      "customer_requested_human": "The customer asked for a person",
+      "audio_unintelligible": "Audio the AI couldn't understand",
+      "case_escalated": "Taken over from a case"
+    }
   },
   "Agents": {
     "title": "Agentes de IA",

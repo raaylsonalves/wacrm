@@ -5,7 +5,7 @@
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { sendPushToAccount } from '@/lib/push/send'
+import { notifyUsers } from '@/lib/notifications/notify'
 import {
   MAX_OPEN_PER_CONVERSATION,
   MAX_OPENED_PER_HOUR,
@@ -89,25 +89,16 @@ export async function notifyTeam(
   },
 ): Promise<void> {
   try {
-    const users = await recipientsFor(db, args.accountId, args.conversationId)
-    if (users.length > 0) {
-      await db.from('notifications').insert(
-        users.map((u) => ({
-          account_id: args.accountId,
-          user_id: u,
-          type: args.type,
-          conversation_id: args.conversationId,
-          contact_id: args.contactId,
-          title: clip(args.title, 200),
-          body: clip(args.body, 500),
-        })),
-      )
-    }
-    await sendPushToAccount(db, args.accountId, {
-      title: clip(args.title, 120),
-      body: clip(args.body, 200),
+    // notifyUsers applies each person's in-app / push preference.
+    await notifyUsers(db, {
+      accountId: args.accountId,
+      userIds: await recipientsFor(db, args.accountId, args.conversationId),
+      type: args.type,
       conversationId: args.conversationId,
-      url: '/cases',
+      contactId: args.contactId,
+      title: clip(args.title, 200),
+      body: clip(args.body, 500),
+      link: '/cases',
     })
   } catch (err) {
     console.warn('[cases] notify failed:', err)

@@ -7,6 +7,8 @@ import { runFollowupSweep } from '@/lib/automations/followup-sweep'
 import { runProspectingTick } from '@/lib/prospecting/tick'
 import { syncContactAvatars } from '@/lib/contacts/avatar-sync'
 import { retryPendingRelays } from '@/lib/cases/relay'
+import { dispatchPendingPushes } from '@/lib/notifications/notify'
+import { sweepAppointmentReminders, sweepSlaBreaches } from '@/lib/notifications/sweeps'
 
 /**
  * Drain due `automation_pending_executions` rows. Meant to be hit
@@ -131,5 +133,13 @@ export async function GET(request: Request) {
     return null
   })
 
-  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays })
+  // Notifications: time-based alerts, then push whatever DB triggers
+  // wrote (they can't reach the push service themselves). Each never throws.
+  const notifications = {
+    sla: await sweepSlaBreaches(supabaseAdmin()),
+    reminders: await sweepAppointmentReminders(supabaseAdmin()),
+    push: await dispatchPendingPushes(supabaseAdmin()),
+  }
+
+  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays, notifications })
 }

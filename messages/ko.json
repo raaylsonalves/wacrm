@@ -2833,18 +2833,112 @@
   },
   "Notifications": {
     "title": "알림",
-    "description": "다른 팀원이 나에게 배정한 대화가 여기에 표시됩니다.",
+    "description": "주의가 필요한 항목: 대화, 영업, 시스템 알림.",
     "markAllRead": "모두 읽음으로 표시",
-    "markReadFailed": "알림을 읽음으로 표시하지 못했습니다",
-    "markAllFailed": "모두 읽음으로 표시하지 못했습니다",
-    "retry": "다시 시도",
+    "markReadFailed": "Failed to mark notification as read",
+    "markAllFailed": "Failed to mark all as read",
+    "retry": "Retry",
     "emptyTitle": "아직 알림이 없습니다",
-    "emptyDesc": "누군가 대화를 배정하면 여기에 알림이 표시됩니다.",
+    "emptyDesc": "When a customer replies, a conversation is handed to you or something needs attention, it shows up here.",
+    "emptyFiltered": "여기에는 아무것도 없습니다.",
     "unread": "읽지 않음",
-    "assignedTitle": "새 대화가 배정되었습니다",
-    "assignedBody": "{actor}님이 {contact}님과의 대화를 배정했습니다",
     "someone": "누군가",
-    "aContact": "연락처"
+    "aContact": "연락처",
+    "fallbackTitle": "Notification",
+    "preferences": "환경설정",
+    "preferencesDesc": "Choose what shows up here and what reaches your phone as a push.",
+    "inApp": "앱",
+    "push": "휴대폰",
+    "saveFailed": "Could not save the preference.",
+    "tabs": {
+      "all": "전체",
+      "unread": "읽지 않음",
+      "conversations": "대화",
+      "sales": "영업·일정",
+      "system": "시스템"
+    },
+    "days": {
+      "today": "오늘",
+      "yesterday": "어제",
+      "earlier": "이전"
+    },
+    "types": {
+      "conversation_assigned": "Conversation handed to me",
+      "customer_replied": "Customer replied",
+      "handoff_waiting": "AI stopped and nobody took it",
+      "sla_breached": "Response target missed",
+      "new_unassigned": "New conversation without an owner",
+      "case_opened": "Case opened for the team",
+      "case_lead_replied": "Customer replied to a case",
+      "case_relay_failed": "Customer not told about a case",
+      "appointment_reminder": "Appointment in 15 minutes",
+      "deal_won": "Deal won",
+      "deal_lost": "Deal lost",
+      "deal_stage_changed": "Deal changed stage",
+      "channel_disconnected": "WhatsApp disconnected",
+      "ai_provider_failed": "AI provider failure",
+      "template_status": "Template approved or rejected",
+      "broadcast_finished": "Broadcast finished"
+    },
+    "assigned": {
+      "byPerson": "{actor}님이 {contact} 대화를 넘겼습니다",
+      "byAi": "AI가 {contact}님을 넘겼습니다",
+      "byRule": "{contact}님과의 새 대화가 배정되었습니다"
+    },
+    "replied": {
+      "one": "{contact}님이 답장했습니다",
+      "many": "{contact}님이 메시지 {count}개를 보냈습니다"
+    },
+    "handoffWaiting": {
+      "title": "{contact} is waiting for a person"
+    },
+    "sla": {
+      "title": "{contact} has waited {minutes} min for a reply"
+    },
+    "newUnassigned": {
+      "title": "New conversation: {contact}"
+    },
+    "appointment": {
+      "title": "{title} at {time}",
+      "with": "With {contact}"
+    },
+    "deal": {
+      "won": "Deal won: {deal}",
+      "lost": "Deal lost: {deal}",
+      "moved": "{deal} changed stage",
+      "by": "by {actor}"
+    },
+    "channel": {
+      "title": "WhatsApp disconnected: {channel}",
+      "body": "Reconnect the number to keep receiving messages."
+    },
+    "aiFailed": {
+      "title": "The AI could not reply",
+      "body": "{count, plural, one {The AI provider failed once.} other {The AI provider failed # times.}} Check the key and billing in AI Agents."
+    },
+    "template": {
+      "approved": "Template {template} approved",
+      "rejected": "Template {template} rejected",
+      "paused": "Template {template} paused by Meta",
+      "disabled": "Template {template} disabled by Meta",
+      "changed": "Template {template} changed status"
+    },
+    "broadcast": {
+      "done": "Broadcast finished: {broadcast}",
+      "failed": "Broadcast failed: {broadcast}",
+      "body": "{sent} of {total} sent · {failed} failed"
+    },
+    "reasons": {
+      "model_requested": "The AI asked for help",
+      "reply_cap": "AI reply limit reached",
+      "provider_failure": "AI provider failure",
+      "empty_reply": "The AI produced no reply",
+      "rate_limited": "Provider rate limit",
+      "system_error": "System error",
+      "customer_requested_human": "The customer asked for a person",
+      "audio_unintelligible": "Audio the AI couldn't understand",
+      "case_escalated": "Taken over from a case"
+    }
   },
   "Agents": {
     "title": "AI 에이전트",

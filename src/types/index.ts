@@ -252,7 +252,23 @@ export interface Conversation {
 // Notifications (migration 027)
 // ============================================================
 
-export type NotificationType = 'conversation_assigned';
+export type NotificationType =
+  | 'conversation_assigned'
+  | 'customer_replied'
+  | 'handoff_waiting'
+  | 'sla_breached'
+  | 'new_unassigned'
+  | 'case_opened'
+  | 'case_lead_replied'
+  | 'case_relay_failed'
+  | 'appointment_reminder'
+  | 'deal_won'
+  | 'deal_lost'
+  | 'deal_stage_changed'
+  | 'channel_disconnected'
+  | 'ai_provider_failed'
+  | 'template_status'
+  | 'broadcast_finished';
 
 export interface Notification {
   id: string;
@@ -273,6 +289,13 @@ export interface Notification {
   contact_name?: string;
   title?: string;
   body?: string;
+  /** Structured facts the sentence is built from (migration 086). */
+  data?: Record<string, unknown> | null;
+  /** Where a click goes. */
+  link?: string | null;
+  /** Events folded into this unread row ("3 messages"). */
+  count?: number;
+  group_key?: string | null;
   read_at?: string;
   created_at: string;
 }
