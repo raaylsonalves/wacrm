@@ -16,10 +16,10 @@ describe('unsupportedTemplateReason', () => {
     expect(unsupportedTemplateReason(undefined)).toBeNull();
   });
 
-  it('flags carousel, limited-time offer, catalog buttons and location headers', () => {
+  it('flags limited-time offer, catalog buttons and location headers; carousels are sendable', () => {
     expect(
       unsupportedTemplateReason([{ type: 'BODY' }, { type: 'CAROUSEL' }])
-    ).toBe('carousel');
+    ).toBeNull();
     expect(unsupportedTemplateReason([{ type: 'LIMITED_TIME_OFFER' }])).toBe(
       'limited_time_offer'
     );

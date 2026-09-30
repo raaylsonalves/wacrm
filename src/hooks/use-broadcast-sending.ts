@@ -48,6 +48,8 @@ interface BroadcastPayload {
    * falls back to the template's stored URL only when this is empty.
    */
   headerMediaUrl?: string;
+  /** Carousel templates: media link per card, by index. */
+  carouselMedia?: string[];
   /**
    * ISO instant to send at (specs/scheduled-broadcasts.md). Set → the
    * broadcast and its recipients are created now, status 'scheduled',
@@ -515,8 +517,13 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         headerType === 'video' ||
         headerType === 'document';
       const headerMediaUrl = payload.headerMediaUrl?.trim();
+      const carouselMedia = payload.carouselMedia?.map((m) => m.trim());
       const messageParams =
-        isMediaHeader && headerMediaUrl ? { headerMediaUrl } : undefined;
+        isMediaHeader && headerMediaUrl
+          ? { headerMediaUrl }
+          : carouselMedia?.length
+            ? { carouselMedia }
+            : undefined;
 
       for (let i = 0; i < recipients.length; i += SEND_BATCH_SIZE) {
         const batch = recipients.slice(i, i + SEND_BATCH_SIZE);

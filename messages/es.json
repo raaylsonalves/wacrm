@@ -1495,6 +1495,16 @@
         "calculating": "Calculando…"
       },
       "personalize": {
+        "carousel": {
+          "title": "Tarjetas del carrusel ({count})",
+          "hint": "Each card needs an image or video on every send. It starts with the template's; change it if you like. It's saved on the template for the next sends.",
+          "card": "Tarjeta {n}",
+          "urlPlaceholder": "https://… (public media link)",
+          "upload": "Upload file",
+          "uploadFailed": "Could not upload the file.",
+          "missing": "This card has no media.",
+          "invalid": "Invalid link — use an https:// address."
+        },
         "title": "Personalizar variables",
         "subtitle": "Asigna las variables de la plantilla a campos del contacto o ingresa valores fijos.",
         "headerImage": "Imagen del encabezado",

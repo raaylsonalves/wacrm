@@ -32,6 +32,12 @@
 
 import type { MessageTemplate, TemplateButton } from '@/types';
 import { extractVariableIndices } from './template-validators';
+import {
+  buildCarouselComponent,
+  carouselCards,
+  resolveCarouselMedia,
+  type CarouselSendComponent,
+} from './template-carousel';
 
 export interface SendTimeParams {
   /** Values for body {{1}}, {{2}}, … indexed by variable position. */
@@ -49,6 +55,9 @@ export interface SendTimeParams {
    * override at send time.
    */
   buttonParams?: Record<number, string>;
+  /** Carousel templates: media link per card, overriding the template's
+   *  saved `carousel_media` (then Meta's sample) for this send. */
+  carouselMedia?: string[];
 }
 
 export type MetaSendComponent =
@@ -59,7 +68,8 @@ export type MetaSendComponent =
       sub_type: 'url' | 'quick_reply' | 'copy_code';
       index: string;
       parameters: MetaSendParameter[];
-    };
+    }
+  | CarouselSendComponent;
 
 type MetaSendParameter =
   | { type: 'text'; text: string }
@@ -225,6 +235,18 @@ export function buildSendComponents(
   if (header) out.push(header);
   const body = buildBodyComponent(template, params);
   if (body) out.push(body);
+  // Carousel: the cards come from the raw template (migration 100). A
+  // carousel template has no top-level buttons of its own.
+  const cards = carouselCards(template.components);
+  if (cards) {
+    out.push(
+      buildCarouselComponent(
+        cards,
+        resolveCarouselMedia(cards, template.carousel_media, params.carouselMedia),
+      ),
+    );
+    return out;
+  }
   if (template.buttons?.length) {
     template.buttons.forEach((btn, i) => {
       const override = params.buttonParams?.[i];

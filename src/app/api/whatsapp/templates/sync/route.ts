@@ -240,6 +240,9 @@ export async function POST() {
         // Formats the send path can't build (migration 099) — shown
         // disabled in the pickers instead of failing at Meta.
         unsupported_reason: unsupportedTemplateReason(t.components),
+        // The whole template as Meta sent it (migration 100) — the source
+        // for formats the flattened columns can't hold, like carousels.
+        components: t.components ?? null,
         updated_at: new Date().toISOString(),
       }
 

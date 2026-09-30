@@ -20,7 +20,7 @@ export function unsupportedTemplateReason(
 ): UnsupportedReason | null {
   for (const c of components ?? []) {
     const type = (c.type ?? '').toUpperCase();
-    if (type === 'CAROUSEL') return 'carousel';
+    // CAROUSEL is sendable since migration 100 (template-carousel.ts).
     if (type === 'LIMITED_TIME_OFFER') return 'limited_time_offer';
     if (type === 'HEADER' && (c.format ?? '').toUpperCase() === 'LOCATION') {
       return 'location_header';

@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowLeft, ArrowRight, Eye, ImageIcon, Loader2 } from 'lucide-react';
+import { carouselCards, resolveCarouselMedia } from '@/lib/whatsapp/template-carousel';
+import { CarouselCardsEditor, CarouselPreview, carouselMediaReady } from './carousel-cards';
 import { useTranslations } from 'next-intl';
 
 type VariableType = 'static' | 'field' | 'custom_field';
@@ -29,6 +31,9 @@ interface Step3Props {
   /** Media URL for an IMAGE/VIDEO/DOCUMENT header, when the template has one. */
   headerMediaUrl: string;
   onHeaderMediaUrlChange: (url: string) => void;
+  /** Carousel templates: media link per card (migration 100). */
+  carouselMedia: string[];
+  onCarouselMediaChange: (media: string[]) => void;
   onNext: () => void;
   onBack: () => void;
 }
@@ -73,6 +78,8 @@ export function Step3Personalize({
   onUpdate,
   headerMediaUrl,
   onHeaderMediaUrlChange,
+  carouselMedia,
+  onCarouselMediaChange,
   onNext,
   onBack,
 }: Step3Props) {
@@ -152,6 +159,17 @@ export function Step3Personalize({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaHeaderType, template.header_media_url]);
+
+  // Carousel templates (migration 100): one media link per card, seeded
+  // from the template's saved links (else Meta's approval samples).
+  const cards = useMemo(() => carouselCards(template.components), [template.components]);
+  useEffect(() => {
+    if (cards && carouselMedia.length === 0) {
+      onCarouselMediaChange(resolveCarouselMedia(cards, template.carousel_media));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards]);
+  const carouselBlocked = !!cards && !carouselMediaReady(cards, carouselMedia);
 
   const headerMediaError = useMemo<'missing' | 'invalid' | null>(() => {
     if (!mediaHeaderType) return null;
@@ -284,7 +302,11 @@ export function Step3Personalize({
         </div>
       )}
 
-      {placeholders.length === 0 && !mediaHeaderType ? (
+      {cards && (
+        <CarouselCardsEditor cards={cards} media={carouselMedia} onChange={onCarouselMediaChange} />
+      )}
+
+      {placeholders.length === 0 && !mediaHeaderType && !cards ? (
         <div className="rounded-xl border border-border bg-card/50 p-6 text-center">
           <p className="text-sm text-muted-foreground">
             {t('personalize.noPreview')}
@@ -414,11 +436,15 @@ export function Step3Personalize({
         {/* Same look as an outgoing bubble in the inbox — the old
             translucent-accent-on-accent text was unreadable in dark mode. */}
         <div className="chat-wallpaper rounded-lg p-3">
+          {cards ? (
+            <CarouselPreview text={previewText} cards={cards} media={carouselMedia} />
+          ) : (
           <div className="ml-auto max-w-[85%] rounded-lg bg-primary px-3 py-2 shadow-sm">
             <p className="whitespace-pre-wrap text-sm text-primary-foreground">
               {previewText}
             </p>
           </div>
+          )}
         </div>
       </div>
 
@@ -442,7 +468,7 @@ export function Step3Personalize({
         </Button>
         <Button
           onClick={onNext}
-          disabled={unmappedKeys.length > 0 || headerMediaError !== null}
+          disabled={unmappedKeys.length > 0 || headerMediaError !== null || carouselBlocked}
           className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {t('next')}

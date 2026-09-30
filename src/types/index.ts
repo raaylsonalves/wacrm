@@ -458,6 +458,11 @@ export interface MessageTemplate {
    *  yet (migration 099): carousel, limited_time_offer, catalog,
    *  location_header. */
   unsupported_reason?: string | null;
+  /** The template as Meta returned it on sync (migration 100). Formats the
+   *  flattened columns can't describe (CAROUSEL) are built from this. */
+  components?: unknown;
+  /** Media link per carousel card, by index (migration 100). */
+  carousel_media?: string[] | null;
   created_at: string;
 }
 

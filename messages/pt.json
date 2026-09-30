@@ -1495,6 +1495,16 @@
         "calculating": "Calculando…"
       },
       "personalize": {
+        "carousel": {
+          "title": "Cartões do carrossel ({count})",
+          "hint": "Cada cartão precisa de uma imagem ou vídeo em todo envio. Começa com as do template; troque se quiser. Fica salvo no template para os próximos envios.",
+          "card": "Cartão {n}",
+          "urlPlaceholder": "https://… (link público da mídia)",
+          "upload": "Enviar arquivo",
+          "uploadFailed": "Não foi possível enviar o arquivo.",
+          "missing": "Falta a mídia deste cartão.",
+          "invalid": "Link inválido — use um endereço https://."
+        },
         "title": "Personalizar variáveis",
         "subtitle": "Associe as variáveis do modelo a campos do contato ou informe valores fixos.",
         "headerImage": "Imagem do cabeçalho",

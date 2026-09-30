@@ -44,10 +44,21 @@ export default function NewBroadcastPage() {
     Record<string, { type: 'static' | 'field' | 'custom_field'; value: string }>
   >({});
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
+  const [carouselMedia, setCarouselMedia] = useState<string[]>([]);
   const [name, setName] = useState('');
 
   async function handleSend(scheduledAt?: string) {
     if (!template) return;
+
+    // Carousel: keep the card media on the template (migration 100) so a
+    // scheduled run, the next broadcast and automations reuse it. Best-
+    // effort — this send carries the links itself either way.
+    if (carouselMedia.length) {
+      await createClient()
+        .from('message_templates')
+        .update({ carousel_media: carouselMedia.map((m) => m.trim()) })
+        .eq('id', template.id);
+    }
 
     try {
       const broadcastId = await createAndSendBroadcast({
@@ -62,6 +73,7 @@ export default function NewBroadcastPage() {
         },
         variables,
         headerMediaUrl,
+        carouselMedia: carouselMedia.length ? carouselMedia : undefined,
         scheduledAt,
       });
       router.push(`/broadcasts/${broadcastId}`);
@@ -212,6 +224,8 @@ export default function NewBroadcastPage() {
               onUpdate={setVariables}
               headerMediaUrl={headerMediaUrl}
               onHeaderMediaUrlChange={setHeaderMediaUrl}
+              carouselMedia={carouselMedia}
+              onCarouselMediaChange={setCarouselMedia}
               onNext={() => setCurrentStep(3)}
               onBack={() => setCurrentStep(1)}
             />

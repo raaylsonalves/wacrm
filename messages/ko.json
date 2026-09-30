@@ -1495,6 +1495,16 @@
         "calculating": "계산 중…"
       },
       "personalize": {
+        "carousel": {
+          "title": "캐러셀 카드 ({count})",
+          "hint": "Each card needs an image or video on every send. It starts with the template's; change it if you like. It's saved on the template for the next sends.",
+          "card": "카드 {n}",
+          "urlPlaceholder": "https://… (public media link)",
+          "upload": "Upload file",
+          "uploadFailed": "Could not upload the file.",
+          "missing": "This card has no media.",
+          "invalid": "Invalid link — use an https:// address."
+        },
         "title": "변수 개인화",
         "subtitle": "템플릿 변수를 연락처 필드에 매핑하거나 고정 값을 입력하세요.",
         "headerImage": "헤더 이미지",
