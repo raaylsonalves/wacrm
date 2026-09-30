@@ -25,6 +25,8 @@ import {
   Clock,
   ArrowLeft,
   RefreshCw,
+  Search,
+  X,
   PanelRightOpen,
   PanelRightClose,
 } from "lucide-react";
@@ -48,6 +50,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "./message-bubble";
 import { DealStageChip } from "./deal-stage-chip";
 import { CaseChip } from "./case-chip";
+import { findMatches } from "@/lib/inbox/thread-search";
 import { TransferDialog } from "./transfer-dialog";
 import { startsRun, unseenCount } from "@/lib/inbox/bubble-runs";
 import { MessageActions } from "./message-actions";
@@ -187,6 +190,28 @@ export function MessageThread({
   const { getPresence, getRow, now } = usePresence();
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // In-conversation search (header magnifier): matches among the loaded
+  // messages, stepped with the arrows; the current one gets a ring.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchIdx, setSearchIdx] = useState(0);
+  const matchIds = useMemo(
+    () => (searchOpen ? findMatches(messages, searchQuery) : []),
+    [searchOpen, messages, searchQuery],
+  );
+  useEffect(() => {
+    const id = matchIds[searchIdx];
+    if (id) {
+      document
+        .getElementById(`msg-${id}`)
+        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [matchIds, searchIdx]);
+  // A different conversation starts with the search closed.
+  useEffect(() => {
+    setSearchOpen(false);
+    setSearchQuery("");
+  }, [conversation?.id]);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
@@ -1136,6 +1161,23 @@ export function MessageThread({
             </button>
           )}
 
+          <button
+            type="button"
+            onClick={() => {
+              setSearchOpen((o) => !o);
+              setSearchQuery("");
+            }}
+            aria-pressed={searchOpen}
+            aria-label={t("searchInChat")}
+            title={t("searchInChat")}
+            className={cn(
+              "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-muted hover:text-foreground",
+              searchOpen ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            <Search className="h-3.5 w-3.5" />
+          </button>
+
           {/* Manual refresh — forces a refetch of the messages + the
               conversation list (the parent bumps its resyncToken). Useful
               when realtime missed an event or the agent just wants to be
@@ -1256,6 +1298,66 @@ export function MessageThread({
         </div>
       </div>
 
+      {searchOpen && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-1.5">
+          <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <input
+            autoFocus
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSearchIdx(0);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setSearchOpen(false);
+              if (e.key === "Enter" && matchIds.length > 0) {
+                e.preventDefault();
+                setSearchIdx((i) =>
+                  (i + (e.shiftKey ? -1 : 1) + matchIds.length) % matchIds.length,
+                );
+              }
+            }}
+            placeholder={t("searchPlaceholder")}
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+            {searchQuery.trim().length < 2
+              ? ""
+              : matchIds.length === 0
+                ? t("searchNoResults")
+                : `${searchIdx + 1}/${matchIds.length}`}
+          </span>
+          <button
+            type="button"
+            disabled={matchIds.length === 0}
+            onClick={() =>
+              setSearchIdx((i) => (i - 1 + matchIds.length) % matchIds.length)
+            }
+            aria-label={t("searchPrev")}
+            className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-40"
+          >
+            <ChevronDown className="h-4 w-4 rotate-180" />
+          </button>
+          <button
+            type="button"
+            disabled={matchIds.length === 0}
+            onClick={() => setSearchIdx((i) => (i + 1) % matchIds.length)}
+            aria-label={t("searchNext")}
+            className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-40"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setSearchOpen(false)}
+            aria-label={t("searchClose")}
+            className="rounded p-1 text-muted-foreground hover:bg-muted"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Messages Area */}
       <div className="relative flex min-h-0 flex-1 flex-col">
       <div
@@ -1313,7 +1415,15 @@ export function MessageThread({
                       void postReaction(msg.id, next);
                     };
                     return (
-                      <div key={msg.id} className={i === 0 ? "" : runStart ? "mt-3" : "mt-0.5"}>
+                      <div
+                        key={msg.id}
+                        id={`msg-${msg.id}`}
+                        className={cn(
+                          i === 0 ? "" : runStart ? "mt-3" : "mt-0.5",
+                          searchOpen && matchIds[searchIdx] === msg.id &&
+                            "rounded-lg ring-2 ring-primary/60",
+                        )}
+                      >
                       <MessageActions
                         message={msg}
                         onReply={() => handleStartReply(msg)}
