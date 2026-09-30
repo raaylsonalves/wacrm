@@ -3,7 +3,9 @@ import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { sendTemplateMessage } from '@/lib/whatsapp/meta-api'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import type { SendTimeParams } from '@/lib/whatsapp/template-send-builder'
-import { resolveTemplateRow } from '@/lib/whatsapp/template-body'
+import { resolveTemplateRow, templateContentText } from '@/lib/whatsapp/template-body'
+import { recordBroadcastMessage } from '@/lib/whatsapp/broadcast-record'
+import { supabaseAdmin } from '@/lib/automations/admin-client'
 import {
   sanitizePhoneForMeta,
   isValidE164,
@@ -47,6 +49,8 @@ interface BroadcastResult {
  */
 interface NewRecipient {
   phone: string
+  /** Records the send in this contact's conversation when present. */
+  contactId?: string
   /** Body variable values, one per {{N}}. Legacy field. */
   params?: string[]
   /**
@@ -216,6 +220,18 @@ export async function POST(request: Request) {
           status: 'sent',
           whatsapp_message_id: sentMessageId,
         })
+        // Into the contact's conversation, so the reply has context
+        // (service role; the helper checks the contact is this account's).
+        if (recipient.contactId) {
+          await recordBroadcastMessage(supabaseAdmin(), {
+            accountId,
+            contactId: recipient.contactId,
+            channelId: null,
+            text: templateContentText(templateRow, recipient.params ?? []),
+            templateName: template_name,
+            waMessageId: sentMessageId,
+          })
+        }
         sentCount++
       } else {
         console.error(

@@ -158,7 +158,7 @@ export async function planBroadcastResume(
   const statuses = scopeStatuses(scope);
   const { data: rawRows, error: recError } = await db
     .from('broadcast_recipients')
-    .select('id, template_params, contact:contacts(phone)')
+    .select('id, contact_id, template_params, contact:contacts(phone)')
     .eq('broadcast_id', broadcastId)
     .in('status', statuses)
     // Oldest first, so repeated capped passes chew through the backlog
@@ -251,6 +251,7 @@ export async function planBroadcastResume(
 
   const plan: BroadcastPlan = {
     broadcastId,
+    accountId,
     templateName: broadcast.template_name,
     templateLanguage: resolvedTemplate.language,
     phoneNumberId,
@@ -260,6 +261,7 @@ export async function planBroadcastResume(
     channelPoolIds,
     planned: slice.map((row) => ({
       recipientRowId: row.id,
+      contactId: (row as { contact_id?: string | null }).contact_id ?? null,
       phone: sanitizePhoneForMeta(contactPhone(row) ?? ''),
       params: Array.isArray(row.template_params)
         ? row.template_params.filter((p): p is string => typeof p === 'string')

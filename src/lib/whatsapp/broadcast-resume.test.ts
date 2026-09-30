@@ -213,11 +213,13 @@ describe('planBroadcastResume', () => {
         recipientRowId: 'r1',
         phone: '15551234567',
         params: ['A123', 'Friday'],
+        contactId: null,
       },
       {
         recipientRowId: 'r2',
         phone: '15559876543',
         params: ['B456', 'Monday'],
+        contactId: null,
       },
     ]);
     expect(plan.accessToken).toBe('decrypted:tok');

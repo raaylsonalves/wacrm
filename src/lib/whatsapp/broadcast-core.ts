@@ -16,6 +16,7 @@
 // for API broadcasts exactly as it does for dashboard ones.
 // ============================================================
 
+import { recordBroadcastMessage } from './broadcast-record';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { audit } from '@/lib/audit';
@@ -74,10 +75,14 @@ interface PlannedRecipient {
   recipientRowId: string;
   phone: string;
   params: string[];
+  /** For the conversation entry (broadcast-record.ts); absent = not recorded. */
+  contactId?: string | null;
 }
 
 export interface BroadcastPlan {
   broadcastId: string;
+  /** Needed to record each send in the contact's conversation. */
+  accountId?: string;
   templateName: string;
   templateLanguage: string;
   /** Cloud API fields — empty strings in WAHA mode (unused there). */
@@ -304,7 +309,12 @@ export async function createBroadcast(
   const planned: PlannedRecipient[] = createdRows.map(
     (row: { recipient_id: string; contact_id: string }) => {
       const r = byContact.get(row.contact_id)!;
-      return { recipientRowId: row.recipient_id, phone: r.phone, params: r.params };
+      return {
+        recipientRowId: row.recipient_id,
+        phone: r.phone,
+        params: r.params,
+        contactId: row.contact_id,
+      };
     }
   );
 
@@ -328,6 +338,7 @@ export async function createBroadcast(
 
   return {
     broadcastId,
+    accountId,
     templateName,
     templateLanguage: resolvedTemplate.language,
     phoneNumberId,
@@ -399,6 +410,16 @@ export async function deliverBroadcast(
           error_message: null,
         })
         .eq('id', recipient.recipientRowId);
+      if (plan.accountId && recipient.contactId) {
+        await recordBroadcastMessage(db, {
+          accountId: plan.accountId,
+          contactId: recipient.contactId,
+          channelId: null,
+          text: templateContentText(plan.templateRow, recipient.params),
+          templateName: plan.templateName,
+          waMessageId: sentMessageId,
+        });
+      }
     } else {
       await db
         .from('broadcast_recipients')
@@ -475,6 +496,16 @@ async function deliverWahaRecipient(
         error_message: null,
       })
       .eq('id', recipient.recipientRowId);
+    if (plan.accountId && recipient.contactId) {
+      await recordBroadcastMessage(db, {
+        accountId: plan.accountId,
+        contactId: recipient.contactId,
+        channelId: channel.id,
+        text,
+        templateName: plan.templateName,
+        waMessageId: null,
+      });
+    }
   } catch (err) {
     const message =
       err instanceof WahaThrottleError || err instanceof WahaApiError
