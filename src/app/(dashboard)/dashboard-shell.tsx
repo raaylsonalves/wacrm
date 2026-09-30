@@ -61,8 +61,6 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       <BrandColorEffect />
       {/* Tab title + favicon from the account's branding. Headless. */}
       <AccountTabBranding />
-      {/* Hides pages a client account did not buy (migration 091). */}
-      <ModuleGuard />
       <Sidebar open={sidebarOpen} onClose={closeSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Operators only: "Operando: <client>" + the stale-tab guard. */}
@@ -73,7 +71,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           {/* Above every page: writes are being rejected and here's why.
               Renders nothing unless the account/role failed to resolve. */}
           <AccountAccessAlert />
-          {children}
+          {/* Pages a client account did not buy never mount (migration 091). */}
+          <ModuleGuard>{children}</ModuleGuard>
         </main>
         {/* Phone tab bar — below lg only; "More" opens the sidebar drawer. */}
         <BottomNav onMore={() => setSidebarOpen(true)} />
