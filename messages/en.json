@@ -329,6 +329,22 @@
       "noCustomerMessages": "No customer messages",
       "explainerTooltip": "WhatsApp only allows free-form replies for 24h after the customer's last message — this is Meta's rule, not a wacrm setting. After it expires, you can only send an approved template."
     },
+    "transfer": {
+      "title": "Hand the conversation to {name}",
+      "description": "Leave a note on what was done and what's left. It's saved in the internal notes and shown in their notification.",
+      "placeholder": "E.g. wants a discount on the annual plan, I offered 10%",
+      "noteBody": "Handed to {name}: {note}",
+      "noteFailed": "Could not save the note.",
+      "done": "Conversation handed to {name}",
+      "cancel": "Cancel",
+      "confirm": "Hand over"
+    },
+    "channelBanner": {
+      "wahaDown": "WhatsApp disconnected: {channel} — messages to this number aren't arriving.",
+      "metaDown": "The official number (Meta API) has a connection problem.",
+      "none": "No WhatsApp number connected.",
+      "reconnect": "Reconnect"
+    },
     "composer": {
       "draftHint": "Tap the ✨ to draft a reply with AI — you can edit it before sending",
       "sessionExpiredHint": "24-hour session expired. Use a template to re-engage.",

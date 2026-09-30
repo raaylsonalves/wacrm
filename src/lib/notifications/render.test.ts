@@ -22,6 +22,23 @@ describe('renderNotification — assignment says who and why', () => {
     expect(r.body).toBe('Oi, tudo bem?');
   });
 
+  it("a teammate's transfer note wins over the last message", () => {
+    const r = renderNotification(
+      {
+        type: 'conversation_assigned',
+        actor_name: 'Carla',
+        contact_name: 'Ana',
+        data: {
+          actor_kind: 'human',
+          last_message: 'Oi',
+          note: 'Quer desconto no anual, já aprovei 10%',
+        },
+      },
+      t
+    );
+    expect(r.body).toBe('Quer desconto no anual, já aprovei 10%');
+  });
+
   it('the AI hand-off carries the reason and summary', () => {
     const r = renderNotification(
       {

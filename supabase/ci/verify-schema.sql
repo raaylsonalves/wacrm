@@ -664,6 +664,11 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'broadcast cancelled status missing — migration 087 did not apply';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc WHERE proname = 'notify_conversation_assigned' AND prosrc LIKE '%conversation_notes%'
+  ) THEN
+    RAISE EXCEPTION 'assignment alert does not carry the transfer note — migration 088 did not apply';
+  END IF;
   IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
     RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
   END IF;

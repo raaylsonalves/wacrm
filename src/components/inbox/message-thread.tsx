@@ -47,6 +47,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "./message-bubble";
 import { DealStageChip } from "./deal-stage-chip";
+import { TransferDialog } from "./transfer-dialog";
 import { startsRun, unseenCount } from "@/lib/inbox/bubble-runs";
 import { MessageActions } from "./message-actions";
 import { MediaLightbox } from "./media-lightbox";
@@ -944,6 +945,8 @@ export function MessageThread({
     [conversation, user?.id, t],
   );
 
+  const [transferTo, setTransferTo] = useState<{ user_id: string; full_name: string } | null>(null);
+
   const handleAssignChange = useCallback(
     async (agentId: string | null) => {
       if (!conversation) return;
@@ -1205,7 +1208,13 @@ export function MessageThread({
                   return (
                     <DropdownMenuItem
                       key={p.id}
-                      onClick={() => handleAssignChange(p.user_id)}
+                      onClick={() =>
+                        // Handing it to someone else asks for a note;
+                        // taking it yourself (or re-picking the owner) is direct.
+                        p.user_id === user?.id || isSelected
+                          ? handleAssignChange(p.user_id)
+                          : setTransferTo({ user_id: p.user_id, full_name: p.full_name })
+                      }
                       className={cn(
                         "text-sm",
                         isSelected ? "text-primary" : "text-popover-foreground"
@@ -1365,6 +1374,13 @@ export function MessageThread({
             onAssignChange(conversation.id, patch.assigned_agent_id ?? null);
           }
         }}
+      />
+
+      <TransferDialog
+        conversationId={conversation.id}
+        target={transferTo}
+        onClose={() => setTransferTo(null)}
+        onAssign={(userId) => handleAssignChange(userId)}
       />
 
       {/* Composer */}

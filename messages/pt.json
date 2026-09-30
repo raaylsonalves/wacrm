@@ -329,6 +329,22 @@
       "noCustomerMessages": "Nenhuma mensagem do cliente",
       "explainerTooltip": "O WhatsApp só permite respostas livres por 24h após a última mensagem do cliente — essa é uma regra da Meta, não uma configuração do wacrm. Depois que expira, só é possível enviar um modelo aprovado."
     },
+    "transfer": {
+      "title": "Passar a conversa para {name}",
+      "description": "Deixe um recado com o que já foi feito e o que falta. Ele fica nas notas internas e aparece na notificação.",
+      "placeholder": "Ex.: quer desconto no plano anual, já ofereci 10%",
+      "noteBody": "Passou para {name}: {note}",
+      "noteFailed": "Não foi possível salvar o recado.",
+      "done": "Conversa passada para {name}",
+      "cancel": "Cancelar",
+      "confirm": "Passar conversa"
+    },
+    "channelBanner": {
+      "wahaDown": "WhatsApp desconectado: {channel} — as mensagens desse número não estão chegando.",
+      "metaDown": "O número oficial (API da Meta) está com problema de conexão.",
+      "none": "Nenhum número de WhatsApp conectado.",
+      "reconnect": "Reconectar"
+    },
     "composer": {
       "draftHint": "Toque em ✨ para redigir uma resposta com IA — você pode editá-la antes de enviar",
       "sessionExpiredHint": "A sessão de 24 horas expirou. Use um modelo para retomar o contato.",

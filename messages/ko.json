@@ -329,6 +329,22 @@
       "noCustomerMessages": "고객 메시지 없음",
       "explainerTooltip": "WhatsApp은 고객의 마지막 메시지로부터 24시간 동안만 자유 형식 답장을 허용합니다 — 이는 wacrm 설정이 아니라 Meta의 규칙입니다. 시간이 지나면 승인된 템플릿만 보낼 수 있습니다."
     },
+    "transfer": {
+      "title": "{name}님에게 대화 넘기기",
+      "description": "한 일과 남은 일을 메모로 남기세요. 내부 메모에 저장되고 알림에 표시됩니다.",
+      "placeholder": "예: 연간 요금제 할인을 원함, 10% 제안함",
+      "noteBody": "{name}님에게 넘김: {note}",
+      "noteFailed": "메모를 저장할 수 없습니다.",
+      "done": "{name}님에게 대화를 넘겼습니다",
+      "cancel": "취소",
+      "confirm": "넘기기"
+    },
+    "channelBanner": {
+      "wahaDown": "WhatsApp 연결 끊김: {channel} — 이 번호로 메시지가 수신되지 않습니다.",
+      "metaDown": "공식 번호(Meta API)에 연결 문제가 있습니다.",
+      "none": "연결된 WhatsApp 번호가 없습니다.",
+      "reconnect": "다시 연결"
+    },
     "composer": {
       "draftHint": "✨를 눌러 AI로 답장 초안을 작성하세요 — 보내기 전에 수정할 수 있습니다",
       "sessionExpiredHint": "24시간 세션이 만료되었습니다. 다시 연결하려면 템플릿을 사용하세요.",

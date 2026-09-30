@@ -70,9 +70,10 @@ export function renderNotification(
       const kind = str(d.actor_kind);
       const detail = str(d.summary) || str(d.last_message) || null;
       if (kind === 'human') {
+        // The transfer dialog's note says why; better than the last message.
         return {
           title: t('assigned.byPerson', { actor, contact }),
-          body: detail,
+          body: str(d.note) || detail,
         };
       }
       if (kind === 'ai') {
