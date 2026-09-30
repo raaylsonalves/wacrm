@@ -23,6 +23,7 @@ import { PushNudgeBanner } from '@/components/notifications/push-nudge-banner';
 import { toast } from 'sonner';
 import { WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 
 // Remembers the agent's show/hide choice for the desktop contact panel
 // across reloads and sessions (device-scoped, like the theme prefs).
@@ -82,6 +83,22 @@ function InboxPageInner() {
       if (stored !== null) setContactPanelOpen(stored === 'true');
     } catch {
       // localStorage can throw in private-browsing / sandboxed contexts.
+    }
+  }, []);
+
+  // Phones have no room for the right panel — the same sidebar opens as
+  // a bottom sheet when the agent taps the contact in the thread header.
+  const [mobileContactOpen, setMobileContactOpen] = useState(false);
+  const handleOpenContact = useCallback(() => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      setContactPanelOpen(true);
+      try {
+        localStorage.setItem(CONTACT_PANEL_STORAGE_KEY, 'true');
+      } catch {
+        // best-effort
+      }
+    } else {
+      setMobileContactOpen(true);
     }
   }, []);
 
@@ -623,7 +640,9 @@ function InboxPageInner() {
             thread can occupy the full width. Always visible on lg+. */}
         <div
           className={cn(
-            'flex h-full flex-1 lg:flex-none',
+            // min-w-0: without it a long last-message preview stretches
+            // the list past the phone's width instead of truncating.
+            'flex h-full min-w-0 flex-1 lg:flex-none',
             hasActiveConv ? 'hidden lg:flex' : 'flex'
           )}
         >
@@ -670,6 +689,7 @@ function InboxPageInner() {
             onRefresh={handleManualRefresh}
             contactPanelOpen={contactPanelOpen}
             onToggleContactPanel={handleToggleContactPanel}
+            onOpenContact={handleOpenContact}
           />
         </div>
 
@@ -686,6 +706,20 @@ function InboxPageInner() {
           </div>
         )}
       </div>
+
+      <Sheet open={mobileContactOpen} onOpenChange={setMobileContactOpen}>
+        <SheetContent side="bottom" className="h-[85dvh] gap-0 rounded-t-2xl p-0 lg:hidden">
+          <SheetTitle className="sr-only">{activeContact?.name || activeContact?.phone || ''}</SheetTitle>
+          <div className="bg-muted-foreground/30 mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full" />
+          <div className="min-h-0 flex-1">
+            <ContactSidebar
+              contact={activeContact}
+              conversationId={activeConversation?.id ?? null}
+              variant="sheet"
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

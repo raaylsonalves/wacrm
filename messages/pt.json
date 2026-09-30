@@ -252,6 +252,20 @@
       "searchPlaceholder": "Buscar conversas...",
       "filterAll": "Todas",
       "filterUnread": "Não lidas",
+      "queue": {
+        "reply": "Responder",
+        "waiting": "Aguardando",
+        "scheduled": "Agendadas"
+      },
+      "queueLine": {
+        "reply": "Responder agora",
+        "waiting": "Aguardando retorno do cliente",
+        "scheduled": "Compromisso agendado"
+      },
+      "queueWhen": {
+        "today": "Hoje, {time}",
+        "tomorrow": "Amanhã, {time}"
+      },
       "filterWaitingHuman": "Aguardando pessoa",
       "filterOpen": "Abertas",
       "filterPending": "Pendentes",

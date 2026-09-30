@@ -31,8 +31,17 @@ import {
   Clock,
   AlarmClock,
   Hash,
+  CalendarClock,
+  CornerUpLeft,
+  Hourglass,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, isToday, isTomorrow } from 'date-fns';
+import {
+  earliestByContact,
+  workQueueOf,
+  type UpcomingAppointment,
+  type WorkQueue,
+} from '@/lib/inbox/work-queue';
 import { dateFnsLocale } from '@/lib/date-fns-locale';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
@@ -154,6 +163,30 @@ export function ConversationList({
     };
   }, [accountId]);
 
+  // Upcoming appointments, one query for the whole list — they put a
+  // conversation in the "Scheduled" queue and on its next-action line.
+  const [appointments, setAppointments] = useState<Map<string, UpcomingAppointment>>(
+    () => new Map()
+  );
+  useEffect(() => {
+    if (!accountId) return;
+    let alive = true;
+    createClient()
+      .from('appointments')
+      .select('contact_id, starts_at, title')
+      .eq('account_id', accountId)
+      .in('status', ['scheduled', 'confirmed'])
+      .gte('starts_at', new Date().toISOString())
+      .order('starts_at', { ascending: true })
+      .limit(500)
+      .then(({ data, error }) => {
+        if (alive && !error) setAppointments(earliestByContact((data ?? []) as UpcomingAppointment[]));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [accountId]);
+
   // specs/inbox-response-time-sla.md — the per-row "waiting Xm" badge
   // needs to advance even when nothing else re-renders the list (no
   // new message, no status change). A single interval here (not one
@@ -181,6 +214,7 @@ export function ConversationList({
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<InboxFilter>('all');
+  const [queue, setQueue] = useState<WorkQueue | null>(null);
   const [loading, setLoading] = useState(true);
   // Contact-based filters (issue #272). Tags use OR logic (a conversation
   // matches if its contact carries any selected tag), consistent with
@@ -486,8 +520,39 @@ export function ConversationList({
     return m;
   }, [wahaChannels]);
 
+  // Which to-do queue each conversation sits in (reply / waiting /
+  // scheduled), computed once per render for the tabs and the rows.
+  const queueById = useMemo(() => {
+    const map = new Map<string, WorkQueue | null>();
+    for (const c of conversations) {
+      map.set(
+        c.id,
+        workQueueOf({
+          command: commandOf({
+            status: c.status,
+            assignedAgentId: c.assigned_agent_id,
+            aiAutoreplyDisabled: c.ai_autoreply_disabled,
+            aiOn,
+          }),
+          snoozed: isSnoozed(c, nowTick),
+          lastSenderType: c.last_message_sender_type,
+          lastMessageAt: c.last_message_at,
+          nextAppointmentAt: c.contact_id ? appointments.get(c.contact_id)?.starts_at : null,
+          now: nowTick,
+        })
+      );
+    }
+    return map;
+  }, [conversations, aiOn, appointments, nowTick]);
+  const queueCounts = useMemo(() => {
+    const counts: Record<WorkQueue, number> = { reply: 0, waiting: 0, scheduled: 0 };
+    for (const q of queueById.values()) if (q) counts[q] += 1;
+    return counts;
+  }, [queueById]);
+
   const filtered = useMemo(() => {
     let result = conversations;
+    if (queue) result = result.filter((c) => queueById.get(c.id) === queue);
 
     // Snoozed threads live only under their own filter. `nowTick`
     // advancing is what makes an expired snooze reappear, no cron.
@@ -541,6 +606,8 @@ export function ConversationList({
   }, [
     conversations,
     filter,
+    queue,
+    queueById,
     nowTick,
     search,
     selectedTagIds,
@@ -618,6 +685,46 @@ export function ConversationList({
     <div className="border-border bg-card flex h-full w-full flex-col border-r lg:w-80">
       {/* Search + Filter */}
       <div className="border-border space-y-2 border-b p-3">
+        {/* The inbox as a to-do list — tap a queue, tap again to clear. */}
+        <div className="grid grid-cols-3 gap-1.5">
+          {(
+            [
+              ['reply', CornerUpLeft],
+              ['waiting', Hourglass],
+              ['scheduled', CalendarClock],
+            ] as const
+          ).map(([key, Icon]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setQueue((q) => (q === key ? null : key))}
+              aria-pressed={queue === key}
+              className={cn(
+                'flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors',
+                queue === key
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{t(`queue.${key}`)}</span>
+              {queueCounts[key] > 0 && (
+                <span
+                  className={cn(
+                    'rounded-full px-1.5 text-[10px] leading-4 tabular-nums',
+                    queue === key
+                      ? 'bg-primary-foreground/20'
+                      : key === 'reply'
+                        ? 'bg-red-500/15 text-red-700 dark:text-red-400'
+                        : 'bg-muted'
+                  )}
+                >
+                  {queueCounts[key]}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
         <div className="relative">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
@@ -889,6 +996,10 @@ export function ConversationList({
                 onClearHistory={handleRowClearHistory}
                 now={nowTick}
                 aiOn={aiOn}
+                queue={queueById.get(conv.id) ?? null}
+                appointment={
+                  conv.contact_id ? (appointments.get(conv.contact_id) ?? null) : null
+                }
                 responseTimeTargetMinutes={responseTimeTargetMinutes}
                 channelLabel={
                   wahaChannels.length === 0
@@ -1014,7 +1125,15 @@ interface ConversationItemProps {
    * "Official API").
    */
   channelLabel: string | null;
+  queue: WorkQueue | null;
+  appointment: UpcomingAppointment | null;
 }
+
+const QUEUE_LINE: Record<WorkQueue, string> = {
+  reply: 'bg-red-500/10 text-red-700 dark:text-red-400',
+  waiting: 'bg-sky-500/10 text-sky-700 dark:text-sky-400',
+  scheduled: 'bg-violet-500/10 text-violet-700 dark:text-violet-400',
+};
 
 const SLA_TIER_CLASSES: Record<SlaTier, string> = {
   ok: 'bg-muted text-muted-foreground',
@@ -1041,6 +1160,8 @@ function ConversationItem({
   aiOn,
   responseTimeTargetMinutes,
   channelLabel,
+  queue,
+  appointment,
 }: ConversationItemProps) {
   const conversationTags = conversation.tags ?? [];
   const snoozed = isSnoozed(conversation, now);
@@ -1282,6 +1403,36 @@ function ConversationItem({
                 {tag.name}
               </span>
             ))}
+          </div>
+        )}
+        {queue && (
+          <div
+            className={cn(
+              'mt-1.5 flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium',
+              QUEUE_LINE[queue]
+            )}
+          >
+            {queue === 'reply' ? (
+              <CornerUpLeft className="h-3 w-3 shrink-0" />
+            ) : queue === 'waiting' ? (
+              <Hourglass className="h-3 w-3 shrink-0" />
+            ) : (
+              <CalendarClock className="h-3 w-3 shrink-0" />
+            )}
+            <span className="truncate">
+              {queue === 'scheduled' && appointment
+                ? appointment.title
+                : t(`queueLine.${queue}`)}
+            </span>
+            {queue === 'scheduled' && appointment && (
+              <span className="ml-auto shrink-0 opacity-80">
+                {isToday(new Date(appointment.starts_at))
+                  ? t('queueWhen.today', { time: format(new Date(appointment.starts_at), 'HH:mm') })
+                  : isTomorrow(new Date(appointment.starts_at))
+                    ? t('queueWhen.tomorrow', { time: format(new Date(appointment.starts_at), 'HH:mm') })
+                    : format(new Date(appointment.starts_at), 'dd/MM HH:mm')}
+              </span>
+            )}
           </div>
         )}
       </div>

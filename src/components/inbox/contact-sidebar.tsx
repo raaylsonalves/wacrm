@@ -29,6 +29,9 @@ interface ContactSidebarProps {
   contact: Contact | null;
   /** Active thread — enables the internal-notes section (migration 070). */
   conversationId?: string | null;
+  /** "sheet": full-width inside the mobile bottom sheet — no border,
+   *  no drag handle, no fixed width. */
+  variant?: "panel" | "sheet";
 }
 
 // Drag-resizable width (spec: inbox-contact-panel-sizing.md). 280px
@@ -54,7 +57,8 @@ function readInitialPanelWidth(): number {
   return DEFAULT_PANEL_WIDTH;
 }
 
-export function ContactSidebar({ contact, conversationId }: ContactSidebarProps) {
+export function ContactSidebar({ contact, conversationId, variant = "panel" }: ContactSidebarProps) {
+  const sheet = variant === "sheet";
   const tSidebar = useTranslations("Inbox.sidebar");
   const tThread = useTranslations("Inbox.messageThread");
 
@@ -219,10 +223,13 @@ export function ContactSidebar({ contact, conversationId }: ContactSidebarProps)
 
   return (
     <div
-      className="relative flex h-full shrink-0 flex-col border-l border-border bg-card"
-      style={{ width: panelWidth }}
+      className={cn(
+        "relative flex h-full shrink-0 flex-col bg-card",
+        sheet ? "w-full" : "border-l border-border",
+      )}
+      style={sheet ? undefined : { width: panelWidth }}
     >
-      {ResizeHandle}
+      {!sheet && ResizeHandle}
       <ScrollArea className="flex-1">
         <div className="p-4">
           {/* Contact Info */}

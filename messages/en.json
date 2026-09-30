@@ -252,6 +252,20 @@
       "searchPlaceholder": "Search conversations...",
       "filterAll": "All",
       "filterUnread": "Unread",
+      "queue": {
+        "reply": "Reply",
+        "waiting": "Waiting",
+        "scheduled": "Scheduled"
+      },
+      "queueLine": {
+        "reply": "Reply now",
+        "waiting": "Waiting for the customer",
+        "scheduled": "Appointment booked"
+      },
+      "queueWhen": {
+        "today": "Today, {time}",
+        "tomorrow": "Tomorrow, {time}"
+      },
       "filterWaitingHuman": "Waiting for a person",
       "filterOpen": "Open",
       "filterPending": "Pending",

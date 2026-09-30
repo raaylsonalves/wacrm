@@ -113,6 +113,8 @@ interface MessageThreadProps {
    */
   contactPanelOpen?: boolean;
   onToggleContactPanel?: () => void;
+  /** Tap on the header contact — opens the contact panel (sheet on phones). */
+  onOpenContact?: () => void;
 }
 
 function formatDateSeparator(dateStr: string, t: ReturnType<typeof useTranslations>): string {
@@ -171,6 +173,7 @@ export function MessageThread({
   onRefresh,
   contactPanelOpen,
   onToggleContactPanel,
+  onOpenContact,
 }: MessageThreadProps) {
   const t = useTranslations("Inbox.messageThread");
   const tTimer = useTranslations("Inbox.sessionTimer");
@@ -1017,9 +1020,25 @@ export function MessageThread({
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
-            {displayName.charAt(0).toUpperCase()}
-          </div>
+          <button
+            type="button"
+            onClick={onOpenContact}
+            disabled={!onOpenContact}
+            aria-label={t("showContact")}
+            className="flex min-w-0 items-center gap-2 rounded-md text-left sm:gap-3"
+          >
+          {contact?.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={contact.avatar_url}
+              alt=""
+              className="h-9 w-9 flex-shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
               <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
@@ -1036,6 +1055,7 @@ export function MessageThread({
               {contactHandle(contact)}
             </p>
           </div>
+          </button>
           {/* Session timer badge — hidden on the narrowest phones so
               the name + back arrow keep their room. This is Meta's own
               24h customer-service-window rule (once the window closes,
