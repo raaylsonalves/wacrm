@@ -504,6 +504,16 @@
       "cancel": "Cancelar",
       "send": "Enviar modelo"
     },
+    "summary": {
+      "title": "Resumo e próximo passo",
+      "generate": "Gerar resumo com IA",
+      "refresh": "Atualizar resumo",
+      "nextStep": "Próximo passo",
+      "updated": "Gerado {when}",
+      "notConfigured": "A IA não está configurada. Ative em Configurações → Assistente de IA.",
+      "noMessages": "Ainda não há mensagens para resumir.",
+      "failed": "Não foi possível gerar o resumo."
+    },
     "sidebar": {
       "contactInfo": "Informações do contato",
       "tags": "Tags",

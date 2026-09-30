@@ -692,6 +692,9 @@ BEGIN
      AND NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'human_cases') THEN
     RAISE EXCEPTION 'human_cases not in the realtime publication — migration 093 did not apply';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'conversations' AND column_name = 'ai_summary') THEN
+    RAISE EXCEPTION 'conversations.ai_summary missing — migration 094 did not apply';
+  END IF;
   IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
     RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
   END IF;

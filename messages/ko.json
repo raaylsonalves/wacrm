@@ -504,6 +504,16 @@
       "cancel": "취소",
       "send": "템플릿 보내기"
     },
+    "summary": {
+      "title": "요약 및 다음 단계",
+      "generate": "AI 요약 생성",
+      "refresh": "요약 새로고침",
+      "nextStep": "다음 단계",
+      "updated": "{when} 생성됨",
+      "notConfigured": "AI가 설정되지 않았습니다. 설정 → AI 어시스턴트에서 켜세요.",
+      "noMessages": "요약할 메시지가 아직 없습니다.",
+      "failed": "요약을 생성할 수 없습니다."
+    },
     "sidebar": {
       "contactInfo": "연락처 정보",
       "tags": "태그",

@@ -24,6 +24,7 @@ import { useTranslations } from "next-intl";
 import { dateFnsLocale } from "@/lib/date-fns-locale";
 import { contactHandle } from "@/lib/whatsapp/wa-identity";
 import { ConversationNotes } from "./conversation-notes";
+import { ConversationSummaryCard } from "./conversation-summary";
 
 interface ContactSidebarProps {
   contact: Contact | null;
@@ -354,6 +355,11 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
 
           {conversationId && (
             <>
+              <div className="my-4 border-t border-border" />
+              <ConversationSummaryCard
+                key={`summary-${conversationId}`}
+                conversationId={conversationId}
+              />
               <div className="my-4 border-t border-border" />
               <ConversationNotes
                 key={conversationId}

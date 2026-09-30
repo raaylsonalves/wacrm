@@ -504,6 +504,16 @@
       "cancel": "Cancelar",
       "send": "Enviar plantilla"
     },
+    "summary": {
+      "title": "Resumen y próximo paso",
+      "generate": "Generar resumen con IA",
+      "refresh": "Actualizar resumen",
+      "nextStep": "Próximo paso",
+      "updated": "Generado {when}",
+      "notConfigured": "La IA no está configurada. Actívala en Ajustes → Asistente de IA.",
+      "noMessages": "Aún no hay mensajes para resumir.",
+      "failed": "No se pudo generar el resumen."
+    },
     "sidebar": {
       "contactInfo": "Información del contacto",
       "tags": "Etiquetas",

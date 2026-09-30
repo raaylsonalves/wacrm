@@ -504,6 +504,16 @@
       "cancel": "Cancel",
       "send": "Send template"
     },
+    "summary": {
+      "title": "Summary and next step",
+      "generate": "Generate AI summary",
+      "refresh": "Refresh summary",
+      "nextStep": "Next step",
+      "updated": "Generated {when}",
+      "notConfigured": "AI is not set up. Enable it in Settings → AI Assistant.",
+      "noMessages": "There are no messages to summarise yet.",
+      "failed": "Could not generate the summary."
+    },
     "sidebar": {
       "contactInfo": "Contact info",
       "tags": "Tags",
