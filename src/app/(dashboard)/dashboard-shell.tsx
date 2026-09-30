@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { AccountAccessAlert } from "@/components/layout/account-access-alert";
 import { BrandColorEffect } from "@/components/layout/brand-color-effect";
 import { AccountTabBranding } from "@/components/layout/account-tab-branding";
@@ -68,6 +69,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           <AccountAccessAlert />
           {children}
         </main>
+        {/* Phone tab bar — below lg only; "More" opens the sidebar drawer. */}
+        <BottomNav onMore={() => setSidebarOpen(true)} />
       </div>
     </div>
   );

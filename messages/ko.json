@@ -36,6 +36,7 @@
   "Sidebar": {
     "title": "WhatsApp용 CRM 템플릿",
     "primaryNav": "기본 메뉴",
+    "today": "오늘",
     "dashboard": "대시보드",
     "inbox": "인박스",
     "notifications": "알림",
@@ -71,6 +72,7 @@
     "menuSignOut": "로그아웃"
   },
   "Header": {
+    "today": "오늘",
     "push": {
       "labelOn": "이 기기에서 알림이 켜져 있습니다",
       "labelOff": "이 기기에서 알림 켜기",
@@ -571,6 +573,37 @@
       "illegal_transition": "This case has already changed.",
       "not_found": "Case not found."
     }
+  },
+  "BottomNav": {
+    "label": "탐색",
+    "today": "오늘",
+    "inbox": "대화",
+    "deals": "거래",
+    "agenda": "일정",
+    "more": "더보기"
+  },
+  "Today": {
+    "greeting": {
+      "morning": "좋은 아침입니다, {name}님",
+      "afternoon": "좋은 오후입니다, {name}님",
+      "evening": "좋은 저녁입니다, {name}님"
+    },
+    "needReply": "{count, plural, other {#개의 대화에 답장이 필요합니다}}",
+    "needReplyHint": "진행 중인 기회입니다. 지금 답장하세요.",
+    "allCaughtUp": "모두 답장했습니다",
+    "allCaughtUpHint": "지금 상담원을 기다리는 고객이 없습니다.",
+    "stats": {
+      "replies": "답장",
+      "meetings": "미팅",
+      "deals": "거래"
+    },
+    "vsYesterday": "어제 대비",
+    "yesterday": "어제 {count}",
+    "priority": "우선 대화",
+    "seeAll": "모두 보기 ({count})",
+    "noPriority": "답장을 기다리는 대화가 없습니다.",
+    "reply": "답장",
+    "agendaToday": "오늘 남은 일정"
   },
   "Prospecting": {
     "title": "잠재 고객 발굴",

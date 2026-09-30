@@ -706,7 +706,7 @@ export function ConversationList({
                   : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >
-              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <Icon className="h-3.5 w-3.5 shrink-0 max-[419px]:hidden" />
               <span className="truncate">{t(`queue.${key}`)}</span>
               {queueCounts[key] > 0 && (
                 <span

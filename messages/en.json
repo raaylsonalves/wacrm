@@ -36,6 +36,7 @@
   "Sidebar": {
     "title": "CRM Template for WhatsApp",
     "primaryNav": "Primary",
+    "today": "Today",
     "dashboard": "Dashboard",
     "inbox": "Inbox",
     "notifications": "Notifications",
@@ -71,6 +72,7 @@
     "menuSignOut": "Sign out"
   },
   "Header": {
+    "today": "Today",
     "push": {
       "labelOn": "Notifications on for this device",
       "labelOff": "Turn on notifications for this device",
@@ -571,6 +573,37 @@
       "illegal_transition": "This case has already changed.",
       "not_found": "Case not found."
     }
+  },
+  "BottomNav": {
+    "label": "Navigation",
+    "today": "Today",
+    "inbox": "Chats",
+    "deals": "Deals",
+    "agenda": "Agenda",
+    "more": "More"
+  },
+  "Today": {
+    "greeting": {
+      "morning": "Good morning, {name}",
+      "afternoon": "Good afternoon, {name}",
+      "evening": "Good evening, {name}"
+    },
+    "needReply": "{count, plural, one {# conversation needs a reply} other {# conversations need a reply}}",
+    "needReplyHint": "These are live opportunities. Reply now to keep the pace.",
+    "allCaughtUp": "All caught up",
+    "allCaughtUpHint": "No customer is waiting for a person right now.",
+    "stats": {
+      "replies": "Replies",
+      "meetings": "Meetings",
+      "deals": "Deals"
+    },
+    "vsYesterday": "vs. yesterday",
+    "yesterday": "{count} yesterday",
+    "priority": "Priority conversations",
+    "seeAll": "See all ({count})",
+    "noPriority": "No conversation waiting for a reply.",
+    "reply": "Reply",
+    "agendaToday": "Later today"
   },
   "Prospecting": {
     "title": "Prospecting",

@@ -89,6 +89,8 @@ function InboxPageInner() {
   // Phones have no room for the right panel — the same sidebar opens as
   // a bottom sheet when the agent taps the contact in the thread header.
   const [mobileContactOpen, setMobileContactOpen] = useState(false);
+  const [sheetDragY, setSheetDragY] = useState(0);
+  const sheetDragStart = useRef<number | null>(null);
   const handleOpenContact = useCallback(() => {
     if (window.matchMedia('(min-width: 1024px)').matches) {
       setContactPanelOpen(true);
@@ -618,7 +620,8 @@ function InboxPageInner() {
   const hasActiveConv = !!activeConversation;
 
   return (
-    <div className="-m-4 flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden sm:-m-6">
+    // --bottom-nav: the phone tab bar's height while it shows (globals.css).
+    <div className="-m-4 flex h-[calc(100dvh-3.5rem-var(--bottom-nav))] flex-col overflow-hidden sm:-m-6">
       {/* WhatsApp connection banner — in the flex column, not absolute,
           so it pushes the panels down instead of overlapping them. */}
       {whatsappConnected === false && (
@@ -708,9 +711,41 @@ function InboxPageInner() {
       </div>
 
       <Sheet open={mobileContactOpen} onOpenChange={setMobileContactOpen}>
-        <SheetContent side="bottom" className="h-[85dvh] gap-0 rounded-t-2xl p-0 lg:hidden">
+        <SheetContent
+          side="bottom"
+          className="h-[85dvh] gap-0 rounded-t-2xl p-0 lg:hidden"
+          style={
+            sheetDragY > 0
+              ? { transform: `translateY(${sheetDragY}px)`, transition: 'none' }
+              : undefined
+          }
+        >
           <SheetTitle className="sr-only">{activeContact?.name || activeContact?.phone || ''}</SheetTitle>
-          <div className="bg-muted-foreground/30 mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full" />
+          {/* Drag the grabber down to dismiss, like a native sheet. The
+              hit area is the full-width strip, not just the 4px bar. */}
+          <div
+            className="flex h-6 shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
+            onPointerDown={(e) => {
+              sheetDragStart.current = e.clientY;
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              if (sheetDragStart.current === null) return;
+              setSheetDragY(Math.max(0, e.clientY - sheetDragStart.current));
+            }}
+            onPointerUp={() => {
+              const dy = sheetDragY;
+              sheetDragStart.current = null;
+              setSheetDragY(0);
+              if (dy > 90) setMobileContactOpen(false);
+            }}
+            onPointerCancel={() => {
+              sheetDragStart.current = null;
+              setSheetDragY(0);
+            }}
+          >
+            <div className="bg-muted-foreground/40 h-1.5 w-12 rounded-full" />
+          </div>
           <div className="min-h-0 flex-1">
             <ContactSidebar
               contact={activeContact}

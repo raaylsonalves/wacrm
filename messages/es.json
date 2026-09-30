@@ -36,6 +36,7 @@
   "Sidebar": {
     "title": "Plantilla de CRM para WhatsApp",
     "primaryNav": "Principal",
+    "today": "Hoy",
     "dashboard": "Panel",
     "inbox": "Bandeja de entrada",
     "notifications": "Notificaciones",
@@ -71,6 +72,7 @@
     "menuSignOut": "Cerrar sesión"
   },
   "Header": {
+    "today": "Hoy",
     "push": {
       "labelOn": "Notificaciones activadas en este dispositivo",
       "labelOff": "Activar notificaciones en este dispositivo",
@@ -571,6 +573,37 @@
       "illegal_transition": "This case has already changed.",
       "not_found": "Case not found."
     }
+  },
+  "BottomNav": {
+    "label": "Navegación",
+    "today": "Hoy",
+    "inbox": "Chats",
+    "deals": "Negocios",
+    "agenda": "Agenda",
+    "more": "Más"
+  },
+  "Today": {
+    "greeting": {
+      "morning": "Buenos días, {name}",
+      "afternoon": "Buenas tardes, {name}",
+      "evening": "Buenas noches, {name}"
+    },
+    "needReply": "{count, plural, one {# conversación necesita respuesta} other {# conversaciones necesitan respuesta}}",
+    "needReplyHint": "Son oportunidades en curso. Responde ahora para mantener el ritmo.",
+    "allCaughtUp": "Todo respondido",
+    "allCaughtUpHint": "Ningún cliente espera a una persona ahora.",
+    "stats": {
+      "replies": "Respuestas",
+      "meetings": "Reuniones",
+      "deals": "Negocios"
+    },
+    "vsYesterday": "vs. ayer",
+    "yesterday": "{count} ayer",
+    "priority": "Conversaciones prioritarias",
+    "seeAll": "Ver todas ({count})",
+    "noPriority": "Ninguna conversación esperando respuesta.",
+    "reply": "Responder",
+    "agendaToday": "Más tarde hoy"
   },
   "Prospecting": {
     "title": "Prospección",
