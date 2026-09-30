@@ -55,6 +55,24 @@ describe('normalizeGeminiModels', () => {
       { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', contextWindow: 1048576 },
     ])
   })
+
+  it('drops image, speech, live-audio and video models that still list generateContent', () => {
+    const gen = ['generateContent']
+    const ids = [
+      'gemini-2.5-flash-preview-tts',
+      'gemini-2.0-flash-preview-image-generation',
+      'gemini-live-2.5-flash-preview',
+      'gemini-2.5-flash-native-audio-dialog',
+      'veo-3.0-generate-preview',
+      'gemini-robotics-er-1.5-preview',
+      'gemini-2.5-pro',
+    ]
+    expect(
+      normalizeGeminiModels({
+        models: ids.map((id) => ({ name: `models/${id}`, supportedGenerationMethods: gen })),
+      }).map((m) => m.id),
+    ).toEqual(['gemini-2.5-pro'])
+  })
 })
 
 describe('normalizeOpenAiModels', () => {

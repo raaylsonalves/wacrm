@@ -93,6 +93,12 @@ export function normalizeAnthropicModels(body: unknown): ModelOption[] {
   })
 }
 
+/** Gemini lists image, speech, live-audio, video and robotics models with
+ *  `generateContent` too, but they can't answer a text chat turn. Same
+ *  heuristic spirit as OPENAI_NOT_CHAT — the UI keeps a "type the id" exit. */
+const GEMINI_NOT_CHAT =
+  /(tts|image|imagen|veo|lyria|live|native-audio|audio|embed|aqa|robotics|computer-use|nano-banana)/i
+
 export function normalizeGeminiModels(body: unknown): ModelOption[] {
   return asArray((body as Json | null)?.models).flatMap((m) => {
     const name = asString(m.name)
@@ -104,6 +110,7 @@ export function normalizeGeminiModels(body: unknown): ModelOption[] {
       : []
     if (!methods.includes('generateContent')) return []
     const id = name.replace(/^models\//, '')
+    if (GEMINI_NOT_CHAT.test(id)) return []
     return [
       {
         id,
