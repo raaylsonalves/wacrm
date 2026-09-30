@@ -698,6 +698,12 @@ BEGIN
   IF to_regclass('public.message_stars') IS NULL THEN
     RAISE EXCEPTION 'message_stars missing — migration 095 did not apply';
   END IF;
+  IF to_regclass('public.calendar_connections') IS NULL OR to_regclass('public.calendar_busy_blocks') IS NULL
+     OR to_regclass('public.calendar_sync_outbox') IS NULL OR to_regclass('public.appointment_google_events') IS NULL
+     OR to_regclass('public.uq_calendar_conn_shared') IS NULL OR to_regclass('public.uq_calendar_conn_member') IS NULL
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_appointments_calendar_sync') THEN
+    RAISE EXCEPTION 'google calendar sync missing — migration 096 did not apply';
+  END IF;
   IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
     RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
   END IF;

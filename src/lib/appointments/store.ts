@@ -5,6 +5,7 @@ import {
   type AppointmentSettings,
   type BusyRange,
 } from './slots';
+import { connectionFor, type ConnectionRef } from '@/lib/google-calendar/routing';
 
 /** Account business hours, falling back to defaults when never configured. */
 export async function loadAppointmentSettings(
@@ -67,6 +68,40 @@ export async function loadBusyRanges(
     .gt('ends_at', from.toISOString());
   query = assignedTo ? query.eq('assigned_to', assignedTo) : query.is('assigned_to', null);
   const { data } = await query;
+  const ranges = ((data as { starts_at: string; ends_at: string }[] | null) ?? []).map((r) => ({
+    start: new Date(r.starts_at),
+    end: new Date(r.ends_at),
+  }));
+  return [...ranges, ...(await loadGoogleBusy(db, accountId, assignedTo, from, to))];
+}
+
+/**
+ * Time the owner blocked in Google Calendar (migration 096) for the
+ * calendar this booking would go to — the assignee's own connection, else
+ * the shared one. The single place every slot consumer (AI tools, the
+ * offer_slots node) picks it up. Best-effort: a lookup failure means no
+ * Google blocks, never a failed booking.
+ */
+async function loadGoogleBusy(
+  db: SupabaseClient,
+  accountId: string,
+  assignedTo: string | null,
+  from: Date,
+  to: Date,
+): Promise<BusyRange[]> {
+  const { data: conns, error } = await db
+    .from('calendar_connections')
+    .select('id, user_id, status')
+    .eq('account_id', accountId);
+  if (error || !conns || conns.length === 0) return [];
+  const conn = connectionFor(conns as ConnectionRef[], assignedTo);
+  if (!conn) return [];
+  const { data } = await db
+    .from('calendar_busy_blocks')
+    .select('starts_at, ends_at')
+    .eq('connection_id', conn.id)
+    .lt('starts_at', to.toISOString())
+    .gt('ends_at', from.toISOString());
   return ((data as { starts_at: string; ends_at: string }[] | null) ?? []).map((r) => ({
     start: new Date(r.starts_at),
     end: new Date(r.ends_at),

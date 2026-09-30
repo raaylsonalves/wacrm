@@ -9,6 +9,7 @@ import { syncContactAvatars } from '@/lib/contacts/avatar-sync'
 import { retryPendingRelays } from '@/lib/cases/relay'
 import { dispatchPendingPushes } from '@/lib/notifications/notify'
 import { runScheduledBroadcasts } from '@/lib/whatsapp/broadcast-schedule'
+import { runCalendarSync } from '@/lib/google-calendar/sync'
 import { sweepAppointmentReminders, sweepSlaBreaches } from '@/lib/notifications/sweeps'
 
 /**
@@ -139,11 +140,16 @@ export async function GET(request: Request) {
   // Scheduled broadcasts whose time has come (specs/scheduled-broadcasts.md).
   const broadcasts = await runScheduledBroadcasts(supabaseAdmin())
 
+  // Google Calendar: push queued bookings, pull the owners' busy time
+  // (specs/google-calendar-sync.md). Null when the deployment has no
+  // Google OAuth client configured. Never throws.
+  const calendar = await runCalendarSync(supabaseAdmin())
+
   const notifications = {
     sla: await sweepSlaBreaches(supabaseAdmin()),
     reminders: await sweepAppointmentReminders(supabaseAdmin()),
     push: await dispatchPendingPushes(supabaseAdmin()),
   }
 
-  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays, broadcasts, notifications })
+  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays, broadcasts, calendar, notifications })
 }

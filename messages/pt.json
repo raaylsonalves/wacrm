@@ -3351,6 +3351,35 @@
     "COP": "Peso colombiano"
   },
   "Agenda": {
+    "google": {
+      "title": "Google Agenda",
+      "pitch": "Os agendamentos feitos aqui (pela equipe ou pela IA) aparecem no seu Google Agenda, e o que você marcar lá como ocupado deixa de ser oferecido aos clientes.",
+      "connect": "Conectar Google Agenda",
+      "reconnect": "Reconectar",
+      "disconnect": "Desconectar",
+      "connectedAs": "Conectado como",
+      "lastSync": "Última sincronização {when}",
+      "firstSyncPending": "Primeira sincronização em até alguns minutos.",
+      "needsReauth": "A autorização do Google expirou ou foi revogada. A sincronização está pausada — nada foi apagado.",
+      "includePhone": "Incluir o telefone do cliente no evento",
+      "confirmDisconnect": "Desconectar o Google Agenda? Os eventos já criados continuam no seu Google; novos agendamentos deixam de ir para lá.",
+      "disconnected": "Google Agenda desconectado.",
+      "failed": "Não foi possível concluir. Tente de novo.",
+      "notConfigured": "Google Agenda não está configurado neste servidor (faltam GOOGLE_OAUTH_CLIENT_ID e GOOGLE_OAUTH_CLIENT_SECRET).",
+      "connectedToast": "Google Agenda conectado. A sincronização começa em alguns minutos.",
+      "busy": "Ocupado (Google)",
+      "busyTitle": "Horário bloqueado no seu Google Agenda",
+      "allDay": "Dia todo",
+      "errors": {
+        "denied": "Você cancelou a autorização no Google.",
+        "invalid": "O link de conexão expirou ou é inválido. Tente conectar de novo.",
+        "no_refresh": "O Google não devolveu acesso permanente. Remova o acesso do app em myaccount.google.com e conecte de novo.",
+        "scope": "É preciso permitir o acesso à agenda para conectar.",
+        "forbidden": "Só administradores podem conectar o Google Agenda.",
+        "unavailable": "Google Agenda não está configurado neste servidor.",
+        "error": "Não foi possível conectar o Google Agenda."
+      }
+    },
     "mobile": {
       "empty": "Nenhum compromisso neste dia.",
       "closed": "Dia sem atendimento.",

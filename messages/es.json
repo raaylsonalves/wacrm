@@ -3351,6 +3351,35 @@
     "COP": "Peso colombiano"
   },
   "Agenda": {
+    "google": {
+      "title": "Google Calendar",
+      "pitch": "Bookings made here (by the team or the AI) show up in your Google Calendar, and what you mark busy there stops being offered to customers.",
+      "connect": "Conectar Google Calendar",
+      "reconnect": "Reconectar",
+      "disconnect": "Desconectar",
+      "connectedAs": "Connected as",
+      "lastSync": "Last sync {when}",
+      "firstSyncPending": "First sync within a few minutes.",
+      "needsReauth": "Google's authorization expired or was revoked. Sync is paused — nothing was deleted.",
+      "includePhone": "Include the customer's phone in the event",
+      "confirmDisconnect": "Disconnect Google Calendar? Events already created stay in your Google; new bookings stop going there.",
+      "disconnected": "Google Calendar disconnected.",
+      "failed": "Could not complete. Try again.",
+      "notConfigured": "Google Calendar is not configured on this server (GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET are missing).",
+      "connectedToast": "Google Calendar connected. Sync starts within a few minutes.",
+      "busy": "Ocupado (Google)",
+      "busyTitle": "Time blocked in your Google Calendar",
+      "allDay": "Todo el día",
+      "errors": {
+        "denied": "You cancelled the authorization at Google.",
+        "invalid": "The connection link expired or is invalid. Try connecting again.",
+        "no_refresh": "Google did not return lasting access. Remove the app's access at myaccount.google.com and connect again.",
+        "scope": "Calendar access must be allowed to connect.",
+        "forbidden": "Only admins can connect Google Calendar.",
+        "unavailable": "Google Calendar is not configured on this server.",
+        "error": "Could not connect Google Calendar."
+      }
+    },
     "mobile": {
       "empty": "Ninguna cita este día.",
       "closed": "Día sin atención.",

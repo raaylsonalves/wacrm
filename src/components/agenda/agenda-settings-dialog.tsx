@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { isValidTimeZone, type AppointmentSettings } from '@/lib/appointments/slots';
+import { GoogleCalendarCard } from './google-calendar-card';
 
 const DAYS = [0, 1, 2, 3, 4, 5, 6];
 
@@ -160,6 +161,8 @@ export function AgendaSettingsDialog({
               <p className="text-muted-foreground text-xs">{t('settings.reminderHint', { vars: '{{nome}}, {{data}}, {{hora}}' })}</p>
             </div>
           </div>
+
+          <GoogleCalendarCard />
         </div>
 
         <DialogFooter>

@@ -3363,6 +3363,35 @@
     "COP": "콜롬비아 페소"
   },
   "Agenda": {
+    "google": {
+      "title": "Google 캘린더",
+      "pitch": "Bookings made here (by the team or the AI) show up in your Google Calendar, and what you mark busy there stops being offered to customers.",
+      "connect": "Google 캘린더 연결",
+      "reconnect": "다시 연결",
+      "disconnect": "연결 해제",
+      "connectedAs": "Connected as",
+      "lastSync": "Last sync {when}",
+      "firstSyncPending": "First sync within a few minutes.",
+      "needsReauth": "Google's authorization expired or was revoked. Sync is paused — nothing was deleted.",
+      "includePhone": "Include the customer's phone in the event",
+      "confirmDisconnect": "Disconnect Google Calendar? Events already created stay in your Google; new bookings stop going there.",
+      "disconnected": "Google Calendar disconnected.",
+      "failed": "Could not complete. Try again.",
+      "notConfigured": "Google Calendar is not configured on this server (GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET are missing).",
+      "connectedToast": "Google Calendar connected. Sync starts within a few minutes.",
+      "busy": "바쁨 (Google)",
+      "busyTitle": "Time blocked in your Google Calendar",
+      "allDay": "종일",
+      "errors": {
+        "denied": "You cancelled the authorization at Google.",
+        "invalid": "The connection link expired or is invalid. Try connecting again.",
+        "no_refresh": "Google did not return lasting access. Remove the app's access at myaccount.google.com and connect again.",
+        "scope": "Calendar access must be allowed to connect.",
+        "forbidden": "Only admins can connect Google Calendar.",
+        "unavailable": "Google Calendar is not configured on this server.",
+        "error": "Could not connect Google Calendar."
+      }
+    },
     "mobile": {
       "empty": "이 날에는 일정이 없습니다.",
       "closed": "휴무일입니다.",

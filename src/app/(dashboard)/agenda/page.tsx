@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, Settings } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,8 @@ export default function AgendaPage() {
   const [view, setView] = useState<View>('week');
   const [cursor, setCursor] = useState<Date | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  // Time the owner blocked in Google Calendar (migration 096).
+  const [blocks, setBlocks] = useState<{ google_event_id: string; starts_at: string; ends_at: string; all_day: boolean }[]>([]);
   const [members, setMembers] = useState<AccountMember[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
@@ -98,14 +101,24 @@ export default function AgendaPage() {
     const after = addDays(days[days.length - 1], 1);
     const from = zonedToUtc(first.getUTCFullYear(), first.getUTCMonth() + 1, first.getUTCDate(), 0, 0, tz);
     const to = zonedToUtc(after.getUTCFullYear(), after.getUTCMonth() + 1, after.getUTCDate(), 0, 0, tz);
-    const { data } = await createClient()
-      .from('appointments')
-      .select('*, contact:contacts(id, name, phone)')
-      .gte('starts_at', from.toISOString())
-      .lt('starts_at', to.toISOString())
-      .order('starts_at');
+    const supabase = createClient();
+    const [{ data }, { data: busy }] = await Promise.all([
+      supabase
+        .from('appointments')
+        .select('*, contact:contacts(id, name, phone)')
+        .gte('starts_at', from.toISOString())
+        .lt('starts_at', to.toISOString())
+        .order('starts_at'),
+      supabase
+        .from('calendar_busy_blocks')
+        .select('google_event_id, starts_at, ends_at, all_day')
+        .lt('starts_at', to.toISOString())
+        .gt('ends_at', from.toISOString())
+        .order('starts_at'),
+    ]);
     if (seq !== loadSeq.current) return;
     setAppointments((data as Appointment[] | null) ?? []);
+    setBlocks((busy as typeof blocks | null) ?? []);
   }, [days, tz]);
 
   useEffect(() => {
@@ -138,6 +151,32 @@ export default function AgendaPage() {
     }
     return map;
   }, [appointments, tz]);
+
+  // A Google block shows on every local day it touches.
+  const blocksByDay = useMemo(() => {
+    const map = new Map<string, typeof blocks>();
+    for (const b of blocks) {
+      const end = new Date(new Date(b.ends_at).getTime() - 1);
+      for (let d = new Date(b.starts_at); d <= end; d = new Date(d.getTime() + 86_400_000)) {
+        const p = localParts(d, tz);
+        const key = `${p.year}-${pad(p.month)}-${pad(p.day)}`;
+        if (!(map.get(key) ?? []).includes(b)) map.set(key, [...(map.get(key) ?? []), b]);
+      }
+    }
+    return map;
+  }, [blocks, tz]);
+
+  // Back from Google's consent screen (the callback redirects with ?google=).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get('google');
+    if (!result) return;
+    if (result === 'connected') toast.success(t('google.connectedToast'));
+    else toast.error(t.has(`google.errors.${result}`) ? t(`google.errors.${result}`) : t('google.failed'));
+    params.delete('google');
+    const qs = params.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
+  }, [t]);
 
   const todayKey = useMemo(() => {
     const p = localParts(new Date(), tz);
@@ -285,7 +324,18 @@ export default function AgendaPage() {
                 timeZone: 'UTC',
               }).format(cursor)}
             </p>
-            {(byDay.get(dayKey(cursor)) ?? []).length === 0 ? (
+            {(blocksByDay.get(dayKey(cursor)) ?? []).map((b) => (
+              <div
+                key={`${b.google_event_id}-${b.starts_at}`}
+                className="text-muted-foreground flex items-center gap-3 rounded-lg border border-dashed bg-[repeating-linear-gradient(135deg,transparent,transparent_6px,var(--muted)_6px,var(--muted)_12px)] p-3 text-sm"
+              >
+                <span className="w-12 shrink-0 font-semibold tabular-nums">
+                  {b.all_day ? t('google.allDay') : timeOf(b.starts_at)}
+                </span>
+                {t('google.busy')}
+              </div>
+            ))}
+            {(byDay.get(dayKey(cursor)) ?? []).length === 0 && (blocksByDay.get(dayKey(cursor)) ?? []).length === 0 ? (
               <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
                 {settings.work_days.includes(cursor.getUTCDay()) ? t('mobile.empty') : t('mobile.closed')}
               </p>
@@ -378,6 +428,19 @@ export default function AgendaPage() {
                   ))}
                 </span>
               )}
+              {(blocksByDay.get(key) ?? []).map((b) => (
+                <div
+                  key={`${b.google_event_id}-${b.starts_at}`}
+                  title={t('google.busyTitle')}
+                  className={cn(
+                    'text-muted-foreground w-full truncate rounded border border-dashed bg-[repeating-linear-gradient(135deg,transparent,transparent_5px,var(--muted)_5px,var(--muted)_10px)] px-1.5 py-1',
+                    view === 'month' && 'hidden md:block',
+                  )}
+                >
+                  <span className="font-medium">{b.all_day ? t('google.allDay') : timeOf(b.starts_at)}</span>{' '}
+                  {t('google.busy')}
+                </div>
+              ))}
               {items.map((a) => (
                 <button
                   key={a.id}
