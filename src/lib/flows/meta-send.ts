@@ -278,6 +278,9 @@ export async function engineSendMedia(
     sender_type: 'bot',
     content_type: args.kind,
     content_text: args.caption ?? null,
+    // Without it the inbox has nothing to play or show — the customer got
+    // the file, the thread said "unavailable".
+    media_url: args.link,
     message_id: waMessageId,
     status: 'sent',
     ai_generated: args.aiGenerated ?? false,

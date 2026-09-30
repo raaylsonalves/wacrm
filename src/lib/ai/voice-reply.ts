@@ -10,7 +10,7 @@ import { AiError } from './types'
 import { providerHttpError, toNetworkError } from './providers/shared'
 import { buildMediaPath } from '@/lib/storage/upload-media'
 import { engineSendMedia } from '@/lib/flows/meta-send'
-import { toSpeechText } from './whatsapp-format'
+import { toSpeechText, toWhatsAppFormat } from './whatsapp-format'
 
 const OPENAI_SPEECH_URL = 'https://api.openai.com/v1/audio/speech'
 export const TTS_MODEL = 'gpt-4o-mini-tts'
@@ -131,7 +131,9 @@ export async function sendVoiceReply(
     contactId: args.contactId,
     kind: 'audio',
     link: publicUrl,
-    caption: args.text,
+    // The row shows what was said: WhatsApp formatting, not the model's
+    // raw Markdown (the text path gets the same conversion in generate).
+    caption: toWhatsAppFormat(args.text),
     aiGenerated: true,
   })
 }

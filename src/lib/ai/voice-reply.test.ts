@@ -81,6 +81,19 @@ describe('sendVoiceReply', () => {
     })
   })
 
+  it('keeps WhatsApp formatting on the row, not raw Markdown', async () => {
+    const { db } = fakeDb()
+    const send = vi.fn().mockResolvedValue({ whatsapp_message_id: 'w' })
+    await sendVoiceReply(db, {
+      ...base,
+      text: '1. **Sistemas sob medida**: criamos plataformas',
+      synthesize: async () => new Uint8Array([9]),
+      send,
+    })
+    expect(send.mock.calls[0][0].caption).not.toContain('**')
+    expect(send.mock.calls[0][0].caption).toContain('*Sistemas sob medida*')
+  })
+
   it('throws when the upload fails, so the caller sends text', async () => {
     const { db } = fakeDb({ message: 'mime not allowed' })
     const send = vi.fn()

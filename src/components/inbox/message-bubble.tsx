@@ -24,6 +24,29 @@ import {
 } from "./message-media";
 import { InteractivePreview } from "@/components/interactive/interactive-preview";
 import { useTranslations } from "next-intl";
+import { parseWhatsAppFormat } from "@/lib/inbox/wa-format";
+
+/** Message text with WhatsApp's *bold* / _italic_ / ~strike~ / ```mono```. */
+function WaText({ text }: { text: string | null | undefined }) {
+  if (!text) return null;
+  return (
+    <>
+      {parseWhatsAppFormat(text).map((seg, i) => (
+        <span
+          key={i}
+          className={cn(
+            seg.bold && "font-semibold",
+            seg.italic && "italic",
+            seg.strike && "line-through",
+            seg.mono && "rounded bg-black/10 px-1 font-mono text-[0.9em] dark:bg-white/10",
+          )}
+        >
+          {seg.text}
+        </span>
+      ))}
+    </>
+  );
+}
 
 interface MessageBubbleProps {
   message: Message;
@@ -119,7 +142,7 @@ function AudioText({
     return (
       <p className="mt-1 max-w-[280px] whitespace-pre-wrap break-words text-xs opacity-80">
         <span className="font-medium">{t("transcript")}:</span>{" "}
-        <span className="italic">{text}</span>
+        <span className="italic"><WaText text={text} /></span>
       </p>
     );
   }
@@ -149,7 +172,7 @@ function MessageContent({
     case "text":
       return (
         <p className="whitespace-pre-wrap break-words text-sm">
-          {message.content_text}
+          <WaText text={message.content_text} />
         </p>
       );
 
@@ -163,7 +186,7 @@ function MessageContent({
           )}
           {message.content_text && (
             <p className="mt-1 whitespace-pre-wrap break-words text-sm">
-              {message.content_text}
+              <WaText text={message.content_text} />
             </p>
           )}
         </div>
@@ -179,7 +202,7 @@ function MessageContent({
           )}
           {message.content_text && (
             <p className="mt-1 whitespace-pre-wrap break-words text-sm">
-              {message.content_text}
+              <WaText text={message.content_text} />
             </p>
           )}
         </div>
@@ -226,7 +249,7 @@ function MessageContent({
           </span>
           {message.content_text ? (
             <p className="mt-1 whitespace-pre-wrap break-words text-sm">
-              {message.content_text}
+              <WaText text={message.content_text} />
             </p>
           ) : (
             message.template_name && (
@@ -282,7 +305,7 @@ function MessageContent({
     default:
       return (
         <p className="whitespace-pre-wrap break-words text-sm">
-          {message.content_text || t("unsupported")}
+          <WaText text={message.content_text || t("unsupported")} />
         </p>
       );
   }
