@@ -241,19 +241,16 @@ html[data-theme="rose"] {
   }
 }
 
-      transparent 1.6px
-    ),
-    radial-gradient(
-      circle at 36px 30px,
-      color-mix(in oklch, var(--primary) 12%, transparent) 1.4px,
-      transparent 1.8px
-    );
+/* Inbox thread backdrop — WhatsApp's tinted wall with a faint dot
+   texture, derived from the theme so every accent/mode keeps contrast
+   against the white (light) / card (dark) inbound bubbles. */
+.chat-wallpaper {
+  background-color: color-mix(in oklch, var(--muted) 70%, var(--primary) 4%);
+  background-image:
+    radial-gradient(circle at 12px 12px, color-mix(in oklch, var(--foreground) 7%, transparent) 1.2px, transparent 1.6px),
+    radial-gradient(circle at 36px 30px, color-mix(in oklch, var(--primary) 12%, transparent) 1.4px, transparent 1.8px);
   background-size: 48px 48px;
 }
-html[data-mode='dark'] .chat-wallpaper {
-  background-color: color-mix(
-    in oklch,
-    var(--background) 92%,
-    var(--primary) 3%
-  );
+html[data-mode="dark"] .chat-wallpaper {
+  background-color: color-mix(in oklch, var(--background) 92%, var(--primary) 3%);
 }
