@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import type { Message } from "@/types";
 import { downloadMediaMessage } from "@/lib/media/download";
 import { useMediaBlobUrl } from "@/hooks/use-media-blob-url";
+import { AudioPlayer } from "./audio-player";
 
 /**
  * The media renderers behind `<MessageBubble>`'s image / video / audio /
@@ -234,7 +235,11 @@ export function MediaAudioBubble({
 
   return (
     <div className="flex items-center gap-2">
-      <audio src={message.media_url} controls className="max-w-60" />
+      <AudioPlayer
+        src={message.media_url ?? ""}
+        seed={message.id}
+        outgoing={message.sender_type !== "customer"}
+      />
       <MediaActionButton
         icon={Download}
         label={t("download")}
