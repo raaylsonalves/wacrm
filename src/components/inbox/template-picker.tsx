@@ -115,6 +115,8 @@ export function TemplatePicker({
         .from("message_templates")
         .select("*")
         .eq("status", "APPROVED")
+        // Formats the send path can't build yet (migration 099).
+        .is("unsupported_reason", null)
         .order("created_at", { ascending: false });
 
       if (cancelled) return;

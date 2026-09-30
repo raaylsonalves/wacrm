@@ -1445,6 +1445,12 @@
       "back": "Back",
       "cancel": "Cancel",
       "chooseTemplate": {
+        "unsupported": {
+          "carousel": "Carousel — can't be sent from here yet.",
+          "limited_time_offer": "Limited-time offer — can't be sent from here yet.",
+          "catalog": "Product catalog — can't be sent from here yet.",
+          "location_header": "Location header — can't be sent from here yet."
+        },
         "title": "Choose a Template",
         "subtitle": "Select an approved message template for your broadcast.",
         "noTemplates": "No templates available.",

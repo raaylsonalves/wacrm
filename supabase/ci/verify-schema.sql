@@ -708,6 +708,9 @@ BEGIN
      OR NOT EXISTS (SELECT 1 FROM notification_types WHERE type = 'calendar_disconnected') THEN
     RAISE EXCEPTION 'platform google oauth / calendar notification missing — migrations 097/098 did not apply';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'message_templates' AND column_name = 'unsupported_reason') THEN
+    RAISE EXCEPTION 'message_templates.unsupported_reason missing — migration 099 did not apply';
+  END IF;
   IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
     RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
   END IF;

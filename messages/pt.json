@@ -1445,6 +1445,12 @@
       "back": "Voltar",
       "cancel": "Cancelar",
       "chooseTemplate": {
+        "unsupported": {
+          "carousel": "Carrossel — ainda não dá para enviar por aqui.",
+          "limited_time_offer": "Oferta por tempo limitado — ainda não dá para enviar por aqui.",
+          "catalog": "Catálogo de produtos — ainda não dá para enviar por aqui.",
+          "location_header": "Cabeçalho de localização — ainda não dá para enviar por aqui."
+        },
         "title": "Escolha um modelo",
         "subtitle": "Selecione um modelo de mensagem aprovado para o seu disparo.",
         "noTemplates": "Nenhum modelo disponível.",

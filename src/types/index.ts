@@ -454,6 +454,10 @@ export interface MessageTemplate {
   quality_score?: 'GREEN' | 'YELLOW' | 'RED';
   submission_error?: string;
   last_submitted_at?: string;
+  /** Set by the sync when Meta approved a format this CRM can't send
+   *  yet (migration 099): carousel, limited_time_offer, catalog,
+   *  location_header. */
+  unsupported_reason?: string | null;
   created_at: string;
 }
 

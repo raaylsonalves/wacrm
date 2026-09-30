@@ -87,15 +87,22 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
           {templates.map((template) => {
             const isSelected = selectedTemplate?.id === template.id;
             const catColor = categoryColors[template.category] ?? categoryColors.Utility;
+            // Approved by Meta but in a format the send path can't build
+            // (migration 099) — visible, not selectable, with the reason.
+            const unsupported = template.unsupported_reason ?? null;
 
             return (
               <button
                 key={template.id}
+                disabled={!!unsupported}
                 onClick={() => onSelect(template)}
+                title={unsupported ? t(`chooseTemplate.unsupported.${unsupported}`) : undefined}
                 className={`flex flex-col gap-3 rounded-xl border p-4 text-left transition-all ${
-                  isSelected
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
-                    : 'border-border bg-card/50 hover:border-border hover:bg-card'
+                  unsupported
+                    ? 'cursor-not-allowed border-dashed border-border opacity-60'
+                    : isSelected
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                      : 'border-border bg-card/50 hover:border-border hover:bg-card'
                 }`}
               >
                 <div className="flex items-start justify-between">
@@ -107,6 +114,11 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
                   </span>
                 </div>
                 <p className="line-clamp-3 text-xs text-muted-foreground">{template.body_text}</p>
+                {unsupported && (
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                    {t(`chooseTemplate.unsupported.${unsupported}`)}
+                  </p>
+                )}
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                   <span>{template.language ?? 'en_US'}</span>
                   {/* Status is omitted on purpose — every template

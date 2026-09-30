@@ -1445,6 +1445,12 @@
       "back": "뒤로",
       "cancel": "취소",
       "chooseTemplate": {
+        "unsupported": {
+          "carousel": "캐러셀 — 아직 여기서 보낼 수 없습니다.",
+          "limited_time_offer": "기간 한정 혜택 — 아직 여기서 보낼 수 없습니다.",
+          "catalog": "상품 카탈로그 — 아직 여기서 보낼 수 없습니다.",
+          "location_header": "위치 헤더 — 아직 여기서 보낼 수 없습니다."
+        },
         "title": "템플릿 선택",
         "subtitle": "브로드캐스트에 사용할 승인된 메시지 템플릿을 선택하세요.",
         "noTemplates": "사용 가능한 템플릿이 없습니다.",

@@ -1445,6 +1445,12 @@
       "back": "Atrás",
       "cancel": "Cancelar",
       "chooseTemplate": {
+        "unsupported": {
+          "carousel": "Carrusel — aún no se puede enviar desde aquí.",
+          "limited_time_offer": "Oferta por tiempo limitado — aún no se puede enviar desde aquí.",
+          "catalog": "Catálogo de productos — aún no se puede enviar desde aquí.",
+          "location_header": "Encabezado de ubicación — aún no se puede enviar desde aquí."
+        },
         "title": "Elige una plantilla",
         "subtitle": "Selecciona una plantilla de mensaje aprobada para tu difusión.",
         "noTemplates": "No hay plantillas disponibles.",

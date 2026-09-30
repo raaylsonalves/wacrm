@@ -411,9 +411,11 @@ export function Step3Personalize({
             <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
           )}
         </div>
-        <div className="rounded-lg bg-[#0e1a12] p-3">
-          <div className="ml-auto max-w-[85%] rounded-lg bg-primary/30 px-3 py-2 shadow-sm">
-            <p className="whitespace-pre-wrap text-sm text-primary">
+        {/* Same look as an outgoing bubble in the inbox — the old
+            translucent-accent-on-accent text was unreadable in dark mode. */}
+        <div className="chat-wallpaper rounded-lg p-3">
+          <div className="ml-auto max-w-[85%] rounded-lg bg-primary px-3 py-2 shadow-sm">
+            <p className="whitespace-pre-wrap text-sm text-primary-foreground">
               {previewText}
             </p>
           </div>

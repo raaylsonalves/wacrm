@@ -1,3 +1,4 @@
+import { unsupportedTemplateReason } from '@/lib/whatsapp/template-support'
 import { NextResponse } from 'next/server'
 import {
   ForbiddenError,
@@ -236,6 +237,9 @@ export async function POST() {
         status: normalizeStatus(t.status),
         meta_template_id: t.id,
         quality_score: normalizeQualityScore(t.quality_score),
+        // Formats the send path can't build (migration 099) — shown
+        // disabled in the pickers instead of failing at Meta.
+        unsupported_reason: unsupportedTemplateReason(t.components),
         updated_at: new Date().toISOString(),
       }
 
