@@ -14,6 +14,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { PipelineStage } from '@/types';
 
+/** Fired after the header chip moves a deal, so the list's chip follows. */
+export const DEAL_STAGE_EVENT = 'wacrm:deal-stage-changed';
+
 interface OpenDeal {
   id: string;
   stage_id: string;
@@ -83,6 +86,14 @@ export function DealStageChip({
     if (error || !data || data.length === 0) {
       setDeal(prev);
       toast.error(t('stageMoveFailed'));
+      return;
+    }
+    // The conversation list carries its own copy of the stage; tell it.
+    const moved = stages.find((s) => s.id === stageId);
+    if (moved && contactId) {
+      window.dispatchEvent(
+        new CustomEvent(DEAL_STAGE_EVENT, { detail: { contactId, stage: moved } })
+      );
     }
   }
 

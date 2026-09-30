@@ -13,12 +13,14 @@ import type {
   Contact,
   ConversationStatus,
   Tag,
+  PipelineStage,
 } from '@/types';
 import { useRealtime } from '@/hooks/use-realtime';
 import { ConversationList } from '@/components/inbox/conversation-list';
 import { MessageThread } from '@/components/inbox/message-thread';
 import { ContactSidebar } from '@/components/inbox/contact-sidebar';
 import { ChannelStatusBanner } from '@/components/inbox/channel-status-banner';
+import { DEAL_STAGE_EVENT } from '@/components/inbox/deal-stage-chip';
 import { PushNudgeBanner } from '@/components/notifications/push-nudge-banner';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -499,6 +501,25 @@ function InboxPageInner() {
     },
     []
   );
+
+  // The header's stage chip moved a deal: the list keeps its own copy of the
+  // contact's stage, so patch it here instead of waiting for a reload.
+  useEffect(() => {
+    const onStage = (e: Event) => {
+      const { contactId, stage } = (e as CustomEvent).detail as {
+        contactId: string;
+        stage: PipelineStage;
+      };
+      const patchOne = (c: Conversation): Conversation =>
+        c.contact?.id === contactId
+          ? { ...c, contact: { ...c.contact, dealStage: stage } }
+          : c;
+      setConversations((prev) => prev.map(patchOne));
+      setActiveConversation((prev) => (prev ? patchOne(prev) : prev));
+    };
+    window.addEventListener(DEAL_STAGE_EVENT, onStage);
+    return () => window.removeEventListener(DEAL_STAGE_EVENT, onStage);
+  }, []);
 
   const handleStatusChange = useCallback(
     (conversationId: string, status: ConversationStatus) => {
