@@ -196,7 +196,7 @@ export default function AgendaPage() {
               }}
             >
               <Settings className="size-4" />
-              {t('settings.button')}
+              <span className="hidden sm:inline">{t('settings.button')}</span>
             </Button>
           )}
           {canSendMessages && (
@@ -225,7 +225,7 @@ export default function AgendaPage() {
         <Button variant="outline" size="icon-sm" onClick={() => shift(1)} aria-label={t('next')}>
           <ChevronRight className="size-4" />
         </Button>
-        <span className="text-sm font-medium capitalize">{heading}</span>
+        <span className="text-sm font-medium first-letter:uppercase">{heading}</span>
         <div className="border-border ml-auto flex rounded-md border p-0.5">
           {(['week', 'month'] as View[]).map((v) => (
             <button
@@ -243,7 +243,87 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-border bg-border text-xs">
+      {/* Phones: a week is a strip of 7 days + the chosen day's list —
+          seven 50px columns can't show a readable appointment. */}
+      {view === 'week' && cursor && (
+        <div className="space-y-3 md:hidden">
+          <div className="grid grid-cols-7 gap-1">
+            {days.map((day) => {
+              const key = dayKey(day);
+              const selected = key === dayKey(cursor);
+              const count = (byDay.get(key) ?? []).length;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setCursor(day)}
+                  className={cn(
+                    'flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-xs',
+                    selected ? 'bg-primary text-primary-foreground' : 'text-muted-foreground',
+                    !selected && key === todayKey && 'text-primary font-semibold',
+                  )}
+                >
+                  <span>{t(`weekdays.${day.getUTCDay()}`)}</span>
+                  <span className="text-base font-semibold tabular-nums">{day.getUTCDate()}</span>
+                  <span
+                    className={cn(
+                      'h-1.5 w-1.5 rounded-full',
+                      count > 0 ? (selected ? 'bg-primary-foreground' : 'bg-primary') : 'bg-transparent',
+                    )}
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium first-letter:uppercase">
+              {new Intl.DateTimeFormat(appLocaleTag(), {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                timeZone: 'UTC',
+              }).format(cursor)}
+            </p>
+            {(byDay.get(dayKey(cursor)) ?? []).length === 0 ? (
+              <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+                {settings.work_days.includes(cursor.getUTCDay()) ? t('mobile.empty') : t('mobile.closed')}
+              </p>
+            ) : (
+              (byDay.get(dayKey(cursor)) ?? []).map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => openEdit(a)}
+                  className={cn('flex w-full items-start gap-3 rounded-lg border p-3 text-left', STATUS_CLASS[a.status])}
+                >
+                  <span className="w-12 shrink-0 text-sm font-semibold tabular-nums">{timeOf(a.starts_at)}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{a.title}</span>
+                    <span className="block truncate text-xs opacity-80">
+                      {a.contact?.name ?? a.contact?.phone}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-[11px] opacity-80">{t(`status.${a.status}`)}</span>
+                </button>
+              ))
+            )}
+            {canSendMessages && (
+              <Button variant="outline" size="sm" className="w-full" onClick={() => openNew(cursor)}>
+                <Plus className="size-4" />
+                {t('mobile.newOnDay')}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div
+        className={cn(
+          'grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-border bg-border text-xs',
+          view === 'week' && 'hidden md:grid',
+        )}
+      >
         {[1, 2, 3, 4, 5, 6, 0].map((d) => (
           <div key={d} className="bg-muted text-muted-foreground px-2 py-1.5 font-medium">
             {t(`weekdays.${d}`)}
@@ -257,9 +337,16 @@ export default function AgendaPage() {
           return (
             <div
               key={key}
+              onClick={() => {
+                // Phones: the month grid is an overview — a tap opens the day.
+                if (view === 'month' && window.matchMedia('(max-width: 767px)').matches) {
+                  setCursor(day);
+                  setView('week');
+                }
+              }}
               className={cn(
                 'bg-card group flex min-w-0 flex-col gap-1 p-1.5',
-                view === 'week' ? 'min-h-72' : 'min-h-24',
+                view === 'week' ? 'min-h-72' : 'min-h-14 md:min-h-24',
                 (outside || closed) && 'bg-muted/40',
               )}
             >
@@ -284,13 +371,24 @@ export default function AgendaPage() {
                   </button>
                 )}
               </div>
+              {view === 'month' && items.length > 0 && (
+                <span className="flex flex-wrap gap-0.5 md:hidden">
+                  {items.slice(0, 4).map((a) => (
+                    <span key={a.id} className="bg-primary h-1.5 w-1.5 rounded-full" />
+                  ))}
+                </span>
+              )}
               {items.map((a) => (
                 <button
                   key={a.id}
                   type="button"
-                  onClick={() => openEdit(a)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEdit(a);
+                  }}
                   className={cn(
                     'w-full truncate rounded border px-1.5 py-1 text-left',
+                    view === 'month' && 'hidden md:block',
                     STATUS_CLASS[a.status],
                   )}
                   title={`${timeOf(a.starts_at)} ${a.title} — ${a.contact?.name ?? a.contact?.phone ?? ''}`}

@@ -71,6 +71,7 @@
     "menuSignOut": "Sair"
   },
   "Header": {
+    "agenda": "Agenda",
     "push": {
       "labelOn": "Notificações ativadas neste dispositivo",
       "labelOff": "Ativar notificações neste dispositivo",
@@ -3199,6 +3200,11 @@
     "COP": "Peso colombiano"
   },
   "Agenda": {
+    "mobile": {
+      "empty": "Nenhum compromisso neste dia.",
+      "closed": "Dia sem atendimento.",
+      "newOnDay": "Novo agendamento neste dia"
+    },
     "title": "Agenda",
     "new": "Novo agendamento",
     "today": "Hoje",

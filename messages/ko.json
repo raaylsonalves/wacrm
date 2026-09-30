@@ -71,6 +71,7 @@
     "menuSignOut": "로그아웃"
   },
   "Header": {
+    "agenda": "일정",
     "push": {
       "labelOn": "이 기기에서 알림이 켜져 있습니다",
       "labelOff": "이 기기에서 알림 켜기",
@@ -3211,6 +3212,11 @@
     "COP": "콜롬비아 페소"
   },
   "Agenda": {
+    "mobile": {
+      "empty": "이 날에는 일정이 없습니다.",
+      "closed": "휴무일입니다.",
+      "newOnDay": "이 날에 새 일정"
+    },
     "title": "일정",
     "new": "새 예약",
     "today": "오늘",

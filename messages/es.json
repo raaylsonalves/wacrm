@@ -71,6 +71,7 @@
     "menuSignOut": "Cerrar sesión"
   },
   "Header": {
+    "agenda": "Agenda",
     "push": {
       "labelOn": "Notificaciones activadas en este dispositivo",
       "labelOff": "Activar notificaciones en este dispositivo",
@@ -3199,6 +3200,11 @@
     "COP": "Peso colombiano"
   },
   "Agenda": {
+    "mobile": {
+      "empty": "Ninguna cita este día.",
+      "closed": "Día sin atención.",
+      "newOnDay": "Nueva cita este día"
+    },
     "title": "Agenda",
     "new": "Nueva cita",
     "today": "Hoy",

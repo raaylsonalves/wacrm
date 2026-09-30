@@ -71,6 +71,7 @@
     "menuSignOut": "Sign out"
   },
   "Header": {
+    "agenda": "Agenda",
     "push": {
       "labelOn": "Notifications on for this device",
       "labelOff": "Turn on notifications for this device",
@@ -3211,6 +3212,11 @@
     "COP": "Colombian Peso"
   },
   "Agenda": {
+    "mobile": {
+      "empty": "No appointments on this day.",
+      "closed": "Closed on this day.",
+      "newOnDay": "New appointment on this day"
+    },
     "title": "Agenda",
     "new": "New appointment",
     "today": "Today",

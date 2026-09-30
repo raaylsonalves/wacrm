@@ -21,6 +21,7 @@ import { PushStatusButton } from "@/components/notifications/push-status-button"
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "dashboard",
+  "/agenda": "agenda",
   "/inbox": "inbox",
   "/notifications": "notifications",
   "/contacts": "contacts",
