@@ -683,6 +683,11 @@ BEGIN
      OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'accounts' AND column_name = 'modules') THEN
     RAISE EXCEPTION 'account modules missing — migration 091 did not apply';
   END IF;
+  IF to_regprocedure('public.set_agency_operator(uuid,boolean)') IS NULL
+     OR to_regprocedure('public.set_operator_assignment(uuid,uuid,boolean)') IS NULL
+     OR to_regprocedure('public.agency_team()') IS NULL THEN
+    RAISE EXCEPTION 'agency team missing — migration 092 did not apply';
+  END IF;
   IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
     RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
   END IF;

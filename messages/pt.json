@@ -710,6 +710,14 @@
         "settings": "Configurações"
       }
     },
+    "team": {
+      "title": "Equipe da agência",
+      "subtitle": "Quem da Nordia pode operar clientes, e quais. Cada pessoa só enxerga os clientes que você liberar.",
+      "operator": "Operador",
+      "makeOperator": "Tornar operador",
+      "noClients": "Nenhum cliente ainda.",
+      "failed": "Não foi possível salvar."
+    },
     "banner": {
       "operating": "Operando:",
       "portfolio": "Carteira",

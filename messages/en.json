@@ -710,6 +710,14 @@
         "settings": "Settings"
       }
     },
+    "team": {
+      "title": "Agency team",
+      "subtitle": "Who on your team can operate clients, and which ones. Each person only sees the clients you assign.",
+      "operator": "Operator",
+      "makeOperator": "Make operator",
+      "noClients": "No clients yet.",
+      "failed": "Could not save."
+    },
     "banner": {
       "operating": "Operating:",
       "portfolio": "Portfolio",

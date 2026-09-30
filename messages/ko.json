@@ -710,6 +710,14 @@
         "settings": "Settings"
       }
     },
+    "team": {
+      "title": "에이전시 팀",
+      "subtitle": "Who on your team can operate clients, and which ones. Each person only sees the clients you assign.",
+      "operator": "운영자",
+      "makeOperator": "운영자로 지정",
+      "noClients": "No clients yet.",
+      "failed": "Could not save."
+    },
     "banner": {
       "operating": "운영 중:",
       "portfolio": "포트폴리오",

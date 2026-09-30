@@ -710,6 +710,14 @@
         "settings": "Settings"
       }
     },
+    "team": {
+      "title": "Equipo de la agencia",
+      "subtitle": "Who on your team can operate clients, and which ones. Each person only sees the clients you assign.",
+      "operator": "Operador",
+      "makeOperator": "Hacer operador",
+      "noClients": "No clients yet.",
+      "failed": "Could not save."
+    },
     "banner": {
       "operating": "Operando:",
       "portfolio": "Cartera",

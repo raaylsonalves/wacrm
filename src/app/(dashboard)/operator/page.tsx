@@ -10,6 +10,7 @@ import { dateFnsLocale } from '@/lib/date-fns-locale';
 import { switchAccount, useOperator } from '@/hooks/use-operator';
 import { attentionScore, type PortfolioRow } from '@/lib/operator/portfolio';
 import { MODULES, MODULE_PRESETS } from '@/lib/account/modules';
+import { AgencyTeam } from '@/components/operator/agency-team';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,6 +119,12 @@ export default function OperatorPage() {
           {t('newClient')}
         </Button>
       </form>
+
+      <AgencyTeam
+        clients={(rows ?? [])
+          .filter((r) => !r.is_home)
+          .map((r) => ({ id: r.account_id, name: r.name }))}
+      />
 
       {rows === null ? (
         <Loader2 className="text-muted-foreground mx-auto size-6 animate-spin" />
