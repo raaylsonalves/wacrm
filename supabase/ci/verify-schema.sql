@@ -669,6 +669,11 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'assignment alert does not carry the transfer note — migration 088 did not apply';
   END IF;
+  IF to_regprocedure('public.dashboard_inbound_heatmap(uuid,timestamptz,text)') IS NULL
+     OR to_regprocedure('public.dashboard_ai_vs_team(uuid,timestamptz)') IS NULL
+     OR to_regprocedure('public.dashboard_team_since(uuid,timestamptz)') IS NULL THEN
+    RAISE EXCEPTION 'dashboard ops functions missing — migration 089 did not apply';
+  END IF;
   IF to_regclass('public.notification_types') IS NULL OR to_regclass('public.notification_preferences') IS NULL THEN
     RAISE EXCEPTION 'notification catalogue/preferences missing — migration 086 did not apply';
   END IF;

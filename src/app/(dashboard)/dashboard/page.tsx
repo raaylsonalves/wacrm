@@ -36,6 +36,7 @@ import { ResponseTimeChart } from '@/components/dashboard/response-time-chart'
 import { ActivityFeed } from '@/components/dashboard/activity-feed'
 import { PriorityPanel, TodayGreeting, useTodayData } from '@/components/dashboard/today-focus'
 import { cn } from '@/lib/utils'
+import { OpsPanels } from '@/components/dashboard/ops-panels'
 
 import { useTranslations } from 'next-intl'
 import { APP_LOCALE } from '@/lib/currency'
@@ -346,6 +347,9 @@ export default function DashboardPage() {
           thresholdMinutes={responseTimeTargetMinutes}
         />
       )}
+
+      {/* Team, AI vs team, cases waiting, when customers write. */}
+      <OpsPanels />
 
       {/* Activity feed */}
       {!activityLoading && activityError ? (

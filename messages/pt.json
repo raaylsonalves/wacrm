@@ -106,6 +106,38 @@
     "retry": "Tentar novamente"
   },
   "Dashboard": {
+    "ops": {
+      "team": {
+        "title": "Equipe hoje",
+        "person": "Pessoa",
+        "replies": "Respostas",
+        "conversations": "Conversas",
+        "open": "Em aberto"
+      },
+      "ai": {
+        "title": "IA e equipe hoje",
+        "none": "Nenhuma resposta enviada hoje ainda.",
+        "share": "das respostas foram da IA",
+        "aiReplies": "Respostas da IA",
+        "teamReplies": "Respostas da equipe",
+        "customerMessages": "Mensagens de clientes",
+        "tokens": "Tokens de IA",
+        "inConversations": "{count, plural, one {em # conversa} other {em # conversas}}"
+      },
+      "cases": {
+        "title": "Casos esperando a equipe",
+        "open": "Abrir casos",
+        "none": "Nenhum caso esperando.",
+        "waiting": "{count, plural, one {caso esperando} other {casos esperando}}"
+      },
+      "heat": {
+        "title": "Quando os clientes escrevem",
+        "subtitle": "Mensagens recebidas nos últimos 30 dias, por dia e hora",
+        "none": "Ainda não há mensagens suficientes.",
+        "cell": "{day} {hour}h: {count} mensagens",
+        "peak": "Pico: {day} às {hour}h. Bom horário para ter gente (ou a IA) de plantão."
+      }
+    },
     "page": {
       "title": "Painel",
       "description": "Métricas ao vivo de conversas, contatos, negócios, disparos e automações.",

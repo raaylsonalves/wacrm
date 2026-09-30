@@ -106,6 +106,38 @@
     "retry": "Retry"
   },
   "Dashboard": {
+    "ops": {
+      "team": {
+        "title": "Team today",
+        "person": "Person",
+        "replies": "Replies",
+        "conversations": "Conversations",
+        "open": "Open"
+      },
+      "ai": {
+        "title": "AI and team today",
+        "none": "No replies sent today yet.",
+        "share": "of replies came from the AI",
+        "aiReplies": "AI replies",
+        "teamReplies": "Team replies",
+        "customerMessages": "Customer messages",
+        "tokens": "AI tokens",
+        "inConversations": "{count, plural, one {in # conversation} other {in # conversations}}"
+      },
+      "cases": {
+        "title": "Cases waiting for the team",
+        "open": "Open cases",
+        "none": "No case waiting.",
+        "waiting": "{count, plural, one {case waiting} other {cases waiting}}"
+      },
+      "heat": {
+        "title": "When customers write",
+        "subtitle": "Messages received in the last 30 days, by day and hour",
+        "none": "Not enough messages yet.",
+        "cell": "{day} {hour}h: {count} messages",
+        "peak": "Peak: {day} at {hour}h. A good time to have someone (or the AI) on duty."
+      }
+    },
     "page": {
       "title": "Dashboard",
       "description": "Live analytics across conversations, contacts, deals, broadcasts, and automations.",
