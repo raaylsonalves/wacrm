@@ -20,7 +20,6 @@ import { ModeToggle } from "@/components/layout/mode-toggle";
 import { PushStatusButton } from "@/components/notifications/push-status-button";
 
 const pageTitles: Record<string, string> = {
-  "/today": "today",
   "/dashboard": "dashboard",
   "/inbox": "inbox",
   "/notifications": "notifications",

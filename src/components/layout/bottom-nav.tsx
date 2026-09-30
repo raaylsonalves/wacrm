@@ -16,14 +16,14 @@ import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 
 const TABS = [
-  { href: '/today', key: 'today', icon: Home },
+  { href: '/dashboard', key: 'dashboard', icon: Home },
   { href: '/inbox', key: 'inbox', icon: MessageCircle },
   { href: '/pipelines', key: 'deals', icon: CircleDollarSign },
   { href: '/agenda', key: 'agenda', icon: CalendarDays },
 ] as const;
 
 /**
- * Phone tab bar (Today / Conversations / Deals / Agenda / More). Below lg
+ * Phone tab bar (Dashboard / Conversations / Deals / Agenda / More). Below lg
  * only — desktop keeps the sidebar. Hidden inside an open conversation so
  * the composer gets the full height, like WhatsApp. While it shows it sets
  * `data-bottom-nav="on"` on <html>, which globals.css turns into the

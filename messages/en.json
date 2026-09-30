@@ -36,7 +36,6 @@
   "Sidebar": {
     "title": "CRM Template for WhatsApp",
     "primaryNav": "Primary",
-    "today": "Today",
     "dashboard": "Dashboard",
     "inbox": "Inbox",
     "notifications": "Notifications",
@@ -72,7 +71,6 @@
     "menuSignOut": "Sign out"
   },
   "Header": {
-    "today": "Today",
     "push": {
       "labelOn": "Notifications on for this device",
       "labelOff": "Turn on notifications for this device",
@@ -576,7 +574,7 @@
   },
   "BottomNav": {
     "label": "Navigation",
-    "today": "Today",
+    "dashboard": "Dashboard",
     "inbox": "Chats",
     "deals": "Deals",
     "agenda": "Agenda",
@@ -592,13 +590,6 @@
     "needReplyHint": "These are live opportunities. Reply now to keep the pace.",
     "allCaughtUp": "All caught up",
     "allCaughtUpHint": "No customer is waiting for a person right now.",
-    "stats": {
-      "replies": "Replies",
-      "meetings": "Meetings",
-      "deals": "Deals"
-    },
-    "vsYesterday": "vs. yesterday",
-    "yesterday": "{count} yesterday",
     "priority": "Priority conversations",
     "seeAll": "See all ({count})",
     "noPriority": "No conversation waiting for a reply.",

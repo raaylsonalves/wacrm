@@ -36,7 +36,6 @@
   "Sidebar": {
     "title": "Plantilla de CRM para WhatsApp",
     "primaryNav": "Principal",
-    "today": "Hoy",
     "dashboard": "Panel",
     "inbox": "Bandeja de entrada",
     "notifications": "Notificaciones",
@@ -72,7 +71,6 @@
     "menuSignOut": "Cerrar sesión"
   },
   "Header": {
-    "today": "Hoy",
     "push": {
       "labelOn": "Notificaciones activadas en este dispositivo",
       "labelOff": "Activar notificaciones en este dispositivo",
@@ -576,7 +574,7 @@
   },
   "BottomNav": {
     "label": "Navegación",
-    "today": "Hoy",
+    "dashboard": "Panel",
     "inbox": "Chats",
     "deals": "Negocios",
     "agenda": "Agenda",
@@ -592,13 +590,6 @@
     "needReplyHint": "Son oportunidades en curso. Responde ahora para mantener el ritmo.",
     "allCaughtUp": "Todo respondido",
     "allCaughtUpHint": "Ningún cliente espera a una persona ahora.",
-    "stats": {
-      "replies": "Respuestas",
-      "meetings": "Reuniones",
-      "deals": "Negocios"
-    },
-    "vsYesterday": "vs. ayer",
-    "yesterday": "{count} ayer",
     "priority": "Conversaciones prioritarias",
     "seeAll": "Ver todas ({count})",
     "noPriority": "Ninguna conversación esperando respuesta.",
