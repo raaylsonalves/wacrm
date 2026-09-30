@@ -47,6 +47,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "./message-bubble";
 import { DealStageChip } from "./deal-stage-chip";
+import { CaseChip } from "./case-chip";
 import { TransferDialog } from "./transfer-dialog";
 import { startsRun, unseenCount } from "@/lib/inbox/bubble-runs";
 import { MessageActions } from "./message-actions";
@@ -1067,6 +1068,7 @@ export function MessageThread({
             </button>
             <div className="flex min-w-0 items-center gap-1.5">
               <DealStageChip contactId={contact?.id} />
+              <CaseChip conversationId={conversation?.id} />
               <p className="truncate text-xs text-muted-foreground">
                 {contactHandle(contact)}
               </p>

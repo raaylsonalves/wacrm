@@ -324,6 +324,10 @@
     },
     "messageThread": {
       "dealStage": "Etapa del embudo",
+      "caseOne": "Caso abierto",
+      "caseCount": "{count} casos abiertos",
+      "caseWaitingTeam": "La IA pasó una tarea al equipo",
+      "caseWaitingCustomer": "Esperando la respuesta del cliente",
       "stageMoveFailed": "No se pudo cambiar la etapa.",
       "backToConversations": "Volver a las conversaciones",
       "hideContactPanel": "Ocultar panel del contacto",

@@ -7,6 +7,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { ClipboardList, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCan } from '@/hooks/use-can';
+import { useAuth } from '@/hooks/use-auth';
+import { createClient } from '@/lib/supabase/client';
 import { dateFnsLocale } from '@/lib/date-fns-locale';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -55,6 +57,36 @@ export default function CasesPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
+  const { accountId } = useAuth();
+
+  // Live: a case opened by the AI, claimed by a teammate or closed by the
+  // customer's reply refreshes the list (migration 093). Bursts collapse
+  // into one reload.
+  useEffect(() => {
+    if (!accountId) return;
+    const supabase = createClient();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const channel = supabase
+      .channel(`cases-${accountId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'human_cases',
+          filter: `account_id=eq.${accountId}`,
+        },
+        () => {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(reload, 400);
+        }
+      )
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      void supabase.removeChannel(channel);
+    };
+  }, [accountId, reload]);
 
   useEffect(() => {
     let alive = true;

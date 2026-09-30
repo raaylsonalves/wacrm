@@ -324,6 +324,10 @@
     },
     "messageThread": {
       "dealStage": "퍼널 단계",
+      "caseOne": "열린 케이스",
+      "caseCount": "열린 케이스 {count}건",
+      "caseWaitingTeam": "AI가 팀에 작업을 넘겼습니다",
+      "caseWaitingCustomer": "고객 답변 대기 중",
       "stageMoveFailed": "단계를 변경할 수 없습니다.",
       "backToConversations": "대화 목록으로 돌아가기",
       "hideContactPanel": "연락처 패널 숨기기",

@@ -324,6 +324,10 @@
     },
     "messageThread": {
       "dealStage": "Funnel stage",
+      "caseOne": "Open case",
+      "caseCount": "{count} open cases",
+      "caseWaitingTeam": "The AI handed a task to the team",
+      "caseWaitingCustomer": "Waiting for the customer to reply",
       "stageMoveFailed": "Could not change the stage.",
       "backToConversations": "Back to conversations",
       "hideContactPanel": "Hide contact panel",

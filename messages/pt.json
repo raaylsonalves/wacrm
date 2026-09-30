@@ -324,6 +324,10 @@
     },
     "messageThread": {
       "dealStage": "Etapa do funil",
+      "caseOne": "Caso aberto",
+      "caseCount": "{count} casos abertos",
+      "caseWaitingTeam": "A IA passou uma tarefa para a equipe",
+      "caseWaitingCustomer": "Esperando o cliente responder",
       "stageMoveFailed": "Não foi possível mudar a etapa.",
       "backToConversations": "Voltar às conversas",
       "hideContactPanel": "Ocultar painel do contato",
