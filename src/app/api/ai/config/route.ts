@@ -116,7 +116,7 @@ export async function GET() {
     // /api/ai/agents.
     let { data, error } = await supabase
       .from('ai_configs')
-      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled, handoff_keywords, transcription_model, voice_reply_mode, voice_name`)
+      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled, handoff_keywords, transcription_model, voice_reply_mode, voice_name, cases_enabled`)
       .eq('account_id', accountId)
       .eq('is_default', true)
       .maybeSingle()
@@ -414,6 +414,7 @@ export async function POST(request: Request) {
     }
     if ('voice_reply_mode' in body) shared.voice_reply_mode = parseVoiceMode(body.voice_reply_mode)
     if ('voice_name' in body) shared.voice_name = parseVoiceName(body.voice_name)
+    if ('cases_enabled' in body) shared.cases_enabled = body.cases_enabled === true
     if (rawEmbeddingsKey) {
       shared.embeddings_api_key = encrypt(rawEmbeddingsKey)
     } else if (clearEmbeddingsKey) {
@@ -447,6 +448,7 @@ export async function POST(request: Request) {
           transcription_model: _omit4,
           voice_reply_mode: _omit5,
           voice_name: _omit6,
+          cases_enabled: _omit7,
           ...payloadWithoutFallbacks
         } = payload
         void _omit
@@ -455,6 +457,7 @@ export async function POST(request: Request) {
         void _omit4
         void _omit5
         void _omit6
+        void _omit7
         ;({ error: upErr } = await supabase
           .from('ai_configs')
           .update(payloadWithoutFallbacks)
@@ -494,6 +497,7 @@ export async function POST(request: Request) {
           transcription_model: _omit4,
           voice_reply_mode: _omit5,
           voice_name: _omit6,
+          cases_enabled: _omit7,
           ...insertWithoutFallbacks
         } = insertPayload as Record<string, unknown>
         void _omit
@@ -502,6 +506,7 @@ export async function POST(request: Request) {
         void _omit4
         void _omit5
         void _omit6
+        void _omit7
         ;({ error: insErr } = await supabase
           .from('ai_configs')
           .insert(insertWithoutFallbacks))

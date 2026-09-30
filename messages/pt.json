@@ -47,6 +47,7 @@
     "flows": "Fluxos",
     "aiAgents": "Agentes de IA",
     "prospecting": "Prospecção",
+    "cases": "Casos",
     "channelsSettings": "Conexões",
     "navGroupAtendimento": "Atendimento",
     "navGroupCrm": "CRM",
@@ -251,6 +252,7 @@
       "searchPlaceholder": "Buscar conversas...",
       "filterAll": "Todas",
       "filterUnread": "Não lidas",
+      "filterWaitingHuman": "Aguardando pessoa",
       "filterOpen": "Abertas",
       "filterPending": "Pendentes",
       "filterClosed": "Fechadas",
@@ -446,7 +448,8 @@
           "rateLimited": "Muitas mensagens ao mesmo tempo — o assistente pausou aqui",
           "systemError": "Falha interna ao reservar a resposta do assistente",
           "customerRequestedHuman": "O cliente pediu um atendente",
-          "audioUnintelligible": "O assistente não conseguiu entender o áudio do cliente"
+          "audioUnintelligible": "O assistente não conseguiu entender o áudio do cliente",
+          "caseEscalated": "Uma pessoa assumiu a conversa a partir de um caso"
         },
         "lastMessage": "Última mensagem do cliente",
         "showMore": "Ver mais",
@@ -468,6 +471,76 @@
           "no_notice_text": "sem texto de aviso configurado"
         }
       }
+    }
+  },
+  "Cases": {
+    "title": "Casos",
+    "subtitle": "Tarefas que a IA não consegue fazer sozinha. Ela continua conversando com o cliente; a equipe resolve aqui e a IA avisa o cliente do resultado.",
+    "views": {
+      "team": "Aguardando equipe",
+      "customer": "Aguardando cliente",
+      "closed": "Encerrados"
+    },
+    "empty": {
+      "team": "Nenhum caso esperando a equipe.",
+      "customer": "Nenhum caso esperando o cliente.",
+      "closed": "Nenhum caso encerrado ainda."
+    },
+    "failSafe": "aberto automaticamente",
+    "notRelayed": "cliente não foi avisado",
+    "status": {
+      "awaiting_human": "Aguardando equipe",
+      "awaiting_lead": "Aguardando cliente",
+      "resolved": "Resolvido",
+      "escalated": "Assumido por uma pessoa",
+      "cancelled": "Cancelado"
+    },
+    "detail": {
+      "blocker": "O que a equipe precisa fazer",
+      "summary": "Resumo",
+      "excerpt": "Trecho da conversa",
+      "openConversation": "Abrir conversa",
+      "respond": "Responder",
+      "notePlaceholder": "Ex.: acesso liberado; ou: preciso do número do pedido",
+      "noteHint": "A IA usa esta nota para avisar o cliente com as próprias palavras; ela não é mostrada ao cliente.",
+      "timeline": "Histórico"
+    },
+    "actions": {
+      "done": "Concluído",
+      "need_info": "Preciso de informação do cliente",
+      "escalate": "Assumir a conversa",
+      "claim": "Pegar para mim",
+      "cancel": "Cancelar caso"
+    },
+    "done": {
+      "done": "Caso concluído. A IA vai avisar o cliente.",
+      "need_info": "A IA vai pedir a informação ao cliente.",
+      "escalate": "Você assumiu a conversa.",
+      "claim": "Caso atribuído a você.",
+      "cancel": "Caso cancelado."
+    },
+    "events": {
+      "opened": "Aberto",
+      "claimed": "Assumido",
+      "done": "Concluído",
+      "need_info": "Pediu informação",
+      "lead_provided": "Cliente respondeu",
+      "escalate": "Conversa assumida",
+      "cancel": "Cancelado",
+      "cancelled": "Cancelado",
+      "relay_sent": "IA avisou o cliente",
+      "relay_failed": "Cliente não foi avisado"
+    },
+    "actor": {
+      "ai": "IA",
+      "human": "Equipe",
+      "system": "Sistema"
+    },
+    "errors": {
+      "generic": "Não foi possível concluir.",
+      "note_required": "Escreva uma nota para a IA.",
+      "illegal_transition": "Este caso já mudou de situação.",
+      "not_found": "Caso não encontrado."
     }
   },
   "Prospecting": {
@@ -2747,6 +2820,10 @@
       "save": "Salvar alterações",
       "saved": "Salvo",
       "saveFailed": "Não foi possível salvar",
+      "cases": {
+        "title": "Casos para a equipe",
+        "description": "A IA abre um caso quando precisa que alguém da equipe faça algo (liberar acesso, verificar um pagamento) e continua conversando com o cliente. Se ela prometer que a equipe vai verificar sem abrir um caso, o sistema abre um automaticamente."
+      },
       "voice": {
         "title": "Responder áudio com áudio",
         "description": "Quando o cliente manda um áudio, a IA responde com uma mensagem de voz (respostas longas continuam em texto). Usa a mesma chave OpenAI da transcrição e custa mais que texto.",

@@ -6,6 +6,7 @@ import type { AutomationContext } from '@/lib/automations/engine'
 import { runFollowupSweep } from '@/lib/automations/followup-sweep'
 import { runProspectingTick } from '@/lib/prospecting/tick'
 import { syncContactAvatars } from '@/lib/contacts/avatar-sync'
+import { retryPendingRelays } from '@/lib/cases/relay'
 
 /**
  * Drain due `automation_pending_executions` rows. Meant to be hit
@@ -124,5 +125,11 @@ export async function GET(request: Request) {
     return null
   })
 
-  return NextResponse.json({ processed, followups, prospecting, avatars })
+  // Case relays whose route run was frozen before it finished.
+  const caseRelays = await retryPendingRelays(supabaseAdmin()).catch((err) => {
+    console.error('[cron] case relay retry failed:', err)
+    return null
+  })
+
+  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays })
 }

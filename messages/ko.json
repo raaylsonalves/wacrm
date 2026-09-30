@@ -47,6 +47,7 @@
     "flows": "플로우",
     "aiAgents": "AI 에이전트",
     "prospecting": "잠재 고객 발굴",
+    "cases": "케이스",
     "channelsSettings": "연결",
     "navGroupAtendimento": "상담",
     "navGroupCrm": "CRM",
@@ -251,6 +252,7 @@
       "searchPlaceholder": "대화 검색...",
       "filterAll": "전체",
       "filterUnread": "읽지 않음",
+      "filterWaitingHuman": "상담원 대기",
       "filterOpen": "열림",
       "filterPending": "대기 중",
       "filterClosed": "닫힘",
@@ -446,7 +448,8 @@
           "rateLimited": "동시에 메시지가 너무 많아 어시스턴트가 여기서 멈췄습니다",
           "systemError": "어시스턴트 답변을 예약하는 중 내부 오류가 발생했습니다",
           "customerRequestedHuman": "고객이 상담원을 요청했습니다",
-          "audioUnintelligible": "어시스턴트가 고객의 음성 메시지를 이해하지 못했습니다"
+          "audioUnintelligible": "어시스턴트가 고객의 음성 메시지를 이해하지 못했습니다",
+          "caseEscalated": "케이스에서 상담원이 대화를 인수했습니다"
         },
         "lastMessage": "고객의 마지막 메시지",
         "showMore": "더 보기",
@@ -468,6 +471,76 @@
           "no_notice_text": "안내 문구가 설정되지 않음"
         }
       }
+    }
+  },
+  "Cases": {
+    "title": "케이스",
+    "subtitle": "Tasks the AI can't do on its own. It keeps talking to the customer; the team handles them here and the AI tells the customer the outcome.",
+    "views": {
+      "team": "팀 대기",
+      "customer": "고객 대기",
+      "closed": "종료됨"
+    },
+    "empty": {
+      "team": "No case waiting for the team.",
+      "customer": "No case waiting for the customer.",
+      "closed": "No closed cases yet."
+    },
+    "failSafe": "opened automatically",
+    "notRelayed": "customer was not told",
+    "status": {
+      "awaiting_human": "Waiting for the team",
+      "awaiting_lead": "Waiting for the customer",
+      "resolved": "Resolved",
+      "escalated": "Taken over by a person",
+      "cancelled": "Cancelled"
+    },
+    "detail": {
+      "blocker": "What the team must do",
+      "summary": "Summary",
+      "excerpt": "Conversation excerpt",
+      "openConversation": "Open conversation",
+      "respond": "Respond",
+      "notePlaceholder": "E.g. access granted; or: I need the order number",
+      "noteHint": "The AI uses this note to tell the customer in its own words; it is not shown to the customer.",
+      "timeline": "History"
+    },
+    "actions": {
+      "done": "Done",
+      "need_info": "Need info from the customer",
+      "escalate": "Take over the conversation",
+      "claim": "Assign to me",
+      "cancel": "Cancel case"
+    },
+    "done": {
+      "done": "Case done. The AI will tell the customer.",
+      "need_info": "The AI will ask the customer.",
+      "escalate": "You took over the conversation.",
+      "claim": "Case assigned to you.",
+      "cancel": "Case cancelled."
+    },
+    "events": {
+      "opened": "Opened",
+      "claimed": "Claimed",
+      "done": "Done",
+      "need_info": "Asked for info",
+      "lead_provided": "Customer replied",
+      "escalate": "Conversation taken over",
+      "cancel": "Cancelled",
+      "cancelled": "Cancelled",
+      "relay_sent": "AI told the customer",
+      "relay_failed": "Customer was not told"
+    },
+    "actor": {
+      "ai": "AI",
+      "human": "Team",
+      "system": "System"
+    },
+    "errors": {
+      "generic": "Could not complete.",
+      "note_required": "Write a note for the AI.",
+      "illegal_transition": "This case has already changed.",
+      "not_found": "Case not found."
     }
   },
   "Prospecting": {
@@ -2759,6 +2832,10 @@
       "save": "변경 사항 저장",
       "saved": "저장됨",
       "saveFailed": "저장하지 못했습니다",
+      "cases": {
+        "title": "팀 케이스",
+        "description": "AI가 팀원이 처리해야 할 일이 있으면 케이스를 열고 고객과 대화를 계속합니다. 케이스 없이 확인을 약속하면 시스템이 자동으로 엽니다."
+      },
       "voice": {
         "title": "음성 메시지에 음성으로 답하기",
         "description": "고객이 음성 메시지를 보내면 AI가 음성 메시지로 답합니다(긴 답변은 텍스트로 전송). 음성 변환과 같은 OpenAI 키를 사용하며 텍스트보다 비용이 더 듭니다.",

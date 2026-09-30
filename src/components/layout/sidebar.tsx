@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useTotalUnread } from '@/hooks/use-total-unread';
 import { useUnreadNotifications } from '@/hooks/use-unread-notifications';
-import { Target,
+import { ClipboardList, Target,
   Bell,
   Bot,
   Cable,
@@ -120,6 +120,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
       { href: '/inbox', labelKey: 'inbox', icon: MessageSquare },
+      { href: '/cases', labelKey: 'cases', icon: ClipboardList },
       { href: '/notifications', labelKey: 'notifications', icon: Bell },
     ],
   },

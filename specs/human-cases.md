@@ -264,3 +264,24 @@ alguém" and never opens a case. Three layers:
 1. Schema + state machine + tools + relay + API (no UI; testable).
 2. "Casos" page, thread chip, notifications/push.
 3. Promise detector + tuning log.
+
+## Implementation notes (all three phases, v1)
+
+Built: migration 085 (tables, `cases_enabled`, `case_escalated` reason,
+notification types, triggers cancelling open cases on close / opt-out —
+verified in a rolled-back transaction), `src/lib/cases/state-machine.ts`
+(double click = no-op), `store.ts` (open with caps + DB-read excerpt,
+transitions guarded by current status, team notification + push to the
+number's responsibles or every agent+), `relay.ts` (button-driven intent,
+note treated as untrusted, no tools, 24h window → `window_closed` +
+notification; cron retries a frozen `pending` relay), the two AI tools and
+the prompt section listing open cases, the promise fail-safe (reuses the
+guardrail regexes + a "vou verificar com a equipe" set; only when no case
+is open), `/api/cases` + `/api/cases/[id]`, the `/cases` page with the
+three views and a detail sheet, the per-agent toggle, and the inbox filter
+"Aguardando pessoa". Verified in the browser: claim + cancel on a test case.
+
+Not built: a chip in the thread header linking to the case; realtime on the
+cases page (it reloads on action); "send template" shortcut when the window
+is closed; auto-open tuning log beyond the `opened_by = 'system'` badge.
+Not exercised live: done / need_info (they message the customer).

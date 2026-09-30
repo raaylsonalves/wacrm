@@ -202,6 +202,7 @@ const REASON_KEYS: Record<string, string> = {
   system_error: "systemError",
   customer_requested_human: "customerRequestedHuman",
   audio_unintelligible: "audioUnintelligible",
+  case_escalated: "caseEscalated",
 };
 
 const ATTEMPT_CODES = new Set([

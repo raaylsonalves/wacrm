@@ -78,6 +78,7 @@ export function AiConfig({
   const [transcriptionModel, setTranscriptionModel] = useState('');
   const [voiceMode, setVoiceMode] = useState<'off' | 'mirror'>('off');
   const [voiceName, setVoiceName] = useState('');
+  const [casesEnabled, setCasesEnabled] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -151,6 +152,7 @@ export function AiConfig({
         setTranscriptionModel(data.transcription_model ?? '');
         setVoiceMode(data.voice_reply_mode === 'mirror' ? 'mirror' : 'off');
         setVoiceName(data.voice_name ?? '');
+        setCasesEnabled(data.cases_enabled === true);
         setHasStoredKey(Boolean(data.has_key));
         setApiKey(data.has_key ? MASKED_KEY : '');
         setKeyEdited(false);
@@ -219,6 +221,7 @@ export function AiConfig({
     transcription_model: transcriptionModel || null,
     voice_reply_mode: voiceMode,
     voice_name: voiceName || null,
+    cases_enabled: casesEnabled,
     fallbacks: fallbackEnabled
       ? [
           {
@@ -784,6 +787,14 @@ export function AiConfig({
                 onChange={setTranscriptionModel}
                 disabled={disabled}
               />
+            </div>
+
+            <div className="flex items-start justify-between gap-4 rounded-md border border-border p-3">
+              <div>
+                <Label>{tDetail('cases.title')}</Label>
+                <p className="text-xs text-muted-foreground">{tDetail('cases.description')}</p>
+              </div>
+              <Switch checked={casesEnabled} onCheckedChange={setCasesEnabled} disabled={disabled} />
             </div>
 
             <div className="space-y-2">

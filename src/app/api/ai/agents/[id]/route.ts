@@ -118,6 +118,7 @@ export async function PATCH(
     }
     if ('voice_reply_mode' in body) update.voice_reply_mode = parseVoiceMode(body.voice_reply_mode);
     if ('voice_name' in body) update.voice_name = parseVoiceName(body.voice_name);
+    if ('cases_enabled' in body) update.cases_enabled = body.cases_enabled === true;
     if ('handoff_keywords' in body) {
       update.handoff_keywords = cleanHandoffKeywords(body.handoff_keywords);
     }

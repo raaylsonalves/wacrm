@@ -41,6 +41,14 @@ import { latestUserMessage } from './query'
 import { AGENDA_TOOLS, createAgendaToolExecutor } from './tools/agenda'
 import { CONTACT_TOOLS, createContactToolExecutor } from './tools/contact'
 import {
+  CASE_TOOLS,
+  casesPromptSection,
+  createCaseToolExecutor,
+  loadOpenCases,
+} from './tools/cases'
+import { openCase } from '@/lib/cases/store'
+import { promisesHumanFollowUp } from './guardrails/gates'
+import {
   PROSPECTING_TOOLS,
   createProspectingToolExecutor,
   loadProspectContext,
@@ -76,7 +84,7 @@ const SEGMENT_DELAY_MS = 1200
  * these paths, so skipping it (as the reply-cap path used to) silently
  * strands the conversation.
  */
-async function handOffToHuman(
+export async function handOffToHuman(
   db: ReturnType<typeof supabaseAdmin>,
   conversationId: string,
   config: Pick<AiConfig, 'handoffAgentId'>,
@@ -105,7 +113,7 @@ async function handOffToHuman(
   await notifyCustomerOfHandoff(db, conversationId, currentAssignedAgentId, meta, notice)
 }
 
-interface NoticeContext {
+export interface NoticeContext {
   accountId: string
   contactId: string
   /** WhatsApp config owner — the outbound send's audit user. */
@@ -682,7 +690,27 @@ export async function dispatchInboundToAiReply(
     const baseTools = config.agendaEnabled
       ? [...CONTACT_TOOLS, ...AGENDA_TOOLS]
       : CONTACT_TOOLS
-    const tools = prospect ? [...baseTools, ...PROSPECTING_TOOLS] : baseTools
+    // Human cases (specs/human-cases.md): per-agent opt-in. The open
+    // cases of this thread go in the prompt so the model knows their ids.
+    const openCases = config.casesEnabled ? await loadOpenCases(db, conversationId) : []
+    if (config.casesEnabled) systemPrompt = `${systemPrompt}\n\n${casesPromptSection(openCases)}`
+    let caseOpenedThisTurn = false
+    const caseExecutor = config.casesEnabled
+      ? createCaseToolExecutor({
+          db,
+          accountId,
+          conversationId,
+          contactId,
+          onOpened: () => {
+            caseOpenedThisTurn = true
+          },
+        })
+      : null
+    const tools = [
+      ...baseTools,
+      ...(prospect ? PROSPECTING_TOOLS : []),
+      ...(caseExecutor ? CASE_TOOLS : []),
+    ]
     const prospectExecutor = prospect
       ? createProspectingToolExecutor({ db, accountId, ctx: prospect })
       : null
@@ -697,7 +725,9 @@ export async function dispatchInboundToAiReply(
         })
       : null
     const executeTool = (name: string, callArgs: Record<string, unknown>) =>
-      name === 'qualify_lead' && prospectExecutor
+      (name === 'open_human_case' || name === 'provide_case_update') && caseExecutor
+        ? caseExecutor(name, callArgs)
+        : name === 'qualify_lead' && prospectExecutor
         ? prospectExecutor(name, callArgs)
         : name === 'save_contact_name'
         ? contactExecutor(name, callArgs)
@@ -794,6 +824,32 @@ export async function dispatchInboundToAiReply(
       return
     }
 
+    // Cases fail-safe (specs/human-cases.md §5): the reply promises the
+    // team will follow up, but no case exists and none was opened this turn
+    // — open one so the promise isn't empty. Only when nothing is open, so a
+    // repeated promise can't pile up duplicates. Never blocks the reply.
+    if (
+      config.casesEnabled &&
+      !caseOpenedThisTurn &&
+      openCases.length === 0 &&
+      promisesHumanFollowUp(text)
+    ) {
+      const asked = (lastCustomerMessage(messages) ?? '').trim()
+      const r = await openCase(db, {
+        accountId,
+        conversationId,
+        contactId,
+        title: (asked || 'Pedido do cliente').slice(0, 120),
+        summary: asked || text,
+        blocker: 'A IA disse ao cliente que a equipe vai verificar, mas não abriu um caso. Confira o pedido.',
+        openedBy: 'system',
+      })
+      if (r.ok) {
+        caseOpenedThisTurn = true
+        console.info(`${tag} fail-safe opened case ${r.caseId} (promise without a case)`)
+      }
+    }
+
     // Before-send guardrails, OBSERVE mode (specs/ai-output-guardrails.md):
     // record what the chain would have blocked, send regardless. Judged
     // once on the joined text, never per bubble.
@@ -807,7 +863,11 @@ export async function dispatchInboundToAiReply(
         accountId,
         conversationId,
         text,
-        ctx: { optedOut: !!gateContact?.opted_out_at, handingOff: false },
+        // A promise of human follow-up is true when a case exists.
+        ctx: {
+          optedOut: !!gateContact?.opted_out_at,
+          handingOff: caseOpenedThisTurn || openCases.length > 0,
+        },
       })
     }
 

@@ -27,6 +27,7 @@ interface AiConfigRow {
   transcription_model?: string | null
   voice_reply_mode?: string | null
   voice_name?: string | null
+  cases_enabled?: boolean | null
 }
 
 /** One row of `listAiAgents` — never the decrypted key, just enough
@@ -42,7 +43,7 @@ export interface AiAgentSummary {
 
 const CONFIG_COLUMNS_BASE =
   'id, provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, embeddings_api_key'
-const CONFIG_COLUMNS = `${CONFIG_COLUMNS_BASE}, fallbacks, agenda_enabled, handoff_keywords, transcription_model, voice_reply_mode, voice_name`
+const CONFIG_COLUMNS = `${CONFIG_COLUMNS_BASE}, fallbacks, agenda_enabled, handoff_keywords, transcription_model, voice_reply_mode, voice_name, cases_enabled`
 
 /** Postgres "undefined_column" — thrown by `fallbacks` not existing yet
  *  when migration 052 hasn't been applied. See the fallback query below. */
@@ -179,6 +180,7 @@ export async function loadAiConfig(
     transcriptionModel: parseTranscriptionModel(row.transcription_model),
     voiceReplyMode: parseVoiceMode(row.voice_reply_mode),
     voiceName: parseVoiceName(row.voice_name),
+    casesEnabled: row.cases_enabled === true,
   }
 }
 

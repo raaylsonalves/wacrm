@@ -49,6 +49,19 @@ const HUMAN_PROMISE = [
   /\b(?:voy a|vamos a)\s+(?:pasar|derivar|transferir)\b[^.\n]{0,30}\b(?:equipo|humano|agente)/i,
 ]
 
+/** Does the text promise that a person will follow up? Shared with the
+ *  human-cases fail-safe (src/lib/ai/tools/cases.ts). */
+export function promisesHumanFollowUp(text: string): boolean {
+  return HUMAN_PROMISE.some((re) => re.test(text)) || VERIFY_PROMISE.some((re) => re.test(text))
+}
+
+// "Vou verificar com a equipe" — a follow-up promise that is not a transfer.
+const VERIFY_PROMISE = [
+  /\b(?:vou|irei|vamos)\s+(?:verificar|checar|confirmar|consultar|ver)\b[^.\n]{0,40}\bcom\s+(?:a|o)\s+(?:equipe|time|setor|financeiro|respons[aá]vel|gerente)/i,
+  /\b(?:i(?:'ll| will)|we(?:'ll| will))\s+(?:check|confirm|verify)\b[^.\n]{0,30}\bwith\s+(?:the\s+)?(?:team|manager|department)/i,
+  /\b(?:voy a|vamos a)\s+(?:verificar|consultar|confirmar)\b[^.\n]{0,30}\bcon\s+(?:el|la)\s+(?:equipo|encargado|gerente)/i,
+]
+
 // Identifier shapes that only exist inside the system.
 const INTERNAL_VOCAB = [
   /\b(?:crm|ai|whatsapp)_[a-z]+(?:_[a-z]+)+\b/, // snake_case tool/table names

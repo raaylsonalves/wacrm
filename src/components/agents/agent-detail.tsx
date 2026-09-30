@@ -61,6 +61,7 @@ interface AgentRow {
   transcription_model: string | null;
   voice_reply_mode: string | null;
   voice_name: string | null;
+  cases_enabled: boolean | null;
   has_key: boolean;
 }
 
@@ -104,6 +105,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   const [transcriptionModel, setTranscriptionModel] = useState('');
   const [voiceMode, setVoiceMode] = useState<'off' | 'mirror'>('off');
   const [voiceName, setVoiceName] = useState('');
+  const [casesEnabled, setCasesEnabled] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -131,6 +133,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         setTranscriptionModel(a.transcription_model ?? '');
         setVoiceMode(a.voice_reply_mode === 'mirror' ? 'mirror' : 'off');
         setVoiceName(a.voice_name ?? '');
+        setCasesEnabled(a.cases_enabled === true);
       } catch {
         if (alive) toast.error(t('loadFailed'));
       }
@@ -184,6 +187,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         transcription_model: transcriptionModel || null,
         voice_reply_mode: voiceMode,
         voice_name: voiceName || null,
+        cases_enabled: casesEnabled,
       };
       // Changing provider/model/key makes the server re-validate against
       // the provider (a round trip), so only send it when it changed.
@@ -421,6 +425,14 @@ export function AgentDetail({ agentId }: { agentId: string }) {
               onChange={setTranscriptionModel}
               disabled={disabled}
             />
+          </div>
+
+          <div className="flex items-start justify-between gap-4 rounded-md border p-3">
+            <div>
+              <Label>{t('cases.title')}</Label>
+              <p className="text-muted-foreground text-xs">{t('cases.description')}</p>
+            </div>
+            <Switch checked={casesEnabled} onCheckedChange={setCasesEnabled} disabled={disabled} />
           </div>
 
           <div className="space-y-1.5">

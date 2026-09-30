@@ -658,6 +658,15 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'ai_usage_log.speech_chars is missing — migration 080 did not apply';
   END IF;
+  IF to_regclass('public.human_cases') IS NULL OR to_regclass('public.human_case_events') IS NULL THEN
+    RAISE EXCEPTION 'human_cases tables are missing — migration 085 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'notifications_type_check' AND pg_get_constraintdef(oid) LIKE '%case_opened%'
+  ) THEN
+    RAISE EXCEPTION 'notifications type check lacks case types — migration 085 did not apply';
+  END IF;
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'contacts' AND column_name = 'avatar_updated_at'

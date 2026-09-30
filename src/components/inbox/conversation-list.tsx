@@ -108,7 +108,7 @@ const STATUS_LABEL_KEY: Record<ConversationStatus, string> = {
   closed: 'statusClosed',
 };
 
-type InboxFilter = ConversationStatus | 'all' | 'unread' | 'snoozed';
+type InboxFilter = ConversationStatus | 'all' | 'unread' | 'snoozed' | 'waiting_human';
 
 const SNOOZE_PRESETS: SnoozePreset[] = ['1h', '3h', 'tomorrow'];
 
@@ -170,6 +170,7 @@ export function ConversationList({
     () => [
       { label: t('filterAll'), value: 'all' },
       { label: t('filterUnread'), value: 'unread' },
+      { label: t('filterWaitingHuman'), value: 'waiting_human' },
       { label: t('filterOpen'), value: 'open' },
       { label: t('filterPending'), value: 'pending' },
       { label: t('filterClosed'), value: 'closed' },
@@ -498,6 +499,12 @@ export function ConversationList({
 
     if (filter === 'unread') {
       result = result.filter((c) => c.unread_count > 0);
+    } else if (filter === 'waiting_human') {
+      // The AI stopped (hand-off / pause) and no person took it yet — the
+      // amber dot on the avatar.
+      result = result.filter(
+        (c) => c.status !== 'closed' && !c.assigned_agent_id && !!c.ai_autoreply_disabled
+      );
     } else if (filter !== 'all' && filter !== 'snoozed') {
       result = result.filter((c) => c.status === filter);
     }

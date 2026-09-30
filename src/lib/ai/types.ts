@@ -63,6 +63,8 @@ export interface AiConfig {
   /** 'mirror' = answer a voice note with a voice note. */
   voiceReplyMode?: 'off' | 'mirror'
   voiceName?: string | null
+  /** Human cases tools on (specs/human-cases.md). */
+  casesEnabled?: boolean
 }
 
 /** A JSON-schema tool definition, provider-neutral — each adapter maps

@@ -15,6 +15,8 @@ const h = vi.hoisted(() => ({
   transcribeInboundAudio: vi.fn(),
   loadNoticeText: vi.fn(),
   waitForQuietPeriod: vi.fn(),
+  openCase: vi.fn(),
+  loadOpenCases: vi.fn(),
   loadAudioRetryText: vi.fn(),
   state: {
     /** The customer's two latest messages' transcript_status, newest first. */
@@ -50,6 +52,13 @@ vi.mock('./context', () => ({
 }))
 vi.mock('./notice-text', () => ({ loadNoticeText: h.loadNoticeText }))
 vi.mock('./burst', () => ({ waitForQuietPeriod: h.waitForQuietPeriod }))
+vi.mock('@/lib/cases/store', () => ({ openCase: h.openCase }))
+vi.mock('./tools/cases', () => ({
+  CASE_TOOLS: [],
+  casesPromptSection: () => 'cases',
+  createCaseToolExecutor: () => async () => '{}',
+  loadOpenCases: h.loadOpenCases,
+}))
 vi.mock('./knowledge', () => ({ retrieveKnowledge: h.retrieveKnowledge }))
 // `AllProvidersFailedError` is imported by auto-reply.ts alongside the
 // mocked function — re-export the real class so `instanceof` checks in
@@ -223,6 +232,10 @@ beforeEach(() => {
   h.loadNoticeText.mockReset()
   h.waitForQuietPeriod.mockReset()
   h.waitForQuietPeriod.mockResolvedValue('proceed')
+  h.openCase.mockReset()
+  h.openCase.mockResolvedValue({ ok: true, caseId: 'case-x' })
+  h.loadOpenCases.mockReset()
+  h.loadOpenCases.mockResolvedValue([])
   h.transcribeInboundAudio.mockReset()
   h.loadAudioRetryText.mockReset()
   h.loadAiConfig.mockResolvedValue(aiConfig())
@@ -987,5 +1000,42 @@ describe('dispatchInboundToAiReply — agent pinned by a prospecting campaign', 
     )
     await dispatchInboundToAiReply(ARGS)
     expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+  })
+})
+
+describe('dispatchInboundToAiReply — human cases fail-safe', () => {
+  const promise = 'Vou verificar com a equipe e te retorno.'
+  const reply = (text: string) =>
+    h.generateReplyWithFallback.mockResolvedValue({
+      text,
+      segments: [text],
+      handoff: false,
+      usage: null,
+      provider: 'openai',
+      model: 'gpt-test',
+      attempts: [],
+    })
+
+  it('a promise with no case opens one (system), and the reply still goes out', async () => {
+    h.loadAiConfig.mockResolvedValue(aiConfig({ casesEnabled: true }))
+    reply(promise)
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.openCase).toHaveBeenCalledTimes(1)
+    expect(h.openCase.mock.calls[0][1]).toMatchObject({ openedBy: 'system', conversationId: 'conv-1' })
+    expect(h.engineSendText).toHaveBeenCalled()
+  })
+
+  it('does not open another when one is already open', async () => {
+    h.loadAiConfig.mockResolvedValue(aiConfig({ casesEnabled: true }))
+    h.loadOpenCases.mockResolvedValue([{ id: 'c1', title: 't', status: 'awaiting_human', pending_note: null }])
+    reply(promise)
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.openCase).not.toHaveBeenCalled()
+  })
+
+  it('cases off: the old behaviour, nothing opened', async () => {
+    reply(promise)
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.openCase).not.toHaveBeenCalled()
   })
 })

@@ -47,6 +47,7 @@
     "flows": "Flows",
     "aiAgents": "AI Agents",
     "prospecting": "Prospecting",
+    "cases": "Cases",
     "channelsSettings": "Connections",
     "navGroupAtendimento": "Support",
     "navGroupCrm": "CRM",
@@ -251,6 +252,7 @@
       "searchPlaceholder": "Search conversations...",
       "filterAll": "All",
       "filterUnread": "Unread",
+      "filterWaitingHuman": "Waiting for a person",
       "filterOpen": "Open",
       "filterPending": "Pending",
       "filterClosed": "Closed",
@@ -446,7 +448,8 @@
           "rateLimited": "Too many messages at once — the assistant paused here",
           "systemError": "Internal error while reserving the assistant’s reply",
           "customerRequestedHuman": "The customer asked for a person",
-          "audioUnintelligible": "The assistant could not make out the customer's voice note"
+          "audioUnintelligible": "The assistant could not make out the customer's voice note",
+          "caseEscalated": "A person took over from a case"
         },
         "lastMessage": "Customer’s last message",
         "showMore": "Show more",
@@ -468,6 +471,76 @@
           "no_notice_text": "no notice text configured"
         }
       }
+    }
+  },
+  "Cases": {
+    "title": "Cases",
+    "subtitle": "Tasks the AI can't do on its own. It keeps talking to the customer; the team handles them here and the AI tells the customer the outcome.",
+    "views": {
+      "team": "Waiting for the team",
+      "customer": "Waiting for the customer",
+      "closed": "Closed"
+    },
+    "empty": {
+      "team": "No case waiting for the team.",
+      "customer": "No case waiting for the customer.",
+      "closed": "No closed cases yet."
+    },
+    "failSafe": "opened automatically",
+    "notRelayed": "customer was not told",
+    "status": {
+      "awaiting_human": "Waiting for the team",
+      "awaiting_lead": "Waiting for the customer",
+      "resolved": "Resolved",
+      "escalated": "Taken over by a person",
+      "cancelled": "Cancelled"
+    },
+    "detail": {
+      "blocker": "What the team must do",
+      "summary": "Summary",
+      "excerpt": "Conversation excerpt",
+      "openConversation": "Open conversation",
+      "respond": "Respond",
+      "notePlaceholder": "E.g. access granted; or: I need the order number",
+      "noteHint": "The AI uses this note to tell the customer in its own words; it is not shown to the customer.",
+      "timeline": "History"
+    },
+    "actions": {
+      "done": "Done",
+      "need_info": "Need info from the customer",
+      "escalate": "Take over the conversation",
+      "claim": "Assign to me",
+      "cancel": "Cancel case"
+    },
+    "done": {
+      "done": "Case done. The AI will tell the customer.",
+      "need_info": "The AI will ask the customer.",
+      "escalate": "You took over the conversation.",
+      "claim": "Case assigned to you.",
+      "cancel": "Case cancelled."
+    },
+    "events": {
+      "opened": "Opened",
+      "claimed": "Claimed",
+      "done": "Done",
+      "need_info": "Asked for info",
+      "lead_provided": "Customer replied",
+      "escalate": "Conversation taken over",
+      "cancel": "Cancelled",
+      "cancelled": "Cancelled",
+      "relay_sent": "AI told the customer",
+      "relay_failed": "Customer was not told"
+    },
+    "actor": {
+      "ai": "AI",
+      "human": "Team",
+      "system": "System"
+    },
+    "errors": {
+      "generic": "Could not complete.",
+      "note_required": "Write a note for the AI.",
+      "illegal_transition": "This case has already changed.",
+      "not_found": "Case not found."
     }
   },
   "Prospecting": {
@@ -2759,6 +2832,10 @@
       "save": "Save changes",
       "saved": "Saved",
       "saveFailed": "Could not save",
+      "cases": {
+        "title": "Cases for the team",
+        "description": "The AI opens a case when it needs a teammate to do something (grant access, check a payment) and keeps talking to the customer. If it promises the team will check without opening one, the system opens it."
+      },
       "voice": {
         "title": "Answer voice notes with voice",
         "description": "When a customer sends a voice note, the AI answers with a voice message (long replies stay as text). Uses the same OpenAI key as transcription and costs more than text.",

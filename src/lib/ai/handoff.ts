@@ -16,6 +16,7 @@ export type HandoffReason =
   | 'system_error'
   | 'customer_requested_human'
   | 'audio_unintelligible'
+  | 'case_escalated'
 
 /** Structured, non-translated facts stored in `ai_handoff_meta`. */
 export interface HandoffMeta {
