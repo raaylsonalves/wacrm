@@ -144,7 +144,12 @@ export function buildSystemPrompt(args: {
         'Call book_appointment directly, without offer_slots, when the customer already named one exact day and time — that call is itself the availability check. ' +
         'A transcript line ending in "(id: slot:...)" is the customer tapping one of your own offered options — pass that id straight to book_appointment as slot_id. ' +
         'If the customer already has an appointment and wants to change the time ("can we move it", "another time works better"), call reschedule_appointment instead of book_appointment — book_appointment would leave BOTH appointments on the calendar instead of moving the one they have. ' +
-        'Never state or imply a time is free, booked, or moved without a tool result saying so.',
+        'Never state or imply a time is free, booked, or moved without a tool result saying so. ' +
+        // Seen live: "can you book a meeting?" was handed off every time —
+        // the business context said "hand off when it isn't in the
+        // knowledge base", and scheduling never is. Booking is a
+        // capability, not a fact to look up.
+        `Scheduling is something you do yourself with these tools: a request to book, schedule, check availability for, or move an appointment or meeting is NOT a reason to reply ${HANDOFF_SENTINEL}, even when the business context or knowledge base below does not mention scheduling or says to hand off whatever it does not cover. Hand off a scheduling request only if the customer asks for a person, or a tool result says it cannot be done.`,
     )
   }
 
@@ -171,7 +176,8 @@ export function buildSystemPrompt(args: {
   if (knowledge && knowledge.length > 0) {
     const fallback =
       mode === 'auto_reply'
-        ? `if they don't cover the question, do not guess — reply with exactly ${HANDOFF_SENTINEL} so a human can help`
+        ? `if they don't cover the question, do not guess — reply with exactly ${HANDOFF_SENTINEL} so a human can help` +
+          (agendaToolsEnabled ? ' (scheduling requests are the exception: use the appointment tools)' : '')
         : "if they don't cover the question, don't guess — say you'll check and follow up"
     parts.push(
       'Knowledge base — excerpts from the business\'s own documentation, retrieved for this question. ' +

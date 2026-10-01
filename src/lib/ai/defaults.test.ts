@@ -52,6 +52,20 @@ describe('buildSystemPrompt — unknown terms', () => {
   })
 })
 
+describe('buildSystemPrompt — scheduling is not a handoff', () => {
+  it('tells the model to book instead of handing off when agenda tools are on', () => {
+    const p = buildSystemPrompt({ ...base, knowledge: ['Consignado desconta da folha.'] })
+    expect(p).toContain('is NOT a reason to reply [[HANDOFF]]')
+    expect(p).toContain('scheduling requests are the exception')
+  })
+
+  it('says nothing about scheduling when agenda tools are off', () => {
+    const p = buildSystemPrompt({ userPrompt: 'x', mode: 'auto_reply', knowledge: ['A'] })
+    expect(p).not.toContain('Scheduling is something you do yourself')
+    expect(p).not.toContain('scheduling requests are the exception')
+  })
+})
+
 it('tells the model its own earlier messages are not a source', () => {
   expect(buildSystemPrompt({ userPrompt: 'x', mode: 'auto_reply' })).toContain('NOT a source of truth')
 })
