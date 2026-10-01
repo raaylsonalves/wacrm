@@ -201,7 +201,7 @@ vi.mock('./admin-client', () => ({
   }),
 }))
 
-import { dispatchInboundToAiReply } from './auto-reply'
+import { dispatchInboundToAiReply, dropEchoedPrompts } from './auto-reply'
 
 const ARGS = {
   accountId: 'acct-1',
@@ -1069,5 +1069,17 @@ describe('dispatchInboundToAiReply — human cases fail-safe', () => {
     reply(promise)
     await dispatchInboundToAiReply(ARGS)
     expect(h.openCase).not.toHaveBeenCalled()
+  })
+})
+
+describe('dropEchoedPrompts', () => {
+  const intro = 'Sem problemas, Raylson! Tenho estes horários disponíveis para amanhã:'
+  it('drops a bubble that repeats the list text already sent', () => {
+    expect(dropEchoedPrompts(['Sem problemas, Raylson! Tenho estes horários disponíveis para amanhã:'], [intro])).toEqual([])
+    expect(dropEchoedPrompts(['sem problemas, raylson'], [intro])).toEqual([])
+  })
+  it('keeps new content', () => {
+    expect(dropEchoedPrompts(['Qualquer dúvida me chama!'], [intro])).toEqual(['Qualquer dúvida me chama!'])
+    expect(dropEchoedPrompts(['Oi'], [])).toEqual(['Oi'])
   })
 })

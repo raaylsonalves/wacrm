@@ -160,6 +160,22 @@ async function notifyHandoff(
   }
 }
 
+const normalizeForEcho = (s: string) =>
+  s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+
+/**
+ * Drop reply bubbles that just repeat the body of an interactive prompt
+ * a tool already sent this turn (the list's text is already on screen).
+ */
+export function dropEchoedPrompts(segments: string[], sentPromptTexts: string[]): string[] {
+  if (sentPromptTexts.length === 0) return segments
+  const sent = sentPromptTexts.map(normalizeForEcho).filter(Boolean)
+  return segments.filter((seg) => {
+    const n = normalizeForEcho(seg)
+    return !n || !sent.some((p) => p === n || (n.length >= 12 && p.includes(n)))
+  })
+}
+
 /** Pause before the single retry of a failed reply bubble. */
 const SEND_RETRY_DELAY_MS = 2000
 
@@ -792,7 +808,22 @@ export async function dispatchInboundToAiReply(
           userId: configOwnerUserId,
         })
       : null
-    const executeTool = (name: string, callArgs: Record<string, unknown>) =>
+    // Bodies of the interactive prompts a tool already sent this turn —
+    // the model tends to repeat that text as its final reply (seen live:
+    // the offer_slots intro arrived twice).
+    const sentPromptTexts: string[] = []
+    const executeTool = async (name: string, callArgs: Record<string, unknown>) => {
+      const result = await routeTool(name, callArgs)
+      if (name === 'offer_slots' && typeof callArgs.intro_text === 'string') {
+        try {
+          if ((JSON.parse(result) as { sent?: boolean }).sent) sentPromptTexts.push(callArgs.intro_text)
+        } catch {
+          // non-JSON result: nothing was sent
+        }
+      }
+      return result
+    }
+    const routeTool = (name: string, callArgs: Record<string, unknown>) =>
       (name === 'open_human_case' || name === 'provide_case_update') && caseExecutor
         ? caseExecutor(name, callArgs)
         : name === 'qualify_lead' && prospectExecutor
@@ -1050,9 +1081,15 @@ export async function dispatchInboundToAiReply(
       }
     }
 
-    const segments = (generation.segments.length > 0 ? generation.segments : [text]).flatMap(
-      (segment) => splitLongText(segment),
+    const segments = dropEchoedPrompts(
+      (generation.segments.length > 0 ? generation.segments : [text]).flatMap((segment) =>
+        splitLongText(segment),
+      ),
+      sentPromptTexts,
     )
+    if (segments.length === 0) {
+      console.info(`${tag} reply only repeated the list already sent — nothing more to send`)
+    }
     for (let i = 0; i < segments.length; i++) {
       if (i > 0) {
         await new Promise((resolve) => setTimeout(resolve, SEGMENT_DELAY_MS))
