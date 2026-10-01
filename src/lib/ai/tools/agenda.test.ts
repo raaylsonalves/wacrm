@@ -114,6 +114,14 @@ beforeEach(() => {
   h.engineSendInteractiveList.mockResolvedValue({ whatsapp_message_id: 'wamid.1' })
 })
 
+/** 10:00 São Paulo on a weekday at least 3 days out — inside business hours. */
+function futureBusinessSlot(): string {
+  const d = new Date(Date.now() + 3 * 86_400_000)
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() + 1)
+  d.setUTCHours(13, 0, 0, 0)
+  return d.toISOString()
+}
+
 const CTX = { accountId: 'acc-1', conversationId: 'conv-1', contactId: 'contact-1', userId: 'user-1' }
 
 describe('AGENDA_TOOLS', () => {
@@ -149,7 +157,7 @@ describe('offer_slots', () => {
         button_label: 'Ver',
       }),
     )
-    expect(result).toEqual({ error: 'date_in_past' })
+    expect(result).toMatchObject({ error: 'date_in_past' })
   })
 
   it('reports no slots without sending anything when the calendar is fully busy', async () => {
@@ -209,7 +217,7 @@ describe('book_appointment', () => {
   it('rejects when neither slot_id nor date+time resolve to a valid future time', async () => {
     const executor = createAgendaToolExecutor({ db: fakeDb({}), ...CTX })
     const result = JSON.parse(await executor('book_appointment', {}))
-    expect(result).toEqual({ error: 'invalid_or_past_time' })
+    expect(result).toMatchObject({ error: 'invalid_or_past_time' })
   })
 
   it('rejects a past slot_id', async () => {
@@ -217,7 +225,7 @@ describe('book_appointment', () => {
     const result = JSON.parse(
       await executor('book_appointment', { slot_id: 'slot:2000-01-01T12:00:00.000Z' }),
     )
-    expect(result).toEqual({ error: 'invalid_or_past_time' })
+    expect(result).toMatchObject({ error: 'invalid_or_past_time' })
   })
 
   it('books a future slot_id, inserting the right account/contact/source', async () => {
@@ -226,7 +234,7 @@ describe('book_appointment', () => {
       db: fakeDb({ insertedRows }),
       ...CTX,
     })
-    const future = new Date(Date.now() + 3 * 86_400_000).toISOString()
+    const future = futureBusinessSlot()
     const result = JSON.parse(await executor('book_appointment', { slot_id: `slot:${future}` }))
     expect(result.booked).toBe(true)
     expect(insertedRows).toHaveLength(1)
@@ -258,7 +266,7 @@ describe('book_appointment', () => {
       db: fakeDb({ insertError: { code: '23P01', message: 'conflict' } }),
       ...CTX,
     })
-    const future = new Date(Date.now() + 3 * 86_400_000).toISOString()
+    const future = futureBusinessSlot()
     const result = JSON.parse(await executor('book_appointment', { slot_id: `slot:${future}` }))
     expect(result).toEqual({ error: 'conflict' })
   })
@@ -270,7 +278,7 @@ describe('reschedule_appointment', () => {
       db: fakeDb({ existingAppointment: null }),
       ...CTX,
     })
-    const future = new Date(Date.now() + 3 * 86_400_000).toISOString()
+    const future = futureBusinessSlot()
     const result = JSON.parse(
       await executor('reschedule_appointment', { slot_id: `slot:${future}` }),
     )
@@ -321,7 +329,7 @@ describe('reschedule_appointment', () => {
     const result = JSON.parse(
       await executor('reschedule_appointment', { slot_id: 'slot:2000-01-01T12:00:00.000Z' }),
     )
-    expect(result).toEqual({ error: 'invalid_or_past_time' })
+    expect(result).toMatchObject({ error: 'invalid_or_past_time' })
     expect(updatedRows).toHaveLength(0)
   })
 
@@ -350,5 +358,14 @@ describe('createAgendaToolExecutor', () => {
     const executor = createAgendaToolExecutor({ db: fakeDb({}), ...CTX })
     const result = JSON.parse(await executor('delete_everything', {}))
     expect(result).toEqual({ error: 'unknown_tool:delete_everything' })
+  })
+})
+
+describe('business hours', () => {
+  it('refuses a booking outside business hours', async () => {
+    const executor = createAgendaToolExecutor({ db: fakeDb({}), ...CTX })
+    const at8 = futureBusinessSlot().replace('T13:00', 'T11:00') // 08:00 local
+    const result = JSON.parse(await executor('book_appointment', { slot_id: `slot:${at8}` }))
+    expect(result).toMatchObject({ error: 'outside_business_hours', day_start: '09:00' })
   })
 })

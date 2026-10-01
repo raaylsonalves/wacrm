@@ -11,6 +11,7 @@ import {
 } from '@/lib/appointments/slots'
 import { findUpcomingAppointment, loadAppointmentSettings, loadBusyRanges } from '@/lib/appointments/store'
 import { engineSendInteractiveList } from '@/lib/flows/meta-send'
+import { isWithinBusinessHours, localToday } from '../agenda-clock'
 
 // ============================================================
 // Agenda tools for the AI auto-reply agent (specs/ai-agenda-tool-
@@ -211,7 +212,8 @@ async function executeOfferSlots(
     if (!targetDate) return jsonResult({ error: 'invalid_date' })
     const today = localParts(now, settings.timezone)
     daysAhead = daysBetween(today, targetDate)
-    if (daysAhead < 0) return jsonResult({ error: 'date_in_past' })
+    if (daysAhead < 0)
+      return jsonResult({ error: 'date_in_past', today: localToday(now, settings.timezone) })
     if (daysAhead > 365) return jsonResult({ error: 'date_too_far' })
   } else {
     daysAhead = clamp(positiveInt(args, 'days_ahead') ?? 7, 1, 60)
@@ -312,7 +314,15 @@ async function executeBookAppointment(
   const start = resolveRequestedStart(args, settings)
 
   if (!start || start.getTime() <= Date.now()) {
-    return jsonResult({ error: 'invalid_or_past_time' })
+    return jsonResult({ error: 'invalid_or_past_time', today: localToday(new Date(), settings.timezone) })
+  }
+  if (!isWithinBusinessHours(start, duration, settings)) {
+    return jsonResult({
+      error: 'outside_business_hours',
+      work_days: settings.work_days,
+      day_start: settings.day_start.slice(0, 5),
+      day_end: settings.day_end.slice(0, 5),
+    })
   }
 
   const end = new Date(start.getTime() + duration * 60_000)
@@ -366,7 +376,15 @@ async function executeRescheduleAppointment(
   const start = resolveRequestedStart(args, settings)
 
   if (!start || start.getTime() <= Date.now()) {
-    return jsonResult({ error: 'invalid_or_past_time' })
+    return jsonResult({ error: 'invalid_or_past_time', today: localToday(new Date(), settings.timezone) })
+  }
+  if (!isWithinBusinessHours(start, duration, settings)) {
+    return jsonResult({
+      error: 'outside_business_hours',
+      work_days: settings.work_days,
+      day_start: settings.day_start.slice(0, 5),
+      day_end: settings.day_end.slice(0, 5),
+    })
   }
 
   const end = new Date(start.getTime() + duration * 60_000)

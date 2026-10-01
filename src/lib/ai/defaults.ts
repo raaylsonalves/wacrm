@@ -107,8 +107,11 @@ export function buildSystemPrompt(args: {
    *  has told the bot one), which teaches the model to ask instead of
    *  guessing or leaving it forever unknown. */
   contactName?: string | null
+  /** Today's date/time and business hours (agenda-clock.ts), auto_reply
+   *  with agenda tools only. Changes every minute, so it goes last. */
+  agendaClock?: string | null
 }): string {
-  const { userPrompt, mode, knowledge, agendaToolsEnabled, contactName } = args
+  const { userPrompt, mode, knowledge, agendaToolsEnabled, contactName, agendaClock } = args
   const parts: string[] = [
     'You are a customer-messaging assistant for a business that uses a WhatsApp CRM. ' +
       'You are shown the recent WhatsApp conversation between the business (assistant) and a customer (user). ' +
@@ -175,6 +178,10 @@ export function buildSystemPrompt(args: {
         ? `This customer's name in the CRM is "${contactName.trim()}". Use it naturally when it fits — don't force it into every message.`
         : "You don't know this customer's name yet. Early in the conversation, ask for it in a natural, low-pressure way (part of your greeting, not an interrogation). As soon as they tell you, call save_contact_name so future conversations already know it — don't ask again after that. Skip asking if the conversation is a one-off/transactional exchange where it wouldn't feel natural.",
     )
+  }
+
+  if (mode === 'auto_reply' && agendaToolsEnabled && agendaClock) {
+    parts.push(agendaClock)
   }
 
   if (knowledge && knowledge.length > 0) {

@@ -62,6 +62,8 @@ import {
 } from '@/lib/flows/meta-send'
 import { sendTypingIndicator } from '@/lib/whatsapp/meta-api'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
+import { agendaClockText } from './agenda-clock'
+import { loadAppointmentSettings } from '@/lib/appointments/store'
 
 /** Pause between successive bubbles of a split reply — long enough to
  *  read as a person pausing between messages, short enough that a
@@ -759,6 +761,9 @@ export async function dispatchInboundToAiReply(
       knowledge,
       agendaToolsEnabled: config.agendaEnabled,
       contactName: contactRow?.name ?? null,
+      agendaClock: config.agendaEnabled
+        ? agendaClockText(new Date(), await loadAppointmentSettings(db, accountId))
+        : null,
     })
 
     // Agenda tools (specs/ai-agenda-tool-calling.md) are opt-in per
