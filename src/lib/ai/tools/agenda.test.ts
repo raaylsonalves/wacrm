@@ -9,7 +9,7 @@ vi.mock('@/lib/flows/meta-send', () => ({
   engineSendInteractiveList: h.engineSendInteractiveList,
 }))
 
-import { AGENDA_TOOLS, createAgendaToolExecutor } from './agenda'
+import { AGENDA_TOOLS, OTHER_TIME_FOOTER, createAgendaToolExecutor } from './agenda'
 
 const DEFAULT_SETTINGS_ROW = {
   timezone: 'America/Sao_Paulo',
@@ -191,6 +191,17 @@ describe('offer_slots', () => {
     expect(call.conversationId).toBe('conv-1')
     expect(call.aiGenerated).toBe(true)
     expect(call.bodyText).toBe('Horários livres:')
+    // Always says the list isn't everything.
+    expect(call.footerText).toBe(OTHER_TIME_FOOTER)
+    expect(OTHER_TIME_FOOTER.length).toBeLessThanOrEqual(60)
+  })
+
+  it('offers a short list by default', async () => {
+    const executor = createAgendaToolExecutor({ db: fakeDb({ busyRows: [] }), ...CTX })
+    const result = JSON.parse(
+      await executor('offer_slots', { days_ahead: 14, intro_text: 'Horários:', button_label: 'Ver' }),
+    )
+    expect(result.count).toBe(4)
   })
 })
 

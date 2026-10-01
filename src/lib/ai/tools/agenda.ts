@@ -32,11 +32,19 @@ export interface AgendaToolContext {
   userId: string
 }
 
+/** A short list reads as suggestions; ten rows read as "this is all". */
+const DEFAULT_OFFERED_SLOTS = 4
+
+/** On every slot list, whatever intro the model wrote: a list alone
+ *  implies those are the only free times, and a customer who doesn't
+ *  see theirs gives up instead of asking (Meta caps a footer at 60). */
+export const OTHER_TIME_FOOTER = 'Prefere outro dia ou horário? É só me dizer.'
+
 export const AGENDA_TOOLS: ToolDefinition[] = [
   {
     name: 'offer_slots',
     description:
-      "Looks up real free time slots on the business's shared appointment calendar and sends them to the customer as a tappable WhatsApp list. Use this when the customer is vague about timing (a day period, \"this week\", no exact time) or when you want them to pick from multiple real options. Never invent availability yourself — always call this instead of guessing free times.",
+      "Looks up real free time slots on the business's shared appointment calendar and sends a few of them to the customer as a tappable WhatsApp list (a footer always tells them they can ask for another day or time). Use this once you know roughly when the customer prefers — pass that day as \"date\" and/or the period, so the list shows only times that fit what they asked for. Never invent availability yourself — always call this instead of guessing free times.",
     parameters: {
       type: 'object',
       properties: {
@@ -60,12 +68,12 @@ export const AGENDA_TOOLS: ToolDefinition[] = [
         },
         max_options: {
           type: 'integer',
-          description: 'Max slots to show, up to 10. Default 5.',
+          description: 'Max slots to show, up to 10. Default 4 — a short list of good options, not every free time.',
         },
         intro_text: {
           type: 'string',
           description:
-            "Short WhatsApp message body shown above the list, written in the customer's own language and matching the conversation's tone.",
+            "Short WhatsApp message body shown above the list, written in the customer's own language and matching the conversation's tone. Present these as suggestions (e.g. \"Tenho esses horários na quinta à tarde:\"), never as the only times available.",
         },
         button_label: {
           type: 'string',
@@ -192,7 +200,7 @@ async function executeOfferSlots(
   const settings = await loadAppointmentSettings(ctx.db, ctx.accountId)
   const now = new Date()
   const duration = positiveInt(args, 'duration_minutes') ?? settings.slot_minutes
-  const maxOptions = clamp(positiveInt(args, 'max_options') ?? 5, 1, 10)
+  const maxOptions = clamp(positiveInt(args, 'max_options') ?? DEFAULT_OFFERED_SLOTS, 1, 10)
 
   const dateArg = str(args, 'date')
   let targetDate: { year: number; month: number; day: number } | null = null
@@ -269,6 +277,7 @@ async function executeOfferSlots(
     bodyText: introText,
     buttonLabel,
     sections: [{ rows: slotInfo.map((s) => ({ id: s.id, title: s.label })) }],
+    footerText: OTHER_TIME_FOOTER,
     aiGenerated: true,
   })
 

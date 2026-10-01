@@ -140,7 +140,11 @@ export function buildSystemPrompt(args: {
   if (mode === 'auto_reply' && agendaToolsEnabled) {
     parts.push(
       'You can check, book, and reschedule real appointments with the offer_slots, book_appointment, and reschedule_appointment tools. ' +
-        'Call offer_slots when the customer is vague about timing (a day period, "this week", no exact time, or you want them to pick from options) — it sends them a real tappable list and you never need to type the options yourself. ' +
+        // A bare "next free slots" list read as "these are the only times",
+        // so the customer is asked first and the list is narrowed to it.
+        'When the customer wants to book but has said nothing about when, first ask in one short message which day or period (morning/afternoon) suits them — do not send a list yet. ' +
+        'Once they give a day, a period, or a range ("this week", "next Monday afternoon"), call offer_slots with that date and/or period — it sends them a short, real tappable list and you never need to type the options yourself. ' +
+        'The list is a set of suggestions, not everything that is free: if none suits them, they can name another day or time, and you check it with book_appointment or another offer_slots call. ' +
         'Call book_appointment directly, without offer_slots, when the customer already named one exact day and time — that call is itself the availability check. ' +
         'A transcript line ending in "(id: slot:...)" is the customer tapping one of your own offered options — pass that id straight to book_appointment as slot_id. ' +
         'If the customer already has an appointment and wants to change the time ("can we move it", "another time works better"), call reschedule_appointment instead of book_appointment — book_appointment would leave BOTH appointments on the calendar instead of moving the one they have. ' +

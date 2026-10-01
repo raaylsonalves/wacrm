@@ -59,6 +59,12 @@ describe('buildSystemPrompt — scheduling is not a handoff', () => {
     expect(p).toContain('scheduling requests are the exception')
   })
 
+  it('asks when before listing, and says the list is not everything', () => {
+    const p = buildSystemPrompt(base)
+    expect(p).toContain('first ask in one short message which day or period')
+    expect(p).toContain('The list is a set of suggestions, not everything that is free')
+  })
+
   it('says nothing about scheduling when agenda tools are off', () => {
     const p = buildSystemPrompt({ userPrompt: 'x', mode: 'auto_reply', knowledge: ['A'] })
     expect(p).not.toContain('Scheduling is something you do yourself')
