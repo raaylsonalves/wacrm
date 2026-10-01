@@ -30,6 +30,19 @@ export function relayInstruction(action: 'done' | 'need_info', title: string, no
     : `To resolve the case "${title}" the team needs from the customer: "${safe}". Ask the customer for exactly that, naturally and briefly. Never quote or reveal internal notes.`
 }
 
+/**
+ * The thread usually ends on the AI's own "I opened a case for you" —
+ * and Gemini refuses to generate after a model turn (seen live: "All
+ * configured AI providers failed" on every relay). A closing user-role
+ * cue makes the turn the model's again; the system prompt already says
+ * what to write.
+ */
+export function relayMessages<M extends { role: string; content: string }>(messages: M[]): (M | { role: 'user'; content: string })[] {
+  const cue = { role: 'user' as const, content: '(The team has an update on the case — write the message to the customer now.)' }
+  if (messages.length === 0) return [cue]
+  return messages[messages.length - 1].role === 'user' ? messages : [...messages, cue]
+}
+
 export async function relayCase(db: SupabaseClient, accountId: string, caseId: string): Promise<RelayResult> {
   // Claim: only one relay per pending note (a cron retry and the route's
   // own run can race).
@@ -92,7 +105,7 @@ export async function relayCase(db: SupabaseClient, accountId: string, caseId: s
     const generation = await generateReplyWithFallback({
       config,
       systemPrompt,
-      messages: messages.length > 0 ? messages : [{ role: 'user', content: '(no messages)' }],
+      messages: relayMessages(messages),
     })
     void logAiUsage(db, {
       accountId,
