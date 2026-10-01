@@ -75,3 +75,7 @@ describe('buildSystemPrompt — scheduling is not a handoff', () => {
 it('tells the model its own earlier messages are not a source', () => {
   expect(buildSystemPrompt({ userPrompt: 'x', mode: 'auto_reply' })).toContain('NOT a source of truth')
 })
+
+it('teaches the model to explain a sent template instead of handing off', () => {
+  expect(buildSystemPrompt({ userPrompt: 'x', mode: 'auto_reply' })).toContain('[modelo enviado]')
+})
