@@ -32,6 +32,20 @@ describe('buildConversationContext', () => {
     ])
   })
 
+  it('includes a sent template as the business turn, marked', async () => {
+    const out = await buildConversationContext(
+      fakeDb([
+        { sender_type: 'customer', content_text: 'Explica isso?' },
+        { sender_type: 'bot', content_type: 'template', content_text: 'Frete grátis hoje' },
+      ]),
+      'conv-1',
+    )
+    expect(out).toEqual([
+      { role: 'assistant', content: '[modelo enviado] Frete grátis hoje' },
+      { role: 'user', content: 'Explica isso?' },
+    ])
+  })
+
   it('treats bot messages as assistant', async () => {
     const out = await buildConversationContext(
       fakeDb([{ sender_type: 'bot', content_text: 'auto reply' }]),

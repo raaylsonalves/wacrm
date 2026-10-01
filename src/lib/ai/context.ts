@@ -5,6 +5,9 @@ import { aiContextMessageLimit } from './defaults'
 /** Prefix on a transcribed voice note in the model's transcript. */
 export const AUDIO_MARK = '[áudio transcrito]'
 
+/** Prefix on a template/broadcast the business sent. */
+export const TEMPLATE_MARK = '[modelo enviado]'
+
 interface DbMessage {
   sender_type: 'customer' | 'agent' | 'bot'
   content_type: string
@@ -17,7 +20,12 @@ interface DbMessage {
  * Fetch the last N text (+ interactive-tap) messages of a conversation
  * and map them to the provider-neutral chat shape. Customer messages
  * become `user`; agent and bot messages become `assistant`. Media and
- * template messages are excluded — they carry no text to model.
+ * template messages without text are excluded.
+ *
+ * A sent template (a broadcast, recorded by broadcast-record.ts) enters
+ * as the business's turn, marked so the model knows it was a campaign
+ * message: a customer answering "can you explain what you sent?" used to
+ * reach a model that had never seen it, and it handed off.
  *
  * A button/list tap (`content_type = 'interactive'`) is included: its
  * `content_text` already holds the human-readable row/button title
@@ -45,7 +53,7 @@ export async function buildConversationContext(
     .from('messages')
     .select('sender_type, content_type, content_text, interactive_reply_id, transcript')
     .eq('conversation_id', conversationId)
-    .in('content_type', ['text', 'interactive', 'audio'])
+    .in('content_type', ['text', 'interactive', 'audio', 'template'])
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -59,7 +67,12 @@ export async function buildConversationContext(
     }))
     .filter((m) => m.text && m.text.trim())
     .map((m) => {
-      const spoken = m.content_type === 'audio' ? `${AUDIO_MARK} ${m.text!.trim()}` : m.text!.trim()
+      const spoken =
+        m.content_type === 'audio'
+          ? `${AUDIO_MARK} ${m.text!.trim()}`
+          : m.content_type === 'template'
+            ? `${TEMPLATE_MARK} ${m.text!.trim()}`
+            : m.text!.trim()
       const content = m.interactive_reply_id
         ? `${spoken} (id: ${m.interactive_reply_id})`
         : spoken
