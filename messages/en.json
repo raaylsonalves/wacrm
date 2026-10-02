@@ -2928,7 +2928,7 @@
       "testNetworkError": "Could not reach the provider.",
       "embeddingsKey": "Embeddings key",
       "optionalSemanticSearch": "(optional — enables semantic knowledge-base search)",
-      "embeddingsHint": "An OpenAI key used only to embed your knowledge base (text-embedding-3-small){sameKeyText}. Leave blank to use keyword search instead. Clear it to turn semantic search off.",
+      "embeddingsHint": "An OpenAI key used only to embed your knowledge base (text-embedding-3-small){sameKeyText}. Leave blank to use keyword search instead. Clear it to turn semantic search off.",
       "accountWideNote": "The embeddings key and the knowledge base apply to the whole account and live on the default agent.",
       "sameKeyText": " — can be the same key as above",
       "behaviour": "Behaviour",

@@ -2916,7 +2916,7 @@
       "testNetworkError": "No se pudo conectar con el proveedor.",
       "embeddingsKey": "Clave de embeddings",
       "optionalSemanticSearch": "(opcional: habilita la búsqueda semántica en la base de conocimiento)",
-      "embeddingsHint": "Una clave de OpenAI que se usa solo para generar embeddings de tu base de conocimiento (text-embedding-3-small){sameKeyText}. Déjala en blanco para usar búsqueda por palabras clave. Bórrala para desactivar la búsqueda semántica.",
+      "embeddingsHint": "Una clave de OpenAI que se usa solo para generar embeddings de tu base de conocimiento (text-embedding-3-small){sameKeyText}. Déjala en blanco para usar búsqueda por palabras clave. Bórrala para desactivar la búsqueda semántica.",
       "accountWideNote": "La clave de embeddings y la base de conocimiento valen para toda la cuenta y están en el agente predeterminado.",
       "sameKeyText": ": puede ser la misma clave de arriba",
       "behaviour": "Comportamiento",
