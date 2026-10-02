@@ -1473,8 +1473,8 @@ export function MessageThread({
             {messageGroups.map((group) => (
               <div key={group.date}>
                 {/* Date separator */}
-                <div className="sticky top-0 z-[1] mb-3 flex items-center justify-center">
-                  <span className="rounded-lg bg-card px-3 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
+                <div className="pointer-events-none sticky top-0 z-[1] mb-3 flex items-center justify-center">
+                  <span className="rounded-lg bg-card/80 px-3 py-1 backdrop-blur-sm text-[11px] font-medium text-muted-foreground shadow-sm">
                     {formatDateSeparator(group.date, t)}
                   </span>
                 </div>

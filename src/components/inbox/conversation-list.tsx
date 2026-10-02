@@ -700,7 +700,7 @@ export function ConversationList({
               onClick={() => setQueue((q) => (q === key ? null : key))}
               aria-pressed={queue === key}
               className={cn(
-                'flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors',
+                'flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors max-[419px]:gap-1 max-[419px]:px-1',
                 queue === key
                   ? 'border-primary bg-primary text-primary-foreground'
                   : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
