@@ -304,7 +304,7 @@ function ModulesEditor({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 text-xs">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-muted-foreground">{t('label')}</span>
         {Object.entries(MODULE_PRESETS).map(([key, v]) => (
           <button
