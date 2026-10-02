@@ -1208,7 +1208,7 @@ export function MessageThread({
           </Tooltip>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {/* Contact-panel toggle — desktop only. The contact sidebar
               eats a chunk of horizontal width that crowds the thread on
               smaller laptops; this lets agents reclaim it when they just
@@ -1266,7 +1266,7 @@ export function MessageThread({
               aria-label={t("refreshConversation")}
               title={t("refresh")}
               className={cn(
-                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60",
+                "hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60 sm:inline-flex",
               )}
             >
               <RefreshCw

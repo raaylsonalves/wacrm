@@ -32,6 +32,18 @@ const pageTitles: Record<string, string> = {
   "/settings": "settings",
 };
 
+// Pages whose title lives with the sidebar labels, not in Header.
+const sidebarTitles: Record<string, string> = {
+  "/agents": "aiAgents",
+  "/flows": "flows",
+  "/cases": "cases",
+  "/prospecting": "prospecting",
+};
+
+function sidebarTitleKey(pathname: string): string | undefined {
+  return Object.entries(sidebarTitles).find(([path]) => pathname.startsWith(path))?.[1];
+}
+
 function getPageTitleKey(pathname: string): string {
   if (pageTitles[pathname]) return pageTitles[pathname];
   const match = Object.entries(pageTitles).find(([path]) =>
@@ -50,9 +62,11 @@ import { useTranslations } from "next-intl";
 
 export function Header({ onOpenSidebar }: HeaderProps) {
   const t = useTranslations("Header");
+  const tSidebar = useTranslations("Sidebar");
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
   const titleKey = getPageTitleKey(pathname);
+  const sidebarKey = sidebarTitleKey(pathname);
 
   const initial =
     profile?.full_name?.charAt(0)?.toUpperCase() ??
@@ -72,7 +86,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
           <Menu className="h-5 w-5" />
         </button>
         <h1 className="truncate text-base font-semibold text-foreground sm:text-lg">
-          {t(titleKey as string)}
+          {sidebarKey ? tSidebar(sidebarKey) : t(titleKey as string)}
         </h1>
       </div>
 
