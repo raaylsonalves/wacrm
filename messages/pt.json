@@ -948,6 +948,9 @@
   },
   "Contacts": {
     "page": {
+      "rowActionsAria": "Ações do contato",
+      "prevPageAria": "Página anterior",
+      "nextPageAria": "Próxima página",
       "title": "Contatos",
       "subtitle": "Gerencie sua lista de contatos. {count} contatos no total.",
       "subtitleZero": "Gerencie sua lista de contatos.",
@@ -2405,6 +2408,7 @@
       }
     },
     "templates": {
+      "removeButtonAria": "Remover botão",
       "title": "Modelos de mensagem",
       "description": "Crie modelos e envie-os à Meta para aprovação. Use \"Sincronizar da Meta\" para importar modelos aprovados em outro lugar.",
       "syncFromMeta": "Sincronizar da Meta",

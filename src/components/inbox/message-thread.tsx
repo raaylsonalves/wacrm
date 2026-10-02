@@ -1393,7 +1393,8 @@ export function MessageThread({
               }
             }}
             placeholder={t("searchPlaceholder")}
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            aria-label={t("searchPlaceholder")}
+            className="min-w-0 flex-1 rounded-sm bg-transparent text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
           />
           <button
             type="button"

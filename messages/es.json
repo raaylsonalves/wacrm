@@ -948,6 +948,9 @@
   },
   "Contacts": {
     "page": {
+      "rowActionsAria": "Acciones del contacto",
+      "prevPageAria": "Página anterior",
+      "nextPageAria": "Página siguiente",
       "title": "Contactos",
       "subtitle": "Administra tu lista de contactos. {count} contactos en total.",
       "subtitleZero": "Administra tu lista de contactos.",
@@ -2405,6 +2408,7 @@
       }
     },
     "templates": {
+      "removeButtonAria": "Quitar botón",
       "title": "Plantillas de mensaje",
       "description": "Crea plantillas y envíalas a Meta para su aprobación. Usa \"Sincronizar desde Meta\" para traer plantillas aprobadas en otro lugar.",
       "syncFromMeta": "Sincronizar desde Meta",

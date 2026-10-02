@@ -948,6 +948,9 @@
   },
   "Contacts": {
     "page": {
+      "rowActionsAria": "연락처 작업",
+      "prevPageAria": "이전 페이지",
+      "nextPageAria": "다음 페이지",
       "title": "연락처",
       "subtitle": "연락처 목록을 관리하세요. 전체 연락처 {count}개.",
       "subtitleZero": "연락처 목록을 관리하세요.",
@@ -2405,6 +2408,7 @@
       }
     },
     "templates": {
+      "removeButtonAria": "버튼 제거",
       "title": "메시지 템플릿",
       "description": "템플릿을 만들어 Meta에 승인을 요청하세요. 다른 곳에서 승인된 템플릿을 가져오려면 \"Meta에서 동기화\"를 사용하세요.",
       "syncFromMeta": "Meta에서 동기화",

@@ -948,6 +948,9 @@
   },
   "Contacts": {
     "page": {
+      "rowActionsAria": "Contact actions",
+      "prevPageAria": "Previous page",
+      "nextPageAria": "Next page",
       "title": "Contacts",
       "subtitle": "Manage your contact list. {count} total contacts.",
       "subtitleZero": "Manage your contact list.",
@@ -2405,6 +2408,7 @@
       }
     },
     "templates": {
+      "removeButtonAria": "Remove button",
       "title": "Message templates",
       "description": "Create templates and submit them to Meta for approval. Use \"Sync from Meta\" to pull templates approved elsewhere.",
       "syncFromMeta": "Sync from Meta",
