@@ -638,6 +638,22 @@ describe('dispatchInboundToAiReply — agent per number (specs/ai-agents-managem
     expect(h.generateReplyWithFallback.mock.calls[0][0].config.model).toBe('barber-model')
   })
 
+  it('answers with the bound agent even when the default agent is off', async () => {
+    h.state.boundAgentId = 'agent-barber'
+    h.loadAiConfig.mockImplementation(
+      async (_db: unknown, _acct: string, opts?: { agentId?: string }) =>
+        opts?.agentId === 'agent-barber' ? BOUND : null,
+    )
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback.mock.calls[0][0].config.model).toBe('barber-model')
+  })
+
+  it('stays silent when the default is off and nothing is bound', async () => {
+    h.loadAiConfig.mockResolvedValue(null)
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+  })
+
   it('uses the default agent when the number has no binding', async () => {
     await dispatchInboundToAiReply(ARGS)
     expect(h.generateReplyWithFallback.mock.calls[0][0].config.model).toBe('default-model')

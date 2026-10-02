@@ -178,6 +178,33 @@ export function dropEchoedPrompts(segments: string[], sentPromptTexts: string[])
   })
 }
 
+/**
+ * The agent pinned to the conversation, else the one bound to its number
+ * — used only when the account's default agent is off. Null when neither
+ * exists or loads.
+ */
+async function loadOwningAgent(
+  db: ReturnType<typeof supabaseAdmin>,
+  accountId: string,
+  conversationId: string,
+  tag: string,
+): Promise<AiConfig | null> {
+  try {
+    const { data: conv } = await db
+      .from('conversations')
+      .select('whatsapp_channel_id, pinned_ai_agent_id')
+      .eq('id', conversationId)
+      .maybeSingle()
+    const agentId =
+      (conv?.pinned_ai_agent_id as string | null) ??
+      (await loadChannelAgentId(db, accountId, (conv?.whatsapp_channel_id as string | null) ?? null))
+    return agentId ? await loadAiConfig(db, accountId, { agentId }) : null
+  } catch (err) {
+    console.warn(`${tag} owning agent could not be loaded:`, err)
+    return null
+  }
+}
+
 /** Pause before the single retry of a failed reply bubble. */
 const SEND_RETRY_DELAY_MS = 2000
 
@@ -365,6 +392,14 @@ export async function dispatchInboundToAiReply(
     const db = supabaseAdmin()
 
     let config = await loadAiConfig(db, accountId)
+    if (!config || !config.autoReplyEnabled) {
+      // The default agent being off must not silence an agent pinned to
+      // this conversation or bound to its number (seen live: a demo agent
+      // bound to the number never answered because the default was
+      // switched off). Start from that agent instead; the routing below
+      // then finds it already in place.
+      config = await loadOwningAgent(db, accountId, conversationId, tag)
+    }
     if (!config || !config.autoReplyEnabled) {
       console.info(`${tag} skipped: AI not configured or auto-reply disabled`)
       return
