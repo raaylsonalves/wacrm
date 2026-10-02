@@ -597,8 +597,9 @@ function InboxPageInner() {
   const hasActiveConv = !!activeConversation;
 
   return (
-    // --bottom-nav: the phone tab bar's height while it shows (globals.css).
-    <div className="-m-4 flex h-[calc(100dvh-3.5rem-var(--bottom-nav))] flex-col overflow-hidden sm:-m-6">
+    // Fills <main> (minus its padding, undone by the negative margin), so the
+    // operator banner, header and tab bar are already accounted for.
+    <div className="-m-4 flex h-[calc(100%+2rem)] flex-col sm:h-[calc(100%+3rem)] overflow-hidden sm:-m-6">
       {/* WhatsApp connection banner — in the flex column, not absolute,
           so it pushes the panels down instead of overlapping them. */}
       <ChannelStatusBanner />

@@ -562,10 +562,10 @@ export function TemplateManager() {
             const status = templateStatusConfig[statusKey];
             return (
               <Card key={template.id}>
-                <CardContent className="flex items-start justify-between pt-4">
+                <CardContent className="flex items-start justify-between gap-2 pt-4">
                   <div className="space-y-2 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-medium text-foreground">{template.name}</h3>
+                      <h3 className="min-w-0 break-all font-medium text-foreground">{template.name}</h3>
                       <Badge
                         className={`text-xs border ${categoryColors[template.category] || ''}`}
                       >

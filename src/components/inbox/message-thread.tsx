@@ -1169,7 +1169,7 @@ export function MessageThread({
                   variant="chip"
                 />
               )}
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="hidden truncate text-xs text-muted-foreground sm:block">
                 {contactHandle(contact)}
               </p>
             </div>
