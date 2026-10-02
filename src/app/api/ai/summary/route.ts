@@ -5,7 +5,7 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from '@/lib/rate-limit';
-import { loadAiConfig } from '@/lib/ai/config';
+import { loadAgentForConversation } from '@/lib/ai/channel-agent';
 import { buildConversationContext } from '@/lib/ai/context';
 import { generateReply } from '@/lib/ai/generate';
 import { buildSystemPrompt } from '@/lib/ai/defaults';
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const config = await loadAiConfig(supabase, accountId).catch((err) => {
+    const config = await loadAgentForConversation(supabase, accountId, conversationId).catch((err) => {
       console.error('[ai/summary] loadAiConfig error:', err);
       throw new AiError('Stored API key could not be decrypted.', {
         code: 'key_decrypt_failed',

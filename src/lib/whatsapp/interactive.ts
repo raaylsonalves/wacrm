@@ -139,6 +139,7 @@ export function validateInteractivePayload(
       )
     }
     const seen = new Set<string>()
+    const titles = new Set<string>()
     for (const b of buttons) {
       if (!b || typeof b.id !== 'string' || b.id.trim() === '') {
         return fail('Every button needs an id.')
@@ -150,6 +151,13 @@ export function validateInteractivePayload(
       if (typeof b.title !== 'string' || b.title.trim() === '') {
         return fail('Every button needs a label.')
       }
+      // Meta rejects repeated labels with a bare #131009 "Parameter value
+      // is not valid" — say which one instead.
+      const label = b.title.trim().toLowerCase()
+      if (titles.has(label)) {
+        return fail(`Two buttons have the same label "${b.title}" — each button needs a different label.`)
+      }
+      titles.add(label)
       if (b.title.length > INTERACTIVE_LIMITS.buttonTitleMaxLength) {
         return fail(
           `Button label "${b.title}" exceeds the ${INTERACTIVE_LIMITS.buttonTitleMaxLength}-character limit.`,

@@ -140,3 +140,28 @@ describe('interactivePayloadPreviewText', () => {
     expect(interactivePayloadPreviewText({ ...validList, body: '' })).toBe('[list]')
   })
 })
+
+describe('validateInteractivePayload — button labels', () => {
+  it('rejects two buttons with the same label (Meta #131009)', () => {
+    const r = validateInteractivePayload({
+      kind: 'buttons',
+      body: 'teste',
+      buttons: [
+        { id: 'btn_1', title: 'teste' },
+        { id: 'btn_2', title: 'Teste ' },
+      ],
+    })
+    expect(r.ok).toBe(false)
+  })
+  it('accepts different labels', () => {
+    const r = validateInteractivePayload({
+      kind: 'buttons',
+      body: 'teste',
+      buttons: [
+        { id: 'btn_1', title: 'Sim' },
+        { id: 'btn_2', title: 'Não' },
+      ],
+    })
+    expect(r.ok).toBe(true)
+  })
+})

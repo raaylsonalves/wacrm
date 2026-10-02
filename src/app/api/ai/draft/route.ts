@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
-import { loadAiConfig } from '@/lib/ai/config'
+import { loadAgentForConversation } from '@/lib/ai/channel-agent'
 import { buildConversationContext } from '@/lib/ai/context'
 import { retrieveKnowledge } from '@/lib/ai/knowledge'
 import { generateReply } from '@/lib/ai/generate'
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
     }
 
-    const config = await loadAiConfig(supabase, accountId).catch((err) => {
+    const config = await loadAgentForConversation(supabase, accountId, conversationId).catch((err) => {
       // Decrypt failure — surface distinctly from "not configured".
       console.error('[ai/draft] loadAiConfig error:', err)
       throw new AiError('Stored API key could not be decrypted.', {
