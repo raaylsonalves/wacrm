@@ -232,7 +232,7 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
       style={sheet ? undefined : { width: panelWidth }}
     >
       {!sheet && ResizeHandle}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="p-4">
           {/* Contact Info */}
           <div className="flex flex-col items-center text-center">

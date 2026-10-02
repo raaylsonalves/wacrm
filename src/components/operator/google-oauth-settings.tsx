@@ -78,7 +78,7 @@ export function GoogleOAuthSettings() {
         <p className="text-muted-foreground text-sm">{t('subtitle')}</p>
       </div>
 
-      <p className="text-sm">
+      <p className="text-sm break-all">
         {state.source === 'env'
           ? t('fromEnv', { id: state.client_id ?? '' })
           : state.source === 'database'

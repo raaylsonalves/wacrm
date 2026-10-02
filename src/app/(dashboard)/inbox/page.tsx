@@ -683,7 +683,7 @@ function InboxPageInner() {
       <Sheet open={mobileContactOpen} onOpenChange={setMobileContactOpen}>
         <SheetContent
           side="bottom"
-          className="h-[85dvh] gap-0 rounded-t-2xl p-0 lg:hidden"
+          className="h-[85dvh] max-h-[85dvh] gap-0 rounded-t-2xl p-0 data-[side=bottom]:h-[85dvh] lg:hidden"
           style={
             sheetDragY > 0
               ? { transform: `translateY(${sheetDragY}px)`, transition: 'none' }

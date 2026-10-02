@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Sparkles, Hand, Undo2, Loader2, Check, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/hooks/use-auth";
@@ -28,14 +29,18 @@ async function fetchAiAccountStatus(accountId: string): Promise<AiAccountStatus>
   const cached = statusCache.get(accountId);
   if (cached) return cached;
   try {
-    const res = await fetch("/api/ai/config", { cache: "no-store" });
-    if (!res.ok) return { autoReplyOn: false }; // don't cache a transient failure
-    const j = await res.json();
-    const status = {
-      // AI auto-reply is "live" only when configured, the master switch
-      // is on, and the inbound bot is enabled.
-      autoReplyOn: !!(j?.configured && j?.is_active && j?.auto_reply_enabled),
-    };
+    // Any agent counts, not just the default: with the default switched
+    // off and another agent bound to the number, the AI still answers —
+    // and the banner (with its "Assumir" button) must still show.
+    const { data, error } = await createClient()
+      .from("ai_configs")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("is_active", true)
+      .eq("auto_reply_enabled", true)
+      .limit(1);
+    if (error) return { autoReplyOn: false }; // don't cache a transient failure
+    const status = { autoReplyOn: (data ?? []).length > 0 };
     statusCache.set(accountId, status);
     return status;
   } catch {
