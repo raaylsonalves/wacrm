@@ -546,6 +546,7 @@
       "resizePanel": "Redimensionar panel de contacto"
     },
     "aiBanner": {
+      "assignedTitle": "Un agente tiene esta conversación — la IA no responde",
       "pausedTitle": "El asistente de IA está en pausa aquí",
       "activeText": "El asistente de IA está respondiendo automáticamente",
       "takeOver": "Tomar el control",
@@ -3498,6 +3499,12 @@
       "reminderEnabled": "Enviar recordatorio por WhatsApp",
       "reminderHours": "Horas antes de la cita",
       "reminderText": "Mensaje del recordatorio",
+      "followupEnabled": "Mensaje después de la cita",
+      "followupDays": "Días después",
+      "followupTemplate": "Plantilla aprobada a enviar",
+      "followupNoTemplate": "Elige una plantilla…",
+      "followupPickTemplate": "Elige la plantilla del mensaje después de la cita.",
+      "followupHint": "Se envía como plantilla porque la ventana de 24h de WhatsApp ya cerró. Solo aparecen plantillas aprobadas sin medios y con una variable como máximo — {{1}} es el primer nombre del cliente.",
       "reminderHint": "Variables: {vars}. Solo llega si el cliente te escribió en las últimas 24h (regla de Meta).",
       "invalidHours": "El fin debe ser posterior al inicio",
       "invalidTimezone": "Zona horaria no válida — usa un nombre IANA, ej.: America/Sao_Paulo",

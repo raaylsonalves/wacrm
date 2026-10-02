@@ -297,7 +297,7 @@ describe('reschedule_appointment', () => {
       db: fakeDb({ existingAppointment: existing, updatedRows, insertedRows }),
       ...CTX,
     })
-    const future = new Date(Date.now() + 5 * 86_400_000).toISOString()
+    const future = futureBusinessSlot()
     const result = JSON.parse(
       await executor('reschedule_appointment', { slot_id: `slot:${future}` }),
     )
@@ -345,7 +345,7 @@ describe('reschedule_appointment', () => {
       }),
       ...CTX,
     })
-    const future = new Date(Date.now() + 5 * 86_400_000).toISOString()
+    const future = futureBusinessSlot()
     const result = JSON.parse(
       await executor('reschedule_appointment', { slot_id: `slot:${future}` }),
     )

@@ -141,6 +141,16 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'appointments_no_contact_overlap is missing — migration 059 did not apply';
   END IF;
+  -- 102 — without the claim column the cron would re-send the
+  -- post-appointment template on every run.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'appointments' AND column_name = 'followup_sent_at'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'appointment_settings_followup_days_check'
+  ) THEN
+    RAISE EXCEPTION 'appointment follow-up columns are missing — migration 102 did not apply';
+  END IF;
   IF pg_get_constraintdef(
        (SELECT oid FROM pg_constraint WHERE conname = 'flow_nodes_node_type_check')
      ) NOT LIKE '%offer_slots%' THEN

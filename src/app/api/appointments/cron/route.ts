@@ -9,6 +9,7 @@ import {
   type AppointmentSettings,
 } from '@/lib/appointments/slots';
 import { normalizeSettings, resolveConversationId } from '@/lib/appointments/store';
+import { followupParams, followupWindow } from '@/lib/appointments/followup';
 
 interface DueRow {
   id: string;
@@ -31,6 +32,9 @@ type DueQuery = any;
  * so overlapping runs never double-remind. A failed send (typically
  * Meta's 24h window — a reminder is free-form text, not a template) is
  * logged and not retried; the claim stays, by design.
+ *
+ * The same run sends the post-appointment template (migration 102) for
+ * accounts that turned it on — claimed the same way on followup_sent_at.
  */
 export async function GET(request: Request) {
   const expected = process.env.AUTOMATION_CRON_SECRET;
@@ -150,5 +154,97 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ sent, failed });
+  const followup = await sendFollowups(admin, now, settingsByAccount);
+
+  return NextResponse.json({ sent, failed, followup });
+}
+
+interface FollowupRow {
+  id: string;
+  account_id: string;
+  contact_id: string;
+  conversation_id: string | null;
+  contact: { name: string | null; opted_out_at: string | null } | null;
+}
+
+/**
+ * "Como ficou?" N days after the appointment. A template, because the
+ * 24h window has normally closed by then. Cancelled and no-show
+ * bookings are skipped; an opted-out contact is claimed and skipped.
+ */
+async function sendFollowups(
+  admin: ReturnType<typeof supabaseAdmin>,
+  now: Date,
+  settingsByAccount: Map<string, AppointmentSettings>,
+): Promise<{ sent: number; failed: number }> {
+  let sent = 0;
+  let failed = 0;
+
+  for (const [accountId, settings] of settingsByAccount) {
+    if (!settings.followup_enabled || !settings.followup_template_id) continue;
+
+    const { data: template } = await admin
+      .from('message_templates')
+      .select('name, language, body_text, status')
+      .eq('id', settings.followup_template_id)
+      .eq('account_id', accountId)
+      .maybeSingle();
+    if (!template || String(template.status).toLowerCase() !== 'approved') {
+      console.warn('[appointments/cron] follow-up template missing or not approved', accountId);
+      continue;
+    }
+
+    const { from, to } = followupWindow(now, settings.followup_days_after);
+    const { data, error } = await admin
+      .from('appointments')
+      .select('id, account_id, contact_id, conversation_id, contact:contacts(name, opted_out_at)')
+      .eq('account_id', accountId)
+      .is('followup_sent_at', null)
+      .in('status', ['scheduled', 'confirmed', 'completed'])
+      .gt('starts_at', from.toISOString())
+      .lte('starts_at', to.toISOString())
+      .order('starts_at')
+      .limit(100);
+    if (error) {
+      console.error('[appointments/cron] follow-up query failed', accountId, error.message);
+      continue;
+    }
+
+    for (const row of (data ?? []) as unknown as FollowupRow[]) {
+      const { data: claim } = await admin
+        .from('appointments')
+        .update({ followup_sent_at: now.toISOString() })
+        .eq('id', row.id)
+        .is('followup_sent_at', null)
+        .select('id')
+        .maybeSingle();
+      if (!claim || row.contact?.opted_out_at) continue;
+
+      const conversationId = await resolveConversationId(
+        admin,
+        row.account_id,
+        row.contact_id,
+        row.conversation_id,
+      );
+      if (!conversationId) {
+        failed++;
+        continue;
+      }
+      try {
+        await sendMessageToConversation(admin, row.account_id, {
+          conversationId,
+          messageType: 'template',
+          templateName: template.name,
+          templateLanguage: template.language,
+          templateParams: followupParams(template.body_text, row.contact?.name),
+        });
+        sent++;
+      } catch (err) {
+        failed++;
+        console.error('[appointments/cron] follow-up failed', row.id, err);
+      }
+    }
+  }
+
+  return { sent, failed };
 }

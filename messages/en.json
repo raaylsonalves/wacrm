@@ -546,6 +546,7 @@
       "resizePanel": "Resize contact panel"
     },
     "aiBanner": {
+      "assignedTitle": "A teammate owns this conversation — the AI won’t reply",
       "pausedTitle": "AI assistant is paused here",
       "activeText": "AI assistant is replying automatically",
       "takeOver": "Take over",
@@ -3510,6 +3511,12 @@
       "reminderEnabled": "Send a WhatsApp reminder",
       "reminderHours": "Hours before the appointment",
       "reminderText": "Reminder message",
+      "followupEnabled": "Message after the appointment",
+      "followupDays": "Days after",
+      "followupTemplate": "Approved template to send",
+      "followupNoTemplate": "Pick a template…",
+      "followupPickTemplate": "Pick the template for the after-appointment message.",
+      "followupHint": "Sent as a template because WhatsApp’s 24h window has closed by then. Only approved templates with no media and at most one variable are listed — {{1}} becomes the customer’s first name.",
       "reminderHint": "Variables: {vars}. Only delivered if the customer messaged you in the last 24h (Meta rule).",
       "invalidHours": "End must be after start",
       "invalidTimezone": "Invalid timezone — use an IANA name, e.g. America/Sao_Paulo",

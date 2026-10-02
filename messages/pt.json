@@ -546,6 +546,7 @@
       "resizePanel": "Redimensionar painel de contato"
     },
     "aiBanner": {
+      "assignedTitle": "Um atendente está com esta conversa — a IA não responde",
       "pausedTitle": "O assistente de IA está pausado aqui",
       "activeText": "O assistente de IA está respondendo automaticamente",
       "takeOver": "Assumir",
@@ -3498,6 +3499,12 @@
       "reminderEnabled": "Enviar lembrete por WhatsApp",
       "reminderHours": "Horas antes do agendamento",
       "reminderText": "Mensagem do lembrete",
+      "followupEnabled": "Mensagem depois do atendimento",
+      "followupDays": "Quantos dias depois",
+      "followupTemplate": "Modelo aprovado a enviar",
+      "followupNoTemplate": "Escolha um modelo…",
+      "followupPickTemplate": "Escolha o modelo da mensagem depois do atendimento.",
+      "followupHint": "Vai como modelo porque a janela de 24h do WhatsApp já fechou. Só aparecem modelos aprovados sem mídia e com no máximo uma variável — {{1}} vira o primeiro nome do cliente.",
       "reminderHint": "Variáveis: {vars}. Só chega se o cliente falou com você nas últimas 24h (regra da Meta).",
       "invalidHours": "O fim precisa ser depois do início",
       "invalidTimezone": "Fuso horário inválido — use um nome IANA, ex.: America/Sao_Paulo",

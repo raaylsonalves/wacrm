@@ -80,8 +80,9 @@ interface AiThreadBannerProps {
  * conversation:
  *   - bot active here → "AI is replying automatically" + [Take over]
  *   - bot paused here → the handoff note (if any) + [Resume AI]
- * Renders nothing when the account has no auto-reply configured, or when
- * the bot is active but a human already owns the thread (nothing to do).
+ *   - bot on, but a human is assigned (e.g. a transfer) → the bot stays
+ *     silent, so say so + [Resume AI], which also releases the assignee
+ * Renders nothing when the account has no auto-reply configured.
  */
 export function AiThreadBanner({
   conversationId,
@@ -178,8 +179,20 @@ export function AiThreadBanner({
     );
   }
 
-  // Active, but a human already owns it → the bot won't fire; no banner.
-  if (assignedAgentId) return null;
+  // Not paused, but a human owns it → auto-reply skips assigned threads.
+  // Without this the only way back to the bot was unassigning by hand.
+  if (assignedAgentId) {
+    return (
+      <Banner tone="muted">
+        <p className="min-w-0 flex-1 truncate font-medium text-foreground">
+          {t("assignedTitle")}
+        </p>
+        <BannerButton onClick={() => toggle(false)} busy={busy} icon={Undo2}>
+          {t("resume")}
+        </BannerButton>
+      </Banner>
+    );
+  }
 
   // Active on this thread.
   return (

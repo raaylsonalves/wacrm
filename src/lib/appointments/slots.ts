@@ -13,6 +13,10 @@ export interface AppointmentSettings {
   reminder_enabled: boolean;
   reminder_hours_before: number;
   reminder_text: string;
+  /** Post-appointment message (migration 102): an approved template. */
+  followup_enabled: boolean;
+  followup_days_after: number;
+  followup_template_id: string | null;
 }
 
 export const DEFAULT_SETTINGS: AppointmentSettings = {
@@ -25,6 +29,9 @@ export const DEFAULT_SETTINGS: AppointmentSettings = {
   reminder_hours_before: 24,
   reminder_text:
     'Olá {{nome}}! Lembrete do seu agendamento em {{data}} às {{hora}}. Até lá!',
+  followup_enabled: false,
+  followup_days_after: 1,
+  followup_template_id: null,
 };
 
 /** True when `tz` is an IANA zone this runtime's Intl understands. */

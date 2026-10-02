@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -20,9 +20,16 @@ import { Label } from '@/components/ui/label';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { isValidTimeZone, type AppointmentSettings } from '@/lib/appointments/slots';
+import { templateVarCount } from '@/lib/appointments/followup';
 import { GoogleCalendarCard } from './google-calendar-card';
 
 const DAYS = [0, 1, 2, 3, 4, 5, 6];
+
+interface FollowupTemplate {
+  id: string;
+  name: string;
+  body_text: string | null;
+}
 
 export function AgendaSettingsDialog({
   open,
@@ -40,6 +47,34 @@ export function AgendaSettingsDialog({
   // Seeded from props; the page remounts this dialog (via `key`) on open.
   const [form, setForm] = useState(settings);
   const [saving, setSaving] = useState(false);
+  const [templates, setTemplates] = useState<FollowupTemplate[]>([]);
+
+  // Approved templates the cron can fill on its own: no media header, no
+  // carousel, and at most one variable ({{1}} = the customer's first name).
+  useEffect(() => {
+    if (!open || !accountId) return;
+    let alive = true;
+    createClient()
+      .from('message_templates')
+      .select('id, name, body_text, header_type, components')
+      .eq('account_id', accountId)
+      .ilike('status', 'approved')
+      .order('name')
+      .then(({ data }) => {
+        if (!alive) return;
+        setTemplates(
+          (data ?? []).filter(
+            (tpl) =>
+              (!tpl.header_type || tpl.header_type === 'text') &&
+              !/carousel/i.test(JSON.stringify(tpl.components ?? '')) &&
+              templateVarCount(tpl.body_text) <= 1,
+          ),
+        );
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open, accountId]);
 
   function toggleDay(day: number, checked: boolean) {
     setForm((f) => ({
@@ -57,6 +92,9 @@ export function AgendaSettingsDialog({
     }
     if (!isValidTimeZone(form.timezone.trim())) {
       return toast.error(t('settings.invalidTimezone'));
+    }
+    if (form.followup_enabled && !form.followup_template_id) {
+      return toast.error(t('settings.followupPickTemplate'));
     }
     setSaving(true);
     const { error } = await createClient()
@@ -159,6 +197,42 @@ export function AgendaSettingsDialog({
                 onChange={(e) => setForm({ ...form, reminder_text: e.target.value })}
               />
               <p className="text-muted-foreground text-xs">{t('settings.reminderHint', { vars: '{{nome}}, {{data}}, {{hora}}' })}</p>
+            </div>
+          </div>
+
+          <div className="border-border space-y-2 rounded-md border p-3">
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <Checkbox
+                checked={form.followup_enabled}
+                onCheckedChange={(c) => setForm({ ...form, followup_enabled: c === true })}
+              />
+              {t('settings.followupEnabled')}
+            </label>
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('settings.followupDays')}</Label>
+              <Input
+                type="number"
+                min={1}
+                max={90}
+                value={form.followup_days_after}
+                onChange={(e) => setForm({ ...form, followup_days_after: Number(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground">{t('settings.followupTemplate')}</Label>
+              <select
+                className="border-border bg-muted text-foreground h-9 w-full rounded-md border px-2 text-sm"
+                value={form.followup_template_id ?? ''}
+                onChange={(e) => setForm({ ...form, followup_template_id: e.target.value || null })}
+              >
+                <option value="">{t('settings.followupNoTemplate')}</option>
+                {templates.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    {tpl.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-muted-foreground text-xs">{t.raw('settings.followupHint') as string}</p>
             </div>
           </div>
 

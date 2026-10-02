@@ -546,6 +546,7 @@
       "resizePanel": "연락처 패널 크기 조절"
     },
     "aiBanner": {
+      "assignedTitle": "담당자가 이 대화를 맡고 있어 AI가 답하지 않습니다",
       "pausedTitle": "이 대화에서 AI 어시스턴트가 일시 중지됨",
       "activeText": "AI 어시스턴트가 자동으로 응답 중입니다",
       "takeOver": "직접 처리",
@@ -3510,6 +3511,12 @@
       "reminderEnabled": "WhatsApp 알림 보내기",
       "reminderHours": "예약 몇 시간 전",
       "reminderText": "알림 메시지",
+      "followupEnabled": "예약 후 메시지",
+      "followupDays": "며칠 후",
+      "followupTemplate": "보낼 승인된 템플릿",
+      "followupNoTemplate": "템플릿 선택…",
+      "followupPickTemplate": "예약 후 메시지 템플릿을 선택하세요.",
+      "followupHint": "그때는 WhatsApp 24시간 창이 닫혀 있어 템플릿으로 보냅니다. 미디어가 없고 변수가 최대 하나인 승인된 템플릿만 표시됩니다 — {{1}}은 고객 이름입니다.",
       "reminderHint": "변수: {vars}. 고객이 최근 24시간 내에 메시지를 보낸 경우에만 전달됩니다(Meta 규칙).",
       "invalidHours": "종료 시간은 시작 시간 이후여야 합니다",
       "invalidTimezone": "잘못된 시간대입니다 — IANA 이름을 사용하세요(예: America/Sao_Paulo)",
