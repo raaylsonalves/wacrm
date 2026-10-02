@@ -5,18 +5,17 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { AgentDetail } from '@/components/agents/agent-detail';
 import { AgentChannels } from '@/components/agents/agent-channels';
 import { AiConfig } from '@/components/settings/ai-config';
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
 
 /**
- * One page per agent. The account's default agent (the fallback for every
- * number nobody claims) has extra account-wide settings — fallback
- * provider, agenda tools, embeddings key, knowledge base — that the lean
- * agents don't, so it keeps its full form; every agent shares the
- * "numbers" card.
+ * One page per agent, the same form for all of them: model, prompt,
+ * agenda, fallback provider, cases, voice, handoff, numbers. Only the
+ * account-wide parts (embeddings key, knowledge base) stay on the default
+ * agent — they used to make it a different screen altogether, and the
+ * other agents had no agenda or fallback options.
  */
 export default function AgentPage() {
   const params = useParams<{ id: string }>();
@@ -47,8 +46,6 @@ export default function AgentPage() {
       </div>
     );
   }
-  if (kind === 'extra') return <AgentDetail agentId={params.id} />;
-
   return (
     <div className="space-y-6">
       <Link
@@ -59,7 +56,11 @@ export default function AgentPage() {
         {t('back')}
       </Link>
       <AgentChannels agentId={params.id} canEdit={canEdit} />
-      <AiConfig hideHeader showName />
+      <AiConfig
+        hideHeader
+        showName
+        agentId={kind === 'extra' ? params.id : undefined}
+      />
     </div>
   );
 }

@@ -57,12 +57,14 @@ export async function POST(request: Request) {
     const rawKey = typeof body.api_key === 'string' ? body.api_key.trim() : ''
     let apiKeyPlain = rawKey
     if (!apiKeyPlain) {
-      const { data: existing } = await supabase
+      // `agent_id` tests that agent's stored key; omitted = the default.
+      const agentId = typeof body.agent_id === 'string' ? body.agent_id : null
+      let lookup = supabase
         .from('ai_configs')
         .select(fallbackIndex !== null ? 'fallbacks' : 'api_key')
         .eq('account_id', accountId)
-        .eq('is_default', true)
-        .maybeSingle()
+      lookup = agentId ? lookup.eq('id', agentId) : lookup.eq('is_default', true)
+      const { data: existing } = await lookup.maybeSingle()
 
       const storedEncrypted =
         fallbackIndex !== null

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 import { Loader2, Sparkles, CheckCircle2, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
@@ -62,13 +63,19 @@ const KEY_PLACEHOLDER: Record<AiProvider, string> = {
 export function AiConfig({
   hideHeader = false,
   showName = false,
+  agentId,
 }: {
+  /** A non-default agent: same form, saved through /api/ai/agents/[id].
+   *  Account-wide parts (embeddings key, knowledge base) stay on the
+   *  default agent and are hidden here. */
+  agentId?: string;
   /** The agent page brings its own header. */
   hideHeader?: boolean;
   /** Show the agent's name (the agent page); onboarding doesn't. */
   showName?: boolean;
 } = {}) {
   const { accountId, accountRole, profileLoading } = useAuth();
+  const router = useRouter();
   const canEdit = accountRole ? canEditSettings(accountRole) : false;
   const t = useTranslations('Settings.aiConfig');
   const tKeywords = useTranslations('Agents.detail.keywords');
@@ -131,12 +138,16 @@ export function AiConfig({
   const fetchConfig = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/ai/config');
-      const data = await res.json();
+      const res = await fetch(
+        agentId ? `/api/ai/agents/${agentId}` : '/api/ai/config',
+        { cache: 'no-store' }
+      );
+      const raw = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? t('loadFailed'));
+        toast.error(raw.error ?? t('loadFailed'));
         return;
       }
+      const data = agentId ? { ...raw.agent, configured: true } : raw;
       if (data.configured) {
         setConfigured(true);
         setName(data.name ?? '');
@@ -175,17 +186,18 @@ export function AiConfig({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [agentId]);
 
   useEffect(() => {
-    if (!accountId || loadedAccountIdRef.current === accountId) return;
-    loadedAccountIdRef.current = accountId;
+    const key = `${accountId}:${agentId ?? ''}`;
+    if (!accountId || loadedAccountIdRef.current === key) return;
+    loadedAccountIdRef.current = key;
     void fetchConfig();
     // Members populate the handoff-target picker. Best-effort — on an
     // older deployment without the endpoint the picker just shows the
     // queue option.
     void fetchAccountMembers().then(setMembers);
-  }, [accountId, fetchConfig]);
+  }, [accountId, agentId, fetchConfig]);
 
   // Swap the model default when the provider changes, unless the user
   // typed a custom model.
@@ -210,7 +222,7 @@ export function AiConfig({
     provider,
     model: model.trim(),
     api_key: keyPayload(),
-    embeddings_api_key: embeddingsKeyPayload(),
+    embeddings_api_key: agentId ? undefined : embeddingsKeyPayload(),
     system_prompt: systemPrompt.trim() || null,
     is_active: isActive,
     auto_reply_enabled: autoReplyEnabled,
@@ -243,6 +255,7 @@ export function AiConfig({
           provider,
           model: model.trim(),
           api_key: keyPayload(),
+          agent_id: agentId,
         }),
       });
       const data = await res.json();
@@ -269,6 +282,7 @@ export function AiConfig({
           // ai_configs.fallbacks[0] rather than the primary api_key.
           api_key: fallbackKeyEdited ? fallbackApiKey.trim() : undefined,
           fallback_index: 0,
+          agent_id: agentId,
         }),
       });
       const data = await res.json();
@@ -302,8 +316,8 @@ export function AiConfig({
     }
     setSaving(true);
     try {
-      const res = await fetch('/api/ai/config', {
-        method: 'POST',
+      const res = await fetch(agentId ? `/api/ai/agents/${agentId}` : '/api/ai/config', {
+        method: agentId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildBody()),
       });
@@ -324,7 +338,14 @@ export function AiConfig({
   const handleRemove = async () => {
     setRemoving(true);
     try {
-      const res = await fetch('/api/ai/config', { method: 'DELETE' });
+      const res = await fetch(agentId ? `/api/ai/agents/${agentId}` : '/api/ai/config', {
+        method: 'DELETE',
+      });
+      if (res.ok && agentId) {
+        toast.success(t('removeSuccess'));
+        router.push('/agents');
+        return;
+      }
       if (res.ok) {
         toast.success(t('removeSuccess'));
         setConfigured(false);
@@ -490,6 +511,7 @@ export function AiConfig({
               </div>
             </div>
 
+            {!agentId && (
             <div className="space-y-2">
               <Label htmlFor="ai-embeddings-key">
                 {t('embeddingsKey')}{' '}
@@ -521,6 +543,7 @@ export function AiConfig({
                 })}
               </p>
             </div>
+            )}
           </CardContent>
         </Card>
 
@@ -813,15 +836,19 @@ export function AiConfig({
           </CardContent>
         </Card>
 
-        <AiKnowledgeCard
-          accountId={accountId}
-          canEdit={canEdit}
-          hasEmbeddingsKey={
-            embeddingsKeyEdited
-              ? embeddingsKey.trim().length > 0
-              : hasStoredEmbeddingsKey
-          }
-        />
+        {agentId ? (
+          <p className="text-xs text-muted-foreground">{t('accountWideNote')}</p>
+        ) : (
+          <AiKnowledgeCard
+            accountId={accountId}
+            canEdit={canEdit}
+            hasEmbeddingsKey={
+              embeddingsKeyEdited
+                ? embeddingsKey.trim().length > 0
+                : hasStoredEmbeddingsKey
+            }
+          />
+        )}
 
         <div className="flex items-center justify-between">
           {configured ? (

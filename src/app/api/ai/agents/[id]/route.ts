@@ -18,6 +18,7 @@ import { validateAiCredentials } from '@/lib/ai/validate';
 import { AiError, type AiProvider } from '@/lib/ai/types';
 import { audit } from '@/lib/audit';
 import { cleanHandoffKeywords } from '@/lib/ai/handoff-keywords';
+import { resolveFallbacks, type RawFallbackInput } from '@/lib/ai/fallbacks-input';
 import { parseTranscriptionModel } from '@/lib/ai/transcribe';
 import { parseVoiceMode, parseVoiceName } from '@/lib/ai/voice-reply';
 
@@ -59,8 +60,20 @@ export async function GET(
     if (!agent)
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
 
-    const { api_key, ...safe } = agent;
-    return NextResponse.json({ agent: { ...safe, has_key: !!api_key } });
+    const { api_key, embeddings_api_key: _emb, fallbacks, ...safe } = agent;
+    const tiers = (fallbacks ?? []) as { provider: string; model: string; api_key?: string }[];
+    return NextResponse.json({
+      agent: {
+        ...safe,
+        has_key: !!api_key,
+        // Keys never leave the server: the form shows a masked field.
+        fallbacks: tiers.map((f) => ({
+          provider: f.provider,
+          model: f.model,
+          has_key: !!f.api_key,
+        })),
+      },
+    });
   } catch (err) {
     return toErrorResponse(err);
   }
@@ -119,6 +132,56 @@ export async function PATCH(
     if ('voice_reply_mode' in body) update.voice_reply_mode = parseVoiceMode(body.voice_reply_mode);
     if ('voice_name' in body) update.voice_name = parseVoiceName(body.voice_name);
     if ('cases_enabled' in body) update.cases_enabled = body.cases_enabled === true;
+    // Every agent has the same options as the default one (agenda tools,
+    // a fallback provider) — they used to be default-only.
+    if ('agenda_enabled' in body) update.agenda_enabled = body.agenda_enabled === true;
+    if ('fallbacks' in body) {
+      const prior = (existing.fallbacks ?? []) as {
+        provider: string;
+        model: string;
+        api_key: string;
+      }[];
+      const result = await resolveFallbacks(body.fallbacks, prior);
+      if ('error' in result) return bad(result.error);
+      for (let i = 0; i < result.tiers.length; i++) {
+        const tier = result.tiers[i];
+        const sent = (body.fallbacks as RawFallbackInput[])[i];
+        const isNew =
+          !prior[i] ||
+          prior[i].provider !== tier.provider ||
+          prior[i].model !== tier.model ||
+          (typeof sent?.api_key === 'string' && sent.api_key.trim() !== '');
+        if (!isNew) continue;
+        try {
+          await validateAiCredentials({
+            provider: tier.provider,
+            model: tier.model,
+            apiKey: tier.apiKey,
+            systemPrompt: null,
+            isActive: true,
+            autoReplyEnabled: false,
+            autoReplyMaxPerConversation: 3,
+            handoffAgentId: null,
+            embeddingsApiKey: null,
+            fallbacks: [],
+            agendaEnabled: false,
+          });
+        } catch (err) {
+          if (err instanceof AiError) {
+            return NextResponse.json(
+              { error: `fallbacks[${i}]: ${err.message}`, code: err.code },
+              { status: 400 }
+            );
+          }
+          return bad(`Could not validate fallbacks[${i}]'s API key with the provider.`);
+        }
+      }
+      update.fallbacks = result.tiers.map((tier) => ({
+        provider: tier.provider,
+        model: tier.model,
+        api_key: encrypt(tier.apiKey),
+      }));
+    }
     if ('handoff_keywords' in body) {
       update.handoff_keywords = cleanHandoffKeywords(body.handoff_keywords);
     }
@@ -175,7 +238,11 @@ export async function PATCH(
         }
       }
 
-      try {
+      // Only spend a provider round-trip when the credentials changed: the
+      // full form re-sends provider/model on every save.
+      const credentialsChanged =
+        !!rawKey || provider !== existing.provider || model !== existing.model;
+      if (credentialsChanged) try {
         await validateAiCredentials({
           provider,
           model,
