@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useTotalUnread } from '@/hooks/use-total-unread';
@@ -173,6 +173,16 @@ import { TeamNow } from '@/components/layout/team-now';
 import { ModeToggle } from '@/components/layout/mode-toggle';
 import { PushStatusButton } from '@/components/notifications/push-status-button';
 
+const XL_QUERY = '(min-width: 1280px)';
+function subscribeXl(cb: () => void) {
+  const mq = window.matchMedia(XL_QUERY);
+  mq.addEventListener('change', cb);
+  return () => mq.removeEventListener('change', cb);
+}
+function readXl() {
+  return window.matchMedia(XL_QUERY).matches;
+}
+
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations('Sidebar');
   const pathname = usePathname();
@@ -189,12 +199,17 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   // (collapsing a full-screen overlay drawer buys nothing), so every
   // class this drives is scoped behind `lg:`.
   const [collapsed, setCollapsed] = useState(readInitialCollapsed);
-  // Below xl (1280px) the desktop sidebar is always the icon rail, so a
-  // laptop screen keeps its width for the page; the expand/collapse
-  // choice applies from xl up. These stand in for `collapsed && …`.
-  const railHide = collapsed ? 'lg:hidden' : 'lg:max-xl:hidden';
-  const railCenter = collapsed ? 'lg:justify-center lg:px-0' : 'lg:max-xl:justify-center lg:max-xl:px-0';
-  const railCol = collapsed ? 'lg:flex-col' : 'lg:max-xl:flex-col';
+  // Below xl (1280px) the desktop sidebar rests as the icon rail so a
+  // laptop keeps its width for the page; the toggle there "peeks" the
+  // full menu as an overlay (not saved, closes on navigation / outside
+  // click / Esc). From xl up the toggle is the saved collapse choice.
+  const isXl = useSyncExternalStore(subscribeXl, readXl, () => true);
+  const [peek, setPeek] = useState(false);
+  const rail = isXl ? collapsed : !peek;
+  const overlay = !isXl && peek;
+  const railHide = rail ? 'lg:hidden' : '';
+  const railCenter = rail ? 'lg:justify-center lg:px-0' : '';
+  const railCol = rail ? 'lg:flex-col' : '';
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
       const next = !prev;
@@ -221,9 +236,19 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   // so once they pick a destination the drawer should get out of the way.
   useEffect(() => {
     onClose?.();
+    setPeek(false);
     // Only pathname drives this — onClose identity doesn't need to re-run it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
+
+  useEffect(() => {
+    if (!overlay) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPeek(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [overlay]);
 
   // Lock body scroll and allow Escape to close while the drawer is open on
   // mobile. No-ops on desktop because the sidebar isn't positioned there.
@@ -258,6 +283,20 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         )}
       />
 
+      {/* Laptop peek: click outside to close; a spacer keeps the rail's
+          width in the row while the menu floats over the page. */}
+      {overlay && (
+        <>
+          <button
+            type="button"
+            aria-label={t('closeMenu')}
+            onClick={() => setPeek(false)}
+            className="fixed inset-0 z-30 hidden bg-[#1d1b18]/20 lg:block"
+          />
+          <div aria-hidden className="hidden w-17 shrink-0 lg:block" />
+        </>
+      )}
+
       <aside
         className={cn(
           // Mobile: fixed drawer that slides in from the left.
@@ -268,7 +307,8 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           // Width transitions between the two lg: states so collapsing
           // the icon rail animates instead of snapping.
           'lg:static lg:z-0 lg:translate-x-0 lg:rounded-3xl lg:border lg:transition-[width] lg:duration-250 lg:ease-out',
-          collapsed ? 'lg:w-17' : 'lg:w-17 xl:w-62'
+          rail ? 'lg:w-17' : 'lg:w-62',
+          overlay && 'lg:fixed lg:top-3 lg:bottom-3 lg:left-3 lg:z-40 lg:h-auto lg:shadow-[0_20px_50px_rgb(0_0_0/0.18)]'
         )}
         aria-label={t('primaryNav')}
       >
@@ -285,8 +325,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             href="/dashboard"
             className={cn(
               'flex min-w-0 items-center gap-2',
-              // The toggle only exists from xl up; below it the mark stays.
-              collapsed ? 'lg:max-xl:justify-center xl:hidden' : 'lg:max-xl:justify-center'
+              rail && 'lg:hidden'
             )}
           >
             {account?.logo_url ? (
@@ -315,12 +354,13 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           </button>
           <button
             type="button"
-            onClick={toggleCollapsed}
-            aria-label={collapsed ? t('expandSidebar') : t('collapseSidebar')}
-            title={collapsed ? t('expandSidebar') : t('collapseSidebar')}
-            className="text-muted-foreground hover:bg-muted hover:text-foreground hidden h-9 w-9 shrink-0 items-center justify-center rounded-full xl:flex"
+            onClick={() => (isXl ? toggleCollapsed() : setPeek((p) => !p))}
+            aria-label={rail ? t('expandSidebar') : t('collapseSidebar')}
+            aria-expanded={!rail}
+            title={rail ? t('expandSidebar') : t('collapseSidebar')}
+            className="text-muted-foreground hover:bg-muted hover:text-foreground hidden h-9 w-9 shrink-0 items-center justify-center rounded-full lg:flex"
           >
-            {collapsed ? (
+            {rail ? (
               <PanelLeftOpen className="h-5 w-5" />
             ) : (
               <PanelLeftClose className="h-5 w-5" />
@@ -453,7 +493,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    title={t(item.labelKey as string)}
+                    title={rail ? t(item.labelKey as string) : undefined}
                     className={cn(
                       'flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13.5px] font-medium transition-colors duration-150 ease-out lg:min-h-9.5',
                       railCenter,
@@ -520,7 +560,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           <DropdownMenu>
             <DropdownMenuTrigger
               title={
-                collapsed ? (profile?.full_name ?? t('defaultUser')) : undefined
+                rail ? (profile?.full_name ?? t('defaultUser')) : undefined
               }
               className={cn(
                 'hover:bg-muted focus-visible:bg-muted data-popup-open:bg-muted flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition-colors duration-150 ease-out focus:outline-none',
