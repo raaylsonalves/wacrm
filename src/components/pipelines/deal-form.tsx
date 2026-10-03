@@ -377,8 +377,8 @@ export function DealForm({
             </div>
 
             {deal && (
-              <div className="space-y-2 rounded-lg border border-border bg-muted/50 p-3">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <div className="space-y-2 rounded-[18px] border border-border bg-card-2 p-3">
+                <p className="text-xs font-bold text-muted-foreground">
                   {t("status")}
                 </p>
                 <div className="flex gap-2">
@@ -386,7 +386,7 @@ export function DealForm({
                     type="button"
                     onClick={() => handleStatusChange("won")}
                     disabled={!!statusAction || deal.status === "won"}
-                    className="h-auto min-w-0 shrink flex-1 basis-0 flex-wrap whitespace-normal bg-primary py-2 text-center text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    className="h-auto min-h-10 min-w-0 shrink flex-1 basis-0 flex-wrap whitespace-normal bg-tone-mint py-2 text-center text-tone-on hover:bg-tone-mint hover:brightness-95 disabled:opacity-50"
                   >
                     {statusAction === "won" ? (
                       <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
@@ -401,7 +401,7 @@ export function DealForm({
                     type="button"
                     onClick={() => handleStatusChange("lost")}
                     disabled={!!statusAction || deal.status === "lost"}
-                    className="h-auto min-w-0 shrink flex-1 basis-0 flex-wrap whitespace-normal bg-red-600 py-2 text-center text-white hover:bg-red-700 disabled:opacity-50"
+                    className="h-auto min-h-10 min-w-0 shrink flex-1 basis-0 flex-wrap whitespace-normal bg-tone-pink-soft py-2 text-center text-tone-pink-ink hover:bg-tone-pink-soft hover:brightness-95 disabled:opacity-50"
                   >
                     {statusAction === "lost" ? (
                       <Loader2 className="h-4 w-4 shrink-0 animate-spin" />

@@ -189,6 +189,12 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   // (collapsing a full-screen overlay drawer buys nothing), so every
   // class this drives is scoped behind `lg:`.
   const [collapsed, setCollapsed] = useState(readInitialCollapsed);
+  // Below xl (1280px) the desktop sidebar is always the icon rail, so a
+  // laptop screen keeps its width for the page; the expand/collapse
+  // choice applies from xl up. These stand in for `collapsed && …`.
+  const railHide = collapsed ? 'lg:hidden' : 'lg:max-xl:hidden';
+  const railCenter = collapsed ? 'lg:justify-center lg:px-0' : 'lg:max-xl:justify-center lg:max-xl:px-0';
+  const railCol = collapsed ? 'lg:flex-col' : 'lg:max-xl:flex-col';
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
       const next = !prev;
@@ -262,7 +268,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           // Width transitions between the two lg: states so collapsing
           // the icon rail animates instead of snapping.
           'lg:static lg:z-0 lg:translate-x-0 lg:rounded-3xl lg:border lg:transition-[width] lg:duration-250 lg:ease-out',
-          collapsed ? 'lg:w-17' : 'lg:w-62'
+          collapsed ? 'lg:w-17' : 'lg:w-17 xl:w-62'
         )}
         aria-label={t('primaryNav')}
       >
@@ -272,14 +278,15 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         <div
           className={cn(
             'flex h-16 shrink-0 items-center justify-between gap-2 px-4',
-            collapsed && 'lg:justify-center lg:px-0'
+            railCenter
           )}
         >
           <Link
             href="/dashboard"
             className={cn(
               'flex min-w-0 items-center gap-2',
-              collapsed && 'lg:hidden'
+              // The toggle only exists from xl up; below it the mark stays.
+              collapsed ? 'lg:max-xl:justify-center xl:hidden' : 'lg:max-xl:justify-center'
             )}
           >
             {account?.logo_url ? (
@@ -294,7 +301,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 {(account?.display_name || t('title')).charAt(0).toUpperCase()}
               </div>
             )}
-            <span className="text-foreground truncate text-[17px] font-bold tracking-tight">
+            <span className={cn('text-foreground truncate text-[17px] font-bold tracking-tight', railHide)}>
               {account?.display_name || t('title')}
             </span>
           </Link>
@@ -311,7 +318,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             onClick={toggleCollapsed}
             aria-label={collapsed ? t('expandSidebar') : t('collapseSidebar')}
             title={collapsed ? t('expandSidebar') : t('collapseSidebar')}
-            className="text-muted-foreground hover:bg-muted hover:text-foreground hidden h-9 w-9 shrink-0 items-center justify-center rounded-full lg:flex"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground hidden h-9 w-9 shrink-0 items-center justify-center rounded-full xl:flex"
           >
             {collapsed ? (
               <PanelLeftOpen className="h-5 w-5" />
@@ -333,7 +340,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               <p
                 className={cn(
                   'text-muted-foreground px-3 pt-2 pb-1 text-xs font-semibold',
-                  collapsed && 'lg:hidden'
+                  railHide
                 )}
               >
                 {t(group.labelKey as string)}
@@ -367,12 +374,12 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                       <Link
                         href={item.href}
                         title={
-                          collapsed ? t(item.labelKey as string) : undefined
+                          t(item.labelKey as string)
                         }
                         className={cn(
                           // Taller on mobile so fingers can hit the row reliably (≥44px).
                           'flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13.5px] font-medium transition-colors duration-150 ease-out lg:min-h-9.5',
-                          collapsed && 'lg:justify-center lg:px-0',
+                          railCenter,
                           isActive
                             ? 'bg-foreground text-background'
                             : 'text-foreground/80 hover:bg-muted hover:text-foreground'
@@ -380,7 +387,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                       >
                         <item.icon className="h-4 w-4 shrink-0" />
                         <span
-                          className={cn('flex-1', collapsed && 'lg:hidden')}
+                          className={cn('flex-1', railHide)}
                         >
                           {t(item.labelKey as string)}
                         </span>
@@ -389,7 +396,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                             aria-label={t('beta')}
                             className={cn(
                               'rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-amber-700 uppercase dark:text-amber-300',
-                              collapsed && 'lg:hidden'
+                              railHide
                             )}
                           >
                             {t('beta')}
@@ -402,7 +409,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                             })}
                             className={cn(
                               'relative flex h-2 w-2',
-                              collapsed && 'lg:hidden'
+                              railHide
                             )}
                           >
                             <span className="bg-tone-salmon relative inline-flex h-2 w-2 rounded-full" />
@@ -415,7 +422,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                             })}
                             className={cn(
                               'bg-tone-salmon text-tone-on flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums',
-                              collapsed && 'lg:hidden'
+                              railHide
                             )}
                           >
                             {unreadNotifications > 9
@@ -431,7 +438,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             </div>
           ))}
 
-          <div className={cn(collapsed && 'lg:hidden')}>
+          <div className={cn(railHide)}>
             <TeamNow />
           </div>
 
@@ -446,17 +453,17 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    title={collapsed ? t(item.labelKey as string) : undefined}
+                    title={t(item.labelKey as string)}
                     className={cn(
                       'flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13.5px] font-medium transition-colors duration-150 ease-out lg:min-h-9.5',
-                      collapsed && 'lg:justify-center lg:px-0',
+                      railCenter,
                       isActive
                         ? 'bg-foreground text-background'
                         : 'text-foreground/80 hover:bg-muted hover:text-foreground'
                     )}
                   >
                     <item.icon className="h-4 w-4 shrink-0" />
-                    <span className={cn(collapsed && 'lg:hidden')}>
+                    <span className={cn(railHide)}>
                       {t(item.labelKey as string)}
                     </span>
                   </Link>
@@ -479,7 +486,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             <div
               className={cn(
                 'text-muted-foreground mb-2 flex items-center gap-2 px-3 text-xs',
-                collapsed && 'lg:hidden'
+                railHide
               )}
             >
               <UsersRound className="size-3.5 shrink-0" />
@@ -509,7 +516,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 : null}
             </div>
           ) : null}
-          <div className={cn('flex items-center gap-1', collapsed && 'lg:flex-col')}>
+          <div className={cn('flex items-center gap-1', railCol)}>
           <DropdownMenu>
             <DropdownMenuTrigger
               title={
@@ -517,7 +524,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               }
               className={cn(
                 'hover:bg-muted focus-visible:bg-muted data-popup-open:bg-muted flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition-colors duration-150 ease-out focus:outline-none',
-                collapsed && 'lg:justify-center lg:px-0'
+                railCenter
               )}
             >
               <Avatar className="size-8 shrink-0">
@@ -533,7 +540,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     'U'}
                 </AvatarFallback>
               </Avatar>
-              <div className={cn('min-w-0 flex-1', collapsed && 'lg:hidden')}>
+              <div className={cn('min-w-0 flex-1', railHide)}>
                 <p className="text-foreground truncate text-sm font-medium">
                   {profile?.full_name ?? t('defaultUser')}
                 </p>
@@ -584,7 +591,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           </DropdownMenu>
           {/* Desktop home of the header's mode + push controls (v2 has no
               top bar); phones keep them in the header. */}
-          <div className={cn('flex shrink-0 items-center', collapsed && 'lg:flex-col')}>
+          <div className={cn('flex shrink-0 items-center', railCol)}>
             <PushStatusButton />
             <ModeToggle className="rounded-full" />
           </div>

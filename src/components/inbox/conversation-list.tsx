@@ -684,7 +684,7 @@ export function ConversationList({
     // w-full on mobile so the list occupies the whole viewport when it's
     // the single pane showing; fixed 320px on desktop where it shares the
     // row with the thread + contact sidebar.
-    <div className="flex h-full w-full flex-col lg:w-80 lg:bg-card">
+    <div className="flex h-full w-full flex-col lg:w-72 lg:bg-card 2xl:w-80">
       {/* Search + Filter */}
       <div className="border-border space-y-2.5 p-3 lg:border-b">
         {/* Desktop page heading (v2): the shell header steps aside on the

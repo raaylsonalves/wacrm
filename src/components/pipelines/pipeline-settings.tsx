@@ -351,7 +351,7 @@ export function PipelineSettings({
             <DialogFooter className="border-border bg-popover/50">
               <Button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="mr-auto bg-red-600 text-white hover:bg-red-700"
+                className="mr-auto border border-destructive/40 bg-transparent text-destructive hover:bg-destructive/10"
               >
                 {t("deletePipeline")}
               </Button>

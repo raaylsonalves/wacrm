@@ -321,14 +321,17 @@ html[data-theme="rose"] {
 
 /* Discreet scrollbars on desktop (mouse/trackpad): a thin thumb that only
    shows while the pointer is over the scrolling area. Touch screens keep
-   their own overlay scrollbars. */
-@media (pointer: fine) {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-  }
-  *:hover {
-    scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent) transparent;
+   their own overlay scrollbars. In the base layer so a utility like
+   [scrollbar-width:none] still wins. */
+@layer base {
+  @media (pointer: fine) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
+    *:hover {
+      scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent) transparent;
+    }
   }
 }
 

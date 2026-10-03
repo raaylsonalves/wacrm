@@ -1,5 +1,6 @@
 'use client';
 
+import { TONE_SOLID, toneFor } from '@/lib/tones';
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { addContactTag, deleteContactTag } from '@/lib/contacts/tag-api';
@@ -494,8 +495,8 @@ export function ContactDetailView({
               {/* Header */}
               <SheetHeader className="border-border/50 border-b p-4">
                 <div className="flex items-center gap-3">
-                  <Avatar className="bg-muted border-border size-12 border">
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                  <Avatar className="size-12">
+                    <AvatarFallback className={`text-sm font-bold ${TONE_SOLID[toneFor(contact.name || contact.phone)]}`}>
                       {getInitials(contact.name)}
                     </AvatarFallback>
                   </Avatar>

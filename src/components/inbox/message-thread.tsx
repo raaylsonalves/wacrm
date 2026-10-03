@@ -1127,7 +1127,7 @@ export function MessageThread({
     <div className={cn("flex min-w-0 flex-1 flex-col", DOODLE_BG_CLASSES)}>
       {/* Header — solid card surface sits on top of the doodle so the
           name/avatar/dropdowns stay legible. */}
-      <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 sm:px-4 lg:py-3.5">
+      <div className="@container/th flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 sm:px-4 lg:py-3.5">
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           {/* Back-to-list button — mobile only. Hidden on lg+ where the
               conversation list is always visible next to the thread. */}
@@ -1210,7 +1210,7 @@ export function MessageThread({
                 <Badge
                   variant="outline"
                   className={cn(
-                    "ml-1 hidden shrink-0 gap-1 rounded-full border-transparent px-2.5 text-[11.5px] font-semibold sm:ml-2",
+                    "ml-1 hidden shrink-0 gap-1 rounded-full border-transparent px-2.5 text-[11.5px] font-semibold sm:ml-2 @max-[620px]/th:hidden!",
                     // The contact panel eats the width this badge would
                     // otherwise have room in (issue: this same trio of
                     // controls — badge, status dropdown, assign dropdown
@@ -1290,7 +1290,7 @@ export function MessageThread({
               aria-label={t("refreshConversation")}
               title={t("refresh")}
               className={cn(
-                "hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60 sm:inline-flex",
+                "hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60 @max-[520px]/th:hidden! sm:inline-flex",
               )}
             >
               <RefreshCw
