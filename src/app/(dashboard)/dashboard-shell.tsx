@@ -15,6 +15,7 @@ import { PresenceHeartbeat } from '@/components/presence/presence-heartbeat';
 import { BrowserNotificationsListener } from '@/components/notifications/browser-notifications-listener';
 import { SplashScreen } from '@/components/layout/splash-screen';
 import { RouteProgress } from '@/components/layout/route-progress';
+import { QueryProvider } from '@/lib/query/provider';
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout
 // itself can stay a server component and export metadata (noindex) —
@@ -84,7 +85,9 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <DashboardShellInner>{children}</DashboardShellInner>
+      <QueryProvider>
+        <DashboardShellInner>{children}</DashboardShellInner>
+      </QueryProvider>
     </AuthProvider>
   );
 }

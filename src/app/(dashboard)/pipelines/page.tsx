@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { qk } from '@/lib/query/keys';
+import { useDeals, usePipelines, useStages, useUpdateDeal } from '@/hooks/queries/use-pipelines';
 import { createClient } from '@/lib/supabase/client';
-import type { Pipeline, PipelineStage, Deal } from '@/types';
+import type { Pipeline, Deal } from '@/types';
 import { PipelineBoard } from '@/components/pipelines/pipeline-board';
 import { PipelineSettings } from '@/components/pipelines/pipeline-settings';
 import { DealForm } from '@/components/pipelines/deal-form';
@@ -64,12 +67,24 @@ export default function PipelinesPage() {
   const canEditSettings = useCan('edit-settings');
   const canCreateDeals = useCan('send-messages');
   const { accountId } = useAuth();
+  const queryClient = useQueryClient();
 
-  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
-  const [selectedPipelineId, setSelectedPipelineId] = useState<string>('');
-  const [stages, setStages] = useState<PipelineStage[]>([]);
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Reads come from TanStack Query (hooks/queries/use-pipelines): cached
+  // per account + pipeline, so leaving and coming back is instant and a
+  // write refreshes exactly the lists it touched.
+  const pipelinesQuery = usePipelines();
+  const pipelines = useMemo(() => pipelinesQuery.data ?? [], [pipelinesQuery.data]);
+  const [chosenPipelineId, setSelectedPipelineId] = useState<string>('');
+  // The chosen pipeline while it still exists, otherwise the first one.
+  const selectedPipelineId =
+    chosenPipelineId && pipelines.some((p) => p.id === chosenPipelineId)
+      ? chosenPipelineId
+      : (pipelines[0]?.id ?? '');
+  const stagesQuery = useStages(selectedPipelineId);
+  const dealsQuery = useDeals(selectedPipelineId);
+  const stages = useMemo(() => stagesQuery.data ?? [], [stagesQuery.data]);
+  const deals = useMemo(() => dealsQuery.data ?? [], [dealsQuery.data]);
+  const updateDeal = useUpdateDeal(selectedPipelineId);
 
   // Dialog / sheet state
   const [newPipelineOpen, setNewPipelineOpen] = useState(false);
@@ -85,49 +100,7 @@ export default function PipelinesPage() {
 
   // Guard against double-seeding (React StrictMode double-effect in dev).
   const seedAttempted = useRef(false);
-
-  // Returns null on a failed fetch (vs. [] for a genuinely empty
-  // account) so callers can tell "no pipelines yet" from "couldn't
-  // check" — conflating the two used to make a transient network
-  // error seed a bogus duplicate pipeline on every retry.
-  const loadPipelines = useCallback(async (): Promise<Pipeline[] | null> => {
-    const { data, error } = await supabase
-      .from('pipelines')
-      .select('*')
-      .order('created_at');
-    if (error) {
-      console.error('Failed to load pipelines:', error.message);
-      return null;
-    }
-    return data ?? [];
-  }, [supabase]);
-
-  const loadStages = useCallback(
-    async (pipelineId: string) => {
-      const { data } = await supabase
-        .from('pipeline_stages')
-        .select('*')
-        .eq('pipeline_id', pipelineId)
-        .order('position');
-      return data ?? [];
-    },
-    [supabase]
-  );
-
-  const loadDeals = useCallback(
-    async (pipelineId: string) => {
-      const { data } = await supabase
-        .from('deals')
-        .select(
-          '*, contact:contacts(*), assignee:profiles!deals_assigned_to_fkey(*)'
-        )
-        .eq('pipeline_id', pipelineId)
-        .order('position_in_stage', { ascending: true, nullsFirst: false })
-        .order('created_at', { ascending: false });
-      return (data ?? []) as Deal[];
-    },
-    [supabase]
-  );
+  const [seeding, setSeeding] = useState(false);
 
   const seedDefaultPipeline =
     useCallback(async (): Promise<Pipeline | null> => {
@@ -165,135 +138,56 @@ export default function PipelinesPage() {
       return pipeline as Pipeline;
     }, [supabase, accountId, t, defaultStages]);
 
-  // Initial load + seed-if-empty
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      let list = await loadPipelines();
-
-      // Only seed on a confirmed-empty account (list.length === 0), never
-      // on a failed fetch (list === null) — a transient network error on
-      // first load used to read as "first run" and insert a duplicate
-      // "Default Pipeline" every time it happened.
-      if (list !== null && list.length === 0 && !seedAttempted.current) {
-        seedAttempted.current = true;
-        const seeded = await seedDefaultPipeline();
-        if (seeded) list = await loadPipelines();
-      }
-
-      if (cancelled) return;
-      if (list === null) {
-        toast.error(t('toastFailedLoadPipelines'));
-        setLoading(false);
-        return;
-      }
-      setPipelines(list);
-      if (list.length > 0) {
-        setSelectedPipelineId((prev) =>
-          prev && list.some((p) => p.id === prev) ? prev : list[0].id
-        );
-      } else {
-        setSelectedPipelineId('');
-      }
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [loadPipelines, seedDefaultPipeline, t]);
-
-  // Load stages + deals whenever selected pipeline changes.
-  // Clearing on no-selection is a legitimate sync with URL/prop
-  // state; the load completion uses async setters inside promise
-  // callbacks (not synchronous in the effect body).
-  useEffect(() => {
-    if (!selectedPipelineId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStages([]);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDeals([]);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const [s, d] = await Promise.all([
-        loadStages(selectedPipelineId),
-        loadDeals(selectedPipelineId),
-      ]);
-      if (cancelled) return;
-      setStages(s);
-      setDeals(d);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedPipelineId, loadStages, loadDeals]);
-
   const refreshPipelines = useCallback(async () => {
-    const list = await loadPipelines();
-    if (list === null) {
-      toast.error(t('toastFailedLoadPipelines'));
-      return;
-    }
-    setPipelines(list);
-    if (list.length === 0) setSelectedPipelineId('');
-    else if (!list.some((p) => p.id === selectedPipelineId))
-      setSelectedPipelineId(list[0].id);
-  }, [loadPipelines, selectedPipelineId, t]);
+    if (!accountId) return;
+    await queryClient.invalidateQueries({ queryKey: qk.pipelines(accountId) });
+  }, [queryClient, accountId]);
 
   const refreshStages = useCallback(async () => {
-    if (!selectedPipelineId) return;
-    setStages(await loadStages(selectedPipelineId));
-  }, [loadStages, selectedPipelineId]);
+    if (!accountId || !selectedPipelineId) return;
+    await queryClient.invalidateQueries({ queryKey: qk.stages(accountId, selectedPipelineId) });
+  }, [queryClient, accountId, selectedPipelineId]);
 
   const refreshDeals = useCallback(async () => {
-    if (!selectedPipelineId) return;
-    setDeals(await loadDeals(selectedPipelineId));
-  }, [loadDeals, selectedPipelineId]);
+    if (!accountId || !selectedPipelineId) return;
+    await queryClient.invalidateQueries({ queryKey: qk.deals(accountId, selectedPipelineId) });
+  }, [queryClient, accountId, selectedPipelineId]);
+
+  // Seed a default pipeline on a confirmed-empty account only — never on a
+  // failed read (a transient error used to read as "first run" and insert
+  // a duplicate "Default Pipeline" each time it happened).
+  const confirmedEmpty = pipelinesQuery.isSuccess && pipelines.length === 0;
+  useEffect(() => {
+    if (!confirmedEmpty || seedAttempted.current) return;
+    seedAttempted.current = true;
+    void (async () => {
+      setSeeding(true);
+      await seedDefaultPipeline();
+      await refreshPipelines();
+      setSeeding(false);
+    })();
+  }, [confirmedEmpty, seedDefaultPipeline, refreshPipelines]);
+
+  useEffect(() => {
+    if (pipelinesQuery.isError) toast.error(t('toastFailedLoadPipelines'));
+  }, [pipelinesQuery.isError, t]);
+
+  const loading = pipelinesQuery.isPending || seeding;
 
   const handleDealMoved = useCallback(
-    async (dealId: string, newStageId: string, newPosition?: number) => {
-      // Optimistic update — board already animated; just persist.
-      setDeals((prev) =>
-        prev.map((d) =>
-          d.id === dealId
-            ? {
-                ...d,
-                stage_id: newStageId,
-                ...(newPosition !== undefined
-                  ? { position_in_stage: newPosition }
-                  : {}),
-              }
-            : d
-        )
+    (dealId: string, newStageId: string, newPosition?: number) => {
+      // Omitting position_in_stage on a same-stage move would let the DB
+      // trigger's "stage changed" branch reassign it — pass it through
+      // whenever the caller has it. The mutation updates the cache first
+      // (the board already animated) and rolls back if RLS refuses.
+      const patch: { stage_id: string; position_in_stage?: number } = { stage_id: newStageId };
+      if (newPosition !== undefined) patch.position_in_stage = newPosition;
+      updateDeal.mutate(
+        { id: dealId, patch },
+        { onError: () => toast.error(t('toastFailedMoveDeal')) }
       );
-      // Omitting position_in_stage on a same-stage move (newPosition
-      // undefined shouldn't happen from the board, but stay defensive)
-      // would otherwise let the DB trigger's "stage changed" branch
-      // silently reassign it — pass it through whenever the caller has it.
-      const updatePayload: { stage_id: string; position_in_stage?: number } = {
-        stage_id: newStageId,
-      };
-      if (newPosition !== undefined)
-        updatePayload.position_in_stage = newPosition;
-
-      // RLS silently denies an UPDATE it filters out — PostgREST still
-      // answers 200 with zero rows affected, not an error. `.select("id")`
-      // makes the denial visible so a viewer/agent dragging a card they
-      // aren't allowed to move gets rolled back instead of a card that
-      // looks moved but reverts on the next real reload.
-      const { data, error } = await supabase
-        .from('deals')
-        .update(updatePayload)
-        .eq('id', dealId)
-        .select('id');
-      if (error || !data || data.length === 0) {
-        toast.error(t('toastFailedMoveDeal'));
-        refreshDeals();
-      }
     },
-    [supabase, refreshDeals, t]
+    [updateDeal, t]
   );
 
   const handleAddDeal = useCallback(
