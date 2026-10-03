@@ -14,6 +14,13 @@ import { cn } from '@/lib/utils';
 import { TONE_SOLID, toneFor } from '@/lib/tones';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
+import {
+  useAiAutoReplyOn,
+  useTagDefinitions,
+  useTeamProfiles,
+  useWahaChannelOptions,
+  type WahaChannelOption,
+} from '@/hooks/queries/use-inbox-lookups';
 import { useCan } from '@/hooks/use-can';
 import { slaTier, formatElapsedMinutes, type SlaTier } from '@/lib/inbox/sla';
 import {
@@ -123,11 +130,6 @@ type InboxFilter = ConversationStatus | 'all' | 'unread' | 'snoozed' | 'waiting_
 
 const SNOOZE_PRESETS: SnoozePreset[] = ['1h', '3h', 'tomorrow'];
 
-interface WahaChannelOption {
-  id: string;
-  label: string;
-}
-
 export function ConversationList({
   activeConversationId,
   onSelect,
@@ -147,24 +149,7 @@ export function ConversationList({
   // Whether the account has an AI answering at all, asked ONCE for the
   // whole list (not per row). Unknown until it loads, and a row then
   // doesn't claim the AI is answering (see commandOf).
-  const [aiOn, setAiOn] = useState<boolean | undefined>(undefined);
-  useEffect(() => {
-    if (!accountId) return;
-    let alive = true;
-    createClient()
-      .from('ai_configs')
-      .select('id')
-      .eq('account_id', accountId)
-      .eq('is_active', true)
-      .eq('auto_reply_enabled', true)
-      .limit(1)
-      .then(({ data, error }) => {
-        if (alive && !error) setAiOn((data ?? []).length > 0);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [accountId]);
+  const aiOn = useAiAutoReplyOn();
 
   // Upcoming appointments, one query for the whole list — they put a
   // conversation in the "Scheduled" queue and on its next-action line.
@@ -222,14 +207,14 @@ export function ConversationList({
   // Contact-based filters (issue #272). Tags use OR logic (a conversation
   // matches if its contact carries any selected tag), consistent with
   // Broadcast audience filtering. Company is an exact match on the field.
-  const [tags, setTags] = useState<Tag[]>([]);
+  const { data: tags = [] } = useTagDefinitions();
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   // Channel filter (specs/waha-channel-connection.md) — 'all' is the
   // no-op default, 'cloud_api' matches conversations whose
   // whatsapp_channel_id is null (the account's Meta number), and any
   // other value is a whatsapp_waha_channels id.
-  const [wahaChannels, setWahaChannels] = useState<WahaChannelOption[]>([]);
+  const { data: wahaChannels = [] } = useWahaChannelOptions();
   const [selectedChannel, setSelectedChannel] = useState<string>('all');
 
   // Keep the latest callback in a ref so the fetch effect below can
@@ -291,62 +276,10 @@ export function ConversationList({
     // up on any events sent while the WS was disconnected or throttled.
   }, [resyncToken]);
 
-  // Tag definitions for the filter picker — loaded once so labels/colours
-  // stay stable regardless of which conversations happen to be loaded.
-  useEffect(() => {
-    const supabase = createClient();
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase.from('tags').select('*').order('name');
-      if (!cancelled && data) setTags(data as Tag[]);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Channel labels for the filter picker and per-row badge — only
-  // fetched to know whether the account has any WAHA channels at all;
-  // both UI pieces stay hidden when it's Cloud-API-only (nothing to
-  // disambiguate).
-  useEffect(() => {
-    const supabase = createClient();
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from('whatsapp_waha_channels')
-        .select('id, label')
-        .order('label');
-      if (!cancelled && data) setWahaChannels(data as WahaChannelOption[]);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   // Teammates for the context menu's "assign" submenu — same query
   // MessageThread runs for its own assign dropdown (see that file for
   // why it's a plain, RLS-scoped select rather than a members endpoint).
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  useEffect(() => {
-    const supabase = createClient();
-    let cancelled = false;
-    supabase
-      .from('profiles')
-      .select('*')
-      .order('full_name')
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          console.error('Failed to fetch profiles:', error);
-          return;
-        }
-        setProfiles((data as Profile[]) ?? []);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data: profiles = [] } = useTeamProfiles();
 
   // Per-channel routing policy, fetched once for the whole list rather
   // than per row (specs/channel-routing-responsibles.md) — a row's

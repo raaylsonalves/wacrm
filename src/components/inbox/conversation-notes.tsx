@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
@@ -8,10 +8,11 @@ import { Lock, Plus, Trash2 } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+import { useTeamProfiles } from '@/hooks/queries/use-inbox-lookups';
 import { useCan } from '@/hooks/use-can';
 import { dateFnsLocale } from '@/lib/date-fns-locale';
 import { Button } from '@/components/ui/button';
-import type { ConversationNote, Profile } from '@/types';
+import type { ConversationNote } from '@/types';
 
 /**
  * Teammate-only notes on one conversation (migration 070). Lives in its
@@ -28,7 +29,11 @@ export function ConversationNotes({
   const canWrite = useCan('send-messages');
 
   const [notes, setNotes] = useState<ConversationNote[]>([]);
-  const [authors, setAuthors] = useState<Map<string, string>>(new Map());
+  const { data: profiles } = useTeamProfiles();
+  const authors = useMemo(
+    () => new Map((profiles ?? []).map((p) => [p.user_id, p.full_name ?? ''])),
+    [profiles]
+  );
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -54,28 +59,6 @@ export function ConversationNotes({
     };
   }, [conversationId]);
 
-  // Author names — the same RLS-scoped profiles select the assign
-  // dropdowns use.
-  useEffect(() => {
-    let cancelled = false;
-    createClient()
-      .from('profiles')
-      .select('user_id, full_name')
-      .then(({ data }) => {
-        if (cancelled || !data) return;
-        setAuthors(
-          new Map(
-            (data as Pick<Profile, 'user_id' | 'full_name'>[]).map((p) => [
-              p.user_id,
-              p.full_name ?? '',
-            ])
-          )
-        );
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   async function handleAdd() {
     const body = draft.trim();
