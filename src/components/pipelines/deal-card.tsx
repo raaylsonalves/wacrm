@@ -13,6 +13,8 @@ interface DealCardProps {
   stage: PipelineStage | null;
   onEdit: (deal: Deal) => void;
   isOverlay?: boolean;
+  /** Open in the side view — outlined in ink. */
+  selected?: boolean;
 }
 
 function formatDate(dateStr: string) {
@@ -29,7 +31,7 @@ function initials(name?: string, fallback?: string) {
   return source.charAt(0).toUpperCase();
 }
 
-export function DealCard({ deal, onEdit, isOverlay }: DealCardProps) {
+export function DealCard({ deal, onEdit, isOverlay, selected }: DealCardProps) {
   const t = useTranslations("Pipelines.card");
   const contactLabel = deal.contact?.name || deal.contact?.phone || t("noContact");
   const assigneeLabel = deal.assignee?.full_name || null;
@@ -49,6 +51,7 @@ export function DealCard({ deal, onEdit, isOverlay }: DealCardProps) {
         isOverlay
           ? "shadow-xl"
           : "hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgb(0_0_0/0.08)]",
+        selected && "ring-2 ring-foreground",
       )}
     >
 

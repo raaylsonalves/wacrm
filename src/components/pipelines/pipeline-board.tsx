@@ -46,6 +46,8 @@ interface PipelineBoardProps {
   ) => void;
   onAddDeal: (stageId: string) => void;
   onEditDeal: (deal: Deal) => void;
+  /** The deal open in the side view, outlined on the board. */
+  selectedDealId?: string | null;
 }
 
 export function PipelineBoard({
@@ -54,6 +56,7 @@ export function PipelineBoard({
   onDealMoved,
   onAddDeal,
   onEditDeal,
+  selectedDealId = null,
 }: PipelineBoardProps) {
   const { defaultCurrency } = useAuth();
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
@@ -183,6 +186,7 @@ export function PipelineBoard({
               totalsByCurrency={totalsByCurrency}
               onAddDeal={onAddDeal}
               onEditDeal={onEditDeal}
+              selectedDealId={selectedDealId}
             />
           );
         })}
@@ -256,12 +260,14 @@ function StageColumn({
   totalsByCurrency,
   onAddDeal,
   onEditDeal,
+  selectedDealId,
 }: {
   stage: PipelineStage;
   deals: Deal[];
   totalsByCurrency: Map<string, number>;
   onAddDeal: (stageId: string) => void;
   onEditDeal: (deal: Deal) => void;
+  selectedDealId: string | null;
 }) {
   const t = useTranslations('Pipelines.board');
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
@@ -317,6 +323,7 @@ function StageColumn({
                 deal={deal}
                 stage={stage}
                 onEdit={onEditDeal}
+                selected={deal.id === selectedDealId}
               />
             ))}
           </SortableContext>
@@ -340,10 +347,12 @@ function DraggableDealCard({
   deal,
   stage,
   onEdit,
+  selected,
 }: {
   deal: Deal;
   stage: PipelineStage;
   onEdit: (deal: Deal) => void;
+  selected: boolean;
 }) {
   const {
     attributes,
@@ -363,7 +372,7 @@ function DraggableDealCard({
 
   return (
     <div ref={setNodeRef} {...listeners} {...attributes} style={style}>
-      <DealCard deal={deal} stage={stage} onEdit={onEdit} />
+      <DealCard deal={deal} stage={stage} onEdit={onEdit} selected={selected} />
     </div>
   );
 }

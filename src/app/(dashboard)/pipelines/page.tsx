@@ -8,7 +8,8 @@ import { createClient } from '@/lib/supabase/client';
 import type { Pipeline, Deal } from '@/types';
 import { PipelineBoard } from '@/components/pipelines/pipeline-board';
 import { PipelineSettings } from '@/components/pipelines/pipeline-settings';
-import { DealForm } from '@/components/pipelines/deal-form';
+import { DealPanel } from '@/components/pipelines/deal-panel';
+import { DealQuickCreate } from '@/components/pipelines/deal-quick-create';
 import { PipelineAnalytics } from '@/components/pipelines/pipeline-analytics';
 import { Button } from '@/components/ui/button';
 import {
@@ -92,11 +93,13 @@ export default function PipelinesPage() {
   const [creating, setCreating] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Deal form state is lifted here so both the top-bar "Add Deal" and
-  // the per-column "+" trigger the same Sheet.
-  const [dealFormOpen, setDealFormOpen] = useState(false);
-  const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
+  // v8: a deal opens in the side view (bottom sheet on phones) and a new
+  // one starts in the small quick-create dialog. Both the top-bar "Add
+  // Deal" and the per-column "+" open the same quick create.
+  const [openDealId, setOpenDealId] = useState<string | null>(null);
+  const [quickOpen, setQuickOpen] = useState(false);
   const [defaultStageId, setDefaultStageId] = useState<string>('');
+  const openDeal = deals.find((d) => d.id === openDealId) ?? null;
 
   // Guard against double-seeding (React StrictMode double-effect in dev).
   const seedAttempted = useRef(false);
@@ -148,11 +151,6 @@ export default function PipelinesPage() {
     await queryClient.invalidateQueries({ queryKey: qk.stages(accountId, selectedPipelineId) });
   }, [queryClient, accountId, selectedPipelineId]);
 
-  const refreshDeals = useCallback(async () => {
-    if (!accountId || !selectedPipelineId) return;
-    await queryClient.invalidateQueries({ queryKey: qk.deals(accountId, selectedPipelineId) });
-  }, [queryClient, accountId, selectedPipelineId]);
-
   // Seed a default pipeline on a confirmed-empty account only — never on a
   // failed read (a transient error used to read as "first run" and insert
   // a duplicate "Default Pipeline" each time it happened).
@@ -192,17 +190,14 @@ export default function PipelinesPage() {
 
   const handleAddDeal = useCallback(
     (stageId?: string) => {
-      setEditingDeal(null);
       setDefaultStageId(stageId ?? stages[0]?.id ?? '');
-      setDealFormOpen(true);
+      setQuickOpen(true);
     },
     [stages]
   );
 
   const handleEditDeal = useCallback((deal: Deal) => {
-    setEditingDeal(deal);
-    setDefaultStageId(deal.stage_id);
-    setDealFormOpen(true);
+    setOpenDealId(deal.id);
   }, []);
 
   async function handleCreatePipeline() {
@@ -375,6 +370,7 @@ export default function PipelinesPage() {
             onDealMoved={handleDealMoved}
             onAddDeal={handleAddDeal}
             onEditDeal={handleEditDeal}
+            selectedDealId={openDealId}
           />
         </>
       )}
@@ -437,15 +433,23 @@ export default function PipelinesPage() {
         />
       )}
 
-      {/* Deal Form (Sheet) */}
-      <DealForm
-        open={dealFormOpen}
-        onOpenChange={setDealFormOpen}
-        deal={editingDeal}
+      {/* Deal view (side card on desktop, bottom sheet on phones) */}
+      <DealPanel
+        deal={openDeal}
+        stages={stages}
+        pipelineId={selectedPipelineId}
+        onClose={() => setOpenDealId(null)}
+      />
+
+      <DealQuickCreate
+        open={quickOpen}
+        onOpenChange={setQuickOpen}
         pipelineId={selectedPipelineId}
         stages={stages}
         defaultStageId={defaultStageId}
-        onSaved={refreshDeals}
+        onCreated={(id, openPanel) => {
+          if (openPanel) setOpenDealId(id);
+        }}
       />
     </div>
   );

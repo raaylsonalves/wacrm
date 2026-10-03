@@ -62,20 +62,19 @@ export function useDeals(pipelineId: string) {
   });
 }
 
-export type DealPatch = Partial<
-  Pick<
-    Deal,
-    | 'title'
-    | 'value'
-    | 'currency'
-    | 'stage_id'
-    | 'position_in_stage'
-    | 'status'
-    | 'expected_close_date'
-    | 'notes'
-    | 'assigned_to'
-  >
->;
+/** Columns a deal view may write. Nullable ones clear with null. */
+export interface DealPatch {
+  title?: string;
+  value?: number;
+  currency?: string;
+  stage_id?: string;
+  position_in_stage?: number | null;
+  status?: Deal['status'];
+  expected_close_date?: string | null;
+  notes?: string | null;
+  assigned_to?: string | null;
+  contact_id?: string;
+}
 
 /**
  * Write a few fields of one deal with an optimistic update: the board and
@@ -105,7 +104,7 @@ export function useUpdateDeal(pipelineId: string) {
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<Deal[]>(key);
       queryClient.setQueryData<Deal[]>(key, (old) =>
-        old?.map((d) => (d.id === id ? { ...d, ...patch } : d))
+        old?.map((d) => (d.id === id ? ({ ...d, ...patch } as Deal) : d))
       );
       return { previous };
     },
