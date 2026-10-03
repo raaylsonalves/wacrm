@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Clock, Loader2 } from "lucide-react";
+import { Clock } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -18,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { useTranslations } from "next-intl";
 import { SettingsPanelHead } from "./settings-panel-head";
+import { SaveButton } from "@/components/ui/save-button";
 
 /**
  * Response time settings — the account-wide SLA target shown as the
@@ -41,6 +41,7 @@ export function ResponseTimeSettings() {
 
   const [minutes, setMinutes] = useState(String(responseTimeTargetMinutes));
   const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const t = useTranslations("Settings.responseTime");
 
   useEffect(() => {
@@ -65,7 +66,7 @@ export function ResponseTimeSettings() {
     }
     await refreshProfile();
     setSaving(false);
-    toast.success(t("saveSuccess"));
+    setSavedAt(Date.now());
   }
 
   return (
@@ -101,20 +102,9 @@ export function ResponseTimeSettings() {
           </div>
 
           {canEditSettings && (
-            <Button
-              onClick={handleSave}
-              disabled={saving || !dirty}
-              className="bg-foreground text-background hover:bg-foreground/90"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  {t("saving")}
-                </>
-              ) : (
-                t("save")
-              )}
-            </Button>
+            <SaveButton onClick={handleSave} disabled={!dirty} saving={saving} savedAt={savedAt}>
+              {t("save")}
+            </SaveButton>
           )}
         </CardContent>
       </Card>

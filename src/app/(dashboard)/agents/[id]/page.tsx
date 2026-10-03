@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { AgentChannels } from '@/components/agents/agent-channels';
 import { AiConfig } from '@/components/settings/ai-config';
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
+import { SkeletonPage } from '@/components/ui/skeleton';
 
 /**
  * One page per agent, the same form for all of them: model, prompt,
@@ -41,9 +42,7 @@ export default function AgentPage() {
 
   if (kind === 'loading') {
     return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="text-muted-foreground size-6 animate-spin" />
-      </div>
+<SkeletonPage variant="cards" />
     );
   }
   return (

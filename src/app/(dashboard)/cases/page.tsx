@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { SkeletonList } from '@/components/ui/skeleton';
 
 type View = 'team' | 'customer' | 'closed';
 interface CaseListRow {
@@ -136,7 +137,7 @@ export default function CasesPage() {
       </div>
 
       {rows === null ? (
-        <Loader2 className="text-muted-foreground mx-auto size-6 animate-spin" />
+        <SkeletonList rows={4} />
       ) : rows.length === 0 ? (
         <Card>
           <CardContent className="text-muted-foreground flex flex-col items-center gap-2 py-12 text-center text-sm">
@@ -145,7 +146,7 @@ export default function CasesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="divide-border overflow-hidden rounded-lg border">
+        <div className="stagger divide-border bg-card overflow-hidden rounded-[20px] border">
           {rows.map((r) => (
             <button
               key={r.id}
@@ -253,7 +254,7 @@ function CaseSheet({
     >
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         {!c ? (
-          <Loader2 className="text-muted-foreground mx-auto mt-10 size-6 animate-spin" />
+          <SkeletonList rows={4} bare className="p-4" />
         ) : (
           <div className="space-y-5 p-4">
             <SheetHeader className="p-0">

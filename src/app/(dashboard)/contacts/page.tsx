@@ -58,6 +58,7 @@ import { useCan } from '@/hooks/use-can';
 import { GatedButton } from '@/components/ui/gated-button';
 import { useTranslations } from 'next-intl';
 import { APP_LOCALE } from '@/lib/currency';
+import { SkeletonTableRows } from '@/components/ui/skeleton';
 
 const PAGE_SIZE = 25;
 
@@ -569,16 +570,9 @@ export default function ContactsPage() {
               <TableHead className="text-muted-foreground w-12" />
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="stagger">
             {loading ? (
-              <TableRow className="border-border">
-                <TableCell colSpan={8} className="text-center py-12">
-                  <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="size-6 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground">{t('loading')}</p>
-                  </div>
-                </TableCell>
-              </TableRow>
+              <SkeletonTableRows rows={6} cols={6} />
             ) : contacts.length === 0 ? (
               <TableRow className="border-border">
                 <TableCell colSpan={8} className="text-center py-12">

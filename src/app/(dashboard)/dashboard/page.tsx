@@ -235,7 +235,7 @@ export default function DashboardPage() {
       <>
 
       {/* Metric cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
         {!metricsLoading && metricsError ? (
           <div className="col-span-2 lg:col-span-4">
             <WidgetError onRetry={loadAll} t={t} />

@@ -1,5 +1,9 @@
 {
   "Common": {
+    "save": {
+      "saving": "저장 중…",
+      "saved": "저장됨"
+    },
     "modes": {
       "light": "라이트",
       "dark": "다크"

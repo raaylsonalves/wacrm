@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SkeletonList } from '@/components/ui/skeleton';
 
 interface Funnel {
   total: number;
@@ -116,7 +117,7 @@ export default function ProspectingPage() {
       </div>
 
       {campaigns === null ? (
-        <Loader2 className="text-muted-foreground mx-auto size-6 animate-spin" />
+        <SkeletonList rows={3} />
       ) : campaigns.length === 0 ? (
         <Card>
           <CardContent className="text-muted-foreground flex flex-col items-center gap-2 py-12 text-center text-sm">

@@ -5,9 +5,8 @@ import { cn } from '@/lib/utils'
  * container it's dropped into. Used by every dashboard widget while
  * its data fetches.
  */
-export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-md bg-muted', className)} />
-}
+export { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export function SkeletonCard({ className }: { className?: string }) {
   return (

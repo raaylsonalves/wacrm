@@ -78,6 +78,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { neighborId, useInboxShortcuts } from '@/hooks/use-inbox-shortcuts';
+import { SkeletonList } from '@/components/ui/skeleton';
 
 interface ConversationListProps {
   activeConversationId: string | null;
@@ -973,9 +974,7 @@ export function ConversationList({
           parent's overflow-hidden with no scrollbar (issue #229). */}
       <ScrollArea className="min-h-0 flex-1">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
-          </div>
+          <SkeletonList rows={7} bare className="px-1.5 max-lg:px-3" />
         ) : filtered.length === 0 ? (
           <div className="px-4 py-12 text-center">
             <p className="text-muted-foreground text-sm">
@@ -983,7 +982,7 @@ export function ConversationList({
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2 px-3 pb-3 lg:gap-0.5 lg:p-1.5">
+          <div className="stagger flex flex-col gap-2 px-3 pb-3 lg:gap-0.5 lg:p-1.5">
             {filtered.map((conv) => (
               <ConversationItem
                 key={conv.id}

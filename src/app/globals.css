@@ -445,6 +445,44 @@ html[data-theme="rose"] {
   }
 }
 
+/* Content arriving after a load enters in a short cascade (40ms apart,
+   250ms each), once, when the rows mount. */
+.stagger > * {
+  animation: enter 250ms var(--ease-out) both;
+}
+.stagger > :nth-child(2) { animation-delay: 40ms; }
+.stagger > :nth-child(3) { animation-delay: 80ms; }
+.stagger > :nth-child(4) { animation-delay: 120ms; }
+.stagger > :nth-child(5) { animation-delay: 160ms; }
+.stagger > :nth-child(6) { animation-delay: 200ms; }
+.stagger > :nth-child(7) { animation-delay: 240ms; }
+.stagger > :nth-child(n + 8) { animation-delay: 280ms; }
+
+/* SaveButton (components/ui/save-button.tsx): the "✓ Salvo" flash. */
+.save-flash-bg {
+  animation: save-bg 1.8s var(--ease-out) both;
+}
+.save-flash-done {
+  animation: save-done 1.8s var(--ease-out) both;
+}
+.save-flash-label {
+  animation: save-label 1.8s var(--ease-out) both;
+}
+@keyframes save-bg {
+  0% { opacity: 0; }
+  10%, 78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes save-done {
+  0% { opacity: 0; transform: scale(0.85); }
+  12%, 78% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+@keyframes save-label {
+  0%, 80% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
 /* Inbox thread backdrop — WhatsApp's tinted wall with a faint dot
    texture, derived from the theme so every accent/mode keeps contrast
    against the white (light) / card (dark) inbound bubbles. */

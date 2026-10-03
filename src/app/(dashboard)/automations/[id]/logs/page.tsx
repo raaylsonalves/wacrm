@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Check,
-  Loader2,
   X,
   ChevronDown,
   ChevronRight,
@@ -21,6 +20,7 @@ import type {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatRelative } from '@/lib/automations/trigger-meta';
+import { SkeletonPage } from '@/components/ui/skeleton';
 
 export default function AutomationLogsPage({
   params,
@@ -75,9 +75,7 @@ export default function AutomationLogsPage({
 
   if (!automation || logs === null) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="text-primary h-6 w-6 animate-spin" />
-      </div>
+<SkeletonPage variant="list" />
     );
   }
 

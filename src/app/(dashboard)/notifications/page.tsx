@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import type { Notification, NotificationType } from '@/types';
+import { SkeletonPage } from '@/components/ui/skeleton';
 
 type Category = 'conversations' | 'sales' | 'system';
 type Tab = 'all' | 'unread' | Category;
@@ -300,9 +301,7 @@ export default function NotificationsPage() {
 
   if (notifications === null) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="text-primary h-6 w-6 animate-spin" />
-      </div>
+<SkeletonPage variant="list" className="mx-auto max-w-3xl" />
     );
   }
 
@@ -385,7 +384,7 @@ export default function NotificationsPage() {
           )}
         </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="stagger space-y-2">
           {visible.map((n, i) => {
             const style = TYPE_STYLE[n.type] ?? {
               icon: Bell,

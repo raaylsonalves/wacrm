@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Loader2,
   CircleCheck,
   CircleAlert,
   Clock,
@@ -22,6 +21,7 @@ import { dateFnsLocale } from "@/lib/date-fns-locale";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { SkeletonPage } from '@/components/ui/skeleton';
 
 /**
  * Run history viewer.
@@ -149,9 +149,7 @@ export default function FlowRunsPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+<SkeletonPage variant="list" />
     );
   }
   if (notFound || !flow) {

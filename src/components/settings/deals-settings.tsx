@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Coins, Loader2 } from "lucide-react";
+import { Coins } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { CURRENCIES } from "@/lib/currency";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Card,
@@ -18,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { useTranslations } from "next-intl";
 import { SettingsPanelHead } from "./settings-panel-head";
+import { SaveButton } from "@/components/ui/save-button";
 
 /**
  * Deals settings — account-wide default currency.
@@ -40,6 +40,7 @@ export function DealsSettings() {
 
   const [selected, setSelected] = useState(defaultCurrency);
   const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const t = useTranslations("Settings.deals");
   const tCurrency = useTranslations("Currencies");
 
@@ -67,7 +68,7 @@ export function DealsSettings() {
     // and every total pick it up without a full reload.
     await refreshProfile();
     setSaving(false);
-    toast.success(t("saveSuccess"));
+    setSavedAt(Date.now());
   }
 
   return (
@@ -109,20 +110,9 @@ export function DealsSettings() {
           </div>
 
           {canEditSettings && (
-            <Button
-              onClick={handleSave}
-              disabled={saving || !dirty}
-              className="bg-foreground text-background hover:bg-foreground/90"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  {t("saving")}
-                </>
-              ) : (
-                t("save")
-              )}
-            </Button>
+            <SaveButton onClick={handleSave} disabled={!dirty} saving={saving} savedAt={savedAt}>
+              {t("save")}
+            </SaveButton>
           )}
         </CardContent>
       </Card>

@@ -24,6 +24,7 @@ import {
 import { firstName, greetingFor } from '@/lib/today/summary';
 import { splitByPriority, type PriorityReason } from '@/lib/today/priority';
 import type { Conversation } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface TodayAppointment {
   id: string;
@@ -148,7 +149,7 @@ export function TodayGreeting({ data }: { data: TodayData }) {
         {t(`greeting.${greetingFor(hour)}`, { name: firstName(profile?.full_name) })} 👋
       </h1>
       {!data.loaded ? (
-        <div className="bg-muted h-5 w-64 animate-pulse rounded" />
+        <Skeleton className="h-5 w-64 rounded-full" />
       ) : (
         <p className="text-muted-foreground text-sm sm:text-base">
           <span className="text-foreground font-semibold">
@@ -177,7 +178,7 @@ export function PriorityPanel({ data }: { data: TodayData }) {
     return (
       <div className="space-y-3">
         {[0, 1].map((i) => (
-          <div key={i} className="bg-muted/60 h-32 animate-pulse rounded-[20px]" />
+          <Skeleton key={i} className="h-32 rounded-[20px]" />
         ))}
       </div>
     );

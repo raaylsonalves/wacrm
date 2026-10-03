@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Upload, Trash2, Mail, CircleAlert } from 'lucide-react';
+import { Upload, Trash2, Mail, CircleAlert } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -18,6 +18,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useTranslations } from 'next-intl';
 import { SettingsPanelHead } from './settings-panel-head';
 import { BrowserNotificationsCard } from './browser-notifications-card';
+import { SaveButton } from '@/components/ui/save-button';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -44,6 +45,7 @@ export function ProfileForm() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [removeAvatar, setRemoveAvatar] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const [emailChangePending, setEmailChangePending] = useState(false);
 
   // Seed form state once the profile loads.
@@ -179,11 +181,10 @@ export function ProfileForm() {
       setRemoveAvatar(false);
       await refreshProfile();
 
-      toast.success(
-        emailSent
-          ? t('profileSavedEmailCheck')
-          : t('profileSaved'),
-      );
+      // The email-change notice still needs words; a plain save just
+      // flashes the button.
+      if (emailSent) toast.success(t('profileSavedEmailCheck'));
+      else setSavedAt(Date.now());
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('unknownError');
       toast.error(msg);
@@ -341,16 +342,9 @@ export function ProfileForm() {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={saving || !dirty || !profile}>
-            {saving ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                {t('saving')}
-              </>
-            ) : (
-              t('saveChanges')
-            )}
-          </Button>
+          <SaveButton type="submit" disabled={!dirty || !profile} saving={saving} savedAt={savedAt}>
+            {t('saveChanges')}
+          </SaveButton>
         </div>
       </form>
 

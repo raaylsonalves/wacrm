@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Building2, Loader2, Trash2, Upload } from "lucide-react";
+import { Building2, Trash2, Upload } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { useTranslations } from "next-intl";
 import { SettingsPanelHead } from "./settings-panel-head";
+import { SaveButton } from "@/components/ui/save-button";
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -47,6 +48,7 @@ export function BrandingSettings() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [removeLogo, setRemoveLogo] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
 
   // Seed form state once the account resolves, and after a save
   // round-trips through refreshProfile.
@@ -143,7 +145,7 @@ export function BrandingSettings() {
       setPreviewUrl(null);
       setRemoveLogo(false);
       await refreshProfile();
-      toast.success(t("saveSuccess"));
+      setSavedAt(Date.now());
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("saveFailed"));
     } finally {
@@ -274,16 +276,9 @@ export function BrandingSettings() {
           </div>
 
           {canEditSettings && (
-            <Button onClick={handleSave} disabled={disabled || !dirty || colorInvalid}>
-              {saving ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  {t("saving")}
-                </>
-              ) : (
-                t("save")
-              )}
-            </Button>
+            <SaveButton onClick={handleSave} disabled={disabled || !dirty || colorInvalid} saving={saving} savedAt={savedAt}>
+              {t("save")}
+            </SaveButton>
           )}
         </CardContent>
       </Card>

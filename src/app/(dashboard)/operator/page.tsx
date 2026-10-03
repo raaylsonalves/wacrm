@@ -15,6 +15,7 @@ import { GoogleOAuthSettings } from '@/components/operator/google-oauth-settings
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SkeletonCards } from '@/components/ui/skeleton';
 
 /**
  * Operator portfolio (migration 090): one card per client account the
@@ -129,7 +130,7 @@ export default function OperatorPage() {
       />
 
       {rows === null ? (
-        <Loader2 className="text-muted-foreground mx-auto size-6 animate-spin" />
+        <SkeletonCards count={4} className="md:grid-cols-2 lg:grid-cols-2" />
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {rows.map((r) => {

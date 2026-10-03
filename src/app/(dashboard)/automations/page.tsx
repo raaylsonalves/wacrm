@@ -43,6 +43,7 @@ import {
 import type { TemplateSlug } from "@/lib/automations/templates"
 import { triggerMeta, formatRelative, isKnownTrigger } from "@/lib/automations/trigger-meta"
 import { cn } from "@/lib/utils"
+import { SkeletonPage } from '@/components/ui/skeleton';
 
 const TEMPLATE_ORDER: TemplateSlug[] = [
   "welcome_message",
@@ -151,9 +152,7 @@ export default function AutomationsPage() {
 
   if (automations === null) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
+<SkeletonPage variant="cards" />
     )
   }
 

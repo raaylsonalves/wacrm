@@ -58,6 +58,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { contactHandle } from '@/lib/whatsapp/wa-identity';
+import { SaveButton } from '@/components/ui/save-button';
 
 interface ContactDetailViewProps {
   open: boolean;
@@ -113,6 +114,7 @@ export function ContactDetailView({
   const [editEmail, setEditEmail] = useState('');
   const [editCompany, setEditCompany] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
+  const [detailsSavedAt, setDetailsSavedAt] = useState<number | null>(null);
   const [anonymizing, setAnonymizing] = useState(false);
 
   // Tags tab
@@ -281,7 +283,7 @@ export function ContactDetailView({
     if (error) {
       toast.error(t('toastUpdateFailed'));
     } else {
-      toast.success(t('toastUpdated'));
+      setDetailsSavedAt(Date.now());
       fetchContact();
       onUpdated();
     }
@@ -637,19 +639,16 @@ export function ContactDetailView({
                         className="bg-muted border-border text-foreground h-8 text-sm"
                       />
                     </div>
-                    <Button
+                    <SaveButton
                       onClick={saveDetails}
-                      disabled={savingDetails}
-                      className="bg-foreground hover:bg-foreground/90 text-background w-full"
+                      saving={savingDetails}
+                      savedAt={detailsSavedAt}
+                      className="w-full"
                       size="sm"
                     >
-                      {savingDetails ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Save className="size-3.5" />
-                      )}
+                      <Save className="size-3.5" />
                       {t('saveChangesBtn')}
-                    </Button>
+                    </SaveButton>
 
                     {canManageLgpd && (
                       <div className="border-border/50 mt-2 space-y-1.5 border-t pt-3">

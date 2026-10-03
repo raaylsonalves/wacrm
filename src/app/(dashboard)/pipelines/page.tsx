@@ -30,6 +30,7 @@ import { useCan } from '@/hooks/use-can';
 import { useAuth } from '@/hooks/use-auth';
 import { GatedButton } from '@/components/ui/gated-button';
 import { useTranslations } from 'next-intl';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Pipeline creation is admin-class (settings-tier write under
 // the new RLS); deal creation is operational and only requires
@@ -364,15 +365,12 @@ export default function PipelinesPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div className="bg-muted h-8 w-48 animate-pulse rounded" />
-          <div className="bg-muted h-9 w-28 animate-pulse rounded-lg" />
+          <Skeleton className="h-8 w-48 rounded-full" />
+          <Skeleton className="h-9 w-28 rounded-full" />
         </div>
         <div className="flex gap-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className="bg-muted/50 h-96 w-72 animate-pulse rounded-[22px]"
-            />
+            <Skeleton key={i} className="h-96 w-72 shrink-0 rounded-[22px]" />
           ))}
         </div>
       </div>

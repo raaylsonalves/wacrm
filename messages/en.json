@@ -1,5 +1,9 @@
 {
   "Common": {
+    "save": {
+      "saving": "Saving…",
+      "saved": "Saved"
+    },
     "modes": {
       "light": "light",
       "dark": "dark"
