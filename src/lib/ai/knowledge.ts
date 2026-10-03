@@ -42,6 +42,17 @@ export async function ingestDocument(
 
   if (chunks.length === 0) return
 
+  // Chunks carry their document's agent (migration 103) — retrieval
+  // filters on it without a join.
+  const { data: doc, error: docErr } = await db
+    .from('ai_knowledge_documents')
+    .select('agent_id')
+    .eq('id', documentId)
+    .eq('account_id', accountId)
+    .maybeSingle()
+  if (docErr) throw docErr
+  const agentId = (doc?.agent_id as string | null) ?? null
+
   // Embed if a key is set, but DON'T let an embedding failure stop the
   // chunks from being stored: a failed embed must still leave the
   // document searchable lexically. We record the error and rethrow it
@@ -61,6 +72,7 @@ export async function ingestDocument(
   const rows = chunks.map((content, i) => ({
     document_id: documentId,
     account_id: accountId,
+    agent_id: agentId,
     chunk_index: i,
     content,
     embedding: embeddings ? toVectorLiteral(embeddings[i]) : null,
@@ -84,12 +96,15 @@ export async function ingestDocument(
 export async function retrieveKnowledge(
   db: SupabaseClient,
   accountId: string,
-  config: Pick<AiConfig, 'embeddingsApiKey'>,
+  config: Pick<AiConfig, 'embeddingsApiKey' | 'id'>,
   queryText: string,
   k = 5,
 ): Promise<string[]> {
   const query = queryText.trim()
-  if (!query || k <= 0) return []
+  // The knowledge base is per agent (migration 103) with no account-wide
+  // fallback: a config that didn't come from a row has none.
+  const agentId = config.id
+  if (!query || k <= 0 || !agentId) return []
 
   // Skip everything when the account has no knowledge base — otherwise
   // every draft / auto-reply would pay for a query embedding + two RPCs
@@ -100,6 +115,7 @@ export async function retrieveKnowledge(
       .from('ai_knowledge_chunks')
       .select('id', { count: 'exact', head: true })
       .eq('account_id', accountId)
+      .eq('agent_id', agentId)
     if (error || !count) return []
   } catch {
     return []
@@ -114,6 +130,7 @@ export async function retrieveKnowledge(
       if (queryEmbedding) {
         const { data, error } = await db.rpc('match_ai_knowledge_semantic', {
           p_account_id: accountId,
+          p_agent_id: agentId,
           p_query_embedding: toVectorLiteral(queryEmbedding),
           p_match_count: k,
         })
@@ -131,6 +148,7 @@ export async function retrieveKnowledge(
     try {
       const { data, error } = await db.rpc('match_ai_knowledge_fts', {
         p_account_id: accountId,
+        p_agent_id: agentId,
         p_query: query,
         p_match_count: k,
       })
@@ -146,4 +164,34 @@ export async function retrieveKnowledge(
   }
 
   return Array.from(picked.values()).slice(0, k)
+}
+
+/**
+ * The agent a knowledge-base request is about: the requested one when it
+ * belongs to the account, else the account's default agent. Null when
+ * the account has no agent yet.
+ */
+export async function resolveKnowledgeAgent(
+  db: SupabaseClient,
+  accountId: string,
+  requested: string | null | undefined,
+): Promise<string | null> {
+  if (requested) {
+    const { data } = await db
+      .from('ai_configs')
+      .select('id')
+      .eq('id', requested)
+      .eq('account_id', accountId)
+      .maybeSingle()
+    if (data) return data.id as string
+  }
+  const { data } = await db
+    .from('ai_configs')
+    .select('id')
+    .eq('account_id', accountId)
+    .order('is_default', { ascending: false })
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  return (data?.id as string | undefined) ?? null
 }

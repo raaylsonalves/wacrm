@@ -2923,7 +2923,7 @@
       "embeddingsKey": "Clave de embeddings",
       "optionalSemanticSearch": "(opcional: habilita la búsqueda semántica en la base de conocimiento)",
       "embeddingsHint": "Una clave de OpenAI que se usa solo para generar embeddings de tu base de conocimiento (text-embedding-3-small){sameKeyText}. Déjala en blanco para usar búsqueda por palabras clave. Bórrala para desactivar la búsqueda semántica.",
-      "accountWideNote": "La clave de embeddings y la base de conocimiento valen para toda la cuenta y están en el agente predeterminado.",
+      "accountWideNote": "La clave de embeddings vale para toda la cuenta y está en el agente predeterminado. La base de conocimiento de abajo es solo de este agente.",
       "sameKeyText": ": puede ser la misma clave de arriba",
       "behaviour": "Comportamiento",
       "behaviourDesc": "Cuéntale al asistente sobre tu negocio: productos, tono, qué puede y qué no puede prometer. Este contexto alimenta tanto los borradores como las respuestas automáticas.",

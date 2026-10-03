@@ -6,21 +6,29 @@ import {
 } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { loadEmbeddingsKey } from '@/lib/ai/config'
-import { ingestDocument } from '@/lib/ai/knowledge'
+import { ingestDocument, resolveKnowledgeAgent } from '@/lib/ai/knowledge'
 import { AiError } from '@/lib/ai/types'
 
 /**
  * GET /api/ai/knowledge
  *
- * List the account's knowledge-base documents (any member).
+ * List one agent's knowledge-base documents (any member).
+ * `?agent_id=` picks the agent; without it, the default agent.
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { supabase, accountId } = await getCurrentAccount()
+    const agentId = await resolveKnowledgeAgent(
+      supabase,
+      accountId,
+      new URL(request.url).searchParams.get('agent_id'),
+    )
+    if (!agentId) return NextResponse.json({ documents: [] })
     const { data, error } = await supabase
       .from('ai_knowledge_documents')
       .select('id, title, updated_at')
       .eq('account_id', accountId)
+      .eq('agent_id', agentId)
       .order('updated_at', { ascending: false })
     if (error) {
       console.error('[ai/knowledge GET] error:', error)
@@ -57,9 +65,22 @@ export async function POST(request: Request) {
       )
     }
 
+    // Belongs to one agent (migration 103): body.agent_id, else the default.
+    const agentId = await resolveKnowledgeAgent(
+      supabase,
+      accountId,
+      typeof body?.agent_id === 'string' ? body.agent_id : null,
+    )
+    if (!agentId) {
+      return NextResponse.json(
+        { error: 'Create an agent before adding documents' },
+        { status: 400 },
+      )
+    }
+
     const { data: doc, error } = await supabase
       .from('ai_knowledge_documents')
-      .insert({ account_id: accountId, created_by: userId, title, content })
+      .insert({ account_id: accountId, agent_id: agentId, created_by: userId, title, content })
       .select('id')
       .single()
     if (error || !doc) {

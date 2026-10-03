@@ -2935,7 +2935,7 @@
       "embeddingsKey": "Embeddings key",
       "optionalSemanticSearch": "(optional — enables semantic knowledge-base search)",
       "embeddingsHint": "An OpenAI key used only to embed your knowledge base (text-embedding-3-small){sameKeyText}. Leave blank to use keyword search instead. Clear it to turn semantic search off.",
-      "accountWideNote": "The embeddings key and the knowledge base apply to the whole account and live on the default agent.",
+      "accountWideNote": "The embeddings key is account-wide and lives on the default agent. The knowledge base below belongs to this agent only.",
       "sameKeyText": " — can be the same key as above",
       "behaviour": "Behaviour",
       "behaviourDesc": "Tell the assistant about your business — products, tone, what it may and may not promise. This context feeds both drafts and auto-replies.",

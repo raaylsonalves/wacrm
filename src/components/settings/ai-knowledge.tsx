@@ -27,10 +27,14 @@ type EditTarget = 'new' | string | null;
 
 export function AiKnowledgeCard({
   accountId,
+  agentId,
   canEdit,
   hasEmbeddingsKey,
 }: {
   accountId: string | null;
+  /** The agent whose documents these are (migration 103); omitted = the
+   *  account's default agent. */
+  agentId?: string;
   canEdit: boolean;
   hasEmbeddingsKey: boolean;
 }) {
@@ -47,7 +51,9 @@ export function AiKnowledgeCard({
   const fetchDocs = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/ai/knowledge');
+      const res = await fetch(
+        agentId ? `/api/ai/knowledge?agent_id=${encodeURIComponent(agentId)}` : '/api/ai/knowledge',
+      );
       const data = await res.json();
       if (res.ok) setDocs(data.documents ?? []);
       else toast.error(data.error ?? t('loadFailed'));
@@ -56,13 +62,14 @@ export function AiKnowledgeCard({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [agentId]);
 
   useEffect(() => {
-    if (!accountId || loadedAccountIdRef.current === accountId) return;
-    loadedAccountIdRef.current = accountId;
+    const key = `${accountId}:${agentId ?? ''}`;
+    if (!accountId || loadedAccountIdRef.current === key) return;
+    loadedAccountIdRef.current = key;
     void fetchDocs();
-  }, [accountId, fetchDocs]);
+  }, [accountId, agentId, fetchDocs]);
 
   const openNew = () => {
     setEditing('new');
@@ -105,7 +112,11 @@ export function AiKnowledgeCard({
         {
           method: isNew ? 'POST' : 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: title.trim(), content: content.trim() }),
+          body: JSON.stringify({
+            title: title.trim(),
+            content: content.trim(),
+            ...(isNew && agentId ? { agent_id: agentId } : {}),
+          }),
         },
       );
       const data = await res.json();

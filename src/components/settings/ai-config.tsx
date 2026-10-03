@@ -836,19 +836,17 @@ export function AiConfig({
           </CardContent>
         </Card>
 
-        {agentId ? (
-          <p className="text-xs text-muted-foreground">{t('accountWideNote')}</p>
-        ) : (
-          <AiKnowledgeCard
-            accountId={accountId}
-            canEdit={canEdit}
-            hasEmbeddingsKey={
-              embeddingsKeyEdited
-                ? embeddingsKey.trim().length > 0
-                : hasStoredEmbeddingsKey
-            }
-          />
-        )}
+        {agentId && <p className="text-xs text-muted-foreground">{t('accountWideNote')}</p>}
+        <AiKnowledgeCard
+          accountId={accountId}
+          agentId={agentId}
+          canEdit={canEdit}
+          hasEmbeddingsKey={
+            embeddingsKeyEdited
+              ? embeddingsKey.trim().length > 0
+              : hasStoredEmbeddingsKey
+          }
+        />
 
         <div className="flex items-center justify-between">
           {configured ? (

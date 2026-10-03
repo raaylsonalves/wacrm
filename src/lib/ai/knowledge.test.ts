@@ -37,10 +37,17 @@ function makeDb() {
       return Promise.resolve({ data: null, error: null })
     },
     from: () => ({
-      // retrieveKnowledge's empty-KB count guard.
-      select: () => ({
-        eq: () => Promise.resolve({ count: state.chunkCount, error: null }),
-      }),
+      // retrieveKnowledge's empty-KB count guard (awaited), and
+      // ingestDocument's document → agent lookup (maybeSingle).
+      select: () => {
+        const chain = {
+          eq: () => chain,
+          maybeSingle: () => Promise.resolve({ data: { agent_id: 'agent-1' }, error: null }),
+          then: (resolve: (v: unknown) => unknown) =>
+            Promise.resolve({ count: state.chunkCount, error: null }).then(resolve),
+        }
+        return chain
+      },
       delete: () => ({
         eq: (_col: string, val: string) => {
           state.deletedFor = val
@@ -64,16 +71,22 @@ beforeEach(() => {
 })
 
 describe('retrieveKnowledge', () => {
+  it('has no knowledge without an agent — no account-wide fallback', async () => {
+    const { db, state } = makeDb()
+    expect(await retrieveKnowledge(db, 'acct', { embeddingsApiKey: null }, 'preço')).toEqual([])
+    expect(state.rpcCalls).toEqual([])
+  })
+
   it('returns [] for an empty query without touching the DB', async () => {
     const { db, state } = makeDb()
-    expect(await retrieveKnowledge(db, 'acct', { embeddingsApiKey: null }, '  ')).toEqual([])
+    expect(await retrieveKnowledge(db, 'acct', { id: 'agent-1', embeddingsApiKey: null }, '  ')).toEqual([])
     expect(state.rpcCalls).toEqual([])
   })
 
   it('short-circuits (no embed, no RPC) when the KB is empty', async () => {
     const { db, state } = makeDb()
     state.chunkCount = 0
-    const out = await retrieveKnowledge(db, 'acct', { embeddingsApiKey: 'sk-x' }, 'q')
+    const out = await retrieveKnowledge(db, 'acct', { id: 'agent-1', embeddingsApiKey: 'sk-x' }, 'q')
     expect(out).toEqual([])
     expect(h.embedTexts).not.toHaveBeenCalled()
     expect(state.rpcCalls).toEqual([])
@@ -82,7 +95,7 @@ describe('retrieveKnowledge', () => {
   it('uses lexical FTS only when there is no embeddings key', async () => {
     const { db, state } = makeDb()
     state.fts = [{ id: 'f1', content: 'F1' }]
-    const out = await retrieveKnowledge(db, 'acct', { embeddingsApiKey: null }, 'q')
+    const out = await retrieveKnowledge(db, 'acct', { id: 'agent-1', embeddingsApiKey: null }, 'q')
     expect(out).toEqual(['F1'])
     expect(state.rpcCalls).toEqual(['match_ai_knowledge_fts'])
     expect(h.embedTexts).not.toHaveBeenCalled()
@@ -95,7 +108,7 @@ describe('retrieveKnowledge', () => {
       { id: 's2', content: 'S2' },
       { id: 's3', content: 'S3' },
     ]
-    const out = await retrieveKnowledge(db, 'acct', { embeddingsApiKey: 'sk-x' }, 'q', 3)
+    const out = await retrieveKnowledge(db, 'acct', { id: 'agent-1', embeddingsApiKey: 'sk-x' }, 'q', 3)
     expect(out).toEqual(['S1', 'S2', 'S3'])
     expect(h.embedTexts).toHaveBeenCalledTimes(1)
     // Enough semantic hits → no FTS top-up.
@@ -112,7 +125,7 @@ describe('retrieveKnowledge', () => {
       { id: 's2', content: 'S2-dup' }, // dedup by id
       { id: 'f1', content: 'F1' },
     ]
-    const out = await retrieveKnowledge(db, 'acct', { embeddingsApiKey: 'sk-x' }, 'q', 3)
+    const out = await retrieveKnowledge(db, 'acct', { id: 'agent-1', embeddingsApiKey: 'sk-x' }, 'q', 3)
     expect(out).toEqual(['S1', 'S2', 'F1'])
     expect(state.rpcCalls).toEqual([
       'match_ai_knowledge_semantic',

@@ -354,6 +354,16 @@ BEGIN
     RAISE EXCEPTION
       'match_ai_knowledge_fts still ANDs every term — migration 063 did not apply';
   END IF;
+  -- 103 — retrieval is per agent; without the agent filter every agent
+  -- answers from every other agent's documents.
+  IF pg_get_functiondef(
+       (SELECT oid FROM pg_proc WHERE proname = 'match_ai_knowledge_fts')
+     ) NOT LIKE '%p_agent_id%' OR NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'ai_knowledge_chunks' AND column_name = 'agent_id'
+  ) THEN
+    RAISE EXCEPTION 'knowledge base is not per agent — migration 103 did not apply';
+  END IF;
 
   -- 064 — the WAHA send throttle's claim is only correct under
   -- concurrent invocations if last_sent_at exists and the RPC is the
