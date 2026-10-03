@@ -371,7 +371,7 @@ export default function PipelinesPage() {
           {[1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
-              className="bg-muted/50 h-96 w-72 animate-pulse rounded-xl"
+              className="bg-muted/50 h-96 w-72 animate-pulse rounded-[22px]"
             />
           ))}
         </div>
@@ -386,7 +386,7 @@ export default function PipelinesPage() {
         <div className="flex items-center gap-3">
           {/* Pipeline selector dropdown */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="border-border bg-card text-foreground hover:bg-muted data-[popup-open]:bg-muted inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors">
+            <DropdownMenuTrigger className="border-border bg-card text-foreground hover:bg-muted data-[popup-open]:bg-muted inline-flex min-h-10 items-center gap-2 rounded-full border px-4 text-sm transition-colors duration-150 ease-out">
               <GitBranch className="text-primary h-4 w-4" />
               <span className="font-semibold">
                 {selectedPipeline?.name ?? t('selectPipeline')}
@@ -456,7 +456,7 @@ export default function PipelinesPage() {
 
       {/* Board */}
       {pipelines.length === 0 ? (
-        <div className="border-border flex flex-col items-center justify-center rounded-xl border border-dashed py-20">
+        <div className="border-border flex flex-col items-center justify-center rounded-[24px] border border-dashed py-20">
           <GitBranch className="text-muted-foreground h-12 w-12" />
           <h3 className="text-foreground mt-4 text-lg font-medium">
             {t('noPipelinesYet')}

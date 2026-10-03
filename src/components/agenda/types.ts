@@ -29,11 +29,11 @@ export interface Appointment {
 }
 
 export const STATUS_CLASS: Record<AppointmentStatus, string> = {
-  // Text in the foreground colour: text-primary vanishes on dark themes
-  // whose accent is dark (navy on near-black).
-  scheduled: 'border-primary/50 bg-primary/10 text-foreground',
-  confirmed: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  // v2 agenda: live appointments on solid pastel with ink text (readable
+  // on every accent and mode), finished ones fade into the surface.
+  scheduled: 'border-transparent bg-tone-lilac text-tone-on',
+  confirmed: 'border-transparent bg-tone-mint text-tone-on',
   completed: 'border-border bg-muted text-muted-foreground',
   cancelled: 'border-border bg-muted text-muted-foreground line-through',
-  no_show: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  no_show: 'border-transparent bg-tone-salmon-soft text-tone-salmon-ink',
 };

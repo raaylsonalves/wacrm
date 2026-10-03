@@ -273,21 +273,22 @@ function StageColumn({
     // restore the flex-1 share-the-row behavior. The droppable ref is
     // on the inner messages region below — intentionally NOT here, so
     // a drag over the column header doesn't highlight the whole column.
-    <div className="border-border bg-card/60 flex w-[85vw] max-w-[320px] min-w-[260px] shrink-0 snap-start flex-col rounded-xl border p-4 lg:w-auto lg:max-w-none lg:flex-1 lg:shrink lg:basis-[260px] lg:snap-none">
-      {/* 3px colored top border — sits above the column's padding */}
-      <div
-        className="-mx-4 -mt-4 h-[3px] rounded-t-xl"
-        style={{ backgroundColor: stage.color }}
-      />
-      <div className="flex items-center justify-between pt-3">
-        <h3 className="text-foreground truncate text-sm font-semibold">
-          {stage.name}
+    <div className="bg-muted/50 flex w-[85vw] max-w-[320px] min-w-[260px] shrink-0 snap-start flex-col rounded-[22px] p-3 lg:w-auto lg:max-w-none lg:flex-1 lg:shrink lg:basis-[260px] lg:snap-none">
+      <div className="flex items-center justify-between gap-2 px-1">
+        <h3 className="text-foreground flex min-w-0 items-center gap-2 text-sm font-bold">
+          {/* Stage colour as a dot — the v2 board keeps columns neutral. */}
+          <span
+            aria-hidden
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: stage.color }}
+          />
+          <span className="truncate">{stage.name}</span>
+          <span className="text-muted-foreground shrink-0 font-medium">
+            ({deals.length})
+          </span>
         </h3>
-        <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium">
-          {deals.length}
-        </span>
       </div>
-      <p className="text-muted-foreground text-xs">
+      <p className="text-muted-foreground px-1 text-xs">
         {Array.from(totalsByCurrency.entries())
           .map(([cur, total]) => formatCurrency(total, cur))
           .join(' + ')}
@@ -326,7 +327,7 @@ function StageColumn({
         variant="ghost"
         size="sm"
         onClick={() => onAddDeal(stage.id)}
-        className="border-border text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground mt-3 w-full justify-start border border-dashed bg-transparent"
+        className="border-border text-muted-foreground hover:bg-card hover:text-foreground mt-3 w-full justify-start border border-dashed bg-transparent"
       >
         <Plus className="mr-1 h-3 w-3" />
         {t('addDeal')}

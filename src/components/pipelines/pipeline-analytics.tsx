@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+
 import { useMemo } from "react";
 import type { Deal, PipelineStage } from "@/types";
 import {
@@ -125,44 +127,48 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
 
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-card/60 p-4 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <Metric
-          icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
+          icon={<BarChart3 className="h-4 w-4" />}
           label={t("totalDeals")}
           value={String(stats.totalCount)}
           tooltip={t("totalDealsTooltip")}
           t={t}
         />
         <Metric
-          icon={<DollarSign className="h-4 w-4 text-primary" />}
+          icon={<DollarSign className="h-4 w-4" />}
+          tone="lilac"
           label={t("pipelineValue")}
           value={formatByCurrency(stats.valueByCurrency)}
           tooltip={t("pipelineValueTooltip")}
           t={t}
         />
         <Metric
-          icon={<Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
+          icon={<Target className="h-4 w-4" />}
           label={t("avgDealSize")}
           value={formatByCurrency(stats.avgByCurrency)}
           tooltip={t("avgDealSizeTooltip")}
           t={t}
         />
         <Metric
-          icon={<TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
+          icon={<TrendingUp className="h-4 w-4" />}
+          tone="blue"
           label={t("weightedValue")}
           value={formatByCurrency(stats.weightedByCurrency)}
           tooltip={t("weightedValueTooltip")}
           t={t}
         />
         <Metric
-          icon={<Trophy className="h-4 w-4 text-primary" />}
+          icon={<Trophy className="h-4 w-4" />}
+          tone="mint"
           label={t("wonThisMonth")}
           value={String(stats.wonThisMonth)}
           tooltip={t("wonThisMonthTooltip")}
           t={t}
         />
         <Metric
-          icon={<XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />}
+          icon={<XCircle className="h-4 w-4" />}
+          tone="salmon"
           label={t("lostThisMonth")}
           value={String(stats.lostThisMonth)}
           tooltip={t("lostThisMonthTooltip")}
@@ -173,14 +179,25 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
   );
 }
 
+// v2 totals: the headline numbers sit on solid pastel tiles, the rest on
+// the card surface.
+const METRIC_TONE = {
+  lilac: "bg-tone-lilac text-tone-on",
+  mint: "bg-tone-mint text-tone-on",
+  salmon: "bg-tone-salmon text-tone-on",
+  blue: "bg-tone-blue text-tone-on",
+} as const;
+
 function Metric({
   icon,
   label,
   value,
   tooltip,
+  tone,
   t,
 }: {
   icon: React.ReactNode;
+  tone?: keyof typeof METRIC_TONE;
   label: string;
   value: string;
   tooltip: string;
@@ -188,8 +205,13 @@ function Metric({
   t: any;
 }) {
   return (
-    <div className="rounded-lg bg-muted/50 p-3">
-      <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+    <div
+      className={cn(
+        "flex min-h-[92px] flex-col justify-between gap-2 rounded-[20px] p-3.5",
+        tone ? METRIC_TONE[tone] : "border border-border bg-card text-foreground",
+      )}
+    >
+      <div className={cn("flex items-center gap-1.5 text-xs font-semibold", tone ? "opacity-80" : "text-muted-foreground")}>
         {icon}
         <span>{label}</span>
         <Tooltip>
@@ -198,7 +220,7 @@ function Metric({
               <button
                 type="button"
                 aria-label={t("howCalculated", { label })}
-                className="ml-auto text-muted-foreground hover:text-foreground focus:outline-none"
+                className="ml-auto opacity-70 hover:opacity-100 focus:outline-none"
               />
             }
           >
@@ -209,7 +231,7 @@ function Metric({
           </TooltipContent>
         </Tooltip>
       </div>
-      <p className="mt-1 text-base font-semibold text-foreground">{value}</p>
+      <p className="text-lg leading-tight font-bold tracking-tight tabular-nums">{value}</p>
     </div>
   );
 }

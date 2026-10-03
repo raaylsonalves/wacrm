@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Settings } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
@@ -222,8 +222,8 @@ export default function AgendaPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <CalendarDays className="text-primary size-5" />
-        <h1 className="text-xl font-semibold">{t('title')}</h1>
+        {/* The page title lives in the shell header; this row is actions only. */}
+        <h1 className="sr-only">{t('title')}</h1>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {canEditSettings && (
             <Button
@@ -248,12 +248,12 @@ export default function AgendaPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="icon-sm" onClick={() => shift(-1)} aria-label={t('previous')}>
+        <Button variant="outline" size="icon-lg" className="bg-card size-10" onClick={() => shift(-1)} aria-label={t('previous')}>
           <ChevronLeft className="size-4" />
         </Button>
         <Button
           variant="outline"
-          size="sm"
+          className="bg-card h-10 px-4"
           onClick={() => {
             const p = localParts(new Date(), tz);
             setCursor(new Date(Date.UTC(p.year, p.month - 1, p.day)));
@@ -261,19 +261,21 @@ export default function AgendaPage() {
         >
           {t('today')}
         </Button>
-        <Button variant="outline" size="icon-sm" onClick={() => shift(1)} aria-label={t('next')}>
+        <Button variant="outline" size="icon-lg" className="bg-card size-10" onClick={() => shift(1)} aria-label={t('next')}>
           <ChevronRight className="size-4" />
         </Button>
-        <span className="text-sm font-medium first-letter:uppercase">{heading}</span>
-        <div className="border-border ml-auto flex rounded-md border p-0.5">
+        <span className="text-muted-foreground text-sm font-medium first-letter:uppercase">{heading}</span>
+        <div className="ml-auto flex gap-1.5">
           {(['week', 'month'] as View[]).map((v) => (
             <button
               key={v}
               type="button"
               onClick={() => setView(v)}
               className={cn(
-                'rounded px-3 py-1 text-sm',
-                view === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground',
+                'min-h-10 rounded-full border px-4 text-[13px] font-semibold transition-colors duration-150 ease-out',
+                view === v
+                  ? 'bg-foreground text-background border-transparent'
+                  : 'border-border text-foreground hover:bg-card',
               )}
             >
               {t(`view.${v}`)}
@@ -297,9 +299,9 @@ export default function AgendaPage() {
                   type="button"
                   onClick={() => setCursor(day)}
                   className={cn(
-                    'flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-xs',
-                    selected ? 'bg-primary text-primary-foreground' : 'text-muted-foreground',
-                    !selected && key === todayKey && 'text-primary font-semibold',
+                    'flex flex-col items-center gap-0.5 rounded-2xl py-2 text-xs transition-colors duration-150 ease-out',
+                    selected ? 'bg-foreground text-background' : 'text-muted-foreground',
+                    !selected && key === todayKey && 'bg-card text-foreground font-semibold',
                   )}
                 >
                   <span>{t(`weekdays.${day.getUTCDay()}`)}</span>
@@ -307,7 +309,7 @@ export default function AgendaPage() {
                   <span
                     className={cn(
                       'h-1.5 w-1.5 rounded-full',
-                      count > 0 ? (selected ? 'bg-primary-foreground' : 'bg-primary') : 'bg-transparent',
+                      count > 0 ? 'bg-tone-salmon' : 'bg-transparent',
                     )}
                   />
                 </button>
@@ -327,7 +329,7 @@ export default function AgendaPage() {
             {(blocksByDay.get(dayKey(cursor)) ?? []).map((b) => (
               <div
                 key={`${b.google_event_id}-${b.starts_at}`}
-                className="text-muted-foreground flex items-center gap-3 rounded-lg border border-dashed bg-[repeating-linear-gradient(135deg,transparent,transparent_6px,var(--muted)_6px,var(--muted)_12px)] p-3 text-sm"
+                className="text-muted-foreground flex items-center gap-3 rounded-2xl border border-dashed bg-[repeating-linear-gradient(135deg,transparent,transparent_6px,var(--muted)_6px,var(--muted)_12px)] p-3 text-sm"
               >
                 <span className="w-12 shrink-0 font-semibold tabular-nums">
                   {b.all_day ? t('google.allDay') : timeOf(b.starts_at)}
@@ -336,7 +338,7 @@ export default function AgendaPage() {
               </div>
             ))}
             {(byDay.get(dayKey(cursor)) ?? []).length === 0 && (blocksByDay.get(dayKey(cursor)) ?? []).length === 0 ? (
-              <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+              <p className="text-muted-foreground rounded-[20px] border border-dashed p-6 text-center text-sm">
                 {settings.work_days.includes(cursor.getUTCDay()) ? t('mobile.empty') : t('mobile.closed')}
               </p>
             ) : (
@@ -345,7 +347,7 @@ export default function AgendaPage() {
                   key={a.id}
                   type="button"
                   onClick={() => openEdit(a)}
-                  className={cn('flex w-full items-start gap-3 rounded-lg border p-3 text-left', STATUS_CLASS[a.status])}
+                  className={cn('flex w-full items-start gap-3 rounded-2xl border p-3 text-left', STATUS_CLASS[a.status])}
                 >
                   <span className="w-12 shrink-0 text-sm font-semibold tabular-nums">{timeOf(a.starts_at)}</span>
                   <span className="min-w-0 flex-1">
@@ -370,12 +372,12 @@ export default function AgendaPage() {
 
       <div
         className={cn(
-          'grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-border bg-border text-xs',
+          'grid grid-cols-7 gap-px overflow-hidden rounded-[24px] border border-border bg-border text-xs',
           view === 'week' && 'hidden md:grid',
         )}
       >
         {[1, 2, 3, 4, 5, 6, 0].map((d) => (
-          <div key={d} className="bg-muted text-muted-foreground px-2 py-1.5 font-medium">
+          <div key={d} className="bg-card text-muted-foreground px-2.5 py-2 font-semibold">
             {t(`weekdays.${d}`)}
           </div>
         ))}
@@ -395,7 +397,7 @@ export default function AgendaPage() {
                 }
               }}
               className={cn(
-                'bg-card group flex min-w-0 flex-col gap-1 p-1.5',
+                'bg-card group flex min-w-0 flex-col gap-1 p-2',
                 view === 'week' ? 'min-h-72' : 'min-h-14 md:min-h-24',
                 (outside || closed) && 'bg-muted/40',
               )}
@@ -403,8 +405,8 @@ export default function AgendaPage() {
               <div className="flex items-center justify-between">
                 <span
                   className={cn(
-                    'rounded px-1 font-medium',
-                    key === todayKey && 'bg-primary text-primary-foreground',
+                    'rounded-full px-2 py-0.5 text-[13px] font-bold tabular-nums',
+                    key === todayKey && 'bg-foreground text-background',
                     outside && 'text-muted-foreground',
                   )}
                 >
@@ -424,7 +426,7 @@ export default function AgendaPage() {
               {view === 'month' && items.length > 0 && (
                 <span className="flex flex-wrap gap-0.5 md:hidden">
                   {items.slice(0, 4).map((a) => (
-                    <span key={a.id} className="bg-primary h-1.5 w-1.5 rounded-full" />
+                    <span key={a.id} className="bg-tone-salmon h-1.5 w-1.5 rounded-full" />
                   ))}
                 </span>
               )}
@@ -433,7 +435,7 @@ export default function AgendaPage() {
                   key={`${b.google_event_id}-${b.starts_at}`}
                   title={t('google.busyTitle')}
                   className={cn(
-                    'text-muted-foreground w-full truncate rounded border border-dashed bg-[repeating-linear-gradient(135deg,transparent,transparent_5px,var(--muted)_5px,var(--muted)_10px)] px-1.5 py-1',
+                    'text-muted-foreground w-full truncate rounded-[10px] border border-dashed bg-[repeating-linear-gradient(135deg,transparent,transparent_5px,var(--muted)_5px,var(--muted)_10px)] px-2 py-1',
                     view === 'month' && 'hidden md:block',
                   )}
                 >
@@ -450,7 +452,7 @@ export default function AgendaPage() {
                     openEdit(a);
                   }}
                   className={cn(
-                    'w-full truncate rounded border px-1.5 py-1 text-left',
+                    'w-full truncate rounded-[10px] border px-2 py-1 text-left transition-[filter] duration-150 ease-out hover:brightness-95',
                     view === 'month' && 'hidden md:block',
                     STATUS_CLASS[a.status],
                   )}

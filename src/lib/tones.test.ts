@@ -7,13 +7,24 @@ describe('toneFor', () => {
   });
 
   it('always returns a known tone, even for empty input', () => {
-    for (const seed of ['', null, undefined, 'x', 'João Pedro', '+55 11 90000-0000']) {
+    for (const seed of [
+      '',
+      null,
+      undefined,
+      'x',
+      'João Pedro',
+      '+55 11 90000-0000',
+    ]) {
       expect(TONES).toContain(toneFor(seed));
     }
   });
 
   it('spreads different seeds across more than one tone', () => {
-    const seen = new Set(['Ana', 'Bia', 'Caio', 'Duda', 'Edu', 'Fábio', 'Gabi', 'Hugo'].map(toneFor));
+    const seen = new Set(
+      ['Ana', 'Bia', 'Caio', 'Duda', 'Edu', 'Fábio', 'Gabi', 'Hugo'].map(
+        toneFor
+      )
+    );
     expect(seen.size).toBeGreaterThan(1);
   });
 });
