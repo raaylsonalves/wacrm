@@ -445,6 +445,7 @@
     "transcript": "Transcript",
     "transcriptFailed": "This voice note could not be transcribed.",
       "photo": "Photo",
+      "image": "Image",
       "video": "Video",
       "audio": "Audio",
       "unavailable": "{label} unavailable",

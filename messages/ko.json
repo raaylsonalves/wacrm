@@ -445,6 +445,7 @@
     "transcript": "텍스트 변환",
     "transcriptFailed": "이 음성 메시지는 텍스트로 변환할 수 없었습니다.",
       "photo": "사진",
+      "image": "이미지",
       "video": "동영상",
       "audio": "오디오",
       "unavailable": "{label}을(를) 사용할 수 없습니다",

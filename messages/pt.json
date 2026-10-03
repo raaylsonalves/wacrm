@@ -445,6 +445,7 @@
     "transcript": "Transcrição",
     "transcriptFailed": "Não foi possível transcrever este áudio.",
       "photo": "Foto",
+      "image": "Imagem",
       "video": "Vídeo",
       "audio": "Áudio",
       "unavailable": "{label} indisponível",

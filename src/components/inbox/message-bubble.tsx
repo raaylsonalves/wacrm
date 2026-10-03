@@ -1,7 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { Message, MessageReaction } from "@/types";
+import { createContext, useContext } from "react";
+import type { Message, MessageReaction, MessageTemplate } from "@/types";
 import {
   Clock,
   Check,
@@ -11,6 +12,10 @@ import {
   LayoutTemplate,
   CornerDownLeft,
   Sparkles,
+  ExternalLink,
+  Phone,
+  Copy,
+  Image as ImageIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ReplyQuote } from "./reply-quote";
@@ -25,6 +30,15 @@ import {
 import { InteractivePreview } from "@/components/interactive/interactive-preview";
 import { useTranslations } from "next-intl";
 import { parseWhatsAppFormat } from "@/lib/inbox/wa-format";
+
+/** The parts of a template a sent message doesn't store (header, footer,
+ *  buttons), by template name. The thread loads the account's templates
+ *  once and provides them; without a provider the bubble shows the body. */
+export type TemplateShape = Pick<
+  MessageTemplate,
+  "header_type" | "header_content" | "footer_text" | "buttons"
+>;
+export const TemplateLookupContext = createContext<Map<string, TemplateShape>>(new Map());
 
 /** Message text with WhatsApp's *bold* / _italic_ / ~strike~ / ```mono```. */
 function WaText({ text }: { text: string | null | undefined }) {
@@ -227,39 +241,7 @@ function MessageContent({
       return <MediaDocumentBubble message={message} t={t} />;
 
     case "template":
-      // Templates are almost always outbound, where the bubble fill IS
-      // `primary` — so the old `bg-primary/20 text-primary` chip was
-      // primary-on-primary and invisible. Paired with a null
-      // content_text (issue #483) that rendered a bubble with nothing
-      // in it at all. Invert on the primary fill, and fall back to the
-      // template's name when we have no stored body (legacy rows sent
-      // before the fix).
-      return (
-        <div>
-          <span
-            className={cn(
-              "mb-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium",
-              isAgent
-                ? "bg-primary-foreground/20 text-primary-foreground"
-                : "bg-primary/20 text-primary",
-            )}
-          >
-            <LayoutTemplate className="h-3 w-3" />
-            {t("template")}
-          </span>
-          {message.content_text ? (
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm">
-              <WaText text={message.content_text} />
-            </p>
-          ) : (
-            message.template_name && (
-              <p className="mt-1 break-words text-sm italic opacity-80">
-                {message.template_name}
-              </p>
-            )
-          )}
-        </div>
-      );
+      return <TemplateBubble message={message} isAgent={isAgent} t={t} />;
 
     case "location":
       return (
@@ -406,6 +388,97 @@ export function MessageBubble({
           currentUserId={currentUserId}
           onToggle={onToggleReaction}
         />
+      )}
+    </div>
+  );
+}
+
+/**
+ * A sent template as the customer saw it: header, the stored (already
+ * substituted) body, footer and buttons. Only the body is stored per
+ * message, so header/footer/buttons come from the template itself —
+ * the static parts, which is what nearly every template uses. A media
+ * header shows as a chip: the sample image isn't necessarily the one
+ * that went out.
+ */
+function TemplateBubble({
+  message,
+  isAgent,
+  t,
+}: {
+  message: Message;
+  isAgent: boolean;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const tpl = useContext(TemplateLookupContext).get(message.template_name ?? "");
+  const muted = isAgent ? "text-primary-foreground/75" : "text-muted-foreground";
+  const divider = isAgent ? "border-primary-foreground/20" : "border-border";
+  const mediaHeader =
+    tpl?.header_type && tpl.header_type !== "text" ? tpl.header_type : null;
+
+  return (
+    <div className="min-w-0">
+      <span
+        className={cn(
+          "mb-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium",
+          isAgent
+            ? "bg-primary-foreground/20 text-primary-foreground"
+            : "bg-primary/20 text-primary",
+        )}
+      >
+        <LayoutTemplate className="h-3 w-3" />
+        {t("template")}
+      </span>
+      {mediaHeader && (
+        <p className={cn("mt-1 inline-flex items-center gap-1 text-xs", muted)}>
+          <ImageIcon className="h-3.5 w-3.5" />
+          {t(mediaHeader === "image" ? "image" : mediaHeader === "video" ? "video" : "document")}
+        </p>
+      )}
+      {tpl?.header_type === "text" && tpl.header_content && (
+        <p className="mt-1 break-words text-sm font-semibold">
+          <WaText text={tpl.header_content} />
+        </p>
+      )}
+      {message.content_text ? (
+        <p className="mt-1 whitespace-pre-wrap break-words text-sm">
+          <WaText text={message.content_text} />
+        </p>
+      ) : (
+        message.template_name && (
+          <p className="mt-1 break-words text-sm italic opacity-80">
+            {message.template_name}
+          </p>
+        )
+      )}
+      {tpl?.footer_text && (
+        <p className={cn("mt-1 break-words text-xs", muted)}>{tpl.footer_text}</p>
+      )}
+      {tpl?.buttons && tpl.buttons.length > 0 && (
+        <div className={cn("-mx-1 mt-2 border-t", divider)}>
+          {tpl.buttons.map((btn, i) => {
+            const Icon =
+              btn.type === "URL"
+                ? ExternalLink
+                : btn.type === "PHONE_NUMBER"
+                  ? Phone
+                  : btn.type === "COPY_CODE"
+                    ? Copy
+                    : CornerDownLeft;
+            return (
+              <div
+                key={i}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 py-1.5 text-sm font-medium",
+                  i > 0 && cn("border-t", divider),
+                )}
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{btn.text}</span>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );

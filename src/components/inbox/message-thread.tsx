@@ -48,7 +48,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageBubble } from "./message-bubble";
+import { MessageBubble, TemplateLookupContext, type TemplateShape } from "./message-bubble";
 import { DealStageChip } from "./deal-stage-chip";
 import { CaseChip } from "./case-chip";
 import { OptOutNotice } from "./opt-out-notice";
@@ -190,6 +190,28 @@ export function MessageThread({
 
   const { user, accountId } = useAuth();
   const { getPresence, getRow, now } = usePresence();
+  // Header/footer/buttons of sent templates — a message only stores the
+  // body, so the bubble looks the rest up by template name.
+  const [templateLookup, setTemplateLookup] = useState<Map<string, TemplateShape>>(
+    () => new Map(),
+  );
+  useEffect(() => {
+    if (!accountId) return;
+    let alive = true;
+    createClient()
+      .from("message_templates")
+      .select("name, header_type, header_content, footer_text, buttons")
+      .eq("account_id", accountId)
+      .then(({ data }) => {
+        if (!alive || !data) return;
+        const map = new Map<string, TemplateShape>();
+        for (const row of data) if (!map.has(row.name)) map.set(row.name, row);
+        setTemplateLookup(map);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [accountId]);
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   // In-conversation search (header magnifier): matches among the loaded
@@ -1100,6 +1122,7 @@ export function MessageThread({
     // clipped and the hover toolbar overlaps the Tags panel. Letting the
     // root shrink lets the bubbles' break-words / max-w caps apply.
     // Issue #257.
+    <TemplateLookupContext.Provider value={templateLookup}>
     <div className={cn("flex min-w-0 flex-1 flex-col", DOODLE_BG_CLASSES)}>
       {/* Header — solid card surface sits on top of the doodle so the
           name/avatar/dropdowns stay legible. */}
@@ -1616,5 +1639,6 @@ export function MessageThread({
         contactLabel={contactDisplayName}
       />
     </div>
+    </TemplateLookupContext.Provider>
   );
 }
