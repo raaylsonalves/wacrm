@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-import type { Contact, Tag, ContactTag } from '@/types';
+import type { Contact, Tag } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -50,7 +50,7 @@ import {
   Filter,
   X,
 } from 'lucide-react';
-import { ContactForm } from '@/components/contacts/contact-form';
+import { ContactQuickCreate } from '@/components/contacts/contact-quick-create';
 import { ContactDetailView } from '@/components/contacts/contact-detail-view';
 import { ImportWizard } from '@/components/contacts/import-wizard';
 import { CustomFieldsManager } from '@/components/contacts/custom-fields-manager';
@@ -94,8 +94,6 @@ export default function ContactsPage() {
 
   // Modals
   const [formOpen, setFormOpen] = useState(false);
-  const [editContact, setEditContact] = useState<Contact | null>(null);
-  const [editContactTags, setEditContactTags] = useState<ContactTag[]>([]);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailContactId, setDetailContactId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -237,19 +235,9 @@ export default function ContactsPage() {
     fetchContacts();
   }, [fetchContacts]);
 
+  // v8: a new contact starts in the small quick create; editing happens
+  // in place on the contact view, so "Editar" just opens it.
   function openAddForm() {
-    setEditContact(null);
-    setEditContactTags([]);
-    setFormOpen(true);
-  }
-
-  async function openEditForm(contact: Contact) {
-    const { data } = await supabase
-      .from('contact_tags')
-      .select('*')
-      .eq('contact_id', contact.id);
-    setEditContact(contact);
-    setEditContactTags(data ?? []);
     setFormOpen(true);
   }
 
@@ -679,7 +667,7 @@ export default function ContactsPage() {
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            openEditForm(contact);
+                            openDetail(contact.id);
                           }}
                           className="text-popover-foreground focus:bg-muted focus:text-foreground"
                         >
@@ -747,20 +735,15 @@ export default function ContactsPage() {
         </div>
       )}
 
-      {/* Contact Form Dialog */}
-      <ContactForm
+      {/* Quick create (dialog on desktop, bottom sheet on phones) */}
+      <ContactQuickCreate
         open={formOpen}
         onOpenChange={setFormOpen}
-        contact={editContact}
-        contactTags={editContactTags}
-        onSaved={() => {
+        onCreated={(id, openPanel) => {
           fetchContacts();
-          fetchTags();
+          if (openPanel) openDetail(id);
         }}
-        onViewExisting={(id) => {
-          setFormOpen(false);
-          openDetail(id);
-        }}
+        onViewExisting={openDetail}
       />
 
       {/* Contact Detail Sheet */}

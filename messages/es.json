@@ -2,7 +2,9 @@
   "Common": {
     "save": {
       "saving": "Guardando…",
-      "saved": "Guardado"
+      "saved": "Guardado",
+      "failed": "No se guardó",
+      "allSaved": "Todo guardado"
     },
     "modes": {
       "light": "claro",
@@ -1041,7 +1043,11 @@
       "dupSimilar": "Ya existe un contacto con un número muy parecido.",
       "loadingTags": "Cargando etiquetas...",
       "noTagsAvailable": "No hay etiquetas disponibles. Crea etiquetas en Configuración.",
-      "phoneRequired": "El número de teléfono es obligatorio"
+      "phoneRequired": "El número de teléfono es obligatorio",
+      "quickTitle": "Nuevo contacto",
+      "createAndOpen": "Crear y abrir ficha",
+      "openPanel": "Abrir ficha",
+      "quickHint": "Correo, empresa y etiquetas los completas en la ficha."
     },
     "detailView": {
       "tabs": {
@@ -1091,6 +1097,8 @@
       },
       "sendTemplateBtn": "Enviar plantilla",
       "saveChangesBtn": "Guardar cambios",
+      "close": "Cerrar",
+      "editHint": "Haz clic en un campo para editar · se guarda solo · Esc cierra",
       "saveCustomFieldsBtn": "Guardar campos personalizados",
       "toastPhoneRequired": "El número de teléfono es obligatorio",
       "toastLoadFailed": "Error al cargar el contacto",

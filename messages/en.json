@@ -2,7 +2,9 @@
   "Common": {
     "save": {
       "saving": "Saving…",
-      "saved": "Saved"
+      "saved": "Saved",
+      "failed": "Not saved",
+      "allSaved": "All saved"
     },
     "modes": {
       "light": "light",
@@ -1041,7 +1043,11 @@
       "dupSimilar": "A contact with a very similar number already exists.",
       "loadingTags": "Loading tags...",
       "noTagsAvailable": "No tags available. Create tags in Settings.",
-      "phoneRequired": "Phone number is required"
+      "phoneRequired": "Phone number is required",
+      "quickTitle": "New contact",
+      "createAndOpen": "Create and open",
+      "openPanel": "Open",
+      "quickHint": "Email, company and tags can be filled in on the contact."
     },
     "detailView": {
       "tabs": {
@@ -1091,6 +1097,8 @@
       },
       "sendTemplateBtn": "Send template",
       "saveChangesBtn": "Save Changes",
+      "close": "Close",
+      "editHint": "Click a field to edit · saves on its own · Esc closes",
       "saveCustomFieldsBtn": "Save Custom Fields",
       "toastPhoneRequired": "Phone number is required",
       "toastLoadFailed": "Failed to load contact",

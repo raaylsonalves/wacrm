@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -25,7 +25,7 @@ import {
 import { CURRENCIES, formatCurrency } from '@/lib/currency';
 import { InlineField } from '@/components/ui/inline-field';
 import { ContactPicker } from '@/components/pipelines/contact-picker';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { SaveState, SidePanel } from '@/components/ui/side-panel';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,14 +35,6 @@ import {
 import { TONE_SOLID, toneFor } from '@/lib/tones';
 import { cn } from '@/lib/utils';
 import type { Deal, PipelineStage } from '@/types';
-
-const DESKTOP = '(min-width: 1024px)';
-function subscribeDesktop(cb: () => void) {
-  const mq = window.matchMedia(DESKTOP);
-  mq.addEventListener('change', cb);
-  return () => mq.removeEventListener('change', cb);
-}
-const readDesktop = () => window.matchMedia(DESKTOP).matches;
 
 /**
  * v8 deal view: the deal opens beside the board on desktop (a floating
@@ -63,29 +55,10 @@ export function DealPanel({
   pipelineId: string;
   onClose: () => void;
 }) {
-  const isDesktop = useSyncExternalStore(
-    subscribeDesktop,
-    readDesktop,
-    () => true
-  );
   const t = useTranslations('Pipelines.panel');
-
-  useEffect(() => {
-    if (!deal || !isDesktop) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [deal, isDesktop, onClose]);
-
-  if (isDesktop) {
-    if (!deal) return null;
-    return (
-      <aside
-        aria-label={t('title')}
-        className="bg-card border-border animate-enter fixed top-3 right-3 bottom-3 z-40 flex w-[440px] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[24px] border shadow-[0_24px_60px_rgb(0_0_0/0.14)]"
-      >
+  return (
+    <SidePanel open={!!deal} onClose={onClose} label={t('title')}>
+      {deal && (
         <DealPanelBody
           key={deal.id}
           deal={deal}
@@ -93,32 +66,8 @@ export function DealPanel({
           pipelineId={pipelineId}
           onClose={onClose}
         />
-      </aside>
-    );
-  }
-
-  return (
-    <Sheet open={!!deal} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent
-        side="bottom"
-        showCloseButton={false}
-        className="h-[88dvh] gap-0 p-0"
-      >
-        <SheetTitle className="sr-only">{t('title')}</SheetTitle>
-        <div className="flex justify-center pt-2.5 pb-1" aria-hidden>
-          <span className="bg-border h-1.5 w-11 rounded-full" />
-        </div>
-        {deal && (
-          <DealPanelBody
-            key={deal.id}
-            deal={deal}
-            stages={stages}
-            pipelineId={pipelineId}
-            onClose={onClose}
-          />
-        )}
-      </SheetContent>
-    </Sheet>
+      )}
+    </SidePanel>
   );
 }
 
@@ -489,54 +438,6 @@ function DealPanelBody({
 }
 
 /** "Tudo salvo" at rest, "Salvando…" while writing, a mint "✓ Salvo" flash after. */
-function SaveState({
-  pending,
-  failed,
-  savedAt,
-}: {
-  pending: boolean;
-  failed: boolean;
-  savedAt: number | null;
-}) {
-  const t = useTranslations('Pipelines.panel');
-  if (failed)
-    return (
-      <span className="text-tone-pink-ink text-xs font-semibold">
-        {t('saveFailed')}
-      </span>
-    );
-  if (pending)
-    return (
-      <span className="text-muted-foreground text-xs font-semibold">
-        {t('saving')}
-      </span>
-    );
-  return (
-    <span
-      className="relative inline-grid text-xs font-semibold"
-      aria-live="polite"
-    >
-      <span
-        key={`a-${savedAt ?? 0}`}
-        className={cn(
-          'text-muted-foreground col-start-1 row-start-1',
-          savedAt && 'save-flash-label'
-        )}
-      >
-        {t('allSaved')}
-      </span>
-      {savedAt && (
-        <span
-          key={`b-${savedAt}`}
-          className="save-flash-done text-tone-mint-ink col-start-1 row-start-1"
-        >
-          ✓ {t('saved')}
-        </span>
-      )}
-    </span>
-  );
-}
-
 /** A details row that opens a short menu of choices (owner, currency). */
 function PickRow({
   label,

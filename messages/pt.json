@@ -2,7 +2,9 @@
   "Common": {
     "save": {
       "saving": "Salvando…",
-      "saved": "Salvo"
+      "saved": "Salvo",
+      "failed": "Não salvou",
+      "allSaved": "Tudo salvo"
     },
     "modes": {
       "light": "claro",
@@ -1041,7 +1043,11 @@
       "dupSimilar": "Já existe um contato com um número muito parecido.",
       "loadingTags": "Carregando tags...",
       "noTagsAvailable": "Nenhuma tag disponível. Crie tags em Configurações.",
-      "phoneRequired": "O número de telefone é obrigatório"
+      "phoneRequired": "O número de telefone é obrigatório",
+      "quickTitle": "Novo contato",
+      "createAndOpen": "Criar e abrir ficha",
+      "openPanel": "Abrir ficha",
+      "quickHint": "E-mail, empresa e tags você completa na ficha."
     },
     "detailView": {
       "tabs": {
@@ -1091,6 +1097,8 @@
       },
       "sendTemplateBtn": "Enviar modelo",
       "saveChangesBtn": "Salvar alterações",
+      "close": "Fechar",
+      "editHint": "Clique em um campo para editar · salva sozinho · Esc fecha",
       "saveCustomFieldsBtn": "Salvar campos personalizados",
       "toastPhoneRequired": "O número de telefone é obrigatório",
       "toastLoadFailed": "Falha ao carregar o contato",

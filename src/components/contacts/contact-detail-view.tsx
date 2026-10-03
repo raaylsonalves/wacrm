@@ -11,10 +11,8 @@ import { toast } from 'sonner';
 import type {
   Contact,
   Tag,
-  ContactTag,
   ContactNote,
   CustomField,
-  ContactCustomValue,
   Deal,
   MessageTemplate,
 } from '@/types';
@@ -22,35 +20,26 @@ import {
   TemplatePicker,
   type TemplateSendValues,
 } from '@/components/inbox/template-picker';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet';
+import { SaveState, SidePanel } from '@/components/ui/side-panel';
+import { InlineField } from '@/components/ui/inline-field';
+import { isUniqueViolation } from '@/lib/contacts/dedupe';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   ScrollEdgeFades,
   useHorizontalScrollEdges,
 } from '@/components/ui/scroll-edges';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Phone,
-  Mail,
-  Building2,
   Copy,
   Check,
   Loader2,
   Plus,
   Trash2,
-  Save,
   X,
   DollarSign,
   LayoutTemplate,
@@ -58,7 +47,6 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { contactHandle } from '@/lib/whatsapp/wa-identity';
-import { SaveButton } from '@/components/ui/save-button';
 
 interface ContactDetailViewProps {
   open: boolean;
@@ -74,6 +62,7 @@ export function ContactDetailView({
   onUpdated,
 }: ContactDetailViewProps) {
   const t = useTranslations('Contacts.detailView');
+  const tForm = useTranslations('Contacts.form');
   const supabase = createClient();
   const { accountId, defaultCurrency } = useAuth();
   const canManageLgpd = useCan('manage-lgpd');
@@ -109,12 +98,10 @@ export function ContactDetailView({
   const [sendingTemplate, setSendingTemplate] = useState(false);
 
   // Details tab
-  const [editName, setEditName] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [editEmail, setEditEmail] = useState('');
-  const [editCompany, setEditCompany] = useState('');
-  const [savingDetails, setSavingDetails] = useState(false);
-  const [detailsSavedAt, setDetailsSavedAt] = useState<number | null>(null);
+  // v8: every field saves on its own; the header reads the combined state.
+  const [pendingSaves, setPendingSaves] = useState(0);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const [anonymizing, setAnonymizing] = useState(false);
 
   // Tags tab
@@ -131,7 +118,6 @@ export function ContactDetailView({
   // Custom fields tab
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
-  const [savingCustom, setSavingCustom] = useState(false);
   const [loadingCustom, setLoadingCustom] = useState(false);
 
   // Deals tab
@@ -148,10 +134,6 @@ export function ContactDetailView({
     // fails left A's details on screen keyed to B's id, so pressing
     // Save would overwrite B with A's data.
     setContact(null);
-    setEditName('');
-    setEditPhone('');
-    setEditEmail('');
-    setEditCompany('');
 
     const { data, error } = await supabase
       .from('contacts')
@@ -163,10 +145,6 @@ export function ContactDetailView({
       toast.error(t('toastLoadFailed'));
     } else {
       setContact(data);
-      setEditName(data.name ?? '');
-      setEditPhone(data.phone);
-      setEditEmail(data.email ?? '');
-      setEditCompany(data.company ?? '');
     }
     setLoading(false);
   }, [contactId, supabase, t]);
@@ -262,32 +240,45 @@ export function ContactDetailView({
     setTimeout(() => setCopiedPhone(false), 2000);
   }
 
-  async function saveDetails() {
-    if (!contactId || !editPhone.trim()) {
+  /** Run one write, keeping the header's "Salvando… / ✓ Salvo" honest. */
+  async function track(write: () => PromiseLike<{ error: unknown }>) {
+    setPendingSaves((n) => n + 1);
+    setSaveFailed(false);
+    const { error } = await write();
+    setPendingSaves((n) => n - 1);
+    if (error) setSaveFailed(true);
+    else setSavedAt(Date.now());
+    return error;
+  }
+
+  async function saveField(
+    key: 'name' | 'phone' | 'email' | 'company',
+    value: string
+  ) {
+    if (!contactId || !contact) return;
+    if (key === 'phone' && !value) {
       toast.error(t('toastPhoneRequired'));
       return;
     }
-
-    setSavingDetails(true);
-    const { error } = await supabase
-      .from('contacts')
-      .update({
-        name: editName.trim() || null,
-        phone: editPhone.trim(),
-        email: editEmail.trim() || null,
-        company: editCompany.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', contactId);
-
+    const prev = contact;
+    const next = key === 'phone' ? value : value || null;
+    setContact({ ...contact, [key]: next });
+    const error = await track(() =>
+      supabase
+        .from('contacts')
+        .update({ [key]: next, updated_at: new Date().toISOString() })
+        .eq('id', contactId)
+    );
     if (error) {
-      toast.error(t('toastUpdateFailed'));
+      setContact(prev);
+      toast.error(
+        isUniqueViolation(error)
+          ? tForm('toastConflict')
+          : t('toastUpdateFailed')
+      );
     } else {
-      setDetailsSavedAt(Date.now());
-      fetchContact();
       onUpdated();
     }
-    setSavingDetails(false);
   }
 
   async function anonymizeContact() {
@@ -382,51 +373,30 @@ export function ContactDetailView({
     }
   }
 
-  async function saveCustomFields() {
+  // Upsert a filled value, delete a cleared one — one field at a time, so a
+  // failure can only ever touch the field being edited.
+  async function saveCustomField(fieldId: string, value: string) {
     if (!contactId) return;
-    setSavingCustom(true);
-
-    try {
-      const filledFieldIds = Object.entries(customValues)
-        .filter(([, val]) => val.trim())
-        .map(([fieldId]) => fieldId);
-      const clearedFieldIds = Object.keys(customValues).filter(
-        (fieldId) => !filledFieldIds.includes(fieldId)
-      );
-
-      const rows = filledFieldIds.map((fieldId) => ({
-        contact_id: contactId,
-        custom_field_id: fieldId,
-        value: customValues[fieldId].trim(),
-      }));
-
-      // Upsert the filled values first, THEN delete only the fields the
-      // user actually cleared — the previous delete-then-insert order
-      // meant a failed insert (network drop, or RLS for a viewer since
-      // contact_custom_values_modify requires agent+) permanently lost
-      // every custom value the contact had, not just the one being
-      // edited.
-      if (rows.length > 0) {
-        const { error } = await supabase
-          .from('contact_custom_values')
-          .upsert(rows, { onConflict: 'contact_id,custom_field_id' });
-        if (error) throw error;
-      }
-
-      if (clearedFieldIds.length > 0) {
-        const { error } = await supabase
-          .from('contact_custom_values')
-          .delete()
-          .eq('contact_id', contactId)
-          .in('custom_field_id', clearedFieldIds);
-        if (error) throw error;
-      }
-
-      toast.success(t('toastCustomFieldsSaved'));
-    } catch {
+    const prev = customValues[fieldId] ?? '';
+    setCustomValues((m) => ({ ...m, [fieldId]: value }));
+    const error = await track(() =>
+      value
+        ? supabase
+            .from('contact_custom_values')
+            .upsert(
+              { contact_id: contactId, custom_field_id: fieldId, value },
+              { onConflict: 'contact_id,custom_field_id' }
+            )
+        : supabase
+            .from('contact_custom_values')
+            .delete()
+            .eq('contact_id', contactId)
+            .eq('custom_field_id', fieldId)
+    );
+    if (error) {
+      setCustomValues((m) => ({ ...m, [fieldId]: prev }));
       toast.error(t('toastCustomFieldsFailed'));
     }
-    setSavingCustom(false);
   }
 
   async function handleSendTemplate(
@@ -483,437 +453,385 @@ export function ContactDetailView({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="right"
-          className="bg-popover border-border text-popover-foreground w-full p-0 sm:max-w-lg"
-        >
-          {loading || !contact ? (
-            <div className="flex h-full items-center justify-center">
-              <Loader2 className="text-primary size-6 animate-spin" />
-            </div>
-          ) : (
-            <div className="flex h-full flex-col">
-              {/* Header */}
-              <SheetHeader className="border-border/50 border-b p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="size-12">
-                    <AvatarFallback className={`text-sm font-bold ${TONE_SOLID[toneFor(contact.name || contact.phone)]}`}>
-                      {getInitials(contact.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <SheetTitle className="text-popover-foreground truncate">
-                      {contact.name || t('unnamed')}
-                    </SheetTitle>
-                    <SheetDescription className="text-muted-foreground mt-0.5 text-xs">
-                      {t('contactDetailsDesc')}
-                    </SheetDescription>
-                    <div className="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-3 text-xs">
-                      <button
-                        onClick={copyPhone}
-                        className="hover:text-primary flex cursor-pointer items-center gap-1 transition-colors"
-                      >
-                        <Phone className="size-3" />
-                        {contactHandle(contact)}
-                        {copiedPhone ? (
-                          <Check className="text-primary size-3" />
-                        ) : (
-                          <Copy className="size-3" />
-                        )}
-                      </button>
-                      {contact.email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="size-3" />
-                          {contact.email}
-                        </span>
-                      )}
-                      {contact.company && (
-                        <span className="flex items-center gap-1">
-                          <Building2 className="size-3" />
-                          {contact.company}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <Button
-                    size="sm"
-                    onClick={() => setTemplatePickerOpen(true)}
-                    disabled={sendingTemplate}
-                    className="bg-foreground text-background hover:bg-foreground/90"
-                  >
-                    {sendingTemplate ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <LayoutTemplate className="size-4" />
-                    )}
-                    {t('sendTemplateBtn')}
-                  </Button>
-                </div>
-              </SheetHeader>
-
-              {/* Tabs */}
-              <Tabs
-                defaultValue="details"
-                className="flex min-h-0 flex-1 flex-col"
+      <SidePanel
+        open={open && !!contactId}
+        onClose={() => onOpenChange(false)}
+        label={t('contactInfo')}
+      >
+        {loading || !contact ? (
+          <div className="flex flex-1 items-center justify-center">
+            <Loader2 className="text-muted-foreground size-6 animate-spin" />
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex items-center gap-2 px-5 pt-4">
+              <span className="flex-1" />
+              <SaveState
+                pending={pendingSaves > 0}
+                failed={saveFailed}
+                savedAt={savedAt}
+              />
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                aria-label={t('close')}
+                className="hover:bg-muted flex size-9 items-center justify-center rounded-full transition-colors duration-150 ease-out"
               >
-                <div className="relative mx-4 mt-3">
-                  {/* The scroll container is a plain div, not TabsList itself —
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="px-5 pb-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="size-12">
+                  <AvatarFallback
+                    className={`text-sm font-bold ${TONE_SOLID[toneFor(contact.name || contact.phone)]}`}
+                  >
+                    {getInitials(contact.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate text-xl font-extrabold tracking-[-0.01em]">
+                    {contact.name || t('unnamed')}
+                  </h2>
+                  <button
+                    onClick={copyPhone}
+                    className="text-muted-foreground hover:text-foreground mt-0.5 flex cursor-pointer items-center gap-1 text-xs transition-colors"
+                  >
+                    <Phone className="size-3" />
+                    {contactHandle(contact)}
+                    {copiedPhone ? (
+                      <Check className="size-3" />
+                    ) : (
+                      <Copy className="size-3" />
+                    )}
+                  </button>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setTemplatePickerOpen(true)}
+                  disabled={sendingTemplate}
+                >
+                  {sendingTemplate ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <LayoutTemplate className="size-4" />
+                  )}
+                  {t('sendTemplateBtn')}
+                </Button>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <Tabs
+              defaultValue="details"
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              <div className="relative mx-4 mt-3">
+                {/* The scroll container is a plain div, not TabsList itself —
                     base-ui's Tabs.List didn't forward the ref down to its
                     DOM node reliably, which silently broke overflow
                     detection (the scroll arrows never appeared even though
                     the row was genuinely overflowing). */}
-                  <div
-                    ref={tabsScrollRef}
-                    className="border-border [scrollbar-width:none] overflow-x-auto border-b pb-3 [&::-webkit-scrollbar]:hidden"
-                  >
-                    <TabsList variant="pill" className="w-max">
-                      <TabsTrigger value="details">
-                        {t('tabs.details')}
-                      </TabsTrigger>
-                      <TabsTrigger value="tags">{t('tabs.tags')}</TabsTrigger>
-                      <TabsTrigger value="notes">{t('tabs.notes')}</TabsTrigger>
-                      <TabsTrigger value="custom">
-                        {t('tabs.custom')}
-                      </TabsTrigger>
-                      <TabsTrigger value="deals">{t('tabs.deals')}</TabsTrigger>
-                    </TabsList>
+                <div
+                  ref={tabsScrollRef}
+                  className="border-border [scrollbar-width:none] overflow-x-auto border-b pb-3 [&::-webkit-scrollbar]:hidden"
+                >
+                  <TabsList variant="pill" className="w-max">
+                    <TabsTrigger value="details">
+                      {t('tabs.details')}
+                    </TabsTrigger>
+                    <TabsTrigger value="tags">{t('tabs.tags')}</TabsTrigger>
+                    <TabsTrigger value="notes">{t('tabs.notes')}</TabsTrigger>
+                    <TabsTrigger value="custom">{t('tabs.custom')}</TabsTrigger>
+                    <TabsTrigger value="deals">{t('tabs.deals')}</TabsTrigger>
+                  </TabsList>
+                </div>
+                <ScrollEdgeFades
+                  canLeft={tabsCanLeft}
+                  canRight={tabsCanRight}
+                  onLeft={() => tabsScrollByDir(-1)}
+                  onRight={() => tabsScrollByDir(1)}
+                  fadeFrom="from-popover"
+                />
+              </div>
+
+              {/* Details Tab */}
+              <TabsContent
+                value="details"
+                className="flex-1 overflow-y-auto px-4 py-3"
+              >
+                <div className="space-y-3">
+                  <div className="flex flex-col">
+                    <InlineField
+                      label={t('name')}
+                      value={contact.name ?? ''}
+                      placeholder={t('unnamed')}
+                      onSave={(v) => saveField('name', v)}
+                    />
+                    <InlineField
+                      label={t('phone')}
+                      value={contact.phone}
+                      inputMode="tel"
+                      onSave={(v) => saveField('phone', v)}
+                    />
+                    <InlineField
+                      label={t('email')}
+                      value={contact.email ?? ''}
+                      placeholder="—"
+                      inputMode="email"
+                      onSave={(v) => saveField('email', v)}
+                    />
+                    <InlineField
+                      label={t('company')}
+                      value={contact.company ?? ''}
+                      placeholder="—"
+                      onSave={(v) => saveField('company', v)}
+                    />
                   </div>
-                  <ScrollEdgeFades
-                    canLeft={tabsCanLeft}
-                    canRight={tabsCanRight}
-                    onLeft={() => tabsScrollByDir(-1)}
-                    onRight={() => tabsScrollByDir(1)}
-                    fadeFrom="from-popover"
+
+                  {canManageLgpd && (
+                    <div className="border-border/50 mt-2 space-y-1.5 border-t pt-3">
+                      <Label className="text-muted-foreground text-xs">
+                        {t('lgpd.title')}
+                      </Label>
+                      {contact.anonymized_at ? (
+                        <Badge
+                          variant="outline"
+                          className="text-muted-foreground"
+                        >
+                          {t('lgpd.anonymizedBadge')}
+                        </Badge>
+                      ) : (
+                        <Button
+                          onClick={anonymizeContact}
+                          disabled={anonymizing}
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-red-600/40 text-red-600 hover:bg-red-600/10 hover:text-red-600 dark:border-red-400/40 dark:text-red-400"
+                        >
+                          {anonymizing ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <ShieldOff className="size-3.5" />
+                          )}
+                          {t('lgpd.anonymizeBtn')}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Tags Tab */}
+              <TabsContent
+                value="tags"
+                className="flex-1 overflow-y-auto px-4 py-3"
+              >
+                <div className="space-y-3">
+                  <p className="text-muted-foreground text-xs">
+                    {t('tagsTab.clickTagDesc')}
+                  </p>
+                  {allTags.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">
+                      {t('tagsTab.noTagsAvailable')}
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {allTags.map((tag) => {
+                        const selected = contactTagIds.includes(tag.id);
+                        return (
+                          <button
+                            key={tag.id}
+                            onClick={() => toggleTag(tag.id)}
+                            disabled={savingTags}
+                            className={`inline-flex cursor-pointer items-center rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                              selected
+                                ? 'ring-primary ring-offset-border ring-2 ring-offset-1'
+                                : 'opacity-50 hover:opacity-80'
+                            }`}
+                            style={{
+                              backgroundColor: tag.color + '20',
+                              color: tag.color,
+                            }}
+                          >
+                            {selected && <Check className="mr-1 size-3" />}
+                            {tag.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Notes Tab */}
+              <TabsContent
+                value="notes"
+                className="flex min-h-0 flex-1 flex-col px-4 py-3"
+              >
+                <div className="mb-3 space-y-2">
+                  <Textarea
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder={t('notesTab.placeholder')}
+                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px] resize-none text-sm"
                   />
+                  <Button
+                    onClick={addNote}
+                    disabled={!newNote.trim() || savingNote}
+                    className="bg-foreground hover:bg-foreground/90 text-background"
+                    size="sm"
+                  >
+                    {savingNote ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="size-3.5" />
+                    )}
+                    {t('notesTab.save')}
+                  </Button>
                 </div>
 
-                {/* Details Tab */}
-                <TabsContent
-                  value="details"
-                  className="flex-1 overflow-y-auto px-4 py-3"
-                >
-                  <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-muted-foreground text-xs">
-                        {t('name')}
-                      </Label>
-                      <Input
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="bg-muted border-border text-foreground h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-muted-foreground text-xs">
-                        {t('phone')}{' '}
-                        <span className="text-red-600 dark:text-red-400">
-                          *
-                        </span>
-                      </Label>
-                      <Input
-                        value={editPhone}
-                        onChange={(e) => setEditPhone(e.target.value)}
-                        className="bg-muted border-border text-foreground h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-muted-foreground text-xs">
-                        {t('email')}
-                      </Label>
-                      <Input
-                        value={editEmail}
-                        onChange={(e) => setEditEmail(e.target.value)}
-                        className="bg-muted border-border text-foreground h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-muted-foreground text-xs">
-                        {t('company')}
-                      </Label>
-                      <Input
-                        value={editCompany}
-                        onChange={(e) => setEditCompany(e.target.value)}
-                        className="bg-muted border-border text-foreground h-8 text-sm"
-                      />
-                    </div>
-                    <SaveButton
-                      onClick={saveDetails}
-                      saving={savingDetails}
-                      savedAt={detailsSavedAt}
-                      className="w-full"
-                      size="sm"
-                    >
-                      <Save className="size-3.5" />
-                      {t('saveChangesBtn')}
-                    </SaveButton>
-
-                    {canManageLgpd && (
-                      <div className="border-border/50 mt-2 space-y-1.5 border-t pt-3">
-                        <Label className="text-muted-foreground text-xs">
-                          {t('lgpd.title')}
-                        </Label>
-                        {contact.anonymized_at ? (
-                          <Badge
-                            variant="outline"
-                            className="text-muted-foreground"
-                          >
-                            {t('lgpd.anonymizedBadge')}
-                          </Badge>
-                        ) : (
-                          <Button
-                            onClick={anonymizeContact}
-                            disabled={anonymizing}
-                            variant="outline"
-                            size="sm"
-                            className="w-full border-red-600/40 text-red-600 hover:bg-red-600/10 hover:text-red-600 dark:border-red-400/40 dark:text-red-400"
-                          >
-                            {anonymizing ? (
-                              <Loader2 className="size-3.5 animate-spin" />
-                            ) : (
-                              <ShieldOff className="size-3.5" />
-                            )}
-                            {t('lgpd.anonymizeBtn')}
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-
-                {/* Tags Tab */}
-                <TabsContent
-                  value="tags"
-                  className="flex-1 overflow-y-auto px-4 py-3"
-                >
-                  <div className="space-y-3">
-                    <p className="text-muted-foreground text-xs">
-                      {t('tagsTab.clickTagDesc')}
-                    </p>
-                    {allTags.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">
-                        {t('tagsTab.noTagsAvailable')}
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {allTags.map((tag) => {
-                          const selected = contactTagIds.includes(tag.id);
-                          return (
-                            <button
-                              key={tag.id}
-                              onClick={() => toggleTag(tag.id)}
-                              disabled={savingTags}
-                              className={`inline-flex cursor-pointer items-center rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                                selected
-                                  ? 'ring-primary ring-offset-border ring-2 ring-offset-1'
-                                  : 'opacity-50 hover:opacity-80'
-                              }`}
-                              style={{
-                                backgroundColor: tag.color + '20',
-                                color: tag.color,
-                              }}
-                            >
-                              {selected && <Check className="mr-1 size-3" />}
-                              {tag.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-
-                {/* Notes Tab */}
-                <TabsContent
-                  value="notes"
-                  className="flex min-h-0 flex-1 flex-col px-4 py-3"
-                >
-                  <div className="mb-3 space-y-2">
-                    <Textarea
-                      value={newNote}
-                      onChange={(e) => setNewNote(e.target.value)}
-                      placeholder={t('notesTab.placeholder')}
-                      className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px] resize-none text-sm"
-                    />
-                    <Button
-                      onClick={addNote}
-                      disabled={!newNote.trim() || savingNote}
-                      className="bg-foreground hover:bg-foreground/90 text-background"
-                      size="sm"
-                    >
-                      {savingNote ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Plus className="size-3.5" />
-                      )}
-                      {t('notesTab.save')}
-                    </Button>
-                  </div>
-
-                  <div className="flex-1 space-y-2 overflow-y-auto">
-                    {loadingNotes ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="text-muted-foreground size-5 animate-spin" />
-                      </div>
-                    ) : notes.length === 0 ? (
-                      <p className="text-muted-foreground py-8 text-center text-sm">
-                        {t('notesTab.noNotes')}
-                      </p>
-                    ) : (
-                      notes.map((note) => (
-                        <div
-                          key={note.id}
-                          className="bg-muted/50 border-border/50 group rounded-lg border p-3"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-muted-foreground flex-1 text-sm whitespace-pre-wrap">
-                              {note.note_text}
-                            </p>
-                            <button
-                              onClick={() => deleteNote(note.id)}
-                              className="text-muted-foreground shrink-0 cursor-pointer opacity-0 transition-all group-hover:opacity-100 hover:text-red-400"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </div>
-                          <p className="text-muted-foreground mt-1.5 text-xs">
-                            {new Date(note.created_at).toLocaleDateString(
-                              APP_LOCALE,
-                              {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              }
-                            )}
-                          </p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </TabsContent>
-
-                {/* Custom Fields Tab */}
-                <TabsContent
-                  value="custom"
-                  className="flex-1 overflow-y-auto px-4 py-3"
-                >
-                  {loadingCustom ? (
+                <div className="flex-1 space-y-2 overflow-y-auto">
+                  {loadingNotes ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="text-muted-foreground size-5 animate-spin" />
                     </div>
-                  ) : customFields.length === 0 ? (
+                  ) : notes.length === 0 ? (
                     <p className="text-muted-foreground py-8 text-center text-sm">
-                      {t('noCustomFields')}
+                      {t('notesTab.noNotes')}
                     </p>
                   ) : (
-                    <div className="space-y-3">
-                      {customFields.map((field) => (
-                        <div key={field.id} className="space-y-1.5">
-                          <Label className="text-muted-foreground text-xs capitalize">
-                            {field.field_name}
-                          </Label>
-                          <Input
-                            value={customValues[field.id] ?? ''}
-                            onChange={(e) =>
-                              setCustomValues((prev) => ({
-                                ...prev,
-                                [field.id]: e.target.value,
-                              }))
-                            }
-                            placeholder={t('enterCustomField', {
-                              name: field.field_name,
-                            })}
-                            className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-sm"
-                          />
-                        </div>
-                      ))}
-                      <Button
-                        onClick={saveCustomFields}
-                        disabled={savingCustom}
-                        className="bg-foreground hover:bg-foreground/90 text-background w-full"
-                        size="sm"
+                    notes.map((note) => (
+                      <div
+                        key={note.id}
+                        className="bg-muted/50 border-border/50 group rounded-lg border p-3"
                       >
-                        {savingCustom ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Save className="size-3.5" />
-                        )}
-                        {t('saveCustomFieldsBtn')}
-                      </Button>
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* Deals Tab */}
-                <TabsContent
-                  value="deals"
-                  className="flex-1 overflow-y-auto px-4 py-3"
-                >
-                  {loadingDeals ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="text-primary size-5 animate-spin" />
-                    </div>
-                  ) : deals.length === 0 ? (
-                    <p className="text-muted-foreground text-xs">
-                      {t('dealsTab.noDeals')}
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {deals.map((deal) => (
-                        <div
-                          key={deal.id}
-                          className="border-border bg-muted/50 rounded-lg border p-3"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-foreground text-sm font-medium">
-                              {deal.title}
-                            </p>
-                            {deal.stage && (
-                              <span
-                                className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                                style={{
-                                  backgroundColor: `${deal.stage.color}20`,
-                                  color: deal.stage.color,
-                                }}
-                              >
-                                {deal.stage.name}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-muted-foreground mt-1.5 flex items-center justify-between text-xs">
-                            <span className="flex items-center gap-1">
-                              <DollarSign className="size-3" />
-                              {formatCurrency(
-                                deal.value ?? 0,
-                                deal.currency || defaultCurrency
-                              )}
-                            </span>
-                            {deal.status && deal.status !== 'open' && (
-                              <span
-                                className={
-                                  deal.status === 'won'
-                                    ? 'text-primary'
-                                    : 'text-red-600 dark:text-red-400'
-                                }
-                              >
-                                {deal.status}
-                              </span>
-                            )}
-                          </div>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-muted-foreground flex-1 text-sm whitespace-pre-wrap">
+                            {note.note_text}
+                          </p>
+                          <button
+                            onClick={() => deleteNote(note.id)}
+                            className="text-muted-foreground shrink-0 cursor-pointer opacity-0 transition-all group-hover:opacity-100 hover:text-red-400"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
                         </div>
-                      ))}
-                    </div>
+                        <p className="text-muted-foreground mt-1.5 text-xs">
+                          {new Date(note.created_at).toLocaleDateString(
+                            APP_LOCALE,
+                            {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            }
+                          )}
+                        </p>
+                      </div>
+                    ))
                   )}
-                </TabsContent>
-              </Tabs>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+                </div>
+              </TabsContent>
+
+              {/* Custom Fields Tab */}
+              <TabsContent
+                value="custom"
+                className="flex-1 overflow-y-auto px-4 py-3"
+              >
+                {loadingCustom ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="text-muted-foreground size-5 animate-spin" />
+                  </div>
+                ) : customFields.length === 0 ? (
+                  <p className="text-muted-foreground py-8 text-center text-sm">
+                    {t('noCustomFields')}
+                  </p>
+                ) : (
+                  <div className="flex flex-col">
+                    {customFields.map((field) => (
+                      <InlineField
+                        key={field.id}
+                        label={field.field_name}
+                        value={customValues[field.id] ?? ''}
+                        placeholder="—"
+                        onSave={(v) => saveCustomField(field.id, v)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Deals Tab */}
+              <TabsContent
+                value="deals"
+                className="flex-1 overflow-y-auto px-4 py-3"
+              >
+                {loadingDeals ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="text-primary size-5 animate-spin" />
+                  </div>
+                ) : deals.length === 0 ? (
+                  <p className="text-muted-foreground text-xs">
+                    {t('dealsTab.noDeals')}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {deals.map((deal) => (
+                      <div
+                        key={deal.id}
+                        className="border-border bg-muted/50 rounded-lg border p-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-foreground text-sm font-medium">
+                            {deal.title}
+                          </p>
+                          {deal.stage && (
+                            <span
+                              className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                              style={{
+                                backgroundColor: `${deal.stage.color}20`,
+                                color: deal.stage.color,
+                              }}
+                            >
+                              {deal.stage.name}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-muted-foreground mt-1.5 flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="size-3" />
+                            {formatCurrency(
+                              deal.value ?? 0,
+                              deal.currency || defaultCurrency
+                            )}
+                          </span>
+                          {deal.status && deal.status !== 'open' && (
+                            <span
+                              className={
+                                deal.status === 'won'
+                                  ? 'text-primary'
+                                  : 'text-red-600 dark:text-red-400'
+                              }
+                            >
+                              {deal.status}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+            <p className="text-muted-foreground border-border border-t px-5 py-3 text-xs">
+              {t('editHint')}
+            </p>
+          </div>
+        )}
+      </SidePanel>
       <TemplatePicker
         open={templatePickerOpen}
         onOpenChange={setTemplatePickerOpen}

@@ -2,7 +2,9 @@
   "Common": {
     "save": {
       "saving": "저장 중…",
-      "saved": "저장됨"
+      "saved": "저장됨",
+      "failed": "저장 안 됨",
+      "allSaved": "모두 저장됨"
     },
     "modes": {
       "light": "라이트",
@@ -1041,7 +1043,11 @@
       "dupSimilar": "매우 유사한 번호를 가진 연락처가 이미 있습니다.",
       "loadingTags": "태그를 불러오는 중...",
       "noTagsAvailable": "사용 가능한 태그가 없습니다. 설정에서 태그를 만드세요.",
-      "phoneRequired": "전화번호는 필수입니다"
+      "phoneRequired": "전화번호는 필수입니다",
+      "quickTitle": "새 연락처",
+      "createAndOpen": "만들고 열기",
+      "openPanel": "열기",
+      "quickHint": "이메일, 회사, 태그는 연락처 화면에서 채울 수 있어요."
     },
     "detailView": {
       "tabs": {
@@ -1091,6 +1097,8 @@
       },
       "sendTemplateBtn": "템플릿 보내기",
       "saveChangesBtn": "변경 사항 저장",
+      "close": "닫기",
+      "editHint": "필드를 클릭해 편집 · 자동 저장 · Esc로 닫기",
       "saveCustomFieldsBtn": "커스텀 필드 저장",
       "toastPhoneRequired": "전화번호는 필수입니다",
       "toastLoadFailed": "연락처를 불러오지 못했습니다",
