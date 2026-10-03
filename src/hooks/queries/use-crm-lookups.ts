@@ -11,6 +11,8 @@ export interface ContactLite {
 }
 
 export interface ProfileLite {
+  /** profiles.id — what deals.assigned_to references (not user_id). */
+  id: string;
   user_id: string;
   full_name: string | null;
 }
@@ -44,7 +46,7 @@ export function useProfilesLite(enabled = true) {
     queryFn: async () => {
       const { data, error } = await createClient()
         .from('profiles')
-        .select('user_id, full_name')
+        .select('id, user_id, full_name')
         .order('full_name');
       if (error) throw error;
       return (data ?? []) as ProfileLite[];

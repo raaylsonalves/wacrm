@@ -163,7 +163,7 @@ function DealPanelBody({
   const currency = deal.currency || defaultCurrency;
   const contactName =
     deal.contact?.name || deal.contact?.phone || t('noContact');
-  const owner = profiles.find((p) => p.user_id === deal.assigned_to);
+  const owner = profiles.find((p) => p.id === deal.assigned_to);
   const status = deal.status ?? 'open';
 
   async function remove() {
@@ -435,7 +435,7 @@ function DealPanelBody({
             options={[
               { id: '', label: tf('unassigned') },
               ...profiles.map((p) => ({
-                id: p.user_id,
+                id: p.id,
                 label: p.full_name ?? '—',
               })),
             ]}
