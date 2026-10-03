@@ -222,6 +222,8 @@ export function WeekTimeGrid({
                 ))}
                 {appts.map((a) => {
                   const m = minutes(a.starts_at, a.ends_at);
+                  // Short slots (≤ ~40 min) fit one line: time first, then who.
+                  const compact = (m.endMin - m.startMin) / 60 * HOUR_PX < 44;
                   return (
                     <button
                       key={a.id}
@@ -230,18 +232,28 @@ export function WeekTimeGrid({
                       aria-pressed={selectedId === a.id}
                       title={`${clock(m.startMin)} ${a.title} — ${a.contact?.name ?? a.contact?.phone ?? ''}`}
                       className={cn(
-                        'absolute overflow-hidden rounded-[14px] border px-2.5 py-1.5 text-left text-xs leading-snug transition-[filter,box-shadow] duration-150 ease-out hover:brightness-95',
+                        'absolute overflow-hidden rounded-[14px] border px-2.5 text-left text-xs leading-snug transition-[filter,box-shadow] duration-150 ease-out hover:brightness-95',
+                        compact ? 'flex items-center py-0' : 'py-1.5',
                         eventToneClass(a),
                         selectedId === a.id && 'ring-foreground ring-2'
                       )}
                       style={box(a.id)}
                     >
-                      <strong className="block truncate font-bold">
-                        {a.contact?.name ?? a.contact?.phone ?? a.title}
-                      </strong>
-                      <span className="block truncate">
-                        {clock(m.startMin)} · {a.title}
-                      </span>
+                      {compact ? (
+                        <span className="truncate">
+                          <span className="tabular-nums">{clock(m.startMin)}</span>{' '}
+                          <strong className="font-bold">{a.contact?.name ?? a.contact?.phone ?? a.title}</strong>
+                        </span>
+                      ) : (
+                        <>
+                          <strong className="block truncate font-bold">
+                            {a.contact?.name ?? a.contact?.phone ?? a.title}
+                          </strong>
+                          <span className="block truncate">
+                            {clock(m.startMin)} · {a.title}
+                          </span>
+                        </>
+                      )}
                     </button>
                   );
                 })}

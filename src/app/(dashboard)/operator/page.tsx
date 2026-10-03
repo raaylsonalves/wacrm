@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatDistanceToNow } from 'date-fns';
-import { Briefcase, Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { dateFnsLocale } from '@/lib/date-fns-locale';
@@ -92,7 +92,6 @@ export default function OperatorPage() {
     <div className="mx-auto max-w-5xl space-y-5">
       <div>
         <h1 className="text-foreground flex items-center gap-2 text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">
-          <Briefcase className="text-primary h-6 w-6" />
           {t('title')}
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">{t('subtitle')}</p>
