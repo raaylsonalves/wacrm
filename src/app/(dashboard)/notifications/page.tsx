@@ -310,7 +310,7 @@ export default function NotificationsPage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-foreground text-2xl font-bold">{t('title')}</h1>
+          <h1 className="text-foreground text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">{t('title')}</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             {t('description')}
           </p>
@@ -349,7 +349,7 @@ export default function NotificationsPage() {
             className={cn(
               'flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
               tab === key
-                ? 'border-primary bg-primary text-primary-foreground'
+                ? 'border-transparent bg-foreground text-background'
                 : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
@@ -359,8 +359,8 @@ export default function NotificationsPage() {
                 className={cn(
                   'rounded-full px-1.5 text-[11px] leading-5 tabular-nums',
                   tab === key
-                    ? 'bg-primary-foreground/20'
-                    : 'bg-primary text-primary-foreground'
+                    ? 'bg-background/20'
+                    : 'bg-tone-salmon text-tone-on font-bold'
                 )}
               >
                 {count}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { Sidebar } from '@/components/layout/sidebar';
@@ -55,7 +55,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           <BrandColorEffect />
           {/* Tab title + favicon from the account's branding. Headless. */}
           <AccountTabBranding />
-          <Sidebar open={sidebarOpen} onClose={closeSidebar} />
+          {/* useSearchParams in the sidebar needs a Suspense boundary. */}
+          <Suspense fallback={null}>
+            <Sidebar open={sidebarOpen} onClose={closeSidebar} />
+          </Suspense>
           <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
             <RouteProgress />
             {/* Operators only: "Operando: <client>" + the stale-tab guard. */}

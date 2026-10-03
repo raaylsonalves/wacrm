@@ -112,7 +112,7 @@ export default function CasesPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-foreground text-2xl font-bold">{t('title')}</h1>
+        <h1 className="text-foreground text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">{t('title')}</h1>
         <p className="text-muted-foreground max-w-2xl text-sm">{t('subtitle')}</p>
       </div>
 

@@ -209,7 +209,7 @@ export function InviteMemberDialog({
                 <Button
                   type="button"
                   onClick={copyToClipboard}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+                  className="bg-foreground hover:bg-foreground/90 text-background shrink-0"
                 >
                   <Copy className="size-4" />
                   {t('copy')}
@@ -251,7 +251,7 @@ export function InviteMemberDialog({
             <DialogFooter className="bg-popover border-border">
               <Button
                 onClick={() => onOpenChange(false)}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="bg-foreground hover:bg-foreground/90 text-background"
               >
                 {t('done')}
               </Button>
@@ -335,7 +335,7 @@ export function InviteMemberDialog({
               <Button
                 onClick={handleCreate}
                 disabled={submitting}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="bg-foreground hover:bg-foreground/90 text-background"
               >
                 {submitting ? (
                   <>

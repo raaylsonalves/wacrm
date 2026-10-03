@@ -363,7 +363,7 @@ export default function ContactsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+          <h1 className="text-foreground text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">{t('title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {totalCount > 0 ? t('subtitle', { count: totalCount }) : t('subtitleZero')}
           </p>
@@ -393,7 +393,7 @@ export default function ContactsPage() {
             canAct={canEdit}
             gateReason="addOrImportContacts"
             onClick={openAddForm}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            className="bg-foreground hover:bg-foreground/90 text-background"
           >
             <Plus className="size-4" />
             {t('addContactBtn')}
@@ -519,7 +519,7 @@ export default function ContactsPage() {
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-4 py-2">
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card px-4 py-2">
           <p className="text-sm text-foreground">
             {t('selectedCount', { count: selected.size })}
           </p>
@@ -547,7 +547,7 @@ export default function ContactsPage() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-border overflow-x-auto">
+      <div className="overflow-x-auto rounded-[22px] border border-border bg-card">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">

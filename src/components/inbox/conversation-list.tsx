@@ -689,7 +689,7 @@ export function ConversationList({
       <div className="border-border space-y-2.5 p-3 lg:border-b">
         {/* Desktop page heading (v2): the shell header steps aside on the
             inbox, so the list card carries the title. */}
-        <h1 className="text-foreground hidden px-1 pt-1 text-[22px] leading-tight font-bold tracking-[-0.02em] lg:block">
+        <h1 className="text-foreground px-1 pt-1 text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[22px]">
           {tHeader('inbox')}
         </h1>
         {/* The inbox as a to-do list — tap a queue, tap again to clear. */}
@@ -1337,7 +1337,7 @@ function ConversationItem({
               </span>
             )}
             {conversation.unread_count > 0 && (
-              <span className="bg-primary text-primary-foreground flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold">
+              <span className="bg-tone-salmon text-tone-on flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums">
                 {conversation.unread_count}
               </span>
             )}

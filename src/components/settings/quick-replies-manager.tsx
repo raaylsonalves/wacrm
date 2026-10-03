@@ -151,7 +151,7 @@ export function QuickRepliesManager() {
           {items.map((qr) => (
             <li
               key={qr.id}
-              className="flex items-start gap-3 rounded-lg border border-border bg-card p-3"
+              className="flex items-start gap-3 rounded-xl border border-border bg-card p-3"
             >
               {qr.kind === "interactive" ? (
                 <Zap className="mt-0.5 h-4 w-4 shrink-0 text-primary" />

@@ -639,7 +639,7 @@ export function ContactDetailView({
                     <Button
                       onClick={saveDetails}
                       disabled={savingDetails}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
+                      className="bg-foreground hover:bg-foreground/90 text-background w-full"
                       size="sm"
                     >
                       {savingDetails ? (
@@ -740,7 +740,7 @@ export function ContactDetailView({
                     <Button
                       onClick={addNote}
                       disabled={!newNote.trim() || savingNote}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                      className="bg-foreground hover:bg-foreground/90 text-background"
                       size="sm"
                     >
                       {savingNote ? (
@@ -834,7 +834,7 @@ export function ContactDetailView({
                       <Button
                         onClick={saveCustomFields}
                         disabled={savingCustom}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
+                        className="bg-foreground hover:bg-foreground/90 text-background w-full"
                         size="sm"
                       >
                         {savingCustom ? (

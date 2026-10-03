@@ -234,7 +234,7 @@ export function SettingsOverview({
           {profile?.avatar_url ? (
             <AvatarImage src={profile.avatar_url} alt={displayName} />
           ) : null}
-          <AvatarFallback className="bg-primary/10 text-xl text-primary">
+          <AvatarFallback className="bg-tone-blue text-tone-on text-xl font-bold">
             {initial}
           </AvatarFallback>
         </Avatar>
@@ -271,7 +271,7 @@ export function SettingsOverview({
                 'hover:border-primary-soft-2 hover:bg-card-2',
               )}
             >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-tone-lilac-soft text-tone-lilac-ink">
                 <Icon className="size-4" />
               </span>
               <span className="min-w-0 flex-1">

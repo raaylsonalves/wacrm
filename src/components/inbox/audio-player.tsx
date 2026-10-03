@@ -129,7 +129,7 @@ export function AudioPlayer({
           'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
           outgoing
             ? 'bg-primary-foreground/20 text-primary-foreground'
-            : 'bg-primary text-primary-foreground'
+            : 'bg-foreground text-background'
         )}
       >
         {playing ? (

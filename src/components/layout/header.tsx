@@ -1,23 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Bell, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { LogOut, Menu, Settings as SettingsIcon, User } from "lucide-react";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ModeToggle } from "@/components/layout/mode-toggle";
-import { PushStatusButton } from "@/components/notifications/push-status-button";
+import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
 import { cn } from "@/lib/utils";
 
 const pageTitles: Record<string, string> = {
@@ -41,7 +30,26 @@ const sidebarTitles: Record<string, string> = {
   "/prospecting": "prospecting",
 };
 
-const OWN_HEADING = ["/dashboard", "/inbox"];
+// Pages that open with their own heading (v2): the greeting, the
+// "Conversas" list card, or a page h1 with its description and actions.
+// The shell header shows no title there — on desktop it disappears, on
+// phones only the account pill + bell row stays.
+const OWN_HEADING: RegExp[] = [
+  /^\/dashboard$/,
+  /^\/inbox(\/|$)/,
+  /^\/agents$/,
+  /^\/automations$/,
+  /^\/automations\/[^/]+\/logs$/,
+  /^\/broadcasts(\/[^/]+)?$/,
+  /^\/cases$/,
+  /^\/contacts$/,
+  /^\/flows$/,
+  /^\/flows\/[^/]+\/runs$/,
+  /^\/notifications$/,
+  /^\/operator$/,
+  /^\/prospecting$/,
+  /^\/settings$/,
+];
 
 function sidebarTitleKey(pathname: string): string | undefined {
   return Object.entries(sidebarTitles).find(([path]) => pathname.startsWith(path))?.[1];
@@ -55,118 +63,89 @@ function getPageTitleKey(pathname: string): string {
   return match ? match[1] : "dashboard";
 }
 
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
+
 interface HeaderProps {
-  /** Wired to the shell's drawer state. Used only on mobile — the
-   *  hamburger button is hidden on lg+. */
+  /** Opens the sidebar drawer on phones (the account pill). */
   onOpenSidebar?: () => void;
 }
 
-import { useTranslations } from "next-intl";
-
-export function Header({ onOpenSidebar }: HeaderProps) {
+/**
+ * v2 shell header. Phones (M2): the account pill (opens the menu drawer)
+ * and the notifications bell, then the page title when the page has no
+ * heading of its own. Desktop: just the 28px title — the account, theme
+ * and push controls live in the sidebar. Hidden inside an open
+ * conversation on phones, where the thread header takes the top.
+ */
+function HeaderInner({ onOpenSidebar }: HeaderProps) {
   const t = useTranslations("Header");
   const tSidebar = useTranslations("Sidebar");
   const pathname = usePathname();
-  const { profile, signOut } = useAuth();
+  const params = useSearchParams();
+  const { account } = useAuth();
+  const unread = useUnreadNotifications();
   const titleKey = getPageTitleKey(pathname);
-  // v2: on desktop these pages open with their own heading (the greeting,
-  // the "Conversas" list card), so the shell header steps aside there.
-  const ownHeading = OWN_HEADING.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const sidebarKey = sidebarTitleKey(pathname);
-
-  const initial =
-    profile?.full_name?.charAt(0)?.toUpperCase() ??
-    profile?.email?.charAt(0)?.toUpperCase() ??
-    "U";
+  const ownHeading = OWN_HEADING.some((re) => re.test(pathname));
+  const inThread = pathname.startsWith("/inbox") && params.has("c");
+  const accountName = account?.display_name || account?.name || tSidebar("title");
 
   return (
-    <header className={cn("flex h-16 shrink-0 items-center justify-between gap-3 px-4 lg:h-auto lg:px-6 lg:pt-6 lg:pb-0", ownHeading && "lg:hidden")}>
-      <div className="flex min-w-0 items-center gap-2">
-        {/* Hamburger — mobile only. 44×44 hit target per Apple HIG. */}
+    <header
+      className={cn(
+        "shrink-0 px-4 pt-3 pb-1 lg:px-6 lg:pt-6 lg:pb-0",
+        ownHeading && "lg:hidden",
+        inThread && "max-lg:hidden",
+      )}
+    >
+      <div className="flex items-center justify-between gap-3 lg:hidden">
         <button
           type="button"
           onClick={onOpenSidebar}
           aria-label={t("openMenu")}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors duration-150 ease-out hover:bg-muted lg:hidden"
+          className="border-border bg-card hover:bg-muted flex min-h-11 min-w-0 items-center gap-2 rounded-full border py-1 pr-3 pl-1 transition-colors duration-150 ease-out"
         >
-          <Menu className="h-5 w-5" />
+          {account?.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- account-supplied URL
+            <img src={account.logo_url} alt="" className="size-[34px] shrink-0 rounded-full object-contain" />
+          ) : (
+            <span className="bg-tone-salmon text-tone-on flex size-[34px] shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold">
+              {initialsOf(accountName)}
+            </span>
+          )}
+          <span className="text-foreground truncate text-[13px] font-semibold">{accountName}</span>
+          <ChevronDown className="text-muted-foreground size-4 shrink-0" />
         </button>
-        <h1 className="truncate text-lg font-bold tracking-tight text-foreground sm:text-xl lg:text-[28px] lg:leading-tight lg:tracking-[-0.02em]">
+        <Link
+          href="/notifications"
+          aria-label={tSidebar("notifications")}
+          className="border-border bg-card text-foreground hover:bg-muted relative flex size-11 shrink-0 items-center justify-center rounded-full border transition-colors duration-150 ease-out"
+        >
+          <Bell className="size-[18px]" />
+          {unread > 0 && (
+            <span className="bg-tone-salmon text-tone-on absolute -top-1 -right-1 min-w-5 rounded-full px-1 text-center text-[10px] leading-5 font-bold tabular-nums">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </Link>
+      </div>
+      {!ownHeading && (
+        <h1 className="text-foreground mt-3 truncate text-[26px] leading-tight font-bold tracking-[-0.02em] lg:mt-0 lg:text-[28px]">
           {sidebarKey ? tSidebar(sidebarKey) : t(titleKey as string)}
         </h1>
-      </div>
-
-      <div className="flex items-center gap-1 sm:gap-2 lg:hidden">
-        <PushStatusButton />
-        <ModeToggle />
-
-        <DropdownMenu>
-        <DropdownMenuTrigger
-          className="flex items-center gap-2 rounded-full border border-transparent p-0.5 transition-colors duration-150 ease-out hover:border-border hover:bg-card focus-visible:border-border focus-visible:bg-card focus:outline-none data-popup-open:border-border data-popup-open:bg-card sm:gap-2.5 sm:pr-3.5"
-          aria-label={t("openAccountMenu")}
-        >
-          <Avatar className="size-8">
-            {profile?.avatar_url ? (
-              <AvatarImage
-                src={profile.avatar_url}
-                alt={profile.full_name ?? t("defaultAvatar")}
-              />
-            ) : null}
-            <AvatarFallback className="bg-tone-blue text-sm font-semibold text-tone-on">
-              {initial}
-            </AvatarFallback>
-          </Avatar>
-          <span className="hidden text-sm font-medium text-foreground sm:inline">
-            {profile?.full_name ?? t("defaultUser")}
-          </span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          sideOffset={6}
-          className="min-w-56 bg-popover text-popover-foreground ring-border"
-        >
-          <div className="px-2 py-1.5">
-            <p className="truncate text-sm font-medium text-foreground">
-              {profile?.full_name ?? t("defaultUser")}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {profile?.email ?? ""}
-            </p>
-          </div>
-          <DropdownMenuSeparator className="bg-border" />
-          <DropdownMenuItem
-            render={
-              <Link
-                href="/settings?tab=profile"
-                className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
-              />
-            }
-          >
-            <User className="size-4" />
-            {t("menuProfile")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            render={
-              <Link
-                href="/settings?tab=whatsapp"
-                className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
-              />
-            }
-          >
-            <SettingsIcon className="size-4" />
-            {t("menuSettings")}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator className="bg-border" />
-          <DropdownMenuItem
-            onClick={signOut}
-            className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
-          >
-            <LogOut className="size-4" />
-            {t("menuSignOut")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      )}
     </header>
+  );
+}
+
+export function Header(props: HeaderProps) {
+  // useSearchParams needs a Suspense boundary under the App Router.
+  return (
+    <Suspense fallback={null}>
+      <HeaderInner {...props} />
+    </Suspense>
   );
 }

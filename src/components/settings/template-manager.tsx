@@ -1106,7 +1106,7 @@ export function TemplateManager() {
             <Button
               onClick={handleSubmit}
               disabled={submitting || form.category === 'Authentication'}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="bg-foreground hover:bg-foreground/90 text-background"
             >
               {submitting ? (
                 <>

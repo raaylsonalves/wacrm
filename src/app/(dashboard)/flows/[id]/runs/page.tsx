@@ -179,7 +179,7 @@ export default function FlowRunsPage() {
         <ArrowLeft className="h-3 w-3" />
         {flow.name}
       </button>
-      <h1 className="text-xl font-semibold text-foreground">{t("title")}</h1>
+      <h1 className="text-foreground text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">{t("title")}</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         {t("description")}
       </p>
@@ -230,7 +230,7 @@ function RunCard({
       })
     : null;
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="rounded-xl border border-border bg-card">
       <button
         type="button"
         onClick={onToggle}

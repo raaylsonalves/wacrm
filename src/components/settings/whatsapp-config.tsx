@@ -970,7 +970,7 @@ export function WhatsAppConfig() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="bg-foreground hover:bg-foreground/90 text-background"
             >
               {saving ? (
                 <>
@@ -1038,7 +1038,7 @@ export function WhatsAppConfig() {
                 <AccordionItem className="border-border">
                   <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                     <span className="flex items-center gap-2">
-                      <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-xs font-bold">
+                      <span className="bg-foreground text-background flex size-5 items-center justify-center rounded-full text-xs font-bold">
                         1
                       </span>
                       {t('step1')}
@@ -1057,7 +1057,7 @@ export function WhatsAppConfig() {
                 <AccordionItem className="border-border">
                   <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                     <span className="flex items-center gap-2">
-                      <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-xs font-bold">
+                      <span className="bg-foreground text-background flex size-5 items-center justify-center rounded-full text-xs font-bold">
                         2
                       </span>
                       {t('step2')}
@@ -1075,7 +1075,7 @@ export function WhatsAppConfig() {
                 <AccordionItem className="border-border">
                   <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                     <span className="flex items-center gap-2">
-                      <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-xs font-bold">
+                      <span className="bg-foreground text-background flex size-5 items-center justify-center rounded-full text-xs font-bold">
                         3
                       </span>
                       {t('step3')}
@@ -1100,7 +1100,7 @@ export function WhatsAppConfig() {
                 <AccordionItem className="border-border">
                   <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                     <span className="flex items-center gap-2">
-                      <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-xs font-bold">
+                      <span className="bg-foreground text-background flex size-5 items-center justify-center rounded-full text-xs font-bold">
                         4
                       </span>
                       {t('step4')}

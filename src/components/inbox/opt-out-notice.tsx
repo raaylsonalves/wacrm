@@ -123,7 +123,7 @@ export function OptOutNotice({
               type="button"
               disabled={busy}
               onClick={() => void reactivate()}
-              className="bg-primary text-primary-foreground inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium disabled:opacity-60"
+              className="bg-foreground text-background inline-flex items-center gap-1 rounded-full px-3 py-1 font-medium disabled:opacity-60"
             >
               {busy && <Loader2 className="h-3 w-3 animate-spin" />}
               {t('confirmYes')}

@@ -191,7 +191,7 @@ export function CustomFieldsPanel() {
         <Button
           onClick={handleCreate}
           disabled={creating || !newName.trim()}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+          className="bg-foreground hover:bg-foreground/90 text-background shrink-0"
         >
           {creating ? (
             <Loader2 className="size-4 animate-spin" />

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
@@ -176,6 +176,9 @@ import { PushStatusButton } from '@/components/notifications/push-status-button'
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations('Sidebar');
   const pathname = usePathname();
+  // The Canais entry is /settings?tab=whatsapp: it and Settings share a
+  // path, so the query decides which of the two is the current page.
+  const settingsTab = useSearchParams().get('tab');
   const { profile, profileLoading, account, accountRole, signOut } = useAuth();
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
@@ -342,10 +345,12 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                   // never includes one, so compare against the path part
                   // only, or this item would never highlight as active.
                   const itemPath = item.href.split('?')[0];
-                  const isActive =
-                    pathname === itemPath ||
-                    (itemPath !== '/dashboard' &&
-                      pathname.startsWith(itemPath));
+                  const itemTab = item.href.includes('?tab=') ? item.href.split('?tab=')[1] : null;
+                  const isActive = itemTab
+                    ? pathname === itemPath && settingsTab === itemTab
+                    : pathname === itemPath ||
+                      (itemPath !== '/dashboard' &&
+                        pathname.startsWith(itemPath));
 
                   const showUnreadDot =
                     item.href === '/inbox' && totalUnread > 0 && !isActive;
@@ -434,7 +439,9 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
           <ul className="flex flex-col gap-0.5">
             {bottomNavItems.filter((item) => (!item.operatorOnly || isOperator) && allowed(item.href)).map((item) => {
-              const isActive = pathname.startsWith(item.href);
+              const isActive =
+                pathname.startsWith(item.href) &&
+                !(item.href === '/settings' && settingsTab === 'whatsapp');
               return (
                 <li key={item.href}>
                   <Link
@@ -577,7 +584,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           </DropdownMenu>
           {/* Desktop home of the header's mode + push controls (v2 has no
               top bar); phones keep them in the header. */}
-          <div className={cn('hidden shrink-0 items-center lg:flex', collapsed && 'lg:flex-col')}>
+          <div className={cn('flex shrink-0 items-center', collapsed && 'lg:flex-col')}>
             <PushStatusButton />
             <ModeToggle className="rounded-full" />
           </div>

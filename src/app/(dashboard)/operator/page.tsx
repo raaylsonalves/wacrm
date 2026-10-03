@@ -91,7 +91,7 @@ export default function OperatorPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <div>
-        <h1 className="text-foreground flex items-center gap-2 text-2xl font-bold">
+        <h1 className="text-foreground flex items-center gap-2 text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">
           <Briefcase className="text-primary h-6 w-6" />
           {t('title')}
         </h1>

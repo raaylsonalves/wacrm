@@ -121,7 +121,7 @@ function SettingsPageInner() {
   return (
     <div>
       <div>
-        <h1 className="text-foreground text-2xl font-bold tracking-tight">
+        <h1 className="text-foreground text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">
           {t('pageTitle')}
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">{t('pageDesc')}</p>

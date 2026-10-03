@@ -374,7 +374,7 @@ export function ContactForm({
             <Button
               type="submit"
               disabled={saving || checkingDup || (!isEdit && !!dupMatch?.exact)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="bg-foreground hover:bg-foreground/90 text-background"
             >
               {saving && <Loader2 className="size-4 animate-spin" />}
               {isEdit ? t('update') : t('create')}

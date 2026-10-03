@@ -183,7 +183,7 @@ export function AiPlayground({
                     className={cn(
                       'rounded-2xl px-3.5 py-2 text-sm',
                       turn.role === 'user'
-                        ? 'rounded-br-sm bg-primary text-primary-foreground'
+                        ? 'rounded-br-md bg-tone-lilac-soft text-foreground'
                         : 'rounded-bl-sm bg-muted text-foreground',
                     )}
                   >

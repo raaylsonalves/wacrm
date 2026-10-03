@@ -146,7 +146,7 @@ export default function NewBroadcastPage() {
     <div className="mx-auto max-w-3xl space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+        <h1 className="text-foreground text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">{t('title')}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {t('subtitle')}
         </p>
@@ -164,9 +164,9 @@ export default function NewBroadcastPage() {
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-all ${
                     isCompleted
-                      ? 'bg-primary text-primary-foreground'
+                      ? 'bg-foreground text-background'
                       : isActive
-                        ? 'border-2 border-primary bg-primary/10 text-primary'
+                        ? 'border-2 border-foreground bg-card text-foreground'
                         : 'border border-border bg-muted text-muted-foreground'
                   }`}
                 >

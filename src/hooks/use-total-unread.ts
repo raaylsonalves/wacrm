@@ -42,8 +42,11 @@ export function useTotalUnread(): number {
       setTotal(sum);
     })();
 
+    // Unique topic per hook instance: supabase-js hands back the same
+    // channel for a repeated topic, so a second consumer mounted at once
+    // (sidebar + header) would add callbacks to a subscribed channel.
     const channel = supabase
-      .channel("total-unread-realtime")
+      .channel(`total-unread-realtime:${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "conversations" },

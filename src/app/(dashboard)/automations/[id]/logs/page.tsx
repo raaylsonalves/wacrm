@@ -93,7 +93,7 @@ export default function AutomationLogsPage({
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div>
-          <h1 className="text-foreground text-2xl font-bold">
+          <h1 className="text-foreground text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">
             {automation.name}
           </h1>
           <p className="text-muted-foreground mt-0.5 text-sm">{t('title')}</p>

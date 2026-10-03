@@ -97,9 +97,9 @@ export function SettingsRail({
                       // Mobile: YouTube-style solid pill chips. Desktop
                       // (lg:) resets back to a full-width vertical menu row.
                       'flex shrink-0 items-center gap-2.5 rounded-full px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
-                      'lg:w-full lg:rounded-lg',
+                      'lg:w-full lg:rounded-xl',
                       isActive
-                        ? 'bg-foreground text-background lg:bg-primary-soft lg:text-primary'
+                        ? 'bg-foreground text-background'
                         : 'bg-muted text-muted-foreground hover:bg-muted/70 lg:hover:bg-muted lg:hover:text-foreground lg:bg-transparent'
                     )}
                   >
@@ -109,7 +109,7 @@ export function SettingsRail({
                       <span
                         className={cn(
                           'hidden items-center gap-1.5 text-xs lg:inline-flex',
-                          isActive ? 'text-primary' : 'text-muted-foreground'
+                          isActive ? 'text-background/70' : 'text-muted-foreground'
                         )}
                       >
                         {hints[s]}
