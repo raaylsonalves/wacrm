@@ -67,6 +67,51 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --color-tone-on: var(--tone-on);
+  --color-tone-lilac: var(--tone-lilac);
+  --color-tone-lilac-soft: var(--tone-lilac-soft);
+  --color-tone-lilac-ink: var(--tone-lilac-ink);
+  --color-tone-salmon: var(--tone-salmon);
+  --color-tone-salmon-soft: var(--tone-salmon-soft);
+  --color-tone-salmon-ink: var(--tone-salmon-ink);
+  --color-tone-blue: var(--tone-blue);
+  --color-tone-blue-soft: var(--tone-blue-soft);
+  --color-tone-blue-ink: var(--tone-blue-ink);
+  --color-tone-mint: var(--tone-mint);
+  --color-tone-mint-soft: var(--tone-mint-soft);
+  --color-tone-mint-ink: var(--tone-mint-ink);
+  --color-tone-pink-soft: var(--tone-pink-soft);
+  --color-tone-pink-ink: var(--tone-pink-ink);
+}
+
+/*
+ * MOTION: the app moves on three durations and two curves (the
+ * "Guia de movimento" board in the design canvas). Overriding Tailwind's
+ * stock `ease-out` / `ease-in-out` retunes every existing transition at
+ * once; pair them with duration-150 (press, hover, leaving), duration-250
+ * (toasts, panels, tabs) or duration-400 (reordering, counters). Leaving
+ * is always the fast one.
+ */
+@theme {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --animate-enter: enter 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-shimmer: shimmer 1.2s linear infinite;
+
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  @keyframes shimmer {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -100% 0;
+    }
+  }
 }
 
 /* ============================================================
@@ -100,61 +145,94 @@
 
 :root,
 html[data-mode="dark"] {
-  --background: oklch(0.13 0.01 260);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.18 0.01 260);
-  --card-2: oklch(0.205 0.01 260);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.18 0.01 260);
-  --popover-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.22 0.01 260);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.22 0.01 260);
-  --muted-foreground: oklch(0.65 0.01 260);
-  --accent: oklch(0.22 0.01 260);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.28 0.01 260);
-  --input: oklch(0.28 0.01 260);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.16 0.01 260);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.22 0.01 260);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.28 0.01 260);
+  --background: #141318;
+  --foreground: #f2f0ec;
+  --card: #1c1b21;
+  --card-2: #24232b;
+  --card-foreground: #f2f0ec;
+  --popover: #1c1b21;
+  --popover-foreground: #f2f0ec;
+  --secondary: #24232b;
+  --secondary-foreground: #f2f0ec;
+  --muted: #24232b;
+  --muted-foreground: #aaa5b5;
+  --accent: #24232b;
+  --accent-foreground: #f2f0ec;
+  --destructive: oklch(0.65 0.2 25);
+  --border: #2f2d37;
+  --input: #34323d;
+  --chart-2: #9ab7ea;
+  --chart-3: #9fd8bd;
+  --chart-4: #ef9d7f;
+  --chart-5: #b9a2f2;
+  --radius: 0.875rem;
+  --sidebar: #1c1b21;
+  --sidebar-foreground: #f2f0ec;
+  --sidebar-accent: #24232b;
+  --sidebar-accent-foreground: #f2f0ec;
+  --sidebar-border: #2f2d37;
+  /* v2 pastel tones for decorative surfaces (KPI cards, tags, avatars).
+   * `--tone-*` is the solid swatch (always with --tone-on text), `-soft`
+   * a tinted background and `-ink` the readable text on that tint. */
+  --tone-on: #1d1b18;
+  --tone-lilac: #b9a2f2;
+  --tone-lilac-soft: #2c2442;
+  --tone-lilac-ink: #d4c6ff;
+  --tone-salmon: #ef9d7f;
+  --tone-salmon-soft: #3a2817;
+  --tone-salmon-ink: #f8c38f;
+  --tone-blue: #9ab7ea;
+  --tone-blue-soft: #1b2a42;
+  --tone-blue-ink: #a9c6f5;
+  --tone-mint: #9fd8bd;
+  --tone-mint-soft: #173328;
+  --tone-mint-ink: #9fe3c2;
+  --tone-pink-soft: #3a1f29;
+  --tone-pink-ink: #f5b3c6;
 }
 
 html[data-mode="light"] {
-  --background: oklch(0.99 0.002 260);
-  --foreground: oklch(0.21 0.01 260);
-  --card: oklch(1 0 0);
-  --card-2: oklch(0.985 0.002 260);
-  --card-foreground: oklch(0.21 0.01 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.01 260);
-  --secondary: oklch(0.967 0.003 260);
-  --secondary-foreground: oklch(0.25 0.01 260);
-  --muted: oklch(0.967 0.003 260);
-  --muted-foreground: oklch(0.52 0.015 260);
-  --accent: oklch(0.96 0.004 260);
-  --accent-foreground: oklch(0.25 0.01 260);
+  --background: #f3eee6;
+  --foreground: #1d1b18;
+  --card: #fffdf9;
+  --card-2: #f7f2e9;
+  --card-foreground: #1d1b18;
+  --popover: #fffdf9;
+  --popover-foreground: #1d1b18;
+  --secondary: #f1ebe1;
+  --secondary-foreground: #1d1b18;
+  --muted: #f1ebe1;
+  --muted-foreground: #6b655b;
+  --accent: #f1ebe1;
+  --accent-foreground: #1d1b18;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0.004 260);
-  --input: oklch(0.922 0.004 260);
-  --chart-2: oklch(0.6 0.1 260);
-  --chart-3: oklch(0.7 0.06 260);
-  --chart-4: oklch(0.8 0.04 260);
-  --chart-5: oklch(0.87 0.03 260);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0.002 260);
-  --sidebar-foreground: oklch(0.21 0.01 260);
-  --sidebar-accent: oklch(0.96 0.004 260);
-  --sidebar-accent-foreground: oklch(0.25 0.01 260);
-  --sidebar-border: oklch(0.922 0.004 260);
+  --border: #ebe3d4;
+  --input: #e3dacb;
+  --chart-2: #adc6f0;
+  --chart-3: #bfe6d2;
+  --chart-4: #f7ad90;
+  --chart-5: #cdb8f6;
+  --radius: 0.875rem;
+  --sidebar: #fffdf9;
+  --sidebar-foreground: #1d1b18;
+  --sidebar-accent: #f1ebe1;
+  --sidebar-accent-foreground: #1d1b18;
+  --sidebar-border: #ebe3d4;
+  --tone-on: #1d1b18;
+  --tone-lilac: #cdb8f6;
+  --tone-lilac-soft: #ece4fc;
+  --tone-lilac-ink: #4a3794;
+  --tone-salmon: #f7ad90;
+  --tone-salmon-soft: #fde6cf;
+  --tone-salmon-ink: #8a4a12;
+  --tone-blue: #adc6f0;
+  --tone-blue-soft: #dde8fb;
+  --tone-blue-ink: #23508e;
+  --tone-mint: #bfe6d2;
+  --tone-mint-soft: #dcf1e6;
+  --tone-mint-ink: #1d6a46;
+  --tone-pink-soft: #fbe0e7;
+  --tone-pink-ink: #8e2b49;
 }
 
 /* ---- ACCENT: primary color ---- */
@@ -241,6 +319,116 @@ html[data-theme="rose"] {
   }
 }
 
+/* "Reduce motion" turns movement into an instant change; spinners keep
+   turning because a frozen one reads as a hung page. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
+}
+
+/* Opening mural (components/layout/splash-screen.tsx). Stickers settle in
+   one by one (250ms, 70ms apart), their icons make one small gesture, the
+   bar fills; on leave everything fades in 150ms and the screen in 250ms. */
+.splash {
+  transition: opacity 250ms var(--ease-out) 150ms;
+}
+.splash[data-leaving] {
+  opacity: 0;
+  pointer-events: none;
+}
+.splash-card {
+  animation: enter 250ms var(--ease-out) both;
+}
+.splash[data-leaving] .splash-card {
+  opacity: 0;
+  transition: opacity 150ms ease-in;
+}
+.splash-sticker {
+  transform: rotate(var(--r));
+  animation: sticker-in 250ms var(--ease-out) both;
+  animation-delay: calc(var(--i) * 70ms + 100ms);
+}
+.splash[data-leaving] .splash-sticker {
+  animation: none;
+  opacity: 0;
+  transform: rotate(var(--r)) scale(0.96);
+  transition:
+    opacity 150ms ease-in,
+    transform 150ms ease-in;
+  transition-delay: calc(var(--i) * 30ms);
+}
+.splash-bar {
+  animation: splash-load 900ms var(--ease-in-out) forwards;
+}
+.splash[data-leaving] .splash-bar {
+  animation: splash-done 250ms var(--ease-out) forwards;
+}
+.splash-sticker .sticker-draw {
+  stroke-dasharray: 100;
+  animation: sticker-draw 250ms var(--ease-in-out) 600ms both;
+}
+.splash-sticker .sticker-bar {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: sticker-grow 250ms var(--ease-out) both;
+  animation-delay: 550ms;
+}
+.splash-sticker .sticker-bar:nth-child(2) {
+  animation-delay: 600ms;
+}
+.splash-sticker .sticker-bar:nth-child(3) {
+  animation-delay: 650ms;
+}
+@keyframes sticker-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.85) rotate(calc(var(--r) + var(--r-in)));
+  }
+  to {
+    opacity: 1;
+    transform: rotate(var(--r));
+  }
+}
+@keyframes splash-load {
+  from {
+    transform: scaleX(0.06);
+  }
+  to {
+    transform: scaleX(0.7);
+  }
+}
+@keyframes splash-done {
+  from {
+    transform: scaleX(0.7);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes sticker-draw {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes sticker-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
 /* Inbox thread backdrop — WhatsApp's tinted wall with a faint dot
    texture, derived from the theme so every accent/mode keeps contrast
    against the white (light) / card (dark) inbound bubbles. */
@@ -262,6 +450,6 @@ html[data-mode="dark"] .chat-wallpaper {
 }
 @media (max-width: 1023.98px) {
   html[data-bottom-nav="on"] {
-    --bottom-nav: calc(4rem + env(safe-area-inset-bottom));
+    --bottom-nav: calc(5rem + env(safe-area-inset-bottom));
   }
 }

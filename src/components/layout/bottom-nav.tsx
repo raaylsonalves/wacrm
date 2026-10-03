@@ -75,8 +75,9 @@ function BottomNavInner({ onMore }: { onMore: () => void }) {
   return (
     <nav
       aria-label={t('label')}
-      className="border-border bg-card/95 supports-backdrop-filter:bg-card/80 flex shrink-0 items-stretch border-t pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+      className="shrink-0 px-3 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden"
     >
+      <div className="border-border bg-card/95 supports-backdrop-filter:bg-card/85 flex items-stretch gap-1 rounded-full border p-1.5 shadow-[0_8px_24px_rgb(0_0_0/0.08)] backdrop-blur">
       {TABS.filter((tab) => allowed(tab.href)).map(({ href, key, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
@@ -85,14 +86,14 @@ function BottomNavInner({ onMore }: { onMore: () => void }) {
             href={href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex h-16 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium',
-              active ? 'text-primary' : 'text-muted-foreground'
+              'flex h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[10.5px] font-semibold transition-colors duration-150 ease-out',
+              active ? 'bg-foreground text-background' : 'text-muted-foreground'
             )}
           >
             <span className="relative">
-              <Icon className={cn('h-6 w-6', active && 'fill-primary/15')} />
+              <Icon className="h-[18px] w-[18px]" />
               {key === 'inbox' && unread > 0 && (
-                <span className="absolute -top-1.5 -right-2.5 min-w-4.5 rounded-full bg-red-500 px-1 text-center text-[10px] leading-4.5 font-bold text-white tabular-nums">
+                <span className="bg-tone-salmon text-tone-on absolute -top-1.5 -right-2.5 min-w-4.5 rounded-full px-1 text-center text-[10px] leading-4.5 font-bold tabular-nums">
                   {unread > 99 ? '99+' : unread}
                 </span>
               )}
@@ -104,11 +105,12 @@ function BottomNavInner({ onMore }: { onMore: () => void }) {
       <button
         type="button"
         onClick={onMore}
-        className="text-muted-foreground flex h-16 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium"
+        className="text-muted-foreground flex h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[10.5px] font-semibold"
       >
-        <Menu className="h-6 w-6" />
+        <Menu className="h-[18px] w-[18px]" />
         {t('more')}
       </button>
+      </div>
     </nav>
   );
 }

@@ -249,14 +249,14 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       <aside
         className={cn(
           // Mobile: fixed drawer that slides in from the left.
-          'border-border bg-card fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r',
-          'transition-transform duration-200 ease-out will-change-transform',
+          'border-border bg-card fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col rounded-r-3xl border-r',
+          'transition-transform duration-250 ease-out will-change-transform',
           open ? 'translate-x-0' : '-translate-x-full',
           // Desktop: static, always visible — reset all the mobile framing.
           // Width transitions between the two lg: states so collapsing
           // the icon rail animates instead of snapping.
-          'lg:static lg:z-0 lg:translate-x-0 lg:transition-[width] lg:duration-200 lg:ease-out',
-          collapsed ? 'lg:w-16' : 'lg:w-60'
+          'lg:static lg:z-0 lg:translate-x-0 lg:rounded-3xl lg:border lg:transition-[width] lg:duration-250 lg:ease-out',
+          collapsed ? 'lg:w-17' : 'lg:w-62'
         )}
         aria-label={t('primaryNav')}
       >
@@ -265,7 +265,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             entirely and centers just that toggle in the narrow rail. */}
         <div
           className={cn(
-            'border-border flex h-14 shrink-0 items-center justify-between gap-2 border-b px-4',
+            'flex h-16 shrink-0 items-center justify-between gap-2 px-4',
             collapsed && 'lg:justify-center lg:px-0'
           )}
         >
@@ -284,11 +284,11 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 className="h-8 w-8 shrink-0 rounded-lg object-contain"
               />
             ) : (
-              <div className="bg-primary text-primary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
-                <MessageSquare className="h-4 w-4" />
+              <div className="bg-tone-lilac text-tone-on flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[15px] font-bold">
+                {(account?.display_name || t('title')).charAt(0).toUpperCase()}
               </div>
             )}
-            <span className="text-foreground truncate text-sm font-semibold">
+            <span className="text-foreground truncate text-[17px] font-bold tracking-tight">
               {account?.display_name || t('title')}
             </span>
           </Link>
@@ -296,7 +296,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             type="button"
             onClick={onClose}
             aria-label={t('closeMenu')}
-            className="text-muted-foreground hover:bg-muted hover:text-foreground flex h-9 w-9 items-center justify-center rounded-md lg:hidden"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground flex h-9 w-9 items-center justify-center rounded-full lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
@@ -305,7 +305,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             onClick={toggleCollapsed}
             aria-label={collapsed ? t('expandSidebar') : t('collapseSidebar')}
             title={collapsed ? t('expandSidebar') : t('collapseSidebar')}
-            className="text-muted-foreground hover:bg-muted hover:text-foreground hidden h-9 w-9 shrink-0 items-center justify-center rounded-md lg:flex"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground hidden h-9 w-9 shrink-0 items-center justify-center rounded-full lg:flex"
           >
             {collapsed ? (
               <PanelLeftOpen className="h-5 w-5" />
@@ -316,23 +316,23 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         </div>
 
         {/* Main navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <nav className="flex-1 overflow-y-auto px-3 pt-1 pb-4">
           {navGroups
             .map((g) => ({ ...g, items: g.items.filter((i) => allowed(i.href)) }))
             .filter((g) => g.items.length > 0)
             .map((group, groupIndex) => (
-            <div key={group.labelKey} className={cn(groupIndex > 0 && 'mt-4')}>
+            <div key={group.labelKey} className={cn(groupIndex > 0 && 'mt-3')}>
               {/* Group header — hidden in rail mode, same treatment
                   every other text label in the sidebar already gets. */}
               <p
                 className={cn(
-                  'text-muted-foreground/70 px-3 pb-1 text-[11px] font-semibold tracking-wider uppercase',
+                  'text-muted-foreground px-3 pt-2 pb-1 text-xs font-semibold',
                   collapsed && 'lg:hidden'
                 )}
               >
                 {t(group.labelKey as string)}
               </p>
-              <ul className="flex flex-col gap-1">
+              <ul className="flex flex-col gap-0.5">
                 {group.items.map((item) => {
                   // A nav href can carry a query string (the Canais entry
                   // points at /settings?tab=whatsapp) — usePathname()
@@ -363,11 +363,11 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                         }
                         className={cn(
                           // Taller on mobile so fingers can hit the row reliably (≥44px).
-                          'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2',
+                          'flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13.5px] font-medium transition-colors duration-150 ease-out lg:min-h-9.5',
                           collapsed && 'lg:justify-center lg:px-0',
                           isActive
-                            ? 'bg-primary/10 text-primary'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                            ? 'bg-foreground text-background'
+                            : 'text-foreground/80 hover:bg-muted hover:text-foreground'
                         )}
                       >
                         <item.icon className="h-4 w-4 shrink-0" />
@@ -397,8 +397,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                               collapsed && 'lg:hidden'
                             )}
                           >
-                            <span className="bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
-                            <span className="bg-primary relative inline-flex h-2 w-2 rounded-full" />
+                            <span className="bg-tone-salmon relative inline-flex h-2 w-2 rounded-full" />
                           </span>
                         )}
                         {showNotificationBadge && (
@@ -407,7 +406,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                               count: unreadNotifications,
                             })}
                             className={cn(
-                              'bg-primary text-primary-foreground flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold',
+                              'bg-tone-salmon text-tone-on flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums',
                               collapsed && 'lg:hidden'
                             )}
                           >
@@ -424,9 +423,9 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             </div>
           ))}
 
-          <div className="border-border my-4 border-t" />
+          <div className="border-border mx-3 my-3 border-t" />
 
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-0.5">
             {bottomNavItems.filter((item) => (!item.operatorOnly || isOperator) && allowed(item.href)).map((item) => {
               const isActive = pathname.startsWith(item.href);
               return (
@@ -435,11 +434,11 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     href={item.href}
                     title={collapsed ? t(item.labelKey as string) : undefined}
                     className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2',
+                      'flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13.5px] font-medium transition-colors duration-150 ease-out lg:min-h-9.5',
                       collapsed && 'lg:justify-center lg:px-0',
                       isActive
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        ? 'bg-foreground text-background'
+                        : 'text-foreground/80 hover:bg-muted hover:text-foreground'
                     )}
                   >
                     <item.icon className="h-4 w-4 shrink-0" />
@@ -502,7 +501,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 collapsed ? (profile?.full_name ?? t('defaultUser')) : undefined
               }
               className={cn(
-                'hover:bg-muted/60 focus:bg-muted/60 data-popup-open:bg-muted/60 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors focus:outline-none',
+                'hover:bg-muted focus-visible:bg-muted data-popup-open:bg-muted flex w-full items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition-colors duration-150 ease-out focus:outline-none',
                 collapsed && 'lg:justify-center lg:px-0'
               )}
             >
@@ -513,7 +512,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     alt={profile.full_name ?? t('defaultAvatar')}
                   />
                 ) : null}
-                <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                <AvatarFallback className="bg-tone-blue text-tone-on text-sm font-semibold">
                   {profile?.full_name?.charAt(0)?.toUpperCase() ??
                     profile?.email?.charAt(0)?.toUpperCase() ??
                     'U'}
