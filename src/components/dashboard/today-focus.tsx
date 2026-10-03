@@ -7,6 +7,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { ChevronRight, CornerUpLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+import { APP_LOCALE } from '@/lib/currency';
 import { dateFnsLocale } from '@/lib/date-fns-locale';
 import { cn } from '@/lib/utils';
 import {
@@ -135,11 +136,15 @@ export function useTodayData(): TodayData {
 export function TodayGreeting({ data }: { data: TodayData }) {
   const t = useTranslations('Today');
   const { profile } = useAuth();
-  const [hour] = useState(() => new Date().getHours());
+  const [now] = useState(() => new Date());
+  const hour = now.getHours();
   const total = data.priority.length + data.others.length;
+  // "Sexta-feira, 3 de outubro" — Intl gives each locale its own word order.
+  const dateLine = new Intl.DateTimeFormat(APP_LOCALE, { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
   return (
     <header className="space-y-1">
-      <h1 className="text-foreground text-2xl font-bold sm:text-3xl">
+      <p className="text-muted-foreground text-[13px] first-letter:uppercase">{dateLine}</p>
+      <h1 className="text-foreground text-[26px] leading-tight font-bold tracking-tight sm:text-[28px]">
         {t(`greeting.${greetingFor(hour)}`, { name: firstName(profile?.full_name) })} 👋
       </h1>
       {!data.loaded ? (
@@ -158,10 +163,10 @@ export function TodayGreeting({ data }: { data: TodayData }) {
 }
 
 const REASON_STYLE: Record<PriorityReason, string> = {
-  handoff: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  mine: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+  handoff: 'bg-tone-salmon-soft text-tone-salmon-ink',
+  mine: 'bg-tone-blue-soft text-tone-blue-ink',
   deal: '',
-  fresh: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
+  fresh: 'bg-tone-mint-soft text-tone-mint-ink',
 };
 
 /** Conversations tab: priority cards, the other unanswered, today's agenda. */
@@ -172,7 +177,7 @@ export function PriorityPanel({ data }: { data: TodayData }) {
     return (
       <div className="space-y-3">
         {[0, 1].map((i) => (
-          <div key={i} className="bg-muted/60 h-32 animate-pulse rounded-xl" />
+          <div key={i} className="bg-muted/60 h-32 animate-pulse rounded-[20px]" />
         ))}
       </div>
     );
@@ -184,7 +189,7 @@ export function PriorityPanel({ data }: { data: TodayData }) {
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
         {empty && (
-          <p className="text-muted-foreground rounded-xl border border-dashed p-8 text-center text-sm">
+          <p className="text-muted-foreground rounded-[20px] border border-dashed p-8 text-center text-sm">
             {t('noPriority')}
           </p>
         )}
@@ -201,7 +206,7 @@ export function PriorityPanel({ data }: { data: TodayData }) {
         {data.others.length > 0 && (
           <section className="space-y-3">
             <SectionTitle title={t('others')} count={data.others.length} />
-            <div className="bg-card divide-border divide-y rounded-xl border">
+            <div className="bg-card divide-border divide-y overflow-hidden rounded-[20px] border">
               {data.others.slice(0, 15).map((c) => (
                 <OtherRow key={c.id} conversation={c} />
               ))}
@@ -219,18 +224,18 @@ export function PriorityPanel({ data }: { data: TodayData }) {
       <section className="space-y-3">
         <SectionTitle title={t('agendaToday')} count={data.todayAppts.length} />
         {data.todayAppts.length === 0 ? (
-          <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">
+          <p className="text-muted-foreground rounded-[20px] border border-dashed p-6 text-center text-sm">
             {t('noAgenda')}
           </p>
         ) : (
-          <div className="bg-card divide-border divide-y rounded-xl border">
+          <div className="bg-card divide-border divide-y overflow-hidden rounded-[20px] border">
             {data.todayAppts.map((a) => (
               <Link
                 key={a.id}
                 href={a.conversation_id ? `/inbox?c=${a.conversation_id}` : '/agenda'}
                 className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3"
               >
-                <span className="text-primary w-12 shrink-0 text-sm font-semibold tabular-nums">
+                <span className="bg-tone-salmon-soft text-tone-salmon-ink w-14 shrink-0 rounded-full py-0.5 text-center text-xs font-bold tabular-nums">
                   {format(new Date(a.starts_at), 'HH:mm')}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -251,7 +256,7 @@ export function PriorityPanel({ data }: { data: TodayData }) {
 
 function SectionTitle({ title, count }: { title: string; count: number }) {
   return (
-    <h2 className="text-foreground flex items-center gap-2 font-semibold">
+    <h2 className="text-foreground flex items-center gap-2 text-base font-bold">
       {title}
       {count > 0 && (
         <span className="bg-muted text-muted-foreground rounded-full px-2 text-xs leading-5 tabular-nums">
@@ -268,7 +273,7 @@ function Avatar({ c, size }: { c: Conversation; size: 'md' | 'sm' }) {
   return (
     <div
       className={cn(
-        'bg-primary/10 text-primary flex shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-semibold',
+        'bg-tone-lilac text-tone-on flex shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold',
         dim
       )}
     >
@@ -298,7 +303,7 @@ function PriorityCard({
   const contact = c.contact;
   const stage = contact?.dealStage;
   return (
-    <div className="bg-card rounded-xl border p-4">
+    <div className="bg-card rounded-[20px] border p-4">
       <div className="flex items-start gap-3">
         <Avatar c={c} size="md" />
         <div className="min-w-0 flex-1">
@@ -332,14 +337,14 @@ function PriorityCard({
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Link
               href={`/inbox?c=${c.id}&focus=1`}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-9 items-center justify-center gap-1.5 rounded-lg text-sm font-medium"
+              className="bg-foreground text-background hover:bg-foreground/90 flex h-10 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold transition-colors duration-150 ease-out"
             >
               <CornerUpLeft className="h-4 w-4" />
               {t('reply')}
             </Link>
             <Link
               href={`/inbox?c=${c.id}`}
-              className="border-border text-foreground hover:bg-muted flex h-9 items-center justify-center rounded-lg border text-sm font-medium"
+              className="border-border text-foreground hover:bg-muted flex h-10 items-center justify-center rounded-full border text-[13px] font-semibold transition-colors duration-150 ease-out"
             >
               {t('viewConversation')}
             </Link>

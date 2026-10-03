@@ -11,6 +11,7 @@ import {
   normalizeConversations,
 } from '@/lib/inbox/conversations';
 import { cn } from '@/lib/utils';
+import { TONE_SOLID, toneFor } from '@/lib/tones';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
 import { useCan } from '@/hooks/use-can';
@@ -682,9 +683,9 @@ export function ConversationList({
     // w-full on mobile so the list occupies the whole viewport when it's
     // the single pane showing; fixed 320px on desktop where it shares the
     // row with the thread + contact sidebar.
-    <div className="border-border bg-card flex h-full w-full flex-col border-r lg:w-80">
+    <div className="bg-card flex h-full w-full flex-col lg:w-80">
       {/* Search + Filter */}
-      <div className="border-border space-y-2 border-b p-3">
+      <div className="border-border space-y-2.5 border-b p-3">
         {/* The inbox as a to-do list — tap a queue, tap again to clear. */}
         <div className="grid grid-cols-3 gap-1.5">
           {(
@@ -700,10 +701,10 @@ export function ConversationList({
               onClick={() => setQueue((q) => (q === key ? null : key))}
               aria-pressed={queue === key}
               className={cn(
-                'flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors max-[419px]:gap-1 max-[419px]:px-1',
+                'flex min-h-9 min-w-0 items-center justify-center gap-1.5 rounded-full border px-2 text-xs font-semibold transition-colors duration-150 ease-out max-[419px]:gap-1 max-[419px]:px-1',
                 queue === key
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-foreground text-background border-transparent'
+                  : 'border-border text-foreground/80 hover:bg-muted hover:text-foreground'
               )}
             >
               <Icon className="h-3.5 w-3.5 shrink-0 max-[419px]:hidden" />
@@ -713,9 +714,9 @@ export function ConversationList({
                   className={cn(
                     'rounded-full px-1.5 text-[10px] leading-4 tabular-nums',
                     queue === key
-                      ? 'bg-primary-foreground/20'
+                      ? 'bg-background/20'
                       : key === 'reply'
-                        ? 'bg-red-500/15 text-red-700 dark:text-red-400'
+                        ? 'bg-tone-salmon text-tone-on font-bold'
                         : 'bg-muted'
                   )}
                 >
@@ -731,7 +732,7 @@ export function ConversationList({
             value={search}
             onChange={handleSearchChange}
             placeholder={t('searchPlaceholder')}
-            className="border-border bg-muted text-foreground placeholder-muted-foreground focus:border-primary/50 pl-9 text-sm"
+            className="bg-muted text-foreground placeholder-muted-foreground focus:border-primary/50 h-10 rounded-full border-transparent pl-9 text-sm"
           />
         </div>
 
@@ -774,7 +775,7 @@ export function ConversationList({
               >
                 {t('tags')}
                 {selectedTagIds.length > 0 && (
-                  <span className="bg-primary text-primary-foreground flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold">
+                  <span className="bg-tone-salmon text-tone-on flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums">
                     {selectedTagIds.length}
                   </span>
                 )}
@@ -976,7 +977,7 @@ export function ConversationList({
             </p>
           </div>
         ) : (
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-0.5 p-1.5">
             {filtered.map((conv) => (
               <ConversationItem
                 key={conv.id}
@@ -1241,23 +1242,20 @@ function ConversationItem({
     <button
       onClick={handleClick}
       className={cn(
-        'hover:bg-muted/50 relative flex w-full items-start gap-3 px-3 py-3 text-left transition-colors',
-        isActive && 'bg-muted/70'
+        'hover:bg-muted/60 relative flex w-full items-start gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors duration-150 ease-out',
+        isActive && 'bg-muted'
       )}
       aria-current={isActive ? 'true' : undefined}
     >
-      {isActive && (
-        <span className="bg-primary absolute inset-y-0 left-0 w-0.5" aria-hidden />
-      )}
       {/* Avatar — the photo when we have one (WAHA numbers), initials
           otherwise; the dot says who is answering. */}
       <div className="relative shrink-0">
-        <div className="bg-muted text-muted-foreground flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-xs font-semibold">
+        <div className={cn('flex h-[42px] w-[42px] items-center justify-center overflow-hidden rounded-full text-[13px] font-bold', TONE_SOLID[toneFor(displayName)])}>
           {contact?.avatar_url ? (
             <img
               src={contact.avatar_url}
               alt=""
-              className="h-10 w-10 rounded-full object-cover"
+              className="h-[42px] w-[42px] rounded-full object-cover"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
               }}

@@ -18,10 +18,10 @@ interface Action {
 }
 
 const ACTIONS: Action[] = [
-  { labelKey: 'newContact', href: '/contacts', icon: UserPlus, tint: 'text-primary' },
-  { labelKey: 'newDeal', href: '/pipelines', icon: Briefcase, tint: 'text-blue-600 dark:text-blue-400' },
-  { labelKey: 'newBroadcast', href: '/broadcasts/new', icon: Radio, tint: 'text-amber-600 dark:text-amber-400' },
-  { labelKey: 'newAutomation', href: '/automations/new', icon: Zap, tint: 'text-primary' },
+  { labelKey: 'newContact', href: '/contacts', icon: UserPlus, tint: 'bg-tone-lilac-soft text-tone-lilac-ink' },
+  { labelKey: 'newDeal', href: '/pipelines', icon: Briefcase, tint: 'bg-tone-blue-soft text-tone-blue-ink' },
+  { labelKey: 'newBroadcast', href: '/broadcasts/new', icon: Radio, tint: 'bg-tone-salmon-soft text-tone-salmon-ink' },
+  { labelKey: 'newAutomation', href: '/automations/new', icon: Zap, tint: 'bg-tone-mint-soft text-tone-mint-ink' },
 ]
 
 export function QuickActions() {
@@ -35,12 +35,12 @@ export function QuickActions() {
           <Link
             key={a.href}
             href={a.href}
-            className="group flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition-colors hover:border-border hover:bg-muted/60"
+            className="group flex min-h-14 items-center gap-3 rounded-[18px] border border-border bg-card px-3 py-2.5 transition-colors duration-150 ease-out hover:bg-card-2"
           >
-            <div className={`flex h-9 w-9 items-center justify-center rounded-lg bg-muted ${a.tint}`}>
+            <div className={`flex size-9 shrink-0 items-center justify-center rounded-full ${a.tint}`}>
               <Icon className="h-4 w-4" />
             </div>
-            <span className="text-sm font-medium text-foreground">{t(a.labelKey as string)}</span>
+            <span className="text-[13px] leading-tight font-semibold text-foreground">{t(a.labelKey as string)}</span>
           </Link>
         )
       })}

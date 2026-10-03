@@ -201,7 +201,7 @@ export default function DashboardPage() {
     <div className="space-y-5">
       <TodayGreeting data={today} />
 
-      <div role="tablist" className="border-border flex gap-1 border-b">
+      <div role="tablist" className="flex flex-wrap gap-1.5">
         {(['overview', 'conversations'] as const).map((key) => {
           const count = key === 'conversations' ? today.priority.length : 0
           return (
@@ -212,15 +212,15 @@ export default function DashboardPage() {
               aria-selected={tab === key}
               onClick={() => setTab(key)}
               className={cn(
-                '-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+                'flex min-h-10 items-center gap-2 rounded-full border px-4 text-[13px] font-semibold transition-colors duration-150 ease-out',
                 tab === key
-                  ? 'border-primary text-foreground'
-                  : 'text-muted-foreground hover:text-foreground border-transparent',
+                  ? 'bg-foreground text-background border-transparent'
+                  : 'border-border text-foreground hover:bg-card',
               )}
             >
               {tToday(`tabs.${key}`)}
               {count > 0 && (
-                <span className="rounded-full bg-red-500 px-1.5 text-[11px] leading-5 font-semibold text-white tabular-nums">
+                <span className="bg-tone-salmon text-tone-on rounded-full px-1.5 text-[11px] leading-5 font-bold tabular-nums">
                   {count}
                 </span>
               )}
@@ -235,9 +235,9 @@ export default function DashboardPage() {
       <>
 
       {/* Metric cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {!metricsLoading && metricsError ? (
-          <div className="sm:col-span-2 lg:col-span-4">
+          <div className="col-span-2 lg:col-span-4">
             <WidgetError onRetry={loadAll} t={t} />
           </div>
         ) : metricsLoading || !metrics ? (
@@ -248,6 +248,7 @@ export default function DashboardPage() {
               title={t('activeConversations')}
               value={metrics.activeConversations.current.toLocaleString(APP_LOCALE)}
               icon={MessageSquare}
+              tone="lilac"
               delta={{
                 sign: metrics.activeConversations.previous,
                 label: deltaLabel(
@@ -261,6 +262,7 @@ export default function DashboardPage() {
               title={t('newContactsToday')}
               value={metrics.newContactsToday.current.toLocaleString(APP_LOCALE)}
               icon={UserPlus}
+              tone="mint"
               delta={{
                 sign:
                   metrics.newContactsToday.current - metrics.newContactsToday.previous,
@@ -281,12 +283,14 @@ export default function DashboardPage() {
                       .join(' + ')
               }
               icon={DollarSign}
+              tone="salmon"
               subtitle={t('openDeals', { count: metrics.openDealsCount })}
             />
             <MetricCard
               title={t('messagesSentToday')}
               value={metrics.messagesSentToday.current.toLocaleString(APP_LOCALE)}
               icon={Send}
+              tone="blue"
               delta={{
                 sign:
                   metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
@@ -386,12 +390,12 @@ function WidgetError({
   t: (key: string) => string
 }) {
   return (
-    <div className="flex h-full min-h-[140px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card/40 p-6 text-center">
+    <div className="flex h-full min-h-[140px] flex-col items-center justify-center gap-2 rounded-[20px] border border-dashed border-border bg-card/40 p-6 text-center">
       <p className="text-sm text-muted-foreground">{t('loadFailed')}</p>
       <button
         type="button"
         onClick={onRetry}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
       >
         <RefreshCw className="h-3.5 w-3.5" />
         {t('retry')}

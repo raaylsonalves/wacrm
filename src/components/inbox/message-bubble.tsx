@@ -75,26 +75,8 @@ interface MessageBubbleProps {
    * stays inline and non-clickable.
    */
   onOpenMedia?: (messageId: string) => void;
-  /** First bubble of a run from one side — draws the WhatsApp tail. */
+  /** First bubble of a run from one side — gets the sharper top corner. */
   tail?: boolean;
-}
-
-/** The little hook on the first bubble of a run, in the bubble's colour. */
-function BubbleTail({ out }: { out: boolean }) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 8 13"
-      width="8"
-      height="13"
-      className={cn(
-        "absolute top-0",
-        out ? "-right-2 text-primary" : "-left-2 -scale-x-100 text-card",
-      )}
-    >
-      <path fill="currentColor" d="M0 0h8L1.5 8.5C1 9.2 0 8.9 0 8V0z" />
-    </svg>
-  );
 }
 
 /**
@@ -319,14 +301,17 @@ export function MessageBubble({
     >
       <div
         className={cn(
-          "relative rounded-lg px-2.5 pt-1.5 pb-1 shadow-sm",
+          "relative rounded-[18px] px-3 pt-2 pb-1.5",
+          // v2 bubbles: outbound on the soft lilac tint, inbound on the card.
+          // Everything inside an outbound bubble is written against
+          // `primary-foreground` (chips, quotes, audio, timestamps), so
+          // re-pointing that token here keeps it all readable on the tint.
           isAgent
-            ? "bg-primary text-primary-foreground"
-            : "bg-card text-card-foreground",
-          tail && (isAgent ? "rounded-tr-none" : "rounded-tl-none"),
+            ? "bg-tone-lilac-soft text-foreground [--primary-foreground:var(--foreground)]"
+            : "border border-border/70 bg-card text-card-foreground",
+          tail && (isAgent ? "rounded-tr-md" : "rounded-tl-md"),
         )}
       >
-        {tail && <BubbleTail out={isAgent} />}
         {reply && (
           <ReplyQuote
             authorLabel={reply.authorLabel}

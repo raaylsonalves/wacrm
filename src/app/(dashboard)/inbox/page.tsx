@@ -599,7 +599,7 @@ function InboxPageInner() {
   return (
     // Fills <main> (minus its padding, undone by the negative margin), so the
     // operator banner, header and tab bar are already accounted for.
-    <div className="-m-4 flex h-[calc(100%+2rem)] flex-col sm:h-[calc(100%+3rem)] overflow-hidden sm:-m-6">
+    <div className="-m-4 flex h-[calc(100%+2rem)] flex-col overflow-hidden sm:-m-6 sm:h-[calc(100%+3rem)] lg:-m-3 lg:h-[calc(100%+1.5rem)] lg:gap-3">
       {/* WhatsApp connection banner — in the flex column, not absolute,
           so it pushes the panels down instead of overlapping them. */}
       <ChannelStatusBanner />
@@ -608,7 +608,7 @@ function InboxPageInner() {
           banner above, dismissible per device. */}
       <PushNudgeBanner />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden lg:gap-3">
         {/* Left panel: Conversation list.
             Hidden on mobile when a conversation is selected so the
             thread can occupy the full width. Always visible on lg+. */}
@@ -616,7 +616,7 @@ function InboxPageInner() {
           className={cn(
             // min-w-0: without it a long last-message preview stretches
             // the list past the phone's width instead of truncating.
-            'flex h-full min-w-0 flex-1 lg:flex-none',
+            'flex h-full min-w-0 flex-1 lg:flex-none lg:overflow-hidden lg:rounded-3xl lg:border lg:border-border',
             hasActiveConv ? 'hidden lg:flex' : 'flex'
           )}
         >
@@ -645,7 +645,7 @@ function InboxPageInner() {
             on the right. Issue #165. */}
         <div
           className={cn(
-            'flex h-full min-w-0 flex-1 lg:flex',
+            'flex h-full min-w-0 flex-1 lg:flex lg:overflow-hidden lg:rounded-3xl lg:border lg:border-border',
             hasActiveConv ? 'flex' : 'hidden lg:flex'
           )}
         >
@@ -672,7 +672,7 @@ function InboxPageInner() {
             On mobile it's always hidden (the `lg:block` below), so the
             toggle — which is itself desktop-only — never affects it. */}
         {contactPanelOpen && (
-          <div className="hidden lg:block">
+          <div className="hidden lg:block lg:overflow-hidden lg:rounded-3xl lg:border lg:border-border">
             <ContactSidebar
               contact={activeContact}
               conversationId={activeConversation?.id ?? null}

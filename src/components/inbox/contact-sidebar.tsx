@@ -211,7 +211,7 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
   if (!contact) {
     return (
       <div
-        className="relative flex h-full shrink-0 items-center justify-center border-l border-border bg-card"
+        className="relative flex h-full shrink-0 items-center justify-center bg-card"
         style={{ width: panelWidth }}
       >
         {ResizeHandle}
@@ -227,7 +227,7 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
     <div
       className={cn(
         "relative flex h-full shrink-0 flex-col bg-card",
-        sheet ? "w-full" : "border-l border-border",
+        sheet && "w-full",
       )}
       style={sheet ? undefined : { width: panelWidth }}
     >
