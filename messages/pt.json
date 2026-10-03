@@ -41,7 +41,7 @@
     "inbox": "Caixa de entrada",
     "notifications": "Notificações",
     "contacts": "Contatos",
-    "pipelines": "Pipelines",
+    "pipelines": "Negócios",
     "agenda": "Agenda",
     "broadcasts": "Disparos",
     "automations": "Automações",
@@ -69,7 +69,17 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Perfil",
     "menuSettings": "Configurações",
-    "menuSignOut": "Sair"
+    "menuSignOut": "Sair",
+    "team": {
+      "title": "Equipe agora",
+      "aiChats": "{count, plural, =0 {nenhuma conversa agora} one {# conversa agora} other {# conversas agora}}",
+      "aiInitials": "IA",
+      "you": "{name} (você)",
+      "online": "online agora",
+      "away": "ausente",
+      "noName": "Colega",
+      "more": "+{count} pessoas"
+    }
   },
   "Header": {
     "operator": "Carteira",
@@ -85,7 +95,7 @@
     "inbox": "Caixa de entrada",
     "notifications": "Notificações",
     "contacts": "Contatos",
-    "pipelines": "Pipelines",
+    "pipelines": "Negócios",
     "broadcasts": "Disparos",
     "automations": "Automações",
     "settings": "Configurações",
@@ -516,7 +526,7 @@
       "send": "Enviar modelo"
     },
     "summary": {
-      "title": "Resumo e próximo passo",
+      "title": "Resumo da IA",
       "generate": "Gerar resumo com IA",
       "refresh": "Atualizar resumo",
       "nextStep": "Próximo passo",
@@ -3520,6 +3530,25 @@
       "4": "Qui",
       "5": "Sex",
       "6": "Sáb"
+    },
+    "grid": {
+      "asideLabel": "Agendamento selecionado",
+      "legendAuto": "marcado pela IA ou por fluxo",
+      "legendTeam": "marcado pela equipe",
+      "upcoming": "Próximos da semana",
+      "noUpcoming": "Nada marcado nesta semana.",
+      "source": {
+        "ai": "Marcado pela IA na conversa",
+        "flow": "Marcado por um fluxo",
+        "manual": "Marcado pela equipe"
+      },
+      "status": "Situação",
+      "owner": "Responsável",
+      "noOwner": "Ninguém",
+      "openConversation": "Abrir conversa",
+      "edit": "Editar",
+      "freeOn": "Livres em {day}",
+      "noFree": "Nenhum horário livre nesse dia."
     }
   },
   "Onboarding": {

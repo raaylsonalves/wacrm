@@ -79,65 +79,62 @@ export function ConversationSummaryCard({
     }
   }
 
+  const refresh = canAct && data && (
+    <button
+      type="button"
+      onClick={() => void generate()}
+      disabled={loading}
+      title={t('refresh')}
+      aria-label={t('refresh')}
+      className="hover:text-foreground ml-auto"
+    >
+      {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+    </button>
+  )
+
+  // v2 contact column: the next step stands out on a solid lilac card,
+  // the summary sits in its own card below it.
   return (
-    <div>
-      <div className="text-muted-foreground flex items-center gap-2 px-1 text-xs font-medium tracking-wider uppercase">
-        <Sparkles className="h-3 w-3" />
-        {t('title')}
-        {canAct && data && (
-          <button
-            type="button"
-            onClick={() => void generate()}
-            disabled={loading}
-            title={t('refresh')}
-            className="hover:text-foreground ml-auto"
-          >
-            {loading ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3 w-3" />
-            )}
-          </button>
+    <>
+      {data?.next_step && (
+        <div className="bg-tone-lilac text-tone-on flex flex-col gap-1.5 rounded-[22px] p-4">
+          <span className="text-xs font-bold">{t('nextStep')}</span>
+          <p className="text-[13.5px] leading-snug">{data.next_step}</p>
+        </div>
+      )}
+      <div className="border-border bg-card rounded-[22px] border p-4">
+        <div className="text-muted-foreground flex items-center gap-2 text-xs font-bold">
+          <Sparkles className="h-3 w-3" />
+          {t('title')}
+          {refresh}
+        </div>
+
+        {data ? (
+          <div className="mt-2 space-y-2 text-[13px] leading-relaxed">
+            <p className="text-foreground whitespace-pre-line">{data.summary}</p>
+            <p className="text-muted-foreground text-[11px]">
+              {t('updated', {
+                when: formatDistanceToNow(new Date(data.at), {
+                  addSuffix: true,
+                  locale: dateFnsLocale,
+                }),
+              })}
+            </p>
+          </div>
+        ) : (
+          canAct && (
+            <button
+              type="button"
+              onClick={() => void generate()}
+              disabled={loading}
+              className="text-muted-foreground hover:bg-muted hover:text-foreground mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-dashed px-3 py-2 text-sm"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {t('generate')}
+            </button>
+          )
         )}
       </div>
-
-      {data ? (
-        <div className="bg-muted/50 mt-2 space-y-2 rounded-lg p-3 text-sm">
-          <p className="text-foreground whitespace-pre-line">{data.summary}</p>
-          {data.next_step && (
-            <div className="border-primary/30 border-l-2 pl-2">
-              <p className="text-muted-foreground text-[11px] font-semibold uppercase">
-                {t('nextStep')}
-              </p>
-              <p className="text-foreground">{data.next_step}</p>
-            </div>
-          )}
-          <p className="text-muted-foreground text-[11px]">
-            {t('updated', {
-              when: formatDistanceToNow(new Date(data.at), {
-                addSuffix: true,
-                locale: dateFnsLocale,
-              }),
-            })}
-          </p>
-        </div>
-      ) : (
-        canAct && (
-          <button
-            type="button"
-            onClick={() => void generate()}
-            disabled={loading}
-            className="text-muted-foreground hover:bg-muted hover:text-foreground mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-            {t('generate')}
-          </button>
-        )
-      )}
-    </div>
-  );
+    </>
+  )
 }

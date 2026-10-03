@@ -169,6 +169,9 @@ interface SidebarProps {
 }
 
 import { useTranslations } from 'next-intl';
+import { TeamNow } from '@/components/layout/team-now';
+import { ModeToggle } from '@/components/layout/mode-toggle';
+import { PushStatusButton } from '@/components/notifications/push-status-button';
 
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations('Sidebar');
@@ -423,6 +426,10 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             </div>
           ))}
 
+          <div className={cn(collapsed && 'lg:hidden')}>
+            <TeamNow />
+          </div>
+
           <div className="border-border mx-3 my-3 border-t" />
 
           <ul className="flex flex-col gap-0.5">
@@ -495,13 +502,14 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 : null}
             </div>
           ) : null}
+          <div className={cn('flex items-center gap-1', collapsed && 'lg:flex-col')}>
           <DropdownMenu>
             <DropdownMenuTrigger
               title={
                 collapsed ? (profile?.full_name ?? t('defaultUser')) : undefined
               }
               className={cn(
-                'hover:bg-muted focus-visible:bg-muted data-popup-open:bg-muted flex w-full items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition-colors duration-150 ease-out focus:outline-none',
+                'hover:bg-muted focus-visible:bg-muted data-popup-open:bg-muted flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition-colors duration-150 ease-out focus:outline-none',
                 collapsed && 'lg:justify-center lg:px-0'
               )}
             >
@@ -567,6 +575,13 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          {/* Desktop home of the header's mode + push controls (v2 has no
+              top bar); phones keep them in the header. */}
+          <div className={cn('hidden shrink-0 items-center lg:flex', collapsed && 'lg:flex-col')}>
+            <PushStatusButton />
+            <ModeToggle className="rounded-full" />
+          </div>
+          </div>
         </div>
       </aside>
     </>

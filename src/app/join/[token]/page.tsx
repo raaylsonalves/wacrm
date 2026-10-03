@@ -244,7 +244,7 @@ export default function JoinPage() {
             <>
               <Button
                 onClick={loadPeekAndAuth}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                className="w-full bg-foreground text-background hover:bg-foreground/90"
               >
                 {t('tryAgain')}
               </Button>
@@ -260,7 +260,7 @@ export default function JoinPage() {
           ) : (
             <>
               <Link href="/signup">
-                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                <Button className="w-full bg-foreground text-background hover:bg-foreground/90">
                   {t('createNewAccount')}
                 </Button>
               </Link>
@@ -320,7 +320,7 @@ export default function JoinPage() {
             <Button
               onClick={handleAccept}
               disabled={accepting}
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              className="w-full bg-foreground text-background hover:bg-foreground/90"
             >
               {accepting ? (
                 <>
@@ -381,7 +381,7 @@ export default function JoinPage() {
               <Button
                 onClick={handleSignOutAndRetry}
                 disabled={signingOut}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                className="bg-foreground text-background hover:bg-foreground/90"
               >
                 {signingOut ? (
                   <>
@@ -405,7 +405,7 @@ export default function JoinPage() {
       {inviteHeader}
       <CardContent className="flex flex-col gap-2">
         <Link href={`/signup?invite=${encodeURIComponent(token!)}`}>
-          <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button className="w-full bg-foreground text-background hover:bg-foreground/90">
             {t('createAndJoin')}
           </Button>
         </Link>

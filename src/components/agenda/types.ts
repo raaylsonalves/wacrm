@@ -24,7 +24,8 @@ export interface Appointment {
   starts_at: string;
   ends_at: string;
   status: AppointmentStatus;
-  source: 'manual' | 'flow';
+  /** Who booked it: a teammate, a Flow, or the AI agent (migration 061). */
+  source: 'manual' | 'flow' | 'ai';
   contact: { id: string; name: string | null; phone: string | null } | null;
 }
 
@@ -37,3 +38,16 @@ export const STATUS_CLASS: Record<AppointmentStatus, string> = {
   cancelled: 'border-border bg-muted text-muted-foreground line-through',
   no_show: 'border-transparent bg-tone-salmon-soft text-tone-salmon-ink',
 };
+
+/**
+ * Colour of a live appointment by who booked it (v2): mint when the AI or
+ * a Flow did, lilac when a teammate did. Finished ones use STATUS_CLASS.
+ */
+export function eventToneClass(a: Pick<Appointment, 'status' | 'source'>): string {
+  if (a.status === 'scheduled' || a.status === 'confirmed') {
+    return a.source === 'manual'
+      ? 'border-transparent bg-tone-lilac text-tone-on'
+      : 'border-transparent bg-tone-mint text-tone-on';
+  }
+  return STATUS_CLASS[a.status];
+}

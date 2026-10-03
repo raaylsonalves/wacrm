@@ -224,7 +224,7 @@ function SignupPageInner() {
             <Button
               type="submit"
               disabled={loading}
-              className="mt-2 h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="mt-2 h-10 w-full bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50"
             >
               {loading ? t("creating") : t("submit")}
             </Button>

@@ -80,8 +80,12 @@ export function usePresence(enabled = true): UsePresenceResult {
     // Realtime has already delivered (keeping the newer last_seen_at)
     // rather than replacing the map — so an event that lands while the
     // fetch is in flight isn't clobbered by a staler snapshot row.
+    // Unique topic per hook instance: supabase-js hands back the SAME
+    // channel object for a repeated topic, so a second consumer mounted
+    // at once (the sidebar's "Equipe agora" next to the inbox) would try
+    // to add callbacks to an already-subscribed channel and throw.
     const channel: RealtimeChannel = supabase
-      .channel(`presence:${accountId}`)
+      .channel(`presence:${accountId}:${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         {

@@ -319,6 +319,19 @@ html[data-theme="rose"] {
   }
 }
 
+/* Discreet scrollbars on desktop (mouse/trackpad): a thin thumb that only
+   shows while the pointer is over the scrolling area. Touch screens keep
+   their own overlay scrollbars. */
+@media (pointer: fine) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  *:hover {
+    scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent) transparent;
+  }
+}
+
 /* "Reduce motion" turns movement into an instant change; spinners keep
    turning because a frozen one reads as a hung page. */
 @media (prefers-reduced-motion: reduce) {

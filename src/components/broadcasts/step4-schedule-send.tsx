@@ -238,7 +238,7 @@ export function Step4ScheduleSend({
             render={
               <Button
                 disabled={!name.trim() || isProcessing || !scheduleOk}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                className="bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50"
               />
             }
           >
@@ -280,7 +280,7 @@ export function Step4ScheduleSend({
                   setShowConfirm(false);
                   onSend(mode === 'later' ? scheduledIso : undefined);
                 }}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                className="bg-foreground text-background hover:bg-foreground/90"
               >
                 {mode === 'later' ? <CalendarClock className="h-4 w-4" /> : <Send className="h-4 w-4" />}
                 {t(mode === 'later' ? 'scheduleSend.schedule' : 'scheduleSend.sendNow')}

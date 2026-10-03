@@ -446,7 +446,7 @@ export default function PipelinesPage() {
             gateReason="createDeals"
             disabled={!selectedPipelineId || stages.length === 0}
             onClick={() => handleAddDeal()}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            className="bg-foreground text-background hover:bg-foreground/90"
           >
             <Plus className="mr-1 h-4 w-4" />
             {t('addDeal')}
@@ -468,7 +468,7 @@ export default function PipelinesPage() {
             canAct={canEditSettings}
             gateReason="createPipelines"
             onClick={() => setNewPipelineOpen(true)}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 mt-4"
+            className="bg-foreground text-background hover:bg-foreground/90 mt-4"
           >
             <Plus className="mr-1 h-4 w-4" />
             {t('createPipeline')}
@@ -521,7 +521,7 @@ export default function PipelinesPage() {
             <Button
               onClick={handleCreatePipeline}
               disabled={creating || !newPipelineName.trim()}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              className="bg-foreground text-background hover:bg-foreground/90"
             >
               {creating ? t('creating') : t('createPipelineBtn')}
             </Button>

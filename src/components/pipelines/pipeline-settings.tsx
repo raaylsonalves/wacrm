@@ -365,7 +365,7 @@ export function PipelineSettings({
               <Button
                 onClick={handleSave}
                 disabled={saving || !name.trim()}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                className="bg-foreground text-background hover:bg-foreground/90"
               >
                 {saving ? t("saving") : t("saveChanges")}
               </Button>

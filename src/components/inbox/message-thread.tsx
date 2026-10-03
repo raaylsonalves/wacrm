@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { usePresence } from "@/hooks/use-presence";
 import { PresenceDot } from "@/components/presence/presence-dot";
 import { presenceLabel } from "@/lib/presence";
+import { TONE_SOLID, toneFor } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import type {
   Conversation,
@@ -1126,7 +1127,7 @@ export function MessageThread({
     <div className={cn("flex min-w-0 flex-1 flex-col", DOODLE_BG_CLASSES)}>
       {/* Header — solid card surface sits on top of the doodle so the
           name/avatar/dropdowns stay legible. */}
-      <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 sm:px-4">
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 sm:px-4 lg:py-3.5">
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           {/* Back-to-list button — mobile only. Hidden on lg+ where the
               conversation list is always visible next to the thread. */}
@@ -1156,10 +1157,10 @@ export function MessageThread({
               <img
                 src={contact.avatar_url}
                 alt=""
-                className="h-9 w-9 flex-shrink-0 rounded-full object-cover"
+                className="h-9 w-9 flex-shrink-0 rounded-full object-cover lg:h-11 lg:w-11"
               />
             ) : (
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
+              <div className={cn("flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold lg:h-11 lg:w-11 lg:text-[15px]", TONE_SOLID[toneFor(displayName)])}>
                 {displayName.charAt(0).toUpperCase()}
               </div>
             )}
@@ -1171,7 +1172,7 @@ export function MessageThread({
               disabled={!onOpenContact}
               className="flex max-w-full min-w-0 items-center gap-1.5 text-left"
             >
-              <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
+              <h2 className="truncate text-sm font-bold text-foreground lg:text-base">{displayName}</h2>
               {channelLabel && (
                 <span
                   title={channelLabel}
@@ -1209,7 +1210,7 @@ export function MessageThread({
                 <Badge
                   variant="outline"
                   className={cn(
-                    "ml-1 hidden shrink-0 gap-1 border-border text-[10px] sm:ml-2",
+                    "ml-1 hidden shrink-0 gap-1 rounded-full border-transparent px-2.5 text-[11.5px] font-semibold sm:ml-2",
                     // The contact panel eats the width this badge would
                     // otherwise have room in (issue: this same trio of
                     // controls — badge, status dropdown, assign dropdown
@@ -1217,7 +1218,7 @@ export function MessageThread({
                     // panel open). Give it a later breakpoint than the
                     // panel-closed case instead of fighting for space.
                     contactPanelOpen ? "xl:inline-flex" : "sm:inline-flex",
-                    sessionInfo.expired ? "text-red-600 dark:text-red-400" : "text-primary"
+                    sessionInfo.expired ? "bg-tone-pink-soft text-tone-pink-ink" : "bg-tone-blue-soft text-tone-blue-ink"
                   )}
                 />
               }

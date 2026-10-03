@@ -112,7 +112,7 @@ export function DealsSettings() {
             <Button
               onClick={handleSave}
               disabled={saving || !dirty}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              className="bg-foreground text-background hover:bg-foreground/90"
             >
               {saving ? (
                 <>

@@ -715,7 +715,7 @@ export function MessageComposer({
           <Button
             size="sm"
             onClick={stopRecording}
-            className="h-9 w-9 shrink-0 bg-primary p-0 hover:bg-primary/90"
+            className="h-9 w-9 shrink-0 bg-foreground text-background p-0 hover:bg-foreground/90"
             title={t("stopAndAttach")}
           >
             <Square className="h-4 w-4" />
@@ -763,7 +763,7 @@ export function MessageComposer({
           {/* WhatsApp-style pill: emoji + text + attach in one rounded field. */}
           <div
             className={cn(
-              "flex min-w-0 flex-1 items-end rounded-3xl border border-border bg-muted px-1 transition-colors focus-within:border-primary/50",
+              "flex min-h-12 min-w-0 flex-1 items-end rounded-3xl border border-border bg-card-2 px-1.5 transition-colors duration-150 ease-out focus-within:border-foreground/30",
               (sessionExpired || readOnly) && "opacity-50"
             )}
           >
@@ -843,7 +843,7 @@ export function MessageComposer({
               gateReason="sendMessages"
               disabled={!text.trim() || sessionExpired || sending}
               onClick={handleSend}
-              className="h-10 w-10 shrink-0 rounded-full bg-primary p-0 hover:bg-primary/90 disabled:opacity-40"
+              className="h-10 w-10 shrink-0 rounded-full bg-foreground text-background p-0 hover:bg-foreground/90 disabled:opacity-40"
             >
               <Send className="h-4 w-4" />
             </GatedButton>
@@ -854,7 +854,7 @@ export function MessageComposer({
               onClick={() => void startRecording()}
               title={t("voiceNote")}
               aria-label={t("voiceNote")}
-              className="h-10 w-10 shrink-0 rounded-full bg-primary p-0 hover:bg-primary/90"
+              className="h-10 w-10 shrink-0 rounded-full bg-foreground text-background p-0 hover:bg-foreground/90"
             >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
             </Button>
@@ -995,7 +995,7 @@ function MediaDraftPreview({
           disabled={busy}
           onClick={onSend}
           className={cn(
-            "h-9 w-9 shrink-0 bg-primary p-0 hover:bg-primary/90 disabled:opacity-40",
+            "h-9 w-9 shrink-0 bg-foreground text-background p-0 hover:bg-foreground/90 disabled:opacity-40",
             draft.kind === "audio" && "ml-auto",
           )}
         >

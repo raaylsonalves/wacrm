@@ -41,7 +41,7 @@
     "inbox": "Inbox",
     "notifications": "Notifications",
     "contacts": "Contacts",
-    "pipelines": "Pipelines",
+    "pipelines": "Deals",
     "agenda": "Agenda",
     "broadcasts": "Broadcasts",
     "automations": "Automations",
@@ -69,7 +69,17 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Profile",
     "menuSettings": "Settings",
-    "menuSignOut": "Sign out"
+    "menuSignOut": "Sign out",
+    "team": {
+      "title": "Team now",
+      "aiChats": "{count, plural, =0 {no conversations right now} one {# conversation right now} other {# conversations right now}}",
+      "aiInitials": "AI",
+      "you": "{name} (you)",
+      "online": "online now",
+      "away": "away",
+      "noName": "Teammate",
+      "more": "+{count} more"
+    }
   },
   "Header": {
     "operator": "Portfolio",
@@ -85,7 +95,7 @@
     "inbox": "Inbox",
     "notifications": "Notifications",
     "contacts": "Contacts",
-    "pipelines": "Pipelines",
+    "pipelines": "Deals",
     "broadcasts": "Broadcasts",
     "automations": "Automations",
     "settings": "Settings",
@@ -516,7 +526,7 @@
       "send": "Send template"
     },
     "summary": {
-      "title": "Summary and next step",
+      "title": "AI summary",
       "generate": "Generate AI summary",
       "refresh": "Refresh summary",
       "nextStep": "Next step",
@@ -3532,6 +3542,25 @@
       "4": "Thu",
       "5": "Fri",
       "6": "Sat"
+    },
+    "grid": {
+      "asideLabel": "Selected appointment",
+      "legendAuto": "booked by the AI or a flow",
+      "legendTeam": "booked by the team",
+      "upcoming": "Coming up this week",
+      "noUpcoming": "Nothing booked this week.",
+      "source": {
+        "ai": "Booked by the AI in the chat",
+        "flow": "Booked by a flow",
+        "manual": "Booked by the team"
+      },
+      "status": "Status",
+      "owner": "Assigned to",
+      "noOwner": "Nobody",
+      "openConversation": "Open conversation",
+      "edit": "Edit",
+      "freeOn": "Free on {day}",
+      "noFree": "No free times left that day."
     }
   },
   "Onboarding": {

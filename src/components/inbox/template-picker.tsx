@@ -329,7 +329,7 @@ export function TemplatePicker({
               <Button
                 disabled={!canConfirm}
                 onClick={confirm}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                className="bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50"
               >
                 {t("send")}
               </Button>

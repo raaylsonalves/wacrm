@@ -41,7 +41,7 @@
     "inbox": "Bandeja de entrada",
     "notifications": "Notificaciones",
     "contacts": "Contactos",
-    "pipelines": "Pipelines",
+    "pipelines": "Negocios",
     "agenda": "Agenda",
     "broadcasts": "Difusiones",
     "automations": "Automatizaciones",
@@ -69,7 +69,17 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Perfil",
     "menuSettings": "Configuración",
-    "menuSignOut": "Cerrar sesión"
+    "menuSignOut": "Cerrar sesión",
+    "team": {
+      "title": "Equipo ahora",
+      "aiChats": "{count, plural, =0 {ninguna conversación ahora} one {# conversación ahora} other {# conversaciones ahora}}",
+      "aiInitials": "IA",
+      "you": "{name} (tú)",
+      "online": "en línea ahora",
+      "away": "ausente",
+      "noName": "Compañero",
+      "more": "+{count} más"
+    }
   },
   "Header": {
     "operator": "Cartera",
@@ -85,7 +95,7 @@
     "inbox": "Bandeja de entrada",
     "notifications": "Notificaciones",
     "contacts": "Contactos",
-    "pipelines": "Pipelines",
+    "pipelines": "Negocios",
     "broadcasts": "Difusiones",
     "automations": "Automatizaciones",
     "settings": "Configuración",
@@ -516,7 +526,7 @@
       "send": "Enviar plantilla"
     },
     "summary": {
-      "title": "Resumen y próximo paso",
+      "title": "Resumen de la IA",
       "generate": "Generar resumen con IA",
       "refresh": "Actualizar resumen",
       "nextStep": "Próximo paso",
@@ -3520,6 +3530,25 @@
       "4": "Jue",
       "5": "Vie",
       "6": "Sáb"
+    },
+    "grid": {
+      "asideLabel": "Cita seleccionada",
+      "legendAuto": "agendada por la IA o un flujo",
+      "legendTeam": "agendada por el equipo",
+      "upcoming": "Próximas de la semana",
+      "noUpcoming": "Nada agendado esta semana.",
+      "source": {
+        "ai": "Agendada por la IA en el chat",
+        "flow": "Agendada por un flujo",
+        "manual": "Agendada por el equipo"
+      },
+      "status": "Estado",
+      "owner": "Responsable",
+      "noOwner": "Nadie",
+      "openConversation": "Abrir conversación",
+      "edit": "Editar",
+      "freeOn": "Libres el {day}",
+      "noFree": "No quedan horarios libres ese día."
     }
   },
   "Onboarding": {

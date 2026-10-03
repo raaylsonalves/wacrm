@@ -69,7 +69,17 @@
     "defaultAvatar": "아바타",
     "menuProfile": "프로필",
     "menuSettings": "설정",
-    "menuSignOut": "로그아웃"
+    "menuSignOut": "로그아웃",
+    "team": {
+      "title": "지금 팀",
+      "aiChats": "{count, plural, =0 {현재 대화 없음} other {현재 대화 #개}}",
+      "aiInitials": "AI",
+      "you": "{name} (나)",
+      "online": "지금 온라인",
+      "away": "자리 비움",
+      "noName": "팀원",
+      "more": "+{count}명"
+    }
   },
   "Header": {
     "operator": "포트폴리오",
@@ -3532,6 +3542,25 @@
       "4": "목",
       "5": "금",
       "6": "토"
+    },
+    "grid": {
+      "asideLabel": "선택한 예약",
+      "legendAuto": "AI 또는 플로우가 예약",
+      "legendTeam": "팀이 예약",
+      "upcoming": "이번 주 예정",
+      "noUpcoming": "이번 주 예약이 없습니다.",
+      "source": {
+        "ai": "대화 중 AI가 예약",
+        "flow": "플로우가 예약",
+        "manual": "팀이 예약"
+      },
+      "status": "상태",
+      "owner": "담당자",
+      "noOwner": "없음",
+      "openConversation": "대화 열기",
+      "edit": "편집",
+      "freeOn": "{day} 빈 시간",
+      "noFree": "그날 남은 빈 시간이 없습니다."
     }
   },
   "Onboarding": {

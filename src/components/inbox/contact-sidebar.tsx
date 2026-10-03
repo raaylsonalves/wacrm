@@ -25,6 +25,7 @@ import { dateFnsLocale } from "@/lib/date-fns-locale";
 import { contactHandle } from "@/lib/whatsapp/wa-identity";
 import { ConversationNotes } from "./conversation-notes";
 import { ConversationSummaryCard } from "./conversation-summary";
+import { TONE_SOLID, toneFor } from "@/lib/tones";
 import { OptOutNotice } from "./opt-out-notice";
 
 interface ContactSidebarProps {
@@ -58,6 +59,11 @@ function readInitialPanelWidth(): number {
   }
   return DEFAULT_PANEL_WIDTH;
 }
+
+
+// v2 contact column: each block is its own card on the page background.
+const CARD = "rounded-[22px] border border-border bg-card p-4";
+const SECTION_TITLE = "flex items-center gap-2 text-xs font-bold text-muted-foreground";
 
 export function ContactSidebar({ contact, conversationId, variant = "panel" }: ContactSidebarProps) {
   const sheet = variant === "sheet";
@@ -211,7 +217,7 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
   if (!contact) {
     return (
       <div
-        className="relative flex h-full shrink-0 items-center justify-center bg-card"
+        className="relative flex h-full shrink-0 items-center justify-center rounded-3xl border border-border bg-card"
         style={{ width: panelWidth }}
       >
         {ResizeHandle}
@@ -226,17 +232,18 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
   return (
     <div
       className={cn(
-        "relative flex h-full shrink-0 flex-col bg-card",
-        sheet && "w-full",
+        "relative flex h-full shrink-0 flex-col",
+        sheet && "w-full bg-card",
       )}
       style={sheet ? undefined : { width: panelWidth }}
     >
       {!sheet && ResizeHandle}
       <ScrollArea className="min-h-0 flex-1">
-        <div className="p-4">
+        <div className={cn("flex flex-col gap-3", sheet && "p-4")}>
+          <div className={cn(CARD, "p-[18px]")}>
           {/* Contact Info */}
           <div className="flex flex-col items-center text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted text-lg font-semibold text-foreground">
+            <div className={cn("flex h-16 w-16 items-center justify-center overflow-hidden rounded-full text-xl font-bold", TONE_SOLID[toneFor(displayName)])}>
               {contact.avatar_url ? (
                 <img
                   src={contact.avatar_url}
@@ -247,7 +254,7 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
                 initials
               )}
             </div>
-            <h3 className="mt-3 text-sm font-semibold text-foreground">
+            <h3 className="mt-2.5 text-base font-bold text-foreground">
               {displayName}
             </h3>
             {contact.company && (
@@ -285,24 +292,23 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
             )}
           </div>
 
-          {/* Divider */}
-          <div className="my-4 border-t border-border" />
+          </div>
 
           {/* Tags */}
-          <div>
-            <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <div className={CARD}>
+            <div className={SECTION_TITLE}>
               <TagIcon className="h-3 w-3" />
               {tSidebar("tags")}
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {tags.length === 0 ? (
-                <p className="px-1 text-xs text-muted-foreground">{tSidebar("noTags")}</p>
+                <p className="text-xs text-muted-foreground">{tSidebar("noTags")}</p>
               ) : (
                 tags.map((tag) => (
                   <span
                     key={tag.contact_tag_id}
                     title={tag.name}
-                    className="inline-block max-w-[160px] truncate align-middle rounded-full px-2 py-0.5 text-[10px] font-medium"
+                    className="inline-block max-w-[160px] truncate align-middle rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold"
                     style={{
                       backgroundColor: `${tag.color}20`,
                       color: tag.color,
@@ -315,23 +321,20 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
             </div>
           </div>
 
-          {/* Divider */}
-          <div className="my-4 border-t border-border" />
-
           {/* Active Deals */}
-          <div>
-            <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <div className={CARD}>
+            <div className={SECTION_TITLE}>
               <DollarSign className="h-3 w-3" />
               {tSidebar("deals")}
             </div>
             <div className="mt-2 space-y-2">
               {deals.length === 0 ? (
-                <p className="px-1 text-xs text-muted-foreground">{tSidebar("noDeals")}</p>
+                <p className="text-xs text-muted-foreground">{tSidebar("noDeals")}</p>
               ) : (
                 deals.map((deal) => (
                   <div
                     key={deal.id}
-                    className="rounded-lg bg-muted px-3 py-2"
+                    className="rounded-2xl bg-muted px-3 py-2"
                   >
                     <p className="text-sm font-medium text-foreground">
                       {deal.title}
@@ -361,25 +364,22 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
 
           {conversationId && (
             <>
-              <div className="my-4 border-t border-border" />
               <ConversationSummaryCard
                 key={`summary-${conversationId}`}
                 conversationId={conversationId}
               />
-              <div className="my-4 border-t border-border" />
-              <ConversationNotes
-                key={conversationId}
-                conversationId={conversationId}
-              />
+              <div className={CARD}>
+                <ConversationNotes
+                  key={conversationId}
+                  conversationId={conversationId}
+                />
+              </div>
             </>
           )}
 
-          {/* Divider */}
-          <div className="my-4 border-t border-border" />
-
           {/* Notes */}
-          <div>
-            <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <div className={CARD}>
+            <div className={SECTION_TITLE}>
               <StickyNote className="h-3 w-3" />
               {tSidebar("notes")}
             </div>
@@ -390,11 +390,11 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
                   onChange={(e) => setNewNote(e.target.value)}
                   placeholder={tSidebar("addNotePlaceholder")}
                   rows={2}
-                  className="flex-1 resize-none rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground placeholder-muted-foreground outline-none focus:border-primary/50"
+                  className="flex-1 resize-none rounded-2xl border border-border bg-card-2 px-3 py-2 text-xs text-foreground placeholder-muted-foreground outline-none focus:border-foreground/30"
                 />
                 <Button
                   size="sm"
-                  className="h-auto bg-primary px-2 hover:bg-primary/90"
+                  className="h-auto rounded-xl px-2"
                   onClick={handleAddNote}
                   disabled={!newNote.trim() || addingNote}
                 >
@@ -406,7 +406,7 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
                 {notes.map((note) => (
                   <div
                     key={note.id}
-                    className="rounded-lg bg-muted px-3 py-2"
+                    className="rounded-2xl bg-muted px-3 py-2"
                   >
                     <p className="whitespace-pre-wrap text-xs text-muted-foreground">
                       {note.note_text}

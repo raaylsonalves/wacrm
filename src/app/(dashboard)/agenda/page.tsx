@@ -21,7 +21,9 @@ import {
 import type { AccountMember } from '@/types';
 import { AppointmentDialog, type AppointmentDraft } from '@/components/agenda/appointment-dialog';
 import { AgendaSettingsDialog } from '@/components/agenda/agenda-settings-dialog';
-import { STATUS_CLASS, type Appointment } from '@/components/agenda/types';
+import { eventToneClass, type Appointment } from '@/components/agenda/types';
+import { WeekTimeGrid } from '@/components/agenda/week-time-grid';
+import { AppointmentAside } from '@/components/agenda/appointment-aside';
 
 type View = 'week' | 'month';
 
@@ -56,6 +58,8 @@ export default function AgendaPage() {
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [draft, setDraft] = useState<AppointmentDraft | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Week view (desktop): the appointment shown in the right column.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   // Bumped on every open so the dialogs remount with fresh form state.
   const [openCount, setOpenCount] = useState(0);
 
@@ -192,9 +196,9 @@ export default function AgendaPage() {
     );
   }
 
-  function openNew(day?: Date) {
+  function openNew(day?: Date, time?: string) {
     setEditing(null);
-    setDraft({ date: dayKey(day ?? cursor ?? new Date()), time: settings.day_start.slice(0, 5) });
+    setDraft({ date: dayKey(day ?? cursor ?? new Date()), time: time ?? settings.day_start.slice(0, 5) });
     setOpenCount((n) => n + 1);
     setDialogOpen(true);
   }
@@ -206,47 +210,44 @@ export default function AgendaPage() {
     setDialogOpen(true);
   }
 
+  // Picking an appointment on the grid: with the side column (lg+) show
+  // it there; on narrower screens open it straight away.
+  function pick(a: Appointment) {
+    if (window.matchMedia('(min-width: 1024px)').matches) setSelectedId(a.id);
+    else openEdit(a);
+  }
+
+  const selected = appointments.find((a) => a.id === selectedId) ?? null;
+  const busyRanges = useMemo(
+    () => [
+      ...appointments
+        .filter((a) => a.status !== 'cancelled')
+        .map((a) => ({ start: new Date(a.starts_at), end: new Date(a.ends_at) })),
+      ...blocks.map((b) => ({ start: new Date(b.starts_at), end: new Date(b.ends_at) })),
+    ],
+    [appointments, blocks]
+  );
+
   const timeOf = (iso: string) => {
     const p = localParts(new Date(iso), tz);
     return `${pad(p.hour)}:${pad(p.minute)}`;
   };
 
-  const heading = cursor
-    ? new Intl.DateTimeFormat(appLocaleTag(), {
-        month: 'long',
-        year: 'numeric',
-        timeZone: 'UTC',
-      }).format(view === 'week' ? startOfWeek(cursor) : cursor)
-    : '';
+  // Week: the date range ("29 de set. – 5 de out."), like the v2 header;
+  // month: "outubro de 2026".
+  const heading = !cursor
+    ? ''
+    : view === 'week'
+      ? new Intl.DateTimeFormat(appLocaleTag(), { day: 'numeric', month: 'short', timeZone: 'UTC' }).formatRange(
+          startOfWeek(cursor),
+          addDays(startOfWeek(cursor), 6)
+        )
+      : new Intl.DateTimeFormat(appLocaleTag(), { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(cursor);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {/* The page title lives in the shell header; this row is actions only. */}
-        <h1 className="sr-only">{t('title')}</h1>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {canEditSettings && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setOpenCount((n) => n + 1);
-                setSettingsOpen(true);
-              }}
-            >
-              <Settings className="size-4" />
-              <span className="hidden sm:inline">{t('settings.button')}</span>
-            </Button>
-          )}
-          {canSendMessages && (
-            <Button size="sm" onClick={() => openNew()}>
-              <Plus className="size-4" />
-              {t('new')}
-            </Button>
-          )}
-        </div>
-      </div>
-
+      {/* The page title lives in the shell header; one row of controls (v2). */}
+      <h1 className="sr-only">{t('title')}</h1>
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" size="icon-lg" className="bg-card size-10" onClick={() => shift(-1)} aria-label={t('previous')}>
           <ChevronLeft className="size-4" />
@@ -265,7 +266,7 @@ export default function AgendaPage() {
           <ChevronRight className="size-4" />
         </Button>
         <span className="text-muted-foreground text-sm font-medium first-letter:uppercase">{heading}</span>
-        <div className="ml-auto flex gap-1.5">
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
           {(['week', 'month'] as View[]).map((v) => (
             <button
               key={v}
@@ -282,13 +283,34 @@ export default function AgendaPage() {
             </button>
           ))}
         </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {canEditSettings && (
+            <Button
+              variant="outline"
+              className="bg-card h-10 px-4"
+              onClick={() => {
+                setOpenCount((n) => n + 1);
+                setSettingsOpen(true);
+              }}
+            >
+              <Settings className="size-4" />
+              <span className="hidden sm:inline">{t('settings.button')}</span>
+            </Button>
+          )}
+          {canSendMessages && (
+            <Button className="h-10 px-4" onClick={() => openNew()}>
+              <Plus className="size-4" />
+              {t('new')}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Phones: a week is a strip of 7 days + the chosen day's list —
           seven 50px columns can't show a readable appointment. */}
       {view === 'week' && cursor && (
         <div className="space-y-3 md:hidden">
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-1.5">
             {days.map((day) => {
               const key = dayKey(day);
               const selected = key === dayKey(cursor);
@@ -299,9 +321,9 @@ export default function AgendaPage() {
                   type="button"
                   onClick={() => setCursor(day)}
                   className={cn(
-                    'flex flex-col items-center gap-0.5 rounded-2xl py-2 text-xs transition-colors duration-150 ease-out',
-                    selected ? 'bg-foreground text-background' : 'text-muted-foreground',
-                    !selected && key === todayKey && 'bg-card text-foreground font-semibold',
+                    'flex min-h-16 flex-col items-center justify-center gap-0.5 rounded-[18px] border text-[11.5px] transition-colors duration-150 ease-out',
+                    selected ? 'bg-foreground text-background border-transparent' : 'border-border bg-card text-muted-foreground',
+                    !selected && key === todayKey && 'text-foreground font-semibold',
                   )}
                 >
                   <span>{t(`weekdays.${day.getUTCDay()}`)}</span>
@@ -318,7 +340,7 @@ export default function AgendaPage() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium first-letter:uppercase">
+            <p className="text-[15px] font-bold first-letter:uppercase">
               {new Intl.DateTimeFormat(appLocaleTag(), {
                 weekday: 'long',
                 day: 'numeric',
@@ -347,7 +369,7 @@ export default function AgendaPage() {
                   key={a.id}
                   type="button"
                   onClick={() => openEdit(a)}
-                  className={cn('flex w-full items-start gap-3 rounded-2xl border p-3 text-left', STATUS_CLASS[a.status])}
+                  className={cn('flex min-h-[52px] w-full items-center gap-3 rounded-[18px] border px-3.5 py-2.5 text-left', eventToneClass(a))}
                 >
                   <span className="w-12 shrink-0 text-sm font-semibold tabular-nums">{timeOf(a.starts_at)}</span>
                   <span className="min-w-0 flex-1">
@@ -370,10 +392,41 @@ export default function AgendaPage() {
         </div>
       )}
 
+      {view === 'week' && cursor && (
+        <div className="hidden items-start gap-4 md:flex">
+          <div className="min-w-0 flex-1">
+            <WeekTimeGrid
+              days={days}
+              byDay={byDay}
+              blocksByDay={blocksByDay}
+              settings={settings}
+              todayKey={todayKey}
+              selectedId={selectedId}
+              canCreate={canSendMessages}
+              onPick={pick}
+              onNew={openNew}
+            />
+          </div>
+          <aside aria-label={t('grid.asideLabel')} className="hidden w-[300px] shrink-0 lg:block">
+            <AppointmentAside
+              selected={selected}
+              week={appointments}
+              members={members}
+              settings={settings}
+              busy={busyRanges}
+              canCreate={canSendMessages}
+              onPick={(a) => setSelectedId(a.id)}
+              onEdit={openEdit}
+              onNew={openNew}
+            />
+          </aside>
+        </div>
+      )}
+
       <div
         className={cn(
           'grid grid-cols-7 gap-px overflow-hidden rounded-[24px] border border-border bg-border text-xs',
-          view === 'week' && 'hidden md:grid',
+          view === 'week' && 'hidden',
         )}
       >
         {[1, 2, 3, 4, 5, 6, 0].map((d) => (
@@ -454,7 +507,7 @@ export default function AgendaPage() {
                   className={cn(
                     'w-full truncate rounded-[10px] border px-2 py-1 text-left transition-[filter] duration-150 ease-out hover:brightness-95',
                     view === 'month' && 'hidden md:block',
-                    STATUS_CLASS[a.status],
+                    eventToneClass(a),
                   )}
                   title={`${timeOf(a.starts_at)} ${a.title} — ${a.contact?.name ?? a.contact?.phone ?? ''}`}
                 >

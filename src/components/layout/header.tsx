@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ModeToggle } from "@/components/layout/mode-toggle";
 import { PushStatusButton } from "@/components/notifications/push-status-button";
+import { cn } from "@/lib/utils";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "dashboard",
@@ -39,6 +40,8 @@ const sidebarTitles: Record<string, string> = {
   "/cases": "cases",
   "/prospecting": "prospecting",
 };
+
+const OWN_HEADING = ["/dashboard", "/inbox"];
 
 function sidebarTitleKey(pathname: string): string | undefined {
   return Object.entries(sidebarTitles).find(([path]) => pathname.startsWith(path))?.[1];
@@ -66,6 +69,9 @@ export function Header({ onOpenSidebar }: HeaderProps) {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
   const titleKey = getPageTitleKey(pathname);
+  // v2: on desktop these pages open with their own heading (the greeting,
+  // the "Conversas" list card), so the shell header steps aside there.
+  const ownHeading = OWN_HEADING.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const sidebarKey = sidebarTitleKey(pathname);
 
   const initial =
@@ -74,7 +80,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
     "U";
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between gap-3 px-4 lg:h-14 lg:px-6">
+    <header className={cn("flex h-16 shrink-0 items-center justify-between gap-3 px-4 lg:h-auto lg:px-6 lg:pt-6 lg:pb-0", ownHeading && "lg:hidden")}>
       <div className="flex min-w-0 items-center gap-2">
         {/* Hamburger — mobile only. 44×44 hit target per Apple HIG. */}
         <button
@@ -85,12 +91,12 @@ export function Header({ onOpenSidebar }: HeaderProps) {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <h1 className="truncate text-lg font-bold tracking-tight text-foreground sm:text-xl">
+        <h1 className="truncate text-lg font-bold tracking-tight text-foreground sm:text-xl lg:text-[28px] lg:leading-tight lg:tracking-[-0.02em]">
           {sidebarKey ? tSidebar(sidebarKey) : t(titleKey as string)}
         </h1>
       </div>
 
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="flex items-center gap-1 sm:gap-2 lg:hidden">
         <PushStatusButton />
         <ModeToggle />
 

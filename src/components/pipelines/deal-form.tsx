@@ -440,7 +440,7 @@ export function DealForm({
               <Button
                 onClick={handleSave}
                 disabled={saving || !title.trim() || !contactId || !stageId}
-                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                className="flex-1 bg-foreground text-background hover:bg-foreground/90"
               >
                 {saving ? t("saving") : deal ? t("saveChanges") : t("createDeal")}
               </Button>

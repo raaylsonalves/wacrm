@@ -192,7 +192,7 @@ export default function BroadcastsPage() {
           canAct={canCreate}
           gateReason="createBroadcasts"
           onClick={() => router.push('/broadcasts/new')}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
+          className="bg-foreground text-background hover:bg-foreground/90"
         >
           <Plus className="h-4 w-4" />
           {t('newBroadcast')}
@@ -210,7 +210,7 @@ export default function BroadcastsPage() {
             canAct={canCreate}
             gateReason="createBroadcasts"
             onClick={() => router.push('/broadcasts/new')}
-            className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="mt-4 bg-foreground text-background hover:bg-foreground/90"
           >
             <Plus className="h-4 w-4" />
             {t('newBroadcast')}

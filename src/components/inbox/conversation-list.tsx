@@ -140,6 +140,7 @@ export function ConversationList({
 }: ConversationListProps) {
   const t = useTranslations('Inbox.conversationList');
   const tThread = useTranslations('Inbox.messageThread');
+  const tHeader = useTranslations('Header');
   const { responseTimeTargetMinutes, accountId } = useAuth();
 
   // Whether the account has an AI answering at all, asked ONCE for the
@@ -683,11 +684,16 @@ export function ConversationList({
     // w-full on mobile so the list occupies the whole viewport when it's
     // the single pane showing; fixed 320px on desktop where it shares the
     // row with the thread + contact sidebar.
-    <div className="bg-card flex h-full w-full flex-col lg:w-80">
+    <div className="flex h-full w-full flex-col lg:w-80 lg:bg-card">
       {/* Search + Filter */}
-      <div className="border-border space-y-2.5 border-b p-3">
+      <div className="border-border space-y-2.5 p-3 lg:border-b">
+        {/* Desktop page heading (v2): the shell header steps aside on the
+            inbox, so the list card carries the title. */}
+        <h1 className="text-foreground hidden px-1 pt-1 text-[22px] leading-tight font-bold tracking-[-0.02em] lg:block">
+          {tHeader('inbox')}
+        </h1>
         {/* The inbox as a to-do list — tap a queue, tap again to clear. */}
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 [scrollbar-width:none] lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
           {(
             [
               ['reply', CornerUpLeft],
@@ -701,10 +707,10 @@ export function ConversationList({
               onClick={() => setQueue((q) => (q === key ? null : key))}
               aria-pressed={queue === key}
               className={cn(
-                'flex min-h-9 min-w-0 items-center justify-center gap-1.5 rounded-full border px-2 text-xs font-semibold transition-colors duration-150 ease-out max-[419px]:gap-1 max-[419px]:px-1',
+                'flex min-h-[38px] shrink-0 items-center justify-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold transition-colors duration-150 ease-out lg:min-h-9 lg:px-3 lg:text-xs',
                 queue === key
                   ? 'bg-foreground text-background border-transparent'
-                  : 'border-border text-foreground/80 hover:bg-muted hover:text-foreground'
+                  : 'border-border bg-card text-foreground/80 hover:bg-muted hover:text-foreground lg:bg-transparent'
               )}
             >
               <Icon className="h-3.5 w-3.5 shrink-0 max-[419px]:hidden" />
@@ -732,7 +738,7 @@ export function ConversationList({
             value={search}
             onChange={handleSearchChange}
             placeholder={t('searchPlaceholder')}
-            className="bg-muted text-foreground placeholder-muted-foreground focus:border-primary/50 h-10 rounded-full border-transparent pl-9 text-sm"
+            className="bg-card border-border text-foreground placeholder-muted-foreground focus:border-primary/50 h-11 rounded-full pl-9 text-sm lg:bg-muted lg:h-10 lg:border-transparent"
           />
         </div>
 
@@ -977,7 +983,7 @@ export function ConversationList({
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-0.5 p-1.5">
+          <div className="flex flex-col gap-2 px-3 pb-3 lg:gap-0.5 lg:p-1.5">
             {filtered.map((conv) => (
               <ConversationItem
                 key={conv.id}
@@ -1242,7 +1248,8 @@ function ConversationItem({
     <button
       onClick={handleClick}
       className={cn(
-        'hover:bg-muted/60 relative flex w-full items-start gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors duration-150 ease-out',
+        // Phones (M2): each conversation is its own card on the page background.
+        'hover:bg-muted/60 border-border bg-card relative flex w-full items-start gap-3 rounded-[20px] border p-3 text-left transition-colors duration-150 ease-out lg:rounded-2xl lg:border-0 lg:bg-transparent lg:px-2.5 lg:py-2.5',
         isActive && 'bg-muted'
       )}
       aria-current={isActive ? 'true' : undefined}

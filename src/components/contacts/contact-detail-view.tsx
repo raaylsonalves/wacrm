@@ -539,7 +539,7 @@ export function ContactDetailView({
                     size="sm"
                     onClick={() => setTemplatePickerOpen(true)}
                     disabled={sendingTemplate}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    className="bg-foreground text-background hover:bg-foreground/90"
                   >
                     {sendingTemplate ? (
                       <Loader2 className="size-4 animate-spin" />
