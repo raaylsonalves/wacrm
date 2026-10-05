@@ -65,6 +65,14 @@ interface Campaign {
 }
 
 
+// Failed leads store "code · provider message"; translate the code and
+// keep the provider's words (e.g. Meta's "(#131005) Access denied").
+function reasonText(t: ReturnType<typeof useTranslations>, error: string) {
+  const [code, ...rest] = error.split(' · ');
+  const label = t.has(`reasons.${code}`) ? t(`reasons.${code}`) : code;
+  return rest.length ? `${label} — ${rest.join(' · ')}` : label;
+}
+
 // Leads → approached → replied → qualified, in the v2 tones.
 const FUNNEL_TONE = ['bg-tone-lilac', 'bg-tone-blue', 'bg-tone-salmon', 'bg-tone-mint'];
 /**
@@ -298,7 +306,7 @@ function LeadList({ campaignId, t }: { campaignId: string; t: ReturnType<typeof 
                       <td className="px-2 py-1">
                         {t(`leads.state.${st}`)}
                         {l.error && (st === 'skipped' || st === 'failed') && (
-                          <span className="text-muted-foreground"> · {t.has(`reasons.${l.error}`) ? t(`reasons.${l.error}`) : l.error}</span>
+                          <span className="text-muted-foreground"> · {reasonText(t, l.error)}</span>
                         )}
                       </td>
                       <td className="px-2 py-1">{day(l.sent_at)}</td>

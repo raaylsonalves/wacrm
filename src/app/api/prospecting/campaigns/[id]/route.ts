@@ -2,12 +2,13 @@
 // A running campaign's config is never edited in place: pause, and start
 // a new one. Resume re-checks everything the campaign depends on.
 
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { audit } from '@/lib/audit'
 import { checkCampaignReady } from '@/lib/prospecting/activate'
+import { runProspectingTick } from '@/lib/prospecting/tick'
 import type { CampaignConfig } from '@/lib/prospecting/logic'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -70,6 +71,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (notReady) return NextResponse.json({ error: notReady }, { status: 400 })
       const { error } = await set({ status: 'running', error: null, next_send_at: new Date().toISOString() })
       if (error) return NextResponse.json({ error: 'another_running' }, { status: 409 })
+      // First pass right away instead of waiting for the next cron hit.
+      // Same window/cap/claim rules as any tick; runs after the response.
+      after(() =>
+        runProspectingTick(new Date(), { campaignId: id }).catch((err) =>
+          console.error('[prospecting] first pass failed:', err),
+        ),
+      )
     } else if (action === 'cancel') {
       if (c.status === 'completed' || c.status === 'cancelled') {
         return NextResponse.json({ error: 'already_finished' }, { status: 409 })

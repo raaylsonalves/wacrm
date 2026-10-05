@@ -54,15 +54,20 @@ export interface TickSummary {
   paused: number
 }
 
-export async function runProspectingTick(now: Date = new Date()): Promise<TickSummary> {
+export async function runProspectingTick(
+  now: Date = new Date(),
+  /** Just this campaign — the first pass right after start/resume. */
+  opts: { campaignId?: string } = {},
+): Promise<TickSummary> {
   const db = supabaseAdmin()
   const summary: TickSummary = { campaigns: 0, sent: 0, followups: 0, failed: 0, paused: 0 }
-  const { data } = await db
+  let q = db
     .from('prospecting_campaigns')
     .select('id, account_id, name, config, next_send_at')
     .eq('status', 'running')
     .lte('next_send_at', now.toISOString())
-    .limit(50)
+  if (opts.campaignId) q = q.eq('id', opts.campaignId)
+  const { data } = await q.limit(50)
 
   for (const c of (data ?? []) as CampaignRow[]) {
     summary.campaigns++
@@ -92,6 +97,19 @@ async function tickCampaign(db: SupabaseClient, c: CampaignRow, now: Date): Prom
     console.warn(`${tag} paused: ${error}`)
     return 'paused' as const
   }
+
+  // Claim this turn: only the pass that moves next_send_at off the value
+  // it read gets to send. Two overlapping passes (the cron and the kick
+  // on start/resume, or two cron hits) would otherwise both send the same
+  // cold message. The lease is short; the real next time is set below.
+  const { data: turn } = await db
+    .from('prospecting_campaigns')
+    .update({ next_send_at: new Date(now.getTime() + 120_000).toISOString() })
+    .eq('id', c.id)
+    .eq('status', 'running')
+    .eq('next_send_at', c.next_send_at)
+    .select('id')
+  if (!turn || turn.length === 0) return 'waiting'
 
   if (!isInSendingWindow(now, cfg)) {
     await reschedule(nextWindowOpening(now, cfg))
@@ -339,7 +357,13 @@ async function sendTouch(
     // Never retried automatically: a duplicate cold message is worse than
     // a missing one. A failed follow-up keeps its count (no second try).
     if (!isFollowup) {
-      await db.from('prospecting_candidates').update({ status: 'failed', error: code }).eq('id', cand.id)
+      // Code first (the UI translates it), then the provider's own words —
+      // "meta_error" alone sent people to the server logs.
+      const detail = err instanceof Error && err.message ? ` · ${err.message}` : ''
+      await db
+        .from('prospecting_candidates')
+        .update({ status: 'failed', error: `${code}${detail}`.slice(0, 300) })
+        .eq('id', cand.id)
     }
     if (failureScope(code) === 'campaign') return args.pause(code)
     await args.reschedule(nextSendAt(now, cfg.interval_minutes))
