@@ -3509,6 +3509,7 @@
       "month": "Mês"
     },
     "hoursSummary": "Horário de atendimento: {start}–{end} ({tz})",
+    "hoursSummary24": "Atendimento 24h ({tz})",
     "status": {
       "scheduled": "Agendado",
       "confirmed": "Confirmado",
@@ -3559,9 +3560,11 @@
       "saved": "Agendamento salvo"
     },
     "settings": {
-      "button": "Horários",
-      "title": "Horário de atendimento",
+      "button": "Configuração da agenda",
+      "title": "Configuração da agenda",
       "description": "Define os horários que o bot oferece e quando os lembretes saem.",
+      "allDay": "Atendimento 24h",
+      "allDayHint": "Todos os dias, a qualquer hora — a IA e a equipe podem marcar em qualquer horário.",
       "workDays": "Dias de atendimento",
       "dayStart": "Início",
       "dayEnd": "Fim",
@@ -3580,7 +3583,7 @@
       "invalidHours": "O fim precisa ser depois do início",
       "invalidTimezone": "Fuso horário inválido — use um nome IANA, ex.: America/Sao_Paulo",
       "saveFailed": "Não foi possível salvar",
-      "saved": "Horários salvos"
+      "saved": "Configuração salva"
     },
     "weekdays": {
       "0": "Dom",

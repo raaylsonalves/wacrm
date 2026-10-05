@@ -3521,6 +3521,7 @@
       "month": "Month"
     },
     "hoursSummary": "Business hours: {start}–{end} ({tz})",
+    "hoursSummary24": "24/7 service ({tz})",
     "status": {
       "scheduled": "Scheduled",
       "confirmed": "Confirmed",
@@ -3571,9 +3572,11 @@
       "saved": "Appointment saved"
     },
     "settings": {
-      "button": "Hours",
-      "title": "Business hours",
+      "button": "Calendar settings",
+      "title": "Calendar settings",
       "description": "Sets the slots the bot offers and when reminders go out.",
+      "allDay": "24/7 service",
+      "allDayHint": "Every day, any time — the AI and the team can book any slot.",
       "workDays": "Working days",
       "dayStart": "Start",
       "dayEnd": "End",
@@ -3592,7 +3595,7 @@
       "invalidHours": "End must be after start",
       "invalidTimezone": "Invalid timezone — use an IANA name, e.g. America/Sao_Paulo",
       "saveFailed": "Could not save",
-      "saved": "Hours saved"
+      "saved": "Settings saved"
     },
     "weekdays": {
       "0": "Sun",

@@ -3521,6 +3521,7 @@
       "month": "월"
     },
     "hoursSummary": "영업 시간: {start}–{end} ({tz})",
+    "hoursSummary24": "24시간 운영 ({tz})",
     "status": {
       "scheduled": "예약됨",
       "confirmed": "확정",
@@ -3571,9 +3572,11 @@
       "saved": "예약이 저장되었습니다"
     },
     "settings": {
-      "button": "영업 시간",
-      "title": "영업 시간",
+      "button": "캘린더 설정",
+      "title": "캘린더 설정",
       "description": "봇이 제안하는 시간대와 알림 발송 시점을 설정합니다.",
+      "allDay": "24시간 운영",
+      "allDayHint": "매일 언제든 — AI와 팀이 어느 시간이든 예약할 수 있어요.",
       "workDays": "영업일",
       "dayStart": "시작",
       "dayEnd": "종료",
@@ -3592,7 +3595,7 @@
       "invalidHours": "종료 시간은 시작 시간 이후여야 합니다",
       "invalidTimezone": "잘못된 시간대입니다 — IANA 이름을 사용하세요(예: America/Sao_Paulo)",
       "saveFailed": "저장하지 못했습니다",
-      "saved": "영업 시간이 저장되었습니다"
+      "saved": "설정이 저장되었어요"
     },
     "weekdays": {
       "0": "일",

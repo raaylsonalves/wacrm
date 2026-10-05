@@ -24,7 +24,7 @@ import {
   type AppointmentDraft,
 } from '@/components/agenda/appointment-quick-create';
 import { AppointmentPanel } from '@/components/agenda/appointment-panel';
-import { AgendaSettingsDialog } from '@/components/agenda/agenda-settings-dialog';
+import { AgendaSettingsDialog, isAllDay } from '@/components/agenda/agenda-settings-dialog';
 import { eventToneClass, type Appointment } from '@/components/agenda/types';
 import { WeekTimeGrid } from '@/components/agenda/week-time-grid';
 import { AppointmentAside } from '@/components/agenda/appointment-aside';
@@ -542,7 +542,9 @@ export default function AgendaPage() {
       </div>
 
       <p className="text-muted-foreground text-xs">
-        {t('hoursSummary', {
+        {isAllDay(settings)
+          ? t('hoursSummary24', { tz })
+          : t('hoursSummary', {
           start: settings.day_start.slice(0, 5),
           end: settings.day_end.slice(0, 5),
           tz,
