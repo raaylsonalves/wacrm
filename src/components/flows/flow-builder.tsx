@@ -291,8 +291,8 @@ function TriggerPanel({
               }))
             }
           >
-            <SelectTrigger className="bg-muted">
-              <SelectValue />
+            <SelectTrigger className="w-full min-w-0">
+              <SelectValue className="block min-w-0 truncate" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="keyword">

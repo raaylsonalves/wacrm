@@ -97,18 +97,20 @@ function FunnelChart({ steps }: { steps: FunnelStep[] }) {
               <span className="w-20 shrink-0 text-xs text-muted-foreground">
                 {step.label}
               </span>
-              <div className="relative h-7 flex-1 rounded-full bg-muted">
+              {/* Solid pastel fill; the count sits beside the track so it
+                  stays readable however short the bar is. */}
+              <div className="h-3 flex-1 overflow-hidden rounded-full bg-muted">
                 <div
-                  className={`h-7 rounded-full ${step.color} transition-[width] duration-500`}
+                  className={`h-full rounded-full ${step.color} transition-[width] duration-500`}
                   style={{ width: `${pctOfMax}%` }}
                 />
-                <span className="absolute inset-0 flex items-center px-3 text-xs font-medium text-foreground">
-                  {step.value.toLocaleString(APP_LOCALE)}
-                  <span className="ml-2 text-muted-foreground/80">
-                    ({pctOfSent}%)
-                  </span>
-                </span>
               </div>
+              <span className="w-24 shrink-0 text-right text-xs font-bold tabular-nums text-foreground">
+                {step.value.toLocaleString(APP_LOCALE)}
+                <span className="ml-1.5 font-medium text-muted-foreground">
+                  {pctOfSent}%
+                </span>
+              </span>
             </div>
           );
         })}
@@ -348,10 +350,10 @@ export default function BroadcastDetailPage() {
   const isStalled = broadcast.status === 'sending' && pendingCount > 0;
 
   const funnelSteps: FunnelStep[] = [
-    { label: t('stats.sent'), value: broadcast.sent_count, color: 'bg-tone-lilac-soft' },
-    { label: t('stats.delivered'), value: broadcast.delivered_count, color: 'bg-tone-mint-soft' },
-    { label: t('stats.read'), value: broadcast.read_count, color: 'bg-tone-blue-soft' },
-    { label: t('stats.replied'), value: broadcast.replied_count, color: 'bg-tone-salmon-soft' },
+    { label: t('stats.sent'), value: broadcast.sent_count, color: 'bg-tone-lilac' },
+    { label: t('stats.delivered'), value: broadcast.delivered_count, color: 'bg-tone-mint' },
+    { label: t('stats.read'), value: broadcast.read_count, color: 'bg-tone-blue' },
+    { label: t('stats.replied'), value: broadcast.replied_count, color: 'bg-tone-salmon' },
   ];
 
   return (
