@@ -2162,6 +2162,7 @@
       "close": "Close",
       "event": {
         "started": "Flow started",
+        "captured": "Answer saved",
         "node_entered": "Entered node",
         "message_sent": "Message sent",
         "reply_received": "Customer replied",

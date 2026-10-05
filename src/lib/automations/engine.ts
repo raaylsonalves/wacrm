@@ -484,6 +484,11 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<boolean> {
           status: 'success',
           detail: { key: taken ? 'conditionBranchYes' : 'conditionBranchNo' },
         });
+        // Flush what this scope has so far before the branch writes its
+        // own results — otherwise the log lists the branch's steps ahead
+        // of the condition that chose them.
+        await appendResults(args.logId, results, null, null);
+        results.length = 0;
         // Recurse into the chosen branch at position 0 (children use their
         // own ordering within the branch scope).
         const childHalted = await executeStepsFrom({

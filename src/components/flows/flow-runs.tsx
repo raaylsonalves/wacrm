@@ -76,6 +76,7 @@ const EVENT_ICON: Record<string, typeof Play> = {
   started: Play,
   message_sent: MessageCircle,
   reply_received: Reply,
+  captured: CircleCheck,
   fallback_fired: CircleAlert,
   handoff: UserPlus,
   timeout: Clock,
@@ -116,7 +117,11 @@ export function FlowRuns() {
 
   const stats = useMemo(() => {
     const all = runs ?? [];
-    const done = all.filter((r) => r.status === 'completed').length;
+    // A hand-off to a person is how many flows are meant to end (lead
+    // capture, triage), so it counts as finished, not as a drop-off.
+    const done = all.filter(
+      (r) => r.status === 'completed' || r.status === 'handed_off'
+    ).length;
     return {
       total: all.length,
       problems: all.filter((r) => PROBLEM.has(r.status)).length,
@@ -345,16 +350,22 @@ function RunTimeline({
       />
       {events.map((ev, i) => {
         const nodeType = ev.node_key ? typeByKey.get(ev.node_key) : undefined;
-        const Icon = EVENT_ICON[ev.event_type] ?? Play;
         const bad =
           ev.event_type === 'error' || ev.event_type === 'fallback_fired';
-        const label = tRuns.has(`event.${ev.event_type}`)
-          ? tRuns(`event.${ev.event_type}`)
+        // The engine re-logs node_entered with the captured key once a
+        // reply is stored — show that as what it means.
+        const kind =
+          ev.event_type === 'node_entered' && ev.payload.captured_key
+            ? 'captured'
+            : ev.event_type;
+        const Icon = EVENT_ICON[kind] ?? Play;
+        const label = tRuns.has(`event.${kind}`)
+          ? tRuns(`event.${kind}`)
           : ev.event_type;
         const detail = summarizePayload(ev.payload);
         return (
           <li key={i} className="relative flex items-start gap-3">
-            {ev.event_type === 'node_entered' && nodeType ? (
+            {kind === 'node_entered' && nodeType ? (
               <NodeIconChip
                 type={nodeType}
                 size={40}

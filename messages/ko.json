@@ -2162,6 +2162,7 @@
       "close": "닫기",
       "event": {
         "started": "플로우 시작",
+        "captured": "응답 저장됨",
         "node_entered": "노드 진입",
         "message_sent": "메시지 전송",
         "reply_received": "고객 응답",
