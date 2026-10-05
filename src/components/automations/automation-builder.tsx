@@ -2149,10 +2149,21 @@ function previewFor(
           ? t('preview.waitHours', { amount })
           : t('preview.waitMinutes', { amount });
     }
-    case 'condition':
+    case 'condition': {
+      const subject = String(cfg.subject ?? 'tag_presence');
+      // What's compared: the typed value, or the time window. A tag's
+      // operand is an id, so it adds nothing a person can read.
+      const what =
+        subject === 'time_of_day'
+          ? (cfg.operand as string | undefined)
+          : subject === 'tag_presence'
+            ? undefined
+            : (cfg.value as string | undefined);
+      const label = t(`config.subjects.${subject}`);
       return t('preview.when', {
-        subject: t(`config.subjects.${String(cfg.subject ?? 'tag_presence')}`),
+        subject: what ? `${label} “${what}”` : label,
       });
+    }
     case 'send_webhook':
       return (cfg.url as string) || t('preview.noUrl');
     default:
