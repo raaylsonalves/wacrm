@@ -2152,6 +2152,7 @@
       "statusFailed": "Fallida"
     },
     "builder": {
+      "close": "Cerrar",
       "triggerTitle": "Disparador",
       "whenLabel": "Cuando…",
       "triggerKeywordTitle": "Un mensaje contiene una palabra clave",

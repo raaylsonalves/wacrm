@@ -1,16 +1,9 @@
-"use client";
+'use client';
 
 /**
- * Editor toolbar — flow name / description, status chip, dirty
- * indicator, and the action buttons (Save, Activate/Pause, Delete,
- * View runs, Back).
- *
- * Restyled to the Flow Builder design handoff: a single compact
- * toolbar row (back · icon · inline-editable name · status chip ·
- * edited dot on the left; Runs · Delete · Activate · Save on the
- * right) followed by a subtle, full-width description "note" line.
- * Replaces the old three-row stack so the editor reads as one app
- * chrome bar above the canvas/list stage.
+ * Editor top bar — the same chrome as the automation builder: back ·
+ * name (with the internal description under it) · Canvas/Lista toggle ·
+ * Execuções · delete · Ativo switch · Salvar.
  *
  * Lifted out of flow-builder.tsx so the same toolbar renders above
  * both views in FlowEditorShell. Without this, canvas users had no
@@ -22,30 +15,29 @@
  * /flows/[id]/runs) — those don't belong in the hook.
  */
 
-import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
-import {
-  ArrowLeft,
-  CircleDot,
-  History,
-  Loader2,
-  PauseCircle,
-  PlayCircle,
-  Save,
-  Trash2,
-  Workflow,
-} from "lucide-react";
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { ArrowLeft, History, Loader2, Trash2 } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import {
-  useFlowEditor,
-  type BuilderState,
-} from "./flow-editor-state";
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
+import { useFlowEditor } from './flow-editor-state';
 
-export function EditorHeader() {
+export type EditorView = 'canvas' | 'list';
+
+export function EditorHeader({
+  view,
+  onView,
+}: {
+  view: EditorView;
+  /** Omitted on phones, where only the list view exists. */
+  onView?: (v: EditorView) => void;
+}) {
   const router = useRouter();
-  const t = useTranslations("Flows.header");
+  const t = useTranslations('Flows.header');
+  const tB = useTranslations('Flows.builder');
+  const tList = useTranslations('Flows.list');
   const {
     flow,
     state,
@@ -58,151 +50,123 @@ export function EditorHeader() {
     setStatus,
     deleteFlow,
   } = useFlowEditor();
+  const active = state.status === 'active';
 
   return (
-    <div className="flex flex-col gap-1.5 px-6 pt-5">
-      <div className="flex flex-wrap items-center gap-3">
-        {/* ---- left: back · icon · name · status · edited ---- */}
-        <button
-          type="button"
-          onClick={() => router.push("/flows")}
-          title={t("backToFlows")}
-          aria-label={t("backToFlows")}
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-          <Workflow className="h-[18px] w-[18px]" />
-        </span>
-        <input
-          value={state.name}
-          onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
-          placeholder={t("namePlaceholder")}
-          spellCheck={false}
-          aria-label={t("namePlaceholder")}
-          className="min-w-[120px] max-w-[340px] rounded-lg border border-transparent bg-transparent px-2 py-1 text-lg font-bold leading-tight tracking-tight text-foreground outline-none transition-colors hover:bg-muted focus:border-primary focus:bg-transparent focus:shadow-[0_0_0_3px_var(--primary-soft)]"
-        />
-        <StatusChip status={state.status} />
-        {dirty && (
-          <span
-            className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300"
-            title={t("unsavedHint")}
-            aria-live="polite"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-            {t("edited")}
-          </span>
-        )}
+    <header className="border-border bg-card/80 flex shrink-0 items-center gap-2 border-b px-3 py-3 sm:gap-3 sm:px-4">
+      <button
+        type="button"
+        onClick={() => router.push('/flows')}
+        aria-label={t('backToFlows')}
+        title={t('backToFlows')}
+        className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-9 shrink-0 items-center justify-center rounded-full transition-colors duration-150 ease-out"
+      >
+        <ArrowLeft className="size-4" />
+      </button>
 
-        {/* ---- right: runs · delete · activate · save ---- */}
-        <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push(`/flows/${flow.id}/runs`)}
-          >
-            <History className="h-3.5 w-3.5" />
-            {t("runs")}
-            <span className="ml-0.5 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
-              {flow.execution_count}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 items-center gap-2">
+          <input
+            value={state.name}
+            onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
+            placeholder={t('namePlaceholder')}
+            spellCheck={false}
+            aria-label={t('namePlaceholder')}
+            className="text-foreground placeholder:text-muted-foreground focus:bg-muted min-w-0 flex-1 rounded-md bg-transparent px-2 py-0.5 text-sm font-extrabold tracking-tight outline-none sm:text-base"
+          />
+          {dirty && (
+            <span
+              className="bg-tone-salmon-soft text-tone-salmon-ink hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold sm:inline"
+              title={t('unsavedHint')}
+              aria-live="polite"
+            >
+              {t('edited')}
             </span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => void deleteFlow()}
-            className="text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:text-red-300"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            {t("delete")}
-          </Button>
-          {state.status === "active" ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void setStatus("draft")}
-              disabled={activating}
-            >
-              {activating ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <PauseCircle className="h-3.5 w-3.5" />
-              )}
-              {t("pause")}
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void setStatus("active")}
-              disabled={activating || !canActivate}
-              title={
-                !canActivate ? t("fixIssues") : undefined
-              }
-            >
-              {activating ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <PlayCircle className="h-3.5 w-3.5" />
-              )}
-              {t("activate")}
-            </Button>
           )}
-          <Button onClick={() => void save()} disabled={saving} size="sm">
-            {saving ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Save className="h-3.5 w-3.5" />
-            )}
-            {t("save")}
-          </Button>
         </div>
+        <input
+          value={state.description}
+          onChange={(e) =>
+            setState((s) => ({ ...s, description: e.target.value }))
+          }
+          placeholder={t('descriptionPlaceholder')}
+          aria-label={t('descriptionLabel')}
+          className="text-muted-foreground placeholder:text-muted-foreground/60 focus:bg-muted focus:text-foreground hidden min-w-0 rounded-md bg-transparent px-2 py-0.5 text-xs outline-none md:block"
+        />
       </div>
 
-      {/* ---- description note (subtle, inline-editable) ---- */}
-      <input
-        value={state.description}
-        onChange={(e) =>
-          setState((s) => ({ ...s, description: e.target.value }))
-        }
-        placeholder={t("descriptionPlaceholder")}
-        aria-label={t("descriptionLabel")}
-        className="w-full max-w-[78ch] rounded-md border border-transparent bg-transparent px-2 py-1 text-[13px] text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground/60 hover:bg-muted/50 focus:border-primary focus:bg-transparent focus:text-foreground"
-      />
-    </div>
-  );
-}
-
-function StatusChip({ status }: { status: BuilderState["status"] }) {
-  // Status labels live with the flows list so the chip and the list
-  // badge can never drift apart.
-  const t = useTranslations("Flows.list");
-  const cfg = {
-    draft: {
-      // Neutral, not amber — amber is reserved for the adjacent
-      // "Edited" dirty signal, so the two don't read as the same alert.
-      cls: "border-border bg-muted text-muted-foreground",
-      label: t("statusDraft"),
-    },
-    active: {
-      cls: "border-emerald-600/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-      label: t("statusActive"),
-    },
-    archived: {
-      cls: "border-border bg-muted/50 text-muted-foreground",
-      label: t("statusArchived"),
-    },
-  }[status];
-  return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-medium",
-        cfg.cls,
+      {onView && (
+        <div
+          role="tablist"
+          aria-label={tB('editorView')}
+          className="bg-muted hidden shrink-0 rounded-full p-1 md:flex"
+        >
+          {(['canvas', 'list'] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={view === k}
+              onClick={() => onView(k)}
+              className={cn(
+                'min-h-8 rounded-full px-3.5 text-[13px] font-semibold transition-colors duration-150 ease-out',
+                view === k
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {tB(k === 'canvas' ? 'canvasView' : 'listView')}
+            </button>
+          ))}
+        </div>
       )}
-    >
-      <CircleDot className="h-3 w-3" />
-      {cfg.label}
-    </span>
+
+      <Button
+        variant="outline"
+        onClick={() => router.push(`/flows/${flow.id}/runs`)}
+        className="shrink-0"
+        title={t('runs')}
+      >
+        <History className="size-4" />
+        <span className="hidden lg:inline">{t('runs')}</span>
+        <span className="bg-muted text-muted-foreground rounded-full px-1.5 text-[11px] font-bold tabular-nums">
+          {flow.execution_count}
+        </span>
+      </Button>
+      <button
+        type="button"
+        onClick={() => void deleteFlow()}
+        aria-label={t('delete')}
+        title={t('delete')}
+        className="text-tone-pink-ink hover:bg-tone-pink-soft hidden size-9 shrink-0 items-center justify-center rounded-full transition-colors duration-150 ease-out sm:flex"
+      >
+        <Trash2 className="size-4" />
+      </button>
+
+      <label
+        className="text-muted-foreground flex items-center gap-2 text-xs"
+        title={!active && !canActivate ? t('fixIssues') : undefined}
+      >
+        <span className="hidden sm:inline">{tList('statusActive')}</span>
+        {activating ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Switch
+            checked={active}
+            disabled={!active && !canActivate}
+            onCheckedChange={(v) => void setStatus(v ? 'active' : 'draft')}
+            aria-label={tList('statusActive')}
+          />
+        )}
+      </label>
+      <Button
+        onClick={() => void save()}
+        disabled={saving}
+        className="bg-foreground text-background hover:bg-foreground/90 shrink-0"
+      >
+        {saving && <Loader2 className="size-4 animate-spin" />}
+        {t('save')}
+      </Button>
+    </header>
   );
 }

@@ -2152,6 +2152,7 @@
       "statusFailed": "Failed"
     },
     "builder": {
+      "close": "Close",
       "triggerTitle": "Trigger",
       "whenLabel": "When…",
       "triggerKeywordTitle": "A message contains a keyword",

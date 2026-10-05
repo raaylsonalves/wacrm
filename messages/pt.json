@@ -2152,6 +2152,7 @@
       "statusFailed": "Falhou"
     },
     "builder": {
+      "close": "Fechar",
       "triggerTitle": "Gatilho",
       "whenLabel": "Quando…",
       "triggerKeywordTitle": "Uma mensagem contém uma palavra-chave",

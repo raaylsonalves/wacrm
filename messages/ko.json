@@ -2152,6 +2152,7 @@
       "statusFailed": "실패"
     },
     "builder": {
+      "close": "닫기",
       "triggerTitle": "트리거",
       "whenLabel": "조건…",
       "triggerKeywordTitle": "메시지에 키워드가 포함될 때",

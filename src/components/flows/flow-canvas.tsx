@@ -36,14 +36,20 @@
  * list view reads.
  */
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   applyNodeChanges,
   Background,
   BackgroundVariant,
   Controls,
   Handle,
-  MiniMap,
   Panel,
   Position,
   ReactFlow,
@@ -57,20 +63,13 @@ import {
   type OnNodeDrag,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, X } from 'lucide-react';
 
 import { useTranslations } from 'next-intl';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { SidePanel } from '@/components/ui/side-panel';
 import {
   applyEdgeConnection,
   deriveCanvasEdges,
@@ -562,17 +561,6 @@ function FlowCanvasInner() {
             className="!border-border !bg-card [&_button]:!border-border [&_button]:!bg-card [&_button:hover]:!bg-muted [&_button_svg]:!fill-foreground !overflow-hidden !rounded-xl !border !shadow-[0_6px_20px_-8px_rgba(0,0,0,0.5)]"
             showInteractive={false}
           />
-          <MiniMap
-            pannable
-            zoomable
-            nodeColor={(n) =>
-              nodeColors((n.data as NodeData).node.node_type).solid
-            }
-            nodeStrokeWidth={0}
-            nodeBorderRadius={3}
-            maskColor="color-mix(in oklch, var(--background) 70%, transparent)"
-            className="!border-border !bg-card !rounded-xl !border !shadow-[0_6px_20px_-8px_rgba(0,0,0,0.5)]"
-          />
           <Panel position="top-left" className="!top-4 !left-4">
             <CanvasAddNodeButton t={t} />
           </Panel>
@@ -618,73 +606,85 @@ function NodeEditSheet({
   onSetEntry: () => void;
   t: ReturnType<typeof useTranslations>;
 }) {
-  // Sheet is controlled — opens when a node is selected, closes via
-  // Esc / overlay / close button (all delegated to onClose).
-  const open = node !== null;
-  if (!node) {
-    return (
-      <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-        <SheetContent side="right" className="w-full sm:max-w-md" />
-      </Sheet>
-    );
-  }
-  const meta = NODE_META[node.node_type];
-  const c = nodeColors(node.node_type);
+  // Non-modal on desktop (the canvas stays usable beside it), a bottom
+  // sheet on phones — the same SidePanel the automation builder uses.
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent
-        side="right"
-        className="border-border bg-popover flex w-full flex-col gap-0 border-l p-0 sm:max-w-md"
-      >
-        <SheetHeader className="border-border flex-row items-center gap-3 space-y-0 border-b px-5 py-4">
-          <NodeIconChip type={node.node_type} size={36} iconSize={18} />
-          <div className="min-w-0 flex-1">
-            <SheetTitle className="flex items-center gap-2 text-[11px] font-semibold tracking-wider uppercase">
-              <span style={{ color: c.text }}>{t(`nodes.${node.node_type}.label`)}</span>
-              {isEntry && (
-                <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-emerald-700 dark:text-emerald-300 uppercase">
-                  {t('badgeEntry')}
+    <SidePanel
+      open={node !== null}
+      onClose={onClose}
+      label={node ? t(`nodes.${node.node_type}.label`) : ''}
+      className="top-[76px]"
+    >
+      {node && (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex items-start gap-3 px-5 pt-4 pb-3">
+            <NodeIconChip
+              type={node.node_type}
+              size={40}
+              iconSize={18}
+              className="rounded-xl"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-[11.5px] font-bold"
+                  style={{ color: nodeColors(node.node_type).text }}
+                >
+                  {t(`nodes.${node.node_type}.label`)}
                 </span>
-              )}
-            </SheetTitle>
-            <SheetDescription className="text-muted-foreground mt-0.5 text-xs">
-              {t(`nodes.${node.node_type}.blurb`)}
-            </SheetDescription>
+                {isEntry && (
+                  <span className="bg-tone-mint-soft text-tone-mint-ink rounded-full px-2 py-0.5 text-[10.5px] font-bold">
+                    {t('badgeEntry')}
+                  </span>
+                )}
+              </div>
+              <div className="truncate text-lg font-extrabold tracking-tight">
+                {node.node_key}
+              </div>
+              <p className="text-muted-foreground text-xs">
+                {t(`nodes.${node.node_type}.blurb`)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t('close')}
+              className="hover:bg-muted flex size-9 shrink-0 items-center justify-center rounded-full transition-colors duration-150 ease-out"
+            >
+              <X className="size-4.5" />
+            </button>
           </div>
-          <code className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px]">
-            {node.node_key}
-          </code>
-        </SheetHeader>
 
-        <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
-          <NodeConfigForm
-            node={node}
-            allNodes={allNodes}
-            showAdvanced={false}
-            onUpdateConfig={onUpdateConfig}
-          />
-        </div>
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 pb-5">
+            <NodeConfigForm
+              node={node}
+              allNodes={allNodes}
+              showAdvanced={false}
+              onUpdateConfig={onUpdateConfig}
+            />
+          </div>
 
-        <SheetFooter className="border-border border-t px-5 py-3 sm:flex-row sm:justify-between">
-          {!isEntry ? (
-            <Button variant="ghost" size="sm" onClick={onSetEntry}>
-              {t('setAsEntry')}
+          <div className="border-border flex items-center justify-between gap-2 border-t px-5 py-3">
+            {!isEntry ? (
+              <Button variant="outline" size="sm" onClick={onSetEntry}>
+                {t('setAsEntry')}
+              </Button>
+            ) : (
+              <span />
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onDelete}
+              className="text-tone-pink-ink hover:bg-tone-pink-soft"
+            >
+              <Trash2 className="size-3.5" />
+              {t('deleteNode')}
             </Button>
-          ) : (
-            <span />
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onDelete}
-            className="text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:text-red-300"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            {t('deleteNode')}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+          </div>
+        </div>
+      )}
+    </SidePanel>
   );
 }
 
