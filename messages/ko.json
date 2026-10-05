@@ -1378,6 +1378,25 @@
       "lostThisMonthTooltip": "이번 달 1일 이후 실패로 표시된 딜입니다.",
       "howCalculated": "{label} 계산 방법"
     },
+    "history": {
+      "heading": "기록",
+      "created": "거래 생성",
+      "stage": "{from}에서 {to}(으)로 이동",
+      "value": "금액 변경: {to}",
+      "owner": "담당자: {to}",
+      "ownerCleared": "담당자 제거",
+      "won": "성사로 표시",
+      "lost": "실패로 표시",
+      "reopened": "다시 열림",
+      "title": "이름 변경: “{to}”",
+      "closeDate": "예상 마감일: {to}",
+      "closeDateCleared": "예상 마감일 제거",
+      "unknown": "삭제된 단계",
+      "nobody": "누군가",
+      "someone": "동료",
+      "system": "자동화",
+      "noDate": "—"
+    },
     "panel": {
       "title": "거래 상세",
       "close": "닫기",

@@ -1,5 +1,6 @@
 'use client';
 
+import { DealHistory } from './deal-history';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
@@ -430,6 +431,13 @@ function DealPanelBody({
             className="bg-muted/60 mx-0 w-full items-start py-3 font-medium"
           />
         </div>
+
+        <DealHistory
+          dealId={deal.id}
+          stages={stages}
+          profiles={profiles}
+          currency={currency}
+        />
       </div>
       <p className="text-muted-foreground border-border hidden border-t px-5 py-2.5 text-xs lg:block">
         {t('hint')}

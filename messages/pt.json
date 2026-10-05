@@ -1378,6 +1378,25 @@
       "lostThisMonthTooltip": "Negócios marcados como perdidos desde o primeiro dia do mês atual.",
       "howCalculated": "Como {label} é calculado"
     },
+    "history": {
+      "heading": "Histórico",
+      "created": "Negócio criado",
+      "stage": "Movido de {from} para {to}",
+      "value": "Valor alterado para {to}",
+      "owner": "Responsável: {to}",
+      "ownerCleared": "Responsável removido",
+      "won": "Marcado como ganho",
+      "lost": "Marcado como perdido",
+      "reopened": "Reaberto",
+      "title": "Renomeado para “{to}”",
+      "closeDate": "Previsão de fechamento: {to}",
+      "closeDateCleared": "Previsão de fechamento removida",
+      "unknown": "etapa removida",
+      "nobody": "alguém",
+      "someone": "Um colega",
+      "system": "Automação",
+      "noDate": "—"
+    },
     "panel": {
       "title": "Ficha do negócio",
       "close": "Fechar",

@@ -796,6 +796,15 @@ BEGIN
     RAISE EXCEPTION 'handoff reason check does not allow audio_unintelligible — migration 076 did not apply';
   END IF;
 
+  IF to_regclass('public.deal_events') IS NULL THEN
+    RAISE EXCEPTION 'deal_events is missing — migration 104 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'deals_record_events'
+  ) THEN
+    RAISE EXCEPTION 'deals_record_events trigger is missing — migration 104 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

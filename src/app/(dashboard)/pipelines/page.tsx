@@ -3,7 +3,13 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { qk } from '@/lib/query/keys';
-import { useDeals, usePipelines, useStages, useUpdateDeal } from '@/hooks/queries/use-pipelines';
+import {
+  useDeals,
+  useDealsRealtime,
+  usePipelines,
+  useStages,
+  useUpdateDeal,
+} from '@/hooks/queries/use-pipelines';
 import { createClient } from '@/lib/supabase/client';
 import type { Pipeline, Deal } from '@/types';
 import { PipelineBoard } from '@/components/pipelines/pipeline-board';
@@ -83,6 +89,7 @@ export default function PipelinesPage() {
       : (pipelines[0]?.id ?? '');
   const stagesQuery = useStages(selectedPipelineId);
   const dealsQuery = useDeals(selectedPipelineId);
+  useDealsRealtime(selectedPipelineId);
   const stages = useMemo(() => stagesQuery.data ?? [], [stagesQuery.data]);
   const deals = useMemo(() => dealsQuery.data ?? [], [dealsQuery.data]);
   const updateDeal = useUpdateDeal(selectedPipelineId);

@@ -9,4 +9,6 @@ export const qk = {
     ['pipeline-stages', accountId, pipelineId] as const,
   deals: (accountId: string, pipelineId: string) =>
     ['deals', accountId, pipelineId] as const,
+  dealEvents: (accountId: string, dealId: string) =>
+    ['deal-events', accountId, dealId] as const,
 };

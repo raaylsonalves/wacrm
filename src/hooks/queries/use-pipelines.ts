@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -112,5 +113,101 @@ export function useUpdateDeal(pipelineId: string) {
       if (ctx?.previous) queryClient.setQueryData(key, ctx.previous);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
+  });
+}
+
+/**
+ * Keep a pipeline's board live: a colleague's create/move/edit (or an
+ * automation's) refetches the deals. Debounced so a burst of writes — a
+ * drag reorders several cards — costs one refetch, and skipped while a
+ * local edit is in flight so the optimistic card doesn't jump back.
+ */
+export function useDealsRealtime(pipelineId: string) {
+  const { accountId } = useAuth();
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!accountId || !pipelineId) return;
+    const key = qk.deals(accountId, pipelineId);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const refresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (queryClient.isMutating() > 0) return refresh();
+        void queryClient.invalidateQueries({ queryKey: key });
+      }, 400);
+    };
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`deals:${pipelineId}:${crypto.randomUUID()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'deals',
+          filter: `pipeline_id=eq.${pipelineId}`,
+        },
+        refresh
+      )
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      void supabase.removeChannel(channel);
+    };
+  }, [accountId, pipelineId, queryClient]);
+}
+
+export interface DealEvent {
+  id: string;
+  deal_id: string;
+  actor_user_id: string | null;
+  kind:
+    'created' | 'stage' | 'value' | 'owner' | 'status' | 'title' | 'close_date';
+  from_value: unknown;
+  to_value: unknown;
+  created_at: string;
+}
+
+/** A deal's history, newest first, live while the deal view is open. */
+export function useDealEvents(dealId: string | null) {
+  const { accountId } = useAuth();
+  const queryClient = useQueryClient();
+  const key = qk.dealEvents(accountId ?? '', dealId ?? '');
+  useEffect(() => {
+    if (!accountId || !dealId) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`deal-events:${dealId}:${crypto.randomUUID()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'deal_events',
+          filter: `deal_id=eq.${dealId}`,
+        },
+        () =>
+          void queryClient.invalidateQueries({
+            queryKey: qk.dealEvents(accountId, dealId),
+          })
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [accountId, dealId, queryClient]);
+  return useQuery({
+    queryKey: key,
+    enabled: !!accountId && !!dealId,
+    queryFn: async () => {
+      const { data, error } = await createClient()
+        .from('deal_events')
+        .select('*')
+        .eq('deal_id', dealId!)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []) as DealEvent[];
+    },
   });
 }

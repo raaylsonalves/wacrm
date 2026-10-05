@@ -1378,6 +1378,25 @@
       "lostThisMonthTooltip": "Deals marked as Lost since the first day of the current month.",
       "howCalculated": "How {label} is calculated"
     },
+    "history": {
+      "heading": "History",
+      "created": "Deal created",
+      "stage": "Moved from {from} to {to}",
+      "value": "Value changed to {to}",
+      "owner": "Owner: {to}",
+      "ownerCleared": "Owner removed",
+      "won": "Marked as won",
+      "lost": "Marked as lost",
+      "reopened": "Reopened",
+      "title": "Renamed to “{to}”",
+      "closeDate": "Expected close: {to}",
+      "closeDateCleared": "Expected close removed",
+      "unknown": "removed stage",
+      "nobody": "someone",
+      "someone": "A colleague",
+      "system": "Automation",
+      "noDate": "—"
+    },
     "panel": {
       "title": "Deal",
       "close": "Close",
