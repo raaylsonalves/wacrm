@@ -27,12 +27,15 @@ export function SidePanel({
   open,
   onClose,
   label,
+  className,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   /** Accessible name of the panel. */
   label: string;
+  /** Desktop card only — e.g. a top offset to clear a page's own toolbar. */
+  className?: string;
   children: React.ReactNode;
 }) {
   const isDesktop = useIsDesktop();
@@ -51,7 +54,10 @@ export function SidePanel({
     return (
       <aside
         aria-label={label}
-        className="bg-card border-border animate-enter fixed top-3 right-3 bottom-3 z-40 flex w-[440px] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[24px] border shadow-[0_24px_60px_rgb(0_0_0/0.14)]"
+        className={cn(
+          'bg-card border-border animate-enter fixed top-3 right-3 bottom-3 z-40 flex w-[440px] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[24px] border shadow-[0_24px_60px_rgb(0_0_0/0.14)]',
+          className
+        )}
       >
         {children}
       </aside>

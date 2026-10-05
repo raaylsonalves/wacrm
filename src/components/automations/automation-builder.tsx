@@ -1,21 +1,20 @@
-"use client"
+'use client';
 
 import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
-} from "react"
-import { useRouter } from "next/navigation"
-import { useTranslations } from "next-intl"
-import { toast } from "sonner"
+} from 'react';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import {
   ArrowLeft,
-  ChevronDown,
   Plus,
   Trash2,
-  GripVertical,
   MessageSquare,
   FileText,
   Tag,
@@ -34,18 +33,17 @@ import {
   MousePointerClick,
   List,
   Sparkles,
-} from "lucide-react"
+  AlertTriangle,
+  Search,
+  X,
+} from 'lucide-react';
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { SidePanel } from '@/components/ui/side-panel';
 import type {
   AccountMember,
   AutomationStepType,
@@ -55,24 +53,28 @@ import type {
   KeywordMatchTriggerConfig,
   MessageTemplate,
   Tag as TagRecord,
-} from "@/types"
+} from '@/types';
 import {
   InteractiveBuilder,
   blankButtonsPayload,
   blankListPayload,
-} from "@/components/interactive/interactive-builder"
-import { interactivePayloadPreviewText } from "@/lib/whatsapp/interactive"
-import { createClient } from "@/lib/supabase/client"
+} from '@/components/interactive/interactive-builder';
+import { interactivePayloadPreviewText } from '@/lib/whatsapp/interactive';
+import { createClient } from '@/lib/supabase/client';
 import {
   childPath,
   insertAt,
+  locate,
   mapAtPath,
+  numberSteps,
   moveAt,
   removeAt,
   type ParentScope,
   type StepPath,
-} from "@/lib/automations/builder-tree"
-import { cn } from "@/lib/utils"
+} from '@/lib/automations/builder-tree';
+import { validateStepsForActivation } from '@/lib/automations/validate';
+import { TONE_SOFT } from '@/lib/tones';
+import { cn } from '@/lib/utils';
 
 // ------------------------------------------------------------
 // Types (builder-local — mirror the flattened rows we POST)
@@ -80,86 +82,125 @@ import { cn } from "@/lib/utils"
 
 export interface BuilderStep {
   /** Client id; the API assigns real UUIDs server-side. */
-  cid: string
-  step_type: AutomationStepType
-  step_config: Record<string, unknown>
-  branches?: { yes: BuilderStep[]; no: BuilderStep[] }
+  cid: string;
+  step_type: AutomationStepType;
+  step_config: Record<string, unknown>;
+  branches?: { yes: BuilderStep[]; no: BuilderStep[] };
 }
 
 export interface BuilderInitial {
-  id?: string
-  name: string
-  description: string
-  trigger_type: AutomationTriggerType
-  trigger_config: Record<string, unknown>
-  is_active: boolean
-  steps: BuilderStep[]
+  id?: string;
+  name: string;
+  description: string;
+  trigger_type: AutomationTriggerType;
+  trigger_config: Record<string, unknown>;
+  is_active: boolean;
+  steps: BuilderStep[];
 }
 
 // ------------------------------------------------------------
 // Step metadata — one source of truth for icon + label + border color
 // ------------------------------------------------------------
 
+type StepGroup = 'messages' | 'contact' | 'deals' | 'logic' | 'integrations';
+
 interface StepMeta {
-  label: string
-  icon: typeof Zap
-  /** Left-border accent color per spec. */
-  border: string
+  label: string;
+  icon: typeof Zap;
+  /** Picker section and card colour. */
+  group: StepGroup;
 }
 
 const STEP_META: Record<AutomationStepType, StepMeta> = {
-  send_message: { label: "send_message", icon: MessageSquare, border: "border-l-primary" },
-  send_buttons: { label: "send_buttons", icon: MousePointerClick, border: "border-l-primary" },
-  send_list: { label: "send_list", icon: List, border: "border-l-primary" },
-  send_template: { label: "send_template", icon: FileText, border: "border-l-primary" },
-  ai_followup: { label: "ai_followup", icon: Sparkles, border: "border-l-primary" },
-  add_tag: { label: "add_tag", icon: Tag, border: "border-l-primary" },
-  remove_tag: { label: "remove_tag", icon: TagIcon, border: "border-l-primary" },
-  assign_conversation: { label: "assign_conversation", icon: UserCheck, border: "border-l-primary" },
-  update_contact_field: { label: "update_contact_field", icon: PencilLine, border: "border-l-primary" },
-  create_deal: { label: "create_deal", icon: Briefcase, border: "border-l-primary" },
-  wait: { label: "wait", icon: Hourglass, border: "border-l-border" },
-  condition: { label: "condition", icon: GitBranch, border: "border-l-amber-500" },
-  send_webhook: { label: "send_webhook", icon: Webhook, border: "border-l-primary" },
-  close_conversation: { label: "close_conversation", icon: CircleSlash, border: "border-l-primary" },
-}
+  send_message: {
+    label: 'send_message',
+    icon: MessageSquare,
+    group: 'messages',
+  },
+  send_buttons: {
+    label: 'send_buttons',
+    icon: MousePointerClick,
+    group: 'messages',
+  },
+  send_list: { label: 'send_list', icon: List, group: 'messages' },
+  send_template: { label: 'send_template', icon: FileText, group: 'messages' },
+  ai_followup: { label: 'ai_followup', icon: Sparkles, group: 'messages' },
+  add_tag: { label: 'add_tag', icon: Tag, group: 'contact' },
+  remove_tag: { label: 'remove_tag', icon: TagIcon, group: 'contact' },
+  assign_conversation: {
+    label: 'assign_conversation',
+    icon: UserCheck,
+    group: 'contact',
+  },
+  update_contact_field: {
+    label: 'update_contact_field',
+    icon: PencilLine,
+    group: 'contact',
+  },
+  close_conversation: {
+    label: 'close_conversation',
+    icon: CircleSlash,
+    group: 'contact',
+  },
+  create_deal: { label: 'create_deal', icon: Briefcase, group: 'deals' },
+  wait: { label: 'wait', icon: Hourglass, group: 'logic' },
+  condition: { label: 'condition', icon: GitBranch, group: 'logic' },
+  send_webhook: { label: 'send_webhook', icon: Webhook, group: 'integrations' },
+};
+
+/** v2 pastel per group, so a glance at the canvas says what a step does. */
+const GROUP_TONE: Record<StepGroup, string> = {
+  messages: TONE_SOFT.lilac,
+  contact: TONE_SOFT.mint,
+  deals: TONE_SOFT.salmon,
+  logic: TONE_SOFT.blue,
+  integrations: 'bg-muted text-foreground',
+};
+
+const GROUP_ORDER: StepGroup[] = [
+  'messages',
+  'contact',
+  'deals',
+  'logic',
+  'integrations',
+];
 
 const ADDABLE_STEPS: AutomationStepType[] = [
-  "send_message",
-  "send_buttons",
-  "send_list",
-  "send_template",
-  "ai_followup",
-  "add_tag",
-  "remove_tag",
-  "assign_conversation",
-  "update_contact_field",
-  "create_deal",
-  "wait",
-  "condition",
-  "send_webhook",
-  "close_conversation",
-]
+  'send_message',
+  'send_buttons',
+  'send_list',
+  'send_template',
+  'ai_followup',
+  'add_tag',
+  'remove_tag',
+  'assign_conversation',
+  'update_contact_field',
+  'create_deal',
+  'wait',
+  'condition',
+  'send_webhook',
+  'close_conversation',
+];
 
 const TRIGGER_OPTIONS: { value: AutomationTriggerType }[] = [
-  { value: "new_message_received" },
-  { value: "first_inbound_message" },
-  { value: "keyword_match" },
-  { value: "interactive_reply" },
-  { value: "new_contact_created" },
-  { value: "conversation_assigned" },
-  { value: "tag_added" },
-  { value: "time_based" },
-  { value: "conversation_silence" },
-]
+  { value: 'new_message_received' },
+  { value: 'first_inbound_message' },
+  { value: 'keyword_match' },
+  { value: 'interactive_reply' },
+  { value: 'new_contact_created' },
+  { value: 'conversation_assigned' },
+  { value: 'tag_added' },
+  { value: 'time_based' },
+  { value: 'conversation_silence' },
+];
 
 function cid(): string {
   return (
-    "c_" +
-    (typeof crypto !== "undefined" && "randomUUID" in crypto
+    'c_' +
+    (typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
       : Math.random().toString(36).slice(2) + Date.now().toString(36))
-  )
+  );
 }
 
 // The send_buttons / send_list step_config IS an InteractiveMessagePayload,
@@ -168,43 +209,45 @@ function cid(): string {
 // payload-shape change has one seam to update instead of four scattered
 // `as unknown as` sites.
 function toStepConfig(p: InteractiveMessagePayload): Record<string, unknown> {
-  return p as unknown as Record<string, unknown>
+  return p as unknown as Record<string, unknown>;
 }
-function asInteractive(cfg: Record<string, unknown>): InteractiveMessagePayload {
-  return cfg as unknown as InteractiveMessagePayload
+function asInteractive(
+  cfg: Record<string, unknown>
+): InteractiveMessagePayload {
+  return cfg as unknown as InteractiveMessagePayload;
 }
 
 function blankConfig(type: AutomationStepType): Record<string, unknown> {
   switch (type) {
-    case "send_message":
-      return { text: "" }
-    case "ai_followup":
-      return { instruction: "", final: false }
-    case "send_buttons":
-      return toStepConfig(blankButtonsPayload())
-    case "send_list":
-      return toStepConfig(blankListPayload())
-    case "send_template":
-      return { template_name: "", language: "en_US" }
-    case "add_tag":
-    case "remove_tag":
-      return { tag_id: "" }
-    case "assign_conversation":
-      return { mode: "round_robin" }
-    case "update_contact_field":
-      return { field: "name", value: "" }
-    case "create_deal":
-      return { pipeline_id: "", stage_id: "", title: "", value: 0 }
-    case "wait":
-      return { amount: 1, unit: "hours" }
-    case "condition":
-      return { subject: "tag_presence", operand: "", value: "" }
-    case "send_webhook":
-      return { url: "", headers: {}, body_template: "" }
-    case "close_conversation":
-      return {}
+    case 'send_message':
+      return { text: '' };
+    case 'ai_followup':
+      return { instruction: '', final: false };
+    case 'send_buttons':
+      return toStepConfig(blankButtonsPayload());
+    case 'send_list':
+      return toStepConfig(blankListPayload());
+    case 'send_template':
+      return { template_name: '', language: 'en_US' };
+    case 'add_tag':
+    case 'remove_tag':
+      return { tag_id: '' };
+    case 'assign_conversation':
+      return { mode: 'round_robin' };
+    case 'update_contact_field':
+      return { field: 'name', value: '' };
+    case 'create_deal':
+      return { pipeline_id: '', stage_id: '', title: '', value: 0 };
+    case 'wait':
+      return { amount: 1, unit: 'hours' };
+    case 'condition':
+      return { subject: 'tag_presence', operand: '', value: '' };
+    case 'send_webhook':
+      return { url: '', headers: {}, body_template: '' };
+    case 'close_conversation':
+      return {};
     default:
-      return {}
+      return {};
   }
 }
 
@@ -219,24 +262,24 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
 // ------------------------------------------------------------
 
 interface AutomationResources {
-  tags: TagRecord[]
-  members: AccountMember[]
-  templates: MessageTemplate[]
-  customFields: CustomField[]
-  pipelines: PipelineOption[]
-  stages: PipelineStageOption[]
+  tags: TagRecord[];
+  members: AccountMember[];
+  templates: MessageTemplate[];
+  customFields: CustomField[];
+  pipelines: PipelineOption[];
+  stages: PipelineStageOption[];
 }
 
 interface PipelineOption {
-  id: string
-  name: string
+  id: string;
+  name: string;
 }
 
 interface PipelineStageOption {
-  id: string
-  name: string
-  pipeline_id: string
-  position: number
+  id: string;
+  name: string;
+  pipeline_id: string;
+  position: number;
 }
 
 const ResourcesContext = createContext<AutomationResources>({
@@ -246,23 +289,23 @@ const ResourcesContext = createContext<AutomationResources>({
   customFields: [],
   pipelines: [],
   stages: [],
-})
+});
 
 function useResources(): AutomationResources {
-  return useContext(ResourcesContext)
+  return useContext(ResourcesContext);
 }
 
 function ResourcesProvider({ children }: { children: ReactNode }) {
-  const [tags, setTags] = useState<TagRecord[]>([])
-  const [members, setMembers] = useState<AccountMember[]>([])
-  const [templates, setTemplates] = useState<MessageTemplate[]>([])
-  const [customFields, setCustomFields] = useState<CustomField[]>([])
-  const [pipelines, setPipelines] = useState<PipelineOption[]>([])
-  const [stages, setStages] = useState<PipelineStageOption[]>([])
+  const [tags, setTags] = useState<TagRecord[]>([]);
+  const [members, setMembers] = useState<AccountMember[]>([]);
+  const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [pipelines, setPipelines] = useState<PipelineOption[]>([]);
+  const [stages, setStages] = useState<PipelineStageOption[]>([]);
 
   useEffect(() => {
-    let cancelled = false
-    const supabase = createClient()
+    let cancelled = false;
+    const supabase = createClient();
 
     // Tags, templates and custom fields come straight from the DB — RLS
     // scopes them to the caller's account. Only APPROVED templates can
@@ -271,45 +314,45 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
     void (async () => {
       const [tagsRes, templatesRes, customFieldsRes, pipelinesRes, stagesRes] =
         await Promise.all([
-          supabase.from("tags").select("*").order("name"),
+          supabase.from('tags').select('*').order('name'),
           supabase
-            .from("message_templates")
-            .select("*")
-            .eq("status", "APPROVED")
-            .order("name"),
-          supabase.from("custom_fields").select("*").order("field_name"),
-          supabase.from("pipelines").select("id, name").order("name"),
+            .from('message_templates')
+            .select('*')
+            .eq('status', 'APPROVED')
+            .order('name'),
+          supabase.from('custom_fields').select('*').order('field_name'),
+          supabase.from('pipelines').select('id, name').order('name'),
           supabase
-            .from("pipeline_stages")
-            .select("id, name, pipeline_id, position")
-            .order("position"),
-        ])
-      if (cancelled) return
-      setTags((tagsRes.data as TagRecord[] | null) ?? [])
-      setTemplates((templatesRes.data as MessageTemplate[] | null) ?? [])
-      setCustomFields((customFieldsRes.data as CustomField[] | null) ?? [])
-      setPipelines((pipelinesRes.data as PipelineOption[] | null) ?? [])
-      setStages((stagesRes.data as PipelineStageOption[] | null) ?? [])
-    })()
+            .from('pipeline_stages')
+            .select('id, name, pipeline_id, position')
+            .order('position'),
+        ]);
+      if (cancelled) return;
+      setTags((tagsRes.data as TagRecord[] | null) ?? []);
+      setTemplates((templatesRes.data as MessageTemplate[] | null) ?? []);
+      setCustomFields((customFieldsRes.data as CustomField[] | null) ?? []);
+      setPipelines((pipelinesRes.data as PipelineOption[] | null) ?? []);
+      setStages((stagesRes.data as PipelineStageOption[] | null) ?? []);
+    })();
 
     // Members go through the API so we inherit its email-visibility
     // rules (agents/viewers don't see emails). Unreachable on older
     // deployments → pickers fall back to a raw agent-id input.
     void (async () => {
       try {
-        const res = await fetch("/api/account/members", { cache: "no-store" })
-        if (!res.ok) return
-        const json = (await res.json()) as { members?: AccountMember[] }
-        if (!cancelled) setMembers(json.members ?? [])
+        const res = await fetch('/api/account/members', { cache: 'no-store' });
+        if (!res.ok) return;
+        const json = (await res.json()) as { members?: AccountMember[] };
+        if (!cancelled) setMembers(json.members ?? []);
       } catch {
         // Members endpoint absent — caller falls back to raw input.
       }
-    })()
+    })();
 
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <ResourcesContext.Provider
@@ -317,11 +360,11 @@ function ResourcesProvider({ children }: { children: ReactNode }) {
     >
       {children}
     </ResourcesContext.Provider>
-  )
+  );
 }
 
 const SELECT_CLASS =
-  "w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+  'h-10 w-full rounded-xl border-[1.5px] border-border bg-card px-3 text-sm text-foreground transition-colors duration-150 ease-out focus:border-foreground focus:outline-none';
 
 /** Tag dropdown by name + color, storing the tag's id. Falls back to a
  *  raw id input when no tags exist yet. */
@@ -330,26 +373,26 @@ function TagSelect({
   onChange,
   t,
 }: {
-  value: string
-  onChange: (v: string) => void
-  t: ReturnType<typeof useTranslations>
+  value: string;
+  onChange: (v: string) => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
-  const { tags } = useResources()
+  const { tags } = useResources();
   if (tags.length === 0) {
     return (
       <Input
-        placeholder={t("tags.placeholder")}
+        placeholder={t('tags.placeholder')}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
-    )
+    );
   }
-  const selected = tags.find((t) => t.id === value)
+  const selected = tags.find((t) => t.id === value);
   return (
     <div className="flex items-center gap-2">
       <span
-        className="h-3 w-3 shrink-0 rounded-full border border-border"
-        style={{ backgroundColor: selected?.color ?? "transparent" }}
+        className="border-border h-3 w-3 shrink-0 rounded-full border"
+        style={{ backgroundColor: selected?.color ?? 'transparent' }}
         aria-hidden
       />
       <select
@@ -357,7 +400,7 @@ function TagSelect({
         onChange={(e) => onChange(e.target.value)}
         className={SELECT_CLASS}
       >
-        <option value="">{t("tags.select")}</option>
+        <option value="">{t('tags.select')}</option>
         {tags.map((tg) => (
           <option key={tg.id} value={tg.id}>
             {tg.name}
@@ -366,11 +409,11 @@ function TagSelect({
         {/* Preserve a saved tag that's since been deleted so editing an
             existing automation doesn't silently drop it. */}
         {value && !selected && (
-          <option value={value}>{t("tags.unknown", { id: value })}</option>
+          <option value={value}>{t('tags.unknown', { id: value })}</option>
         )}
       </select>
     </div>
-  )
+  );
 }
 
 /** Contact-field dropdown for "Update Contact Field": built-in columns plus
@@ -382,25 +425,25 @@ function ContactFieldSelect({
   onChange,
   t,
 }: {
-  value: string
-  onChange: (v: string) => void
-  t: ReturnType<typeof useTranslations>
+  value: string;
+  onChange: (v: string) => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
-  const { customFields } = useResources()
-  const customValue = value.startsWith("custom:") ? value : ""
+  const { customFields } = useResources();
+  const customValue = value.startsWith('custom:') ? value : '';
   const knownCustom =
-    customValue && customFields.some((f) => `custom:${f.id}` === customValue)
+    customValue && customFields.some((f) => `custom:${f.id}` === customValue);
   return (
     <select
-      value={value || "name"}
+      value={value || 'name'}
       onChange={(e) => onChange(e.target.value)}
       className={SELECT_CLASS}
     >
-      <option value="name">{t("fields.name")}</option>
-      <option value="email">{t("fields.email")}</option>
-      <option value="company">{t("fields.company")}</option>
+      <option value="name">{t('fields.name')}</option>
+      <option value="email">{t('fields.email')}</option>
+      <option value="company">{t('fields.company')}</option>
       {customFields.length > 0 && (
-        <optgroup label={t("fields.customFields")}>
+        <optgroup label={t('fields.customFields')}>
           {customFields.map((f) => (
             <option key={f.id} value={`custom:${f.id}`}>
               {f.field_name}
@@ -409,10 +452,12 @@ function ContactFieldSelect({
         </optgroup>
       )}
       {customValue && !knownCustom && (
-        <option value={customValue}>{t("fields.unknown", { id: customValue })}</option>
+        <option value={customValue}>
+          {t('fields.unknown', { id: customValue })}
+        </option>
       )}
     </select>
-  )
+  );
 }
 
 /** Agent dropdown by name, storing the member's user_id. Falls back to
@@ -422,38 +467,38 @@ function AgentSelect({
   onChange,
   t,
 }: {
-  value: string
-  onChange: (v: string) => void
-  t: ReturnType<typeof useTranslations>
+  value: string;
+  onChange: (v: string) => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
-  const { members } = useResources()
+  const { members } = useResources();
   if (members.length === 0) {
     return (
       <Input
-        placeholder={t("agents.placeholder")}
+        placeholder={t('agents.placeholder')}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
-    )
+    );
   }
-  const selected = members.find((m) => m.user_id === value)
+  const selected = members.find((m) => m.user_id === value);
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className={SELECT_CLASS}
     >
-      <option value="">{t("agents.select")}</option>
+      <option value="">{t('agents.select')}</option>
       {members.map((m) => (
         <option key={m.user_id} value={m.user_id}>
           {m.full_name || m.email || m.user_id}
         </option>
       ))}
       {value && !selected && (
-        <option value={value}>{t("agents.unknown", { id: value })}</option>
+        <option value={value}>{t('agents.unknown', { id: value })}</option>
       )}
     </select>
-  )
+  );
 }
 
 /** Pipeline + stage picker for Create Deal. The automation stores ids because
@@ -464,17 +509,17 @@ function DealPipelineFields({
   onChange,
   t,
 }: {
-  pipelineId: string
-  stageId: string
-  onChange: (patch: { pipeline_id: string; stage_id: string }) => void
-  t: ReturnType<typeof useTranslations>
+  pipelineId: string;
+  stageId: string;
+  onChange: (patch: { pipeline_id: string; stage_id: string }) => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
-  const { pipelines, stages } = useResources()
+  const { pipelines, stages } = useResources();
 
   if (pipelines.length === 0) {
     return (
       <>
-        <FieldBlock label={t("pipelines.pipelineIdLabel")}>
+        <FieldBlock label={t('pipelines.pipelineIdLabel')}>
           <Input
             value={pipelineId}
             onChange={(e) =>
@@ -482,7 +527,7 @@ function DealPipelineFields({
             }
           />
         </FieldBlock>
-        <FieldBlock label={t("pipelines.stageIdLabel")}>
+        <FieldBlock label={t('pipelines.stageIdLabel')}>
           <Input
             value={stageId}
             onChange={(e) =>
@@ -491,42 +536,44 @@ function DealPipelineFields({
           />
         </FieldBlock>
       </>
-    )
+    );
   }
 
-  const selectedPipeline = pipelines.find((p) => p.id === pipelineId)
-  const stageOptions = stages.filter((s) => s.pipeline_id === pipelineId)
-  const selectedStage = stageOptions.find((s) => s.id === stageId)
+  const selectedPipeline = pipelines.find((p) => p.id === pipelineId);
+  const stageOptions = stages.filter((s) => s.pipeline_id === pipelineId);
+  const selectedStage = stageOptions.find((s) => s.id === stageId);
 
   return (
     <>
-      <FieldBlock label={t("pipelines.pipelineLabel")}>
+      <FieldBlock label={t('pipelines.pipelineLabel')}>
         <select
           value={pipelineId}
           onChange={(e) => {
-            const nextPipelineId = e.target.value
+            const nextPipelineId = e.target.value;
             const firstStage = stages.find(
               (s) => s.pipeline_id === nextPipelineId
-            )
+            );
             onChange({
               pipeline_id: nextPipelineId,
-              stage_id: firstStage?.id ?? "",
-            })
+              stage_id: firstStage?.id ?? '',
+            });
           }}
           className={SELECT_CLASS}
         >
-          <option value="">{t("pipelines.selectPipeline")}</option>
+          <option value="">{t('pipelines.selectPipeline')}</option>
           {pipelines.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
           {pipelineId && !selectedPipeline && (
-            <option value={pipelineId}>{t("pipelines.unknownPipeline", { id: pipelineId })}</option>
+            <option value={pipelineId}>
+              {t('pipelines.unknownPipeline', { id: pipelineId })}
+            </option>
           )}
         </select>
       </FieldBlock>
-      <FieldBlock label={t("pipelines.stageLabel")}>
+      <FieldBlock label={t('pipelines.stageLabel')}>
         <select
           value={stageId}
           onChange={(e) =>
@@ -536,7 +583,9 @@ function DealPipelineFields({
           disabled={!pipelineId || stageOptions.length === 0}
         >
           <option value="">
-            {pipelineId ? t("pipelines.selectStage") : t("pipelines.selectPipelineFirst")}
+            {pipelineId
+              ? t('pipelines.selectStage')
+              : t('pipelines.selectPipelineFirst')}
           </option>
           {stageOptions.map((s) => (
             <option key={s.id} value={s.id}>
@@ -544,12 +593,14 @@ function DealPipelineFields({
             </option>
           ))}
           {stageId && pipelineId && !selectedStage && (
-            <option value={stageId}>{t("pipelines.unknownStage", { id: stageId })}</option>
+            <option value={stageId}>
+              {t('pipelines.unknownStage', { id: stageId })}
+            </option>
           )}
         </select>
       </FieldBlock>
     </>
-  )
+  );
 }
 
 /** Template dropdown showing approved templates by name + language,
@@ -561,17 +612,17 @@ function SendTemplateFields({
   onChange,
   t,
 }: {
-  templateName: string
-  language: string
-  onChange: (patch: { template_name: string; language: string }) => void
-  t: ReturnType<typeof useTranslations>
+  templateName: string;
+  language: string;
+  onChange: (patch: { template_name: string; language: string }) => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
-  const { templates } = useResources()
+  const { templates } = useResources();
 
   if (templates.length === 0) {
     return (
       <>
-        <FieldBlock label={t("templates.templateNameLabel")}>
+        <FieldBlock label={t('templates.templateNameLabel')}>
           <Input
             value={templateName}
             onChange={(e) =>
@@ -579,53 +630,59 @@ function SendTemplateFields({
             }
           />
         </FieldBlock>
-        <FieldBlock label={t("templates.languageLabel")}>
+        <FieldBlock label={t('templates.languageLabel')}>
           <Input
             value={language}
             onChange={(e) =>
-              onChange({ template_name: templateName, language: e.target.value })
+              onChange({
+                template_name: templateName,
+                language: e.target.value,
+              })
             }
           />
         </FieldBlock>
       </>
-    )
+    );
   }
 
   // Encode name + language in the option value so two templates that
   // share a name across languages stay distinct.
-  const toValue = (name: string, lang: string) => `${name}::${lang}`
-  const current = templateName ? toValue(templateName, language) : ""
+  const toValue = (name: string, lang: string) => `${name}::${lang}`;
+  const current = templateName ? toValue(templateName, language) : '';
   const hasMatch = templates.some(
-    (t) => toValue(t.name, t.language ?? "en_US") === current,
-  )
+    (t) => toValue(t.name, t.language ?? 'en_US') === current
+  );
 
   return (
-    <FieldBlock label={t("templates.templateLabel")}>
+    <FieldBlock label={t('templates.templateLabel')}>
       <select
         value={current}
         onChange={(e) => {
-          const [name, lang] = e.target.value.split("::")
-          onChange({ template_name: name ?? "", language: lang ?? "" })
+          const [name, lang] = e.target.value.split('::');
+          onChange({ template_name: name ?? '', language: lang ?? '' });
         }}
         className={SELECT_CLASS}
       >
-        <option value="">{t("templates.select")}</option>
+        <option value="">{t('templates.select')}</option>
         {templates.map((tmpl) => {
-          const lang = tmpl.language ?? "en_US"
+          const lang = tmpl.language ?? 'en_US';
           return (
             <option key={tmpl.id} value={toValue(tmpl.name, lang)}>
               {tmpl.name} ({lang})
             </option>
-          )
+          );
         })}
         {current && !hasMatch && (
           <option value={current}>
-            {t("templates.unknown", { name: templateName, lang: language || t("templates.unknownLang") })}
+            {t('templates.unknown', {
+              name: templateName,
+              lang: language || t('templates.unknownLang'),
+            })}
           </option>
         )}
       </select>
     </FieldBlock>
-  )
+  );
 }
 
 // ------------------------------------------------------------
@@ -633,117 +690,131 @@ function SendTemplateFields({
 // ------------------------------------------------------------
 
 export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
-  const router = useRouter()
-  const t = useTranslations("Automations.builder")
-  const isEditing = !!initial.id
-  const [state, setState] = useState<BuilderInitial>(initial)
-  const [saving, setSaving] = useState(false)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const router = useRouter();
+  const t = useTranslations('Automations.builder');
+  const isEditing = !!initial.id;
+  const [state, setState] = useState<BuilderInitial>(initial);
+  const [saving, setSaving] = useState(false);
+  // v8: the canvas stays compact; the selected step (or "trigger") opens
+  // its settings in the side panel, like a record view.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const numbers = useMemo(() => numberSteps(state.steps), [state.steps]);
 
-  function patchTop<K extends keyof BuilderInitial>(key: K, value: BuilderInitial[K]) {
-    setState((s) => ({ ...s, [key]: value }))
+  function patchTop<K extends keyof BuilderInitial>(
+    key: K,
+    value: BuilderInitial[K]
+  ) {
+    setState((s) => ({ ...s, [key]: value }));
   }
 
   // --- Step tree mutations (immutable) ---
 
-  function updateStep(path: StepPath, updater: (s: BuilderStep) => BuilderStep) {
-    setState((s) => ({ ...s, steps: mapAtPath(s.steps, path, updater) }))
+  function updateStep(
+    path: StepPath,
+    updater: (s: BuilderStep) => BuilderStep
+  ) {
+    setState((s) => ({ ...s, steps: mapAtPath(s.steps, path, updater) }));
   }
 
-  function addStepAt(parent: ParentScope, index: number, type: AutomationStepType) {
+  function addStepAt(
+    parent: ParentScope,
+    index: number,
+    type: AutomationStepType
+  ) {
     const node: BuilderStep = {
       cid: cid(),
       step_type: type,
       step_config: blankConfig(type),
-      branches: type === "condition" ? { yes: [], no: [] } : undefined,
-    }
-    setState((s) => ({ ...s, steps: insertAt(s.steps, parent, index, node) }))
-    setExpandedId(node.cid)
+      branches: type === 'condition' ? { yes: [], no: [] } : undefined,
+    };
+    setState((s) => ({ ...s, steps: insertAt(s.steps, parent, index, node) }));
+    setExpandedId(node.cid);
   }
 
   function deleteStepAt(path: StepPath) {
-    setState((s) => ({ ...s, steps: removeAt(s.steps, path) }))
+    setState((s) => ({ ...s, steps: removeAt(s.steps, path) }));
+    setExpandedId(null);
   }
 
   function moveStepAt(path: StepPath, direction: -1 | 1) {
-    setState((s) => ({ ...s, steps: moveAt(s.steps, path, direction) }))
+    setState((s) => ({ ...s, steps: moveAt(s.steps, path, direction) }));
   }
 
   async function save() {
-    setSaving(true)
+    setSaving(true);
     try {
       const payload = {
-        name: state.name || t("untitled"),
+        name: state.name || t('untitled'),
         description: state.description || null,
         trigger_type: state.trigger_type,
         trigger_config: state.trigger_config,
         is_active: state.is_active,
         steps: toApiSteps(state.steps),
-      }
+      };
 
       const res = isEditing
         ? await fetch(`/api/automations/${initial.id}`, {
-            method: "PATCH",
-            headers: { "content-type": "application/json" },
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
             body: JSON.stringify(payload),
           })
         : await fetch(`/api/automations`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
             body: JSON.stringify(payload),
-          })
+          });
 
-      const body = await res.json().catch(() => ({}))
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         // If the server blocked activation with validation issues,
         // surface the first concrete problem so the user can fix it
         // without opening DevTools for the full array.
         const firstIssue: { path?: string; message?: string } | undefined =
-          body?.issues?.[0]
+          body?.issues?.[0];
         if (firstIssue?.message) {
           toast.error(firstIssue.message, {
             description: firstIssue.path ? `at ${firstIssue.path}` : undefined,
-          })
+          });
         } else {
-          toast.error(body?.error ?? t("toasts.saveFailed"))
+          toast.error(body?.error ?? t('toasts.saveFailed'));
         }
-        return
+        return;
       }
-      toast.success(isEditing ? t("toasts.saved") : t("toasts.created"))
+      toast.success(isEditing ? t('toasts.saved') : t('toasts.created'));
       if (!isEditing && body?.automation?.id) {
-        router.replace(`/automations/${body.automation.id}/edit`)
+        router.replace(`/automations/${body.automation.id}/edit`);
       }
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-background">
+    <div className="bg-background fixed inset-0 flex flex-col">
       {/* Top bar. At sub-sm widths the "Active" label is hidden and the
           switch moves to the right of the save button, so the name input
           gets maximum width. */}
-      <header className="flex flex-shrink-0 items-center gap-2 border-b border-border bg-card/80 px-3 py-3 sm:gap-3 sm:px-4">
+      <header className="border-border bg-card/80 flex flex-shrink-0 items-center gap-2 border-b px-3 py-3 sm:gap-3 sm:px-4">
         <button
           type="button"
-          onClick={() => router.push("/automations")}
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          aria-label={t("backToAutomations")}
+          onClick={() => router.push('/automations')}
+          className="text-muted-foreground hover:bg-muted hover:text-foreground flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md transition-colors"
+          aria-label={t('backToAutomations')}
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
         <input
           value={state.name}
-          onChange={(e) => patchTop("name", e.target.value)}
-          placeholder={t("untitled")}
-          className="min-w-0 flex-1 rounded-md bg-transparent px-2 py-1 text-sm font-semibold text-foreground placeholder:text-muted-foreground focus:bg-muted focus:outline-none sm:text-base"
+          onChange={(e) => patchTop('name', e.target.value)}
+          placeholder={t('untitled')}
+          className="text-foreground placeholder:text-muted-foreground focus:bg-muted min-w-0 flex-1 rounded-md bg-transparent px-2 py-1 text-sm font-semibold focus:outline-none sm:text-base"
         />
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="hidden sm:inline">{t("active")}</span>
+        <div className="text-muted-foreground flex items-center gap-2 text-xs">
+          <span className="hidden sm:inline">{t('active')}</span>
           <Switch
             checked={state.is_active}
-            onCheckedChange={(v) => patchTop("is_active", !!v)}
-            aria-label={t("activeAria")}
+            onCheckedChange={(v) => patchTop('is_active', !!v)}
+            aria-label={t('activeAria')}
           />
         </div>
         <Button
@@ -752,36 +823,33 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
           className="bg-foreground text-background hover:bg-foreground/90"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {isEditing ? t("save") : t("saveDraft")}
+          {isEditing ? t('save') : t('saveDraft')}
         </Button>
       </header>
 
       {/* Canvas */}
       <div className="relative flex-1 overflow-y-auto">
-        <div className="absolute inset-0 bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
-        <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-0 px-4 py-10">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px]" />
+        <div
+          className={cn(
+            'relative mx-auto flex max-w-2xl flex-col items-center gap-0 px-4 py-10 transition-[padding] duration-200 ease-out',
+            expandedId && 'lg:max-w-none lg:pr-[468px]'
+          )}
+        >
           <ResourcesProvider>
             <TriggerCard
               type={state.trigger_type}
-              config={state.trigger_config}
-              onTypeChange={(tVal) => {
-                patchTop("trigger_type", tVal)
-                // Picking the follow-up trigger fills sensible defaults so
-                // the silence field isn't a blank box.
-                if (tVal === "conversation_silence" && !state.trigger_config.silence_after) {
-                  patchTop("trigger_config", {
-                    ...state.trigger_config,
-                    silence_after: { amount: 4, unit: "hours" },
-                  })
-                }
-              }}
-              onConfigChange={(c) => patchTop("trigger_config", c)}
+              selected={expandedId === 'trigger'}
+              onSelect={() =>
+                setExpandedId(expandedId === 'trigger' ? null : 'trigger')
+              }
               t={t}
             />
             <StepList
               steps={state.steps}
               basePath={[]}
-              scope={{ kind: "root" }}
+              scope={{ kind: 'root' }}
+              numbers={numbers}
               expandedId={expandedId}
               setExpandedId={setExpandedId}
               updateStep={updateStep}
@@ -789,11 +857,37 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
               deleteStepAt={deleteStepAt}
               moveStepAt={moveStepAt}
             />
+            <BuilderPanel
+              selectedId={expandedId}
+              onClose={() => setExpandedId(null)}
+              steps={state.steps}
+              numbers={numbers}
+              triggerType={state.trigger_type}
+              triggerConfig={state.trigger_config}
+              onTriggerTypeChange={(tVal) => {
+                patchTop('trigger_type', tVal);
+                // Picking the follow-up trigger fills sensible defaults so
+                // the silence field isn't a blank box.
+                if (
+                  tVal === 'conversation_silence' &&
+                  !state.trigger_config.silence_after
+                ) {
+                  patchTop('trigger_config', {
+                    ...state.trigger_config,
+                    silence_after: { amount: 4, unit: 'hours' },
+                  });
+                }
+              }}
+              onTriggerConfigChange={(c) => patchTop('trigger_config', c)}
+              updateStep={updateStep}
+              deleteStepAt={deleteStepAt}
+              moveStepAt={moveStepAt}
+            />
           </ResourcesProvider>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 // ------------------------------------------------------------
@@ -802,109 +896,126 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
 
 function TriggerCard({
   type,
+  selected,
+  onSelect,
+  t,
+}: {
+  type: AutomationTriggerType;
+  selected: boolean;
+  onSelect: () => void;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <div className="z-10 w-full max-w-[340px] sm:w-[340px]">
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-pressed={selected}
+        className={cn(
+          'border-border bg-card flex w-full items-center gap-3 rounded-[20px] border p-3 text-left shadow-[0_6px_18px_rgb(0_0_0/0.06)] transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-0.5',
+          selected && 'ring-foreground ring-2'
+        )}
+      >
+        <span className="bg-foreground text-background flex size-10 shrink-0 items-center justify-center rounded-xl">
+          <Zap className="size-[18px]" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="text-muted-foreground block text-[11px] font-bold">
+            {t('whenThis')}
+          </span>
+          <span className="block truncate text-sm font-bold">
+            {t(`triggers.${type}.label`)}
+          </span>
+        </span>
+      </button>
+    </div>
+  );
+}
+
+function TriggerEditor({
+  type,
   config,
   onTypeChange,
   onConfigChange,
   t,
 }: {
-  type: AutomationTriggerType
-  config: Record<string, unknown>
-  onTypeChange: (t: AutomationTriggerType) => void
-  onConfigChange: (c: Record<string, unknown>) => void
-  t: ReturnType<typeof useTranslations>
+  type: AutomationTriggerType;
+  config: Record<string, unknown>;
+  onTypeChange: (t: AutomationTriggerType) => void;
+  onConfigChange: (c: Record<string, unknown>) => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
-  const [open, setOpen] = useState(false)
   return (
-    // Card width: full on mobile, fixed 320px on sm+. The canvas wrapper
-    // (max-w-2xl + px-4) keeps this tidy on tablet/desktop.
-    <div className="z-10 w-full max-w-[320px] sm:w-80">
-      <div className="rounded-lg border border-border border-l-4 border-l-blue-500 bg-card shadow-lg">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center gap-3 px-4 py-3 text-left"
+    <div className="space-y-4">
+      <div>
+        <label className="text-muted-foreground mb-1 block text-xs font-medium">
+          {t('triggerType')}
+        </label>
+        <select
+          value={type}
+          onChange={(e) =>
+            onTypeChange(e.target.value as AutomationTriggerType)
+          }
+          className="border-border bg-card text-foreground focus:border-foreground h-10 w-full rounded-xl border-[1.5px] px-3 text-sm transition-colors duration-150 ease-out focus:outline-none"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
-            <Zap className="h-4 w-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[11px] uppercase tracking-wide text-blue-700 dark:text-blue-300">{t("trigger")}</div>
-            <div className="truncate text-sm font-medium text-foreground">
-              {t(`triggers.${type}.label`)}
-            </div>
-          </div>
-          <ChevronDown
-            className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")}
-          />
-        </button>
-        {open && (
-          <div className="space-y-3 border-t border-border px-4 py-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                {t("triggerType")}
-              </label>
-              <select
-                value={type}
-                onChange={(e) => onTypeChange(e.target.value as AutomationTriggerType)}
-                className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
-              >
-                {TRIGGER_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {t(`triggers.${o.value}.label`)}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                {t(`triggers.${type}.hint`)}
-              </p>
-            </div>
-            {type === "keyword_match" && (
-              <KeywordMatchConfig
-                config={config as unknown as KeywordMatchTriggerConfig}
-                onChange={onConfigChange}
-                t={t}
-              />
-            )}
-            {type === "interactive_reply" && (
-              <InteractiveReplyConfig config={config} onChange={onConfigChange} t={t} />
-            )}
-            {type === "tag_added" && (
-              <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                  Tag
-                </label>
-                <TagSelect
-                  value={(config.tag_id as string) ?? ""}
-                  onChange={(v) => onConfigChange({ ...config, tag_id: v })}
-                  t={t}
-                />
-              </div>
-            )}
-            {type === "conversation_silence" && (
-              <SilenceConfig config={config} onChange={onConfigChange} t={t} />
-            )}
-            {type === "time_based" && (
-              <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                  {t("schedule")}
-                </label>
-                <Input
-                  placeholder={t("schedulePlaceholder")}
-                  value={(config.schedule as string) ?? ""}
-                  onChange={(e) =>
-                    onConfigChange({ ...config, schedule: e.target.value })
-                  }
-                />
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  {t("scheduleHint")}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+          {TRIGGER_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {t(`triggers.${o.value}.label`)}
+            </option>
+          ))}
+        </select>
+        <p className="text-muted-foreground mt-1 text-[11px]">
+          {t(`triggers.${type}.hint`)}
+        </p>
       </div>
+      {type === 'keyword_match' && (
+        <KeywordMatchConfig
+          config={config as unknown as KeywordMatchTriggerConfig}
+          onChange={onConfigChange}
+          t={t}
+        />
+      )}
+      {type === 'interactive_reply' && (
+        <InteractiveReplyConfig
+          config={config}
+          onChange={onConfigChange}
+          t={t}
+        />
+      )}
+      {type === 'tag_added' && (
+        <div>
+          <label className="text-muted-foreground mb-1 block text-xs font-medium">
+            Tag
+          </label>
+          <TagSelect
+            value={(config.tag_id as string) ?? ''}
+            onChange={(v) => onConfigChange({ ...config, tag_id: v })}
+            t={t}
+          />
+        </div>
+      )}
+      {type === 'conversation_silence' && (
+        <SilenceConfig config={config} onChange={onConfigChange} t={t} />
+      )}
+      {type === 'time_based' && (
+        <div>
+          <label className="text-muted-foreground mb-1 block text-xs font-medium">
+            {t('schedule')}
+          </label>
+          <Input
+            placeholder={t('schedulePlaceholder')}
+            value={(config.schedule as string) ?? ''}
+            onChange={(e) =>
+              onConfigChange({ ...config, schedule: e.target.value })
+            }
+          />
+          <p className="text-muted-foreground mt-1 text-[11px]">
+            {t('scheduleHint')}
+          </p>
+        </div>
+      )}
     </div>
-  )
+  );
 }
 
 /**
@@ -918,83 +1029,90 @@ function SilenceConfig({
   onChange,
   t,
 }: {
-  config: Record<string, unknown>
-  onChange: (c: Record<string, unknown>) => void
-  t: ReturnType<typeof useTranslations>
+  config: Record<string, unknown>;
+  onChange: (c: Record<string, unknown>) => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
-  const sa = (config.silence_after as { amount?: number; unit?: string } | undefined) ?? {}
+  const sa =
+    (config.silence_after as { amount?: number; unit?: string } | undefined) ??
+    {};
   const win = config.send_window as
-    | { start_hour: number; end_hour: number; tz: string }
-    | undefined
-  const set = (patch: Record<string, unknown>) => onChange({ ...config, ...patch })
-  const field = "w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+    { start_hour: number; end_hour: number; tz: string } | undefined;
+  const set = (patch: Record<string, unknown>) =>
+    onChange({ ...config, ...patch });
+  const field =
+    'h-10 w-full rounded-xl border-[1.5px] border-border bg-card px-3 text-sm text-foreground transition-colors duration-150 ease-out focus:border-foreground focus:outline-none';
 
   return (
     <div className="space-y-3">
       <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          {t("silence.after")}
+        <label className="text-muted-foreground mb-1 block text-xs font-medium">
+          {t('silence.after')}
         </label>
         <div className="flex gap-2">
           <Input
             type="number"
             min={1}
-            value={sa.amount ?? ""}
+            value={sa.amount ?? ''}
             onChange={(e) =>
               set({
                 silence_after: {
                   amount: Number(e.target.value),
-                  unit: sa.unit ?? "hours",
+                  unit: sa.unit ?? 'hours',
                 },
               })
             }
             className="w-24"
           />
           <select
-            value={sa.unit ?? "hours"}
+            value={sa.unit ?? 'hours'}
             onChange={(e) =>
-              set({ silence_after: { amount: sa.amount ?? 4, unit: e.target.value } })
+              set({
+                silence_after: { amount: sa.amount ?? 4, unit: e.target.value },
+              })
             }
             className={field}
           >
-            <option value="minutes">{t("silence.minutes")}</option>
-            <option value="hours">{t("silence.hours")}</option>
-            <option value="days">{t("silence.days")}</option>
+            <option value="minutes">{t('silence.minutes')}</option>
+            <option value="hours">{t('silence.hours')}</option>
+            <option value="days">{t('silence.days')}</option>
           </select>
         </div>
-        <p className="mt-1 text-[11px] text-muted-foreground">{t("silence.afterHint")}</p>
+        <p className="text-muted-foreground mt-1 text-[11px]">
+          {t('silence.afterHint')}
+        </p>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          {t("silence.audience")}
+        <label className="text-muted-foreground mb-1 block text-xs font-medium">
+          {t('silence.audience')}
         </label>
         <select
-          value={(config.audience as string) ?? "ai_conversations"}
+          value={(config.audience as string) ?? 'ai_conversations'}
           onChange={(e) => set({ audience: e.target.value })}
           className={field}
         >
-          <option value="ai_conversations">{t("silence.audienceAi")}</option>
-          <option value="all_open">{t("silence.audienceAll")}</option>
+          <option value="ai_conversations">{t('silence.audienceAi')}</option>
+          <option value="all_open">{t('silence.audienceAll')}</option>
         </select>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          {t("silence.handoff")}
+        <label className="text-muted-foreground mb-1 block text-xs font-medium">
+          {t('silence.handoff')}
         </label>
         <select
-          value={(config.handoff_policy as string) ?? "cancel"}
+          value={(config.handoff_policy as string) ?? 'cancel'}
           onChange={(e) => set({ handoff_policy: e.target.value })}
           className={field}
         >
-          <option value="cancel">{t("silence.handoffCancel")}</option>
-          <option value="allow">{t("silence.handoffAllow")}</option>
+          <option value="cancel">{t('silence.handoffCancel')}</option>
+          <option value="allow">{t('silence.handoffAllow')}</option>
         </select>
       </div>
 
       <div>
-        <label className="mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <label className="text-muted-foreground mb-1 flex items-center gap-2 text-xs font-medium">
           <input
             type="checkbox"
             checked={!!win}
@@ -1005,48 +1123,55 @@ function SilenceConfig({
                       start_hour: 9,
                       end_hour: 18,
                       tz:
-                        Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+                        Intl.DateTimeFormat().resolvedOptions().timeZone ||
+                        'UTC',
                     }
                   : undefined,
               })
             }
           />
-          {t("silence.window")}
+          {t('silence.window')}
         </label>
         {win && (
-          <div className="flex items-center gap-2 text-sm text-foreground">
+          <div className="text-foreground flex items-center gap-2 text-sm">
             <Input
               type="number"
               min={0}
               max={23}
               value={win.start_hour}
               onChange={(e) =>
-                set({ send_window: { ...win, start_hour: Number(e.target.value) } })
+                set({
+                  send_window: { ...win, start_hour: Number(e.target.value) },
+                })
               }
               className="w-20"
             />
-            <span>{t("silence.to")}</span>
+            <span>{t('silence.to')}</span>
             <Input
               type="number"
               min={1}
               max={24}
               value={win.end_hour}
               onChange={(e) =>
-                set({ send_window: { ...win, end_hour: Number(e.target.value) } })
+                set({
+                  send_window: { ...win, end_hour: Number(e.target.value) },
+                })
               }
               className="w-20"
             />
-            <span className="text-xs text-muted-foreground">{win.tz}</span>
+            <span className="text-muted-foreground text-xs">{win.tz}</span>
           </div>
         )}
-        <p className="mt-1 text-[11px] text-muted-foreground">{t("silence.windowHint")}</p>
+        <p className="text-muted-foreground mt-1 text-[11px]">
+          {t('silence.windowHint')}
+        </p>
       </div>
 
       <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-800 dark:text-amber-200">
-        {t("silence.risk")}
+        {t('silence.risk')}
       </p>
     </div>
-  )
+  );
 }
 
 function KeywordMatchConfig({
@@ -1054,18 +1179,18 @@ function KeywordMatchConfig({
   onChange,
   t,
 }: {
-  config: KeywordMatchTriggerConfig
-  onChange: (c: Record<string, unknown>) => void
-  t: ReturnType<typeof useTranslations>
+  config: KeywordMatchTriggerConfig;
+  onChange: (c: Record<string, unknown>) => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
-  const keywords = config?.keywords ?? []
+  const keywords = config?.keywords ?? [];
   // Keep a local draft string so the comma and trailing space aren't
   // stripped on every keystroke (which made multi-word, comma-separated
   // entry like "SEO, search engine optimization" impossible to type).
   // We only parse into the keywords array on blur, then re-display the
   // cleaned, rejoined form. Seeded once on mount; this component remounts
   // when the trigger type changes, so the seed stays in sync.
-  const [draft, setDraft] = useState(keywords.join(", "))
+  const [draft, setDraft] = useState(keywords.join(', '));
 
   // Persist the default the <select> displays. The dropdown falls back to
   // "contains" for display, but leaving it untouched would otherwise omit
@@ -1074,68 +1199,68 @@ function KeywordMatchConfig({
   // remounts when the trigger type changes, matching the keywords draft.
   useEffect(() => {
     if (config?.match_type == null) {
-      onChange({ ...config, match_type: "contains" })
+      onChange({ ...config, match_type: 'contains' });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   function commit() {
     const parsed = draft
-      .split(",")
+      .split(',')
       .map((s) => s.trim())
-      .filter(Boolean)
-    setDraft(parsed.join(", "))
-    onChange({ ...config, keywords: parsed })
+      .filter(Boolean);
+    setDraft(parsed.join(', '));
+    onChange({ ...config, keywords: parsed });
   }
 
   return (
     <div className="space-y-2">
       <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          {t("keywords")}
+        <label className="text-muted-foreground mb-1 block text-xs font-medium">
+          {t('keywords')}
         </label>
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault()
-              commit()
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              commit();
             }
           }}
-          placeholder={t("keywordsHint")}
+          placeholder={t('keywordsHint')}
         />
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          {t("config.matchType")}
+        <label className="text-muted-foreground mb-1 block text-xs font-medium">
+          {t('config.matchType')}
         </label>
         <select
-          value={config?.match_type ?? "contains"}
+          value={config?.match_type ?? 'contains'}
           onChange={(e) =>
             onChange({
               ...config,
-              match_type: e.target.value as "exact" | "contains" | "word",
+              match_type: e.target.value as 'exact' | 'contains' | 'word',
             })
           }
-          className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground focus:outline-none"
+          className="border-border bg-card text-foreground focus:border-foreground h-10 w-full rounded-xl border-[1.5px] px-3 text-sm transition-colors duration-150 ease-out focus:outline-none"
         >
-          <option value="contains">{t("config.matchContains")}</option>
-          <option value="word">{t("config.matchWord")}</option>
-          <option value="exact">{t("config.matchExact")}</option>
+          <option value="contains">{t('config.matchContains')}</option>
+          <option value="word">{t('config.matchWord')}</option>
+          <option value="exact">{t('config.matchExact')}</option>
         </select>
         {/* Only worth explaining for `word` — "contains" and "exact" read
             for themselves, and this is the one that changes which messages
             fire an automation in a way that isn't obvious. */}
-        {config?.match_type === "word" && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t("config.matchWordHint")}
+        {config?.match_type === 'word' && (
+          <p className="text-muted-foreground mt-1 text-xs">
+            {t('config.matchWordHint')}
           </p>
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function InteractiveReplyConfig({
@@ -1143,45 +1268,47 @@ function InteractiveReplyConfig({
   onChange,
   t,
 }: {
-  config: Record<string, unknown>
-  onChange: (c: Record<string, unknown>) => void
-  t: ReturnType<typeof useTranslations>
+  config: Record<string, unknown>;
+  onChange: (c: Record<string, unknown>) => void;
+  t: ReturnType<typeof useTranslations>;
 }) {
-  const ids = (config?.reply_ids as string[] | undefined) ?? []
+  const ids = (config?.reply_ids as string[] | undefined) ?? [];
   // Same local-draft-then-commit pattern as KeywordMatchConfig so
   // commas + spaces survive keystrokes.
-  const [draft, setDraft] = useState(ids.join(", "))
+  const [draft, setDraft] = useState(ids.join(', '));
 
   function commit() {
     const parsed = draft
-      .split(",")
+      .split(',')
       .map((s) => s.trim())
-      .filter(Boolean)
-    setDraft(parsed.join(", "))
-    onChange({ ...config, reply_ids: parsed })
+      .filter(Boolean);
+    setDraft(parsed.join(', '));
+    onChange({ ...config, reply_ids: parsed });
   }
 
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-muted-foreground">
-        {t("replyIds")}
+      <label className="text-muted-foreground mb-1 block text-xs font-medium">
+        {t('replyIds')}
       </label>
       <Input
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault()
-            commit()
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commit();
           }
         }}
-        placeholder={t("replyIdsHint")}
-        className="bg-muted font-mono text-foreground"
+        placeholder={t('replyIdsHint')}
+        className="bg-muted text-foreground font-mono"
       />
-      <p className="mt-1 text-[11px] text-muted-foreground">{t("replyIdsHelp")}</p>
+      <p className="text-muted-foreground mt-1 text-[11px]">
+        {t('replyIdsHelp')}
+      </p>
     </div>
-  )
+  );
 }
 
 // ------------------------------------------------------------
@@ -1189,25 +1316,34 @@ function InteractiveReplyConfig({
 // ------------------------------------------------------------
 
 interface StepListProps {
-  steps: BuilderStep[]
+  steps: BuilderStep[];
   /**
    * Path of the step that owns this list — `[]` for the root canvas,
    * the condition's own path for a branch column. Combined with
    * `scope` by `childPath` to address each child.
    */
-  basePath: StepPath
+  basePath: StepPath;
   /** Which bucket this list reads and writes. */
-  scope: ParentScope
-  expandedId: string | null
-  setExpandedId: (id: string | null) => void
-  updateStep: (path: StepPath, updater: (s: BuilderStep) => BuilderStep) => void
-  addStepAt: (parent: ParentScope, index: number, type: AutomationStepType) => void
-  deleteStepAt: (path: StepPath) => void
-  moveStepAt: (path: StepPath, direction: -1 | 1) => void
+  scope: ParentScope;
+  /** Display number per step cid, in reading order. */
+  numbers: Map<string, number>;
+  expandedId: string | null;
+  setExpandedId: (id: string | null) => void;
+  updateStep: (
+    path: StepPath,
+    updater: (s: BuilderStep) => BuilderStep
+  ) => void;
+  addStepAt: (
+    parent: ParentScope,
+    index: number,
+    type: AutomationStepType
+  ) => void;
+  deleteStepAt: (path: StepPath) => void;
+  moveStepAt: (path: StepPath, direction: -1 | 1) => void;
 }
 
 function StepList(props: StepListProps) {
-  const { steps, basePath, scope, ...rest } = props
+  const { steps, basePath, scope, ...rest } = props;
 
   return (
     <div className="flex w-full flex-col items-center">
@@ -1217,37 +1353,34 @@ function StepList(props: StepListProps) {
           key={step.cid}
           step={step}
           index={idx}
-          total={steps.length}
           basePath={basePath}
           scope={scope}
           {...rest}
         />
       ))}
     </div>
-  )
+  );
 }
 
 function StepRenderer({
   step,
   index,
-  total,
   scope,
   basePath,
   ...props
 }: {
-  step: BuilderStep
-  index: number
-  total: number
-  scope: ParentScope
-  basePath: StepPath
-} & Omit<StepListProps, "steps" | "basePath" | "scope">) {
-  const t = useTranslations("Automations.builder")
-  const path = childPath(basePath, scope, index)
-  const meta = STEP_META[step.step_type]
-  const Icon = meta.icon
-  const expanded = props.expandedId === step.cid
-  const isCondition = step.step_type === "condition"
-  const nested = basePath.length > 0
+  step: BuilderStep;
+  index: number;
+  scope: ParentScope;
+  basePath: StepPath;
+} & Omit<StepListProps, 'steps' | 'basePath' | 'scope'>) {
+  const t = useTranslations('Automations.builder');
+  const path = childPath(basePath, scope, index);
+  const meta = STEP_META[step.step_type];
+  const Icon = meta.icon;
+  const expanded = props.expandedId === step.cid;
+  const isCondition = step.step_type === 'condition';
+  const nested = basePath.length > 0;
   // Card widths on mobile fill the full canvas column (max-w-2xl px-4
   // still keeps them reasonable). On sm+ fixed widths come back so the
   // flow visual stays recognisable — but only at the top level: a
@@ -1261,79 +1394,55 @@ function StepRenderer({
   // 640px of content) leaves each branch ~294px — near enough to the
   // 320px a step gets at the top level for the same editors to fit.
   const width = nested
-    ? "w-full"
+    ? 'w-full'
     : isCondition
-      ? "w-full max-w-[600px] sm:w-[600px]"
-      : "w-full max-w-[320px] sm:w-80"
+      ? 'w-full max-w-[600px] sm:w-[600px]'
+      : 'w-full max-w-[340px] sm:w-[340px]';
+
+  const needsSetup = useMemo(
+    () =>
+      validateStepsForActivation([{ ...step, branches: undefined }]).length > 0,
+    [step]
+  );
 
   return (
     <>
-      <div className={cn("z-10 flex min-w-0 flex-col", width)}>
-        <div
+      <div className={cn('z-10 flex min-w-0 flex-col', width)}>
+        <button
+          type="button"
+          onClick={() => props.setExpandedId(expanded ? null : step.cid)}
+          aria-pressed={expanded}
           className={cn(
-            "rounded-lg border border-border border-l-4 bg-card shadow-lg",
-            meta.border,
+            'border-border bg-card flex w-full items-center gap-3 rounded-[20px] border p-3 text-left shadow-[0_6px_18px_rgb(0_0_0/0.06)] transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-0.5',
+            expanded && 'ring-foreground ring-2'
           )}
         >
-          <button
-            type="button"
-            onClick={() => props.setExpandedId(expanded ? null : step.cid)}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left"
+          <span
+            className={cn(
+              'flex size-10 shrink-0 items-center justify-center rounded-xl',
+              GROUP_TONE[meta.group]
+            )}
           >
-            <GripVertical className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden />
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
-              <Icon className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                {isCondition ? t("kindCondition") : step.step_type === "wait" ? t("kindWait") : t("kindAction")}
-              </div>
-              <div className="truncate text-sm font-medium text-foreground">{t(`steps.${meta.label}`)}</div>
-              <div className="truncate text-[11px] text-muted-foreground">{previewFor(step)}</div>
-            </div>
-            <ChevronDown
-              className={cn("h-4 w-4 text-muted-foreground transition-transform", expanded && "rotate-180")}
-            />
-          </button>
-          {expanded && (
-            <div className="border-t border-border px-4 py-3">
-              <StepEditor
-                step={step}
-                onChange={(next) => props.updateStep(path, () => next)}
-              />
-              <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    disabled={index === 0}
-                    aria-label={t("moveUp")}
-                    onClick={() => props.moveStepAt(path, -1)}
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    disabled={index === total - 1}
-                    aria-label={t("moveDown")}
-                    onClick={() => props.moveStepAt(path, 1)}
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </Button>
-                </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => props.deleteStepAt(path)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  {t("delete")}
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
+            <Icon className="size-[18px]" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-bold">
+              {t('stepN', { n: props.numbers.get(step.cid) ?? index + 1 })}
+              {needsSetup && (
+                <span className="bg-tone-pink-soft text-tone-pink-ink inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10.5px]">
+                  <AlertTriangle className="size-3" />
+                  {t('needsSetup')}
+                </span>
+              )}
+            </span>
+            <span className="block truncate text-sm font-bold">
+              {t(`steps.${meta.label}`)}
+            </span>
+            <span className="text-muted-foreground block truncate text-xs">
+              {previewFor(step, t)}
+            </span>
+          </span>
+        </button>
 
         {isCondition && (
           <ConditionBranches step={step} path={path} {...props} />
@@ -1347,7 +1456,7 @@ function StepRenderer({
         <AddButton onPick={(t) => props.addStepAt(scope, index + 1, t)} />
       )}
     </>
-  )
+  );
 }
 
 function ConditionBranches({
@@ -1355,13 +1464,13 @@ function ConditionBranches({
   path,
   ...props
 }: {
-  step: BuilderStep
+  step: BuilderStep;
   /** The condition's OWN path. Children hang off it, one marker each. */
-  path: StepPath
-} & Omit<StepListProps, "steps" | "basePath" | "scope">) {
-  const t = useTranslations("Automations.builder")
-  const yes = step.branches?.yes ?? []
-  const no = step.branches?.no ?? []
+  path: StepPath;
+} & Omit<StepListProps, 'steps' | 'basePath' | 'scope'>) {
+  const t = useTranslations('Automations.builder');
+  const yes = step.branches?.yes ?? [];
+  const no = step.branches?.no ?? [];
   return (
     // Stack Yes/No vertically until THIS CARD is wide enough for two
     // columns. A viewport breakpoint can't tell: a condition nested in
@@ -1369,25 +1478,28 @@ function ConditionBranches({
     // it anyway, leaving two columns too narrow to render a step in.
     <div className="@container mt-3 w-full">
       <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2">
-        <BranchColumn label={t("branches.yes")} color="text-primary">
+        <BranchColumn label={t('branches.yes')} color="text-primary">
           <StepList
             {...props}
             steps={yes}
             basePath={path}
-            scope={{ kind: "branch", parentCid: step.cid, branch: "yes" }}
+            scope={{ kind: 'branch', parentCid: step.cid, branch: 'yes' }}
           />
         </BranchColumn>
-        <BranchColumn label={t("branches.no")} color="text-rose-600 dark:text-rose-400">
+        <BranchColumn
+          label={t('branches.no')}
+          color="text-rose-600 dark:text-rose-400"
+        >
           <StepList
             {...props}
             steps={no}
             basePath={path}
-            scope={{ kind: "branch", parentCid: step.cid, branch: "no" }}
+            scope={{ kind: 'branch', parentCid: step.cid, branch: 'no' }}
           />
         </BranchColumn>
       </div>
     </div>
-  )
+  );
 }
 
 function BranchColumn({
@@ -1395,48 +1507,313 @@ function BranchColumn({
   color,
   children,
 }: {
-  label: string
-  color: string
-  children: React.ReactNode
+  label: string;
+  color: string;
+  children: React.ReactNode;
 }) {
   return (
     <div className="flex min-w-0 flex-col items-center">
-      <div className={cn("mb-2 text-[11px] font-semibold uppercase", color)}>{label}</div>
+      <div className={cn('mb-2 text-[11px] font-semibold uppercase', color)}>
+        {label}
+      </div>
       {children}
     </div>
-  )
+  );
 }
 
 function AddButton({ onPick }: { onPick: (t: AutomationStepType) => void }) {
-  const t = useTranslations("Automations.builder")
+  const t = useTranslations('Automations.builder');
+  const [open, setOpen] = useState(false);
   return (
     <div className="relative flex flex-col items-center">
-      <div className="h-4 w-[2px] bg-border" aria-hidden />
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed border-border bg-background text-muted-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary data-[popup-open]:border-primary data-[popup-open]:bg-primary/20 data-[popup-open]:text-primary"
-          aria-label={t("addStep")}
-        >
-          <Plus className="h-4 w-4" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="start"
-          className="max-h-80 min-w-56 overflow-y-auto border-border bg-popover"
-        >
-          {ADDABLE_STEPS.map((tp) => {
-            const Icon = STEP_META[tp].icon
-            return (
-              <DropdownMenuItem key={tp} onClick={() => onPick(tp)}>
-                <Icon className="h-4 w-4" />
-                {t(`steps.${STEP_META[tp].label}`)}
-              </DropdownMenuItem>
-            )
-          })}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <div className="h-4 w-[2px] bg-border" aria-hidden />
+      <div className="bg-border h-5 w-[2px]" aria-hidden />
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={t('addStep')}
+        className="border-border bg-card text-muted-foreground hover:border-foreground hover:bg-foreground hover:text-background flex size-8 items-center justify-center rounded-full border-[1.5px] shadow-sm transition-colors duration-150 ease-out"
+      >
+        <Plus className="size-4" />
+      </button>
+      <div className="bg-border h-5 w-[2px]" aria-hidden />
+      <StepPicker
+        open={open}
+        onOpenChange={setOpen}
+        onPick={(tp) => {
+          setOpen(false);
+          onPick(tp);
+        }}
+      />
     </div>
-  )
+  );
+}
+
+/** Activepieces-style picker: search, grouped, one line on what each does. */
+function StepPicker({
+  open,
+  onOpenChange,
+  onPick,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onPick: (t: AutomationStepType) => void;
+}) {
+  const t = useTranslations('Automations.builder');
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const groups = GROUP_ORDER.map((g) => ({
+    group: g,
+    items: ADDABLE_STEPS.filter(
+      (tp) =>
+        STEP_META[tp].group === g &&
+        (!q ||
+          t(`steps.${STEP_META[tp].label}`).toLowerCase().includes(q) ||
+          t(`picker.desc.${tp}`).toLowerCase().includes(q))
+    ),
+  })).filter((g) => g.items.length > 0);
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        onOpenChange(o);
+        if (!o) setQuery('');
+      }}
+    >
+      <DialogContent className="flex max-h-[85dvh] flex-col gap-0 p-0 sm:max-w-[520px]">
+        <div className="px-6 pt-5 pb-3">
+          <DialogTitle>{t('picker.title')}</DialogTitle>
+          <label className="relative mt-3 block">
+            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('picker.search')}
+              aria-label={t('picker.search')}
+              className="border-border bg-card focus:border-foreground h-11 w-full rounded-2xl border-[1.5px] pr-3 pl-9 text-sm transition-colors duration-150 ease-out outline-none"
+            />
+          </label>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+          {groups.length === 0 ? (
+            <p className="text-muted-foreground px-3 py-6 text-center text-sm">
+              {t('picker.empty')}
+            </p>
+          ) : (
+            groups.map(({ group, items }) => (
+              <section key={group} className="mb-2">
+                <h3 className="text-muted-foreground px-3 pt-2 pb-1 text-xs font-bold">
+                  {t(`picker.groups.${group}`)}
+                </h3>
+                {items.map((tp) => {
+                  const Icon = STEP_META[tp].icon;
+                  return (
+                    <button
+                      key={tp}
+                      type="button"
+                      onClick={() => onPick(tp)}
+                      className="hover:bg-muted flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors duration-150 ease-out"
+                    >
+                      <span
+                        className={cn(
+                          'flex size-9 shrink-0 items-center justify-center rounded-xl',
+                          GROUP_TONE[group]
+                        )}
+                      >
+                        <Icon className="size-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold">
+                          {t(`steps.${STEP_META[tp].label}`)}
+                        </span>
+                        <span className="text-muted-foreground block text-xs">
+                          {t(`picker.desc.${tp}`)}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </section>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ------------------------------------------------------------
+// Side panel: settings for the selected trigger or step
+// ------------------------------------------------------------
+
+function BuilderPanel({
+  selectedId,
+  onClose,
+  steps,
+  numbers,
+  triggerType,
+  triggerConfig,
+  onTriggerTypeChange,
+  onTriggerConfigChange,
+  updateStep,
+  deleteStepAt,
+  moveStepAt,
+}: {
+  selectedId: string | null;
+  onClose: () => void;
+  steps: BuilderStep[];
+  numbers: Map<string, number>;
+  triggerType: AutomationTriggerType;
+  triggerConfig: Record<string, unknown>;
+  onTriggerTypeChange: (t: AutomationTriggerType) => void;
+  onTriggerConfigChange: (c: Record<string, unknown>) => void;
+  updateStep: (
+    path: StepPath,
+    updater: (s: BuilderStep) => BuilderStep
+  ) => void;
+  deleteStepAt: (path: StepPath) => void;
+  moveStepAt: (path: StepPath, direction: -1 | 1) => void;
+}) {
+  const t = useTranslations('Automations.builder');
+  const isTrigger = selectedId === 'trigger';
+  const hit = selectedId && !isTrigger ? locate(steps, selectedId) : null;
+  const open = isTrigger || !!hit;
+
+  let header: ReactNode = null;
+  let content: ReactNode = null;
+  let footer: ReactNode = null;
+  if (isTrigger) {
+    header = (
+      <PanelHeading
+        icon={<Zap className="size-[18px]" />}
+        tone="bg-foreground text-background"
+        kicker={t('whenThis')}
+        title={t(`triggers.${triggerType}.label`)}
+      />
+    );
+    content = (
+      <TriggerEditor
+        type={triggerType}
+        config={triggerConfig}
+        onTypeChange={onTriggerTypeChange}
+        onConfigChange={onTriggerConfigChange}
+        t={t}
+      />
+    );
+  } else if (hit) {
+    const meta = STEP_META[hit.step.step_type];
+    const Icon = meta.icon;
+    header = (
+      <PanelHeading
+        icon={<Icon className="size-[18px]" />}
+        tone={GROUP_TONE[meta.group]}
+        kicker={t('stepN', { n: numbers.get(hit.step.cid) ?? hit.index + 1 })}
+        title={t(`steps.${meta.label}`)}
+      />
+    );
+    content = (
+      <StepEditor
+        step={hit.step}
+        onChange={(next) => updateStep(hit.path, () => next)}
+      />
+    );
+    footer = (
+      <div className="border-border flex items-center justify-between gap-2 border-t px-5 py-3">
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={hit.index === 0}
+            aria-label={t('moveUp')}
+            onClick={() => moveStepAt(hit.path, -1)}
+          >
+            <ArrowUp className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={hit.index === hit.siblings - 1}
+            aria-label={t('moveDown')}
+            onClick={() => moveStepAt(hit.path, 1)}
+          >
+            <ArrowDown className="size-4" />
+          </Button>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-tone-pink-ink hover:bg-tone-pink-soft"
+          onClick={() => deleteStepAt(hit.path)}
+        >
+          <Trash2 className="size-3.5" />
+          {t('delete')}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <SidePanel
+      open={open}
+      onClose={onClose}
+      label={t('picker.title')}
+      // Clear the builder's own top bar (name, Ativa, Salvar).
+      className="top-[76px]"
+    >
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex items-start gap-2 px-5 pt-4 pb-3">
+          <div className="min-w-0 flex-1">{header}</div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('close')}
+            className="hover:bg-muted flex size-9 shrink-0 items-center justify-center rounded-full transition-colors duration-150 ease-out"
+          >
+            <X className="size-4.5" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">
+          {content}
+        </div>
+        {footer}
+        <p className="border-border text-muted-foreground border-t px-5 py-3 text-xs">
+          {t('editHint')}
+        </p>
+      </div>
+    </SidePanel>
+  );
+}
+
+function PanelHeading({
+  icon,
+  tone,
+  kicker,
+  title,
+}: {
+  icon: ReactNode;
+  tone: string;
+  kicker: string;
+  title: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span
+        className={cn(
+          'flex size-11 shrink-0 items-center justify-center rounded-xl',
+          tone
+        )}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <div className="text-muted-foreground text-xs font-bold">{kicker}</div>
+        <div className="truncate text-lg font-extrabold tracking-[-0.01em]">
+          {title}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ------------------------------------------------------------
@@ -1447,41 +1824,41 @@ function StepEditor({
   step,
   onChange,
 }: {
-  step: BuilderStep
-  onChange: (s: BuilderStep) => void
+  step: BuilderStep;
+  onChange: (s: BuilderStep) => void;
 }) {
-  const t = useTranslations("Automations.builder")
-  const cfg = step.step_config
+  const t = useTranslations('Automations.builder');
+  const cfg = step.step_config;
   const set = (patch: Record<string, unknown>) =>
-    onChange({ ...step, step_config: { ...cfg, ...patch } })
+    onChange({ ...step, step_config: { ...cfg, ...patch } });
 
   switch (step.step_type) {
-    case "send_message":
+    case 'send_message':
       return (
-        <FieldBlock label={t("config.messageText")}>
+        <FieldBlock label={t('config.messageText')}>
           <Textarea
-            value={(cfg.text as string) ?? ""}
+            value={(cfg.text as string) ?? ''}
             onChange={(e) => set({ text: e.target.value })}
-            placeholder={t("config.placeholderMessageText")}
+            placeholder={t('config.placeholderMessageText')}
             className="min-h-24"
           />
         </FieldBlock>
-      )
-    case "ai_followup":
+      );
+    case 'ai_followup':
       return (
         <>
-          <p className="mb-2 rounded-md bg-muted px-2 py-1.5 text-[11px] text-muted-foreground">
-            {t("config.aiFollowupHint")}
+          <p className="bg-muted text-muted-foreground mb-2 rounded-md px-2 py-1.5 text-[11px]">
+            {t('config.aiFollowupHint')}
           </p>
-          <FieldBlock label={t("config.aiFollowupInstruction")}>
+          <FieldBlock label={t('config.aiFollowupInstruction')}>
             <Textarea
-              value={(cfg.instruction as string) ?? ""}
+              value={(cfg.instruction as string) ?? ''}
               onChange={(e) => set({ instruction: e.target.value })}
-              placeholder={t("config.aiFollowupInstructionPlaceholder")}
+              placeholder={t('config.aiFollowupInstructionPlaceholder')}
               className="min-h-16"
             />
           </FieldBlock>
-          <label className="mb-2 flex items-start gap-2 text-xs text-foreground">
+          <label className="text-foreground mb-2 flex items-start gap-2 text-xs">
             <input
               type="checkbox"
               checked={!!cfg.final}
@@ -1489,24 +1866,24 @@ function StepEditor({
               className="mt-0.5"
             />
             <span>
-              {t("config.aiFollowupFinal")}
-              <span className="block text-[11px] text-muted-foreground">
-                {t("config.aiFollowupFinalHint")}
+              {t('config.aiFollowupFinal')}
+              <span className="text-muted-foreground block text-[11px]">
+                {t('config.aiFollowupFinalHint')}
               </span>
             </span>
           </label>
-          <FieldBlock label={t("config.aiFollowupFallback")}>
+          <FieldBlock label={t('config.aiFollowupFallback')}>
             <Textarea
-              value={(cfg.fallback_text as string) ?? ""}
+              value={(cfg.fallback_text as string) ?? ''}
               onChange={(e) => set({ fallback_text: e.target.value })}
-              placeholder={t("config.aiFollowupFallbackPlaceholder")}
+              placeholder={t('config.aiFollowupFallbackPlaceholder')}
               className="min-h-14"
             />
           </FieldBlock>
         </>
-      )
-    case "send_buttons":
-    case "send_list":
+      );
+    case 'send_buttons':
+    case 'send_list':
       // The whole step_config IS the interactive payload; the shared
       // builder edits it in place (and enforces Meta's limits + preview).
       return (
@@ -1516,86 +1893,88 @@ function StepEditor({
             onChange({ ...step, step_config: toStepConfig(payload) })
           }
         />
-      )
-    case "send_template":
+      );
+    case 'send_template':
       return (
         <SendTemplateFields
-          templateName={(cfg.template_name as string) ?? ""}
-          language={(cfg.language as string) ?? ""}
+          templateName={(cfg.template_name as string) ?? ''}
+          language={(cfg.language as string) ?? ''}
           onChange={(patch) => set(patch)}
           t={t}
         />
-      )
-    case "add_tag":
-    case "remove_tag":
+      );
+    case 'add_tag':
+    case 'remove_tag':
       return (
-        <FieldBlock label={t("config.tagLabel")}>
+        <FieldBlock label={t('config.tagLabel')}>
           <TagSelect
-            value={(cfg.tag_id as string) ?? ""}
+            value={(cfg.tag_id as string) ?? ''}
             onChange={(v) => set({ tag_id: v })}
             t={t}
           />
         </FieldBlock>
-      )
-    case "assign_conversation":
+      );
+    case 'assign_conversation':
       return (
         <>
-          <FieldBlock label={t("config.modeLabel")}>
+          <FieldBlock label={t('config.modeLabel')}>
             <select
-              value={(cfg.mode as string) ?? "round_robin"}
+              value={(cfg.mode as string) ?? 'round_robin'}
               onChange={(e) => set({ mode: e.target.value })}
-              className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
+              className="border-border bg-card text-foreground focus:border-foreground h-10 w-full rounded-xl border-[1.5px] px-3 text-sm transition-colors duration-150 ease-out focus:outline-none"
             >
-              <option value="round_robin">{t("config.modes.round_robin")}</option>
-              <option value="specific">{t("config.modes.specific")}</option>
+              <option value="round_robin">
+                {t('config.modes.round_robin')}
+              </option>
+              <option value="specific">{t('config.modes.specific')}</option>
             </select>
           </FieldBlock>
-          {cfg.mode === "specific" && (
-            <FieldBlock label={t("config.agentLabel")}>
+          {cfg.mode === 'specific' && (
+            <FieldBlock label={t('config.agentLabel')}>
               <AgentSelect
-                value={(cfg.agent_id as string) ?? ""}
+                value={(cfg.agent_id as string) ?? ''}
                 onChange={(v) => set({ agent_id: v })}
                 t={t}
               />
             </FieldBlock>
           )}
         </>
-      )
-    case "update_contact_field":
+      );
+    case 'update_contact_field':
       return (
         <>
-          <FieldBlock label={t("config.fieldLabel")}>
+          <FieldBlock label={t('config.fieldLabel')}>
             <ContactFieldSelect
-              value={(cfg.field as string) ?? "name"}
+              value={(cfg.field as string) ?? 'name'}
               onChange={(v) => set({ field: v })}
               t={t}
             />
           </FieldBlock>
-          <FieldBlock label={t("config.valueLabel")}>
+          <FieldBlock label={t('config.valueLabel')}>
             <Input
-              value={(cfg.value as string) ?? ""}
+              value={(cfg.value as string) ?? ''}
               onChange={(e) => set({ value: e.target.value })}
-              placeholder={t.raw("config.placeholderValue")}
+              placeholder={t.raw('config.placeholderValue')}
             />
           </FieldBlock>
         </>
-      )
-    case "create_deal":
+      );
+    case 'create_deal':
       return (
         <>
           <DealPipelineFields
-            pipelineId={(cfg.pipeline_id as string) ?? ""}
-            stageId={(cfg.stage_id as string) ?? ""}
+            pipelineId={(cfg.pipeline_id as string) ?? ''}
+            stageId={(cfg.stage_id as string) ?? ''}
             onChange={(patch) => set(patch)}
             t={t}
           />
-          <FieldBlock label={t("config.titleLabel")}>
+          <FieldBlock label={t('config.titleLabel')}>
             <Input
-              value={(cfg.title as string) ?? ""}
+              value={(cfg.title as string) ?? ''}
               onChange={(e) => set({ title: e.target.value })}
             />
           </FieldBlock>
-          <FieldBlock label={t("config.valueLabel")}>
+          <FieldBlock label={t('config.valueLabel')}>
             <Input
               type="number"
               value={(cfg.value as number) ?? 0}
@@ -1603,97 +1982,111 @@ function StepEditor({
             />
           </FieldBlock>
         </>
-      )
-    case "wait":
+      );
+    case 'wait':
       return (
         <div className="grid grid-cols-2 gap-2">
-          <FieldBlock label={t("config.amountLabel")}>
+          <FieldBlock label={t('config.amountLabel')}>
             <Input
               type="number"
               min={1}
               value={(cfg.amount as number) ?? 1}
-              onChange={(e) => set({ amount: Math.max(1, Number(e.target.value)) })}
+              onChange={(e) =>
+                set({ amount: Math.max(1, Number(e.target.value)) })
+              }
             />
           </FieldBlock>
-          <FieldBlock label={t("config.unitLabel")}>
+          <FieldBlock label={t('config.unitLabel')}>
             <select
-              value={(cfg.unit as string) ?? "hours"}
+              value={(cfg.unit as string) ?? 'hours'}
               onChange={(e) => set({ unit: e.target.value })}
-              className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
+              className="border-border bg-card text-foreground focus:border-foreground h-10 w-full rounded-xl border-[1.5px] px-3 text-sm transition-colors duration-150 ease-out focus:outline-none"
             >
-              <option value="minutes">{t("config.units.minutes")}</option>
-              <option value="hours">{t("config.units.hours")}</option>
-              <option value="days">{t("config.units.days")}</option>
+              <option value="minutes">{t('config.units.minutes')}</option>
+              <option value="hours">{t('config.units.hours')}</option>
+              <option value="days">{t('config.units.days')}</option>
             </select>
           </FieldBlock>
         </div>
-      )
-    case "condition":
+      );
+    case 'condition':
       return (
         <>
-          <FieldBlock label={t("config.subjectLabel")}>
+          <FieldBlock label={t('config.subjectLabel')}>
             <select
-              value={(cfg.subject as string) ?? "tag_presence"}
+              value={(cfg.subject as string) ?? 'tag_presence'}
               onChange={(e) => set({ subject: e.target.value })}
-              className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-sm text-foreground"
+              className="border-border bg-card text-foreground focus:border-foreground h-10 w-full rounded-xl border-[1.5px] px-3 text-sm transition-colors duration-150 ease-out focus:outline-none"
             >
-              <option value="tag_presence">{t("config.subjects.tag_presence")}</option>
-              <option value="contact_field">{t("config.subjects.contact_field")}</option>
-              <option value="message_content">{t("config.subjects.message_content")}</option>
-              <option value="time_of_day">{t("config.subjects.time_of_day")}</option>
+              <option value="tag_presence">
+                {t('config.subjects.tag_presence')}
+              </option>
+              <option value="contact_field">
+                {t('config.subjects.contact_field')}
+              </option>
+              <option value="message_content">
+                {t('config.subjects.message_content')}
+              </option>
+              <option value="time_of_day">
+                {t('config.subjects.time_of_day')}
+              </option>
             </select>
           </FieldBlock>
-          <FieldBlock label={t("config.operandLabel")}>
+          <FieldBlock label={t('config.operandLabel')}>
             <Input
               placeholder={
-                cfg.subject === "time_of_day"
-                  ? t("config.placeholderTime")
-                  : cfg.subject === "contact_field"
-                  ? t("config.placeholderContact")
-                  : cfg.subject === "tag_presence"
-                  ? t("config.placeholderTag")
-                  : ""
+                cfg.subject === 'time_of_day'
+                  ? t('config.placeholderTime')
+                  : cfg.subject === 'contact_field'
+                    ? t('config.placeholderContact')
+                    : cfg.subject === 'tag_presence'
+                      ? t('config.placeholderTag')
+                      : ''
               }
-              value={(cfg.operand as string) ?? ""}
+              value={(cfg.operand as string) ?? ''}
               onChange={(e) => set({ operand: e.target.value })}
             />
           </FieldBlock>
-          {(cfg.subject === "contact_field" || cfg.subject === "message_content") && (
-            <FieldBlock label={t("config.valueLabel")}>
+          {(cfg.subject === 'contact_field' ||
+            cfg.subject === 'message_content') && (
+            <FieldBlock label={t('config.valueLabel')}>
               <Input
-                value={(cfg.value as string) ?? ""}
+                value={(cfg.value as string) ?? ''}
                 onChange={(e) => set({ value: e.target.value })}
               />
             </FieldBlock>
           )}
         </>
-      )
-    case "send_webhook":
+      );
+    case 'send_webhook':
       return (
         <>
-          <FieldBlock label={t("config.urlLabel")}>
+          <FieldBlock label={t('config.urlLabel')}>
             <Input
-              value={(cfg.url as string) ?? ""}
+              value={(cfg.url as string) ?? ''}
               onChange={(e) => set({ url: e.target.value })}
             />
           </FieldBlock>
-          <FieldBlock label={t("config.bodyTemplateLabel")}>
+          <FieldBlock label={t('config.bodyTemplateLabel')}>
             <Textarea
-              value={(cfg.body_template as string) ?? ""}
+              value={(cfg.body_template as string) ?? ''}
               onChange={(e) => set({ body_template: e.target.value })}
-              className="min-h-20 bg-muted font-mono text-xs text-foreground"
+              className="bg-muted text-foreground min-h-20 font-mono text-xs"
             />
           </FieldBlock>
         </>
-      )
-    case "close_conversation":
+      );
+    case 'close_conversation':
       return (
-        <p className="text-xs text-muted-foreground">
-          {t("config.closeConversationHint", { defaultValue: "Sets the conversation status to \"closed\". No configuration needed." })}
+        <p className="text-muted-foreground text-xs">
+          {t('config.closeConversationHint', {
+            defaultValue:
+              'Sets the conversation status to "closed". No configuration needed.',
+          })}
         </p>
-      )
+      );
     default:
-      return null
+      return null;
   }
 }
 
@@ -1701,36 +2094,52 @@ function FieldBlock({
   label,
   children,
 }: {
-  label: string
-  children: React.ReactNode
+  label: string;
+  children: React.ReactNode;
 }) {
   return (
     <div className="mb-2 last:mb-0">
-      <label className="mb-1 block text-xs font-medium text-muted-foreground">{label}</label>
+      <label className="text-muted-foreground mb-1 block text-xs font-medium">
+        {label}
+      </label>
       {children}
     </div>
-  )
+  );
 }
 
-function previewFor(step: BuilderStep): string {
+function previewFor(
+  step: BuilderStep,
+  t: ReturnType<typeof useTranslations>
+): string {
+  const cfg = step.step_config;
   switch (step.step_type) {
-    case "send_message":
-      return (step.step_config.text as string) || "no text yet"
-    case "ai_followup":
-      return step.step_config.final ? "IA · última tentativa" : "IA escreve pelo contexto da conversa"
-    case "send_buttons":
-    case "send_list":
-      return interactivePayloadPreviewText(asInteractive(step.step_config)) || "no body yet"
-    case "send_template":
-      return (step.step_config.template_name as string) || "pick a template"
-    case "wait":
-      return `${step.step_config.amount ?? "?"} ${step.step_config.unit ?? ""}`
-    case "condition":
-      return `when ${step.step_config.subject ?? "?"}`
-    case "send_webhook":
-      return (step.step_config.url as string) || "no url"
+    case 'send_message':
+      return (cfg.text as string) || t('preview.noText');
+    case 'ai_followup':
+      return cfg.final ? t('preview.aiFinal') : t('preview.aiContext');
+    case 'send_buttons':
+    case 'send_list':
+      return (
+        interactivePayloadPreviewText(asInteractive(cfg)) || t('preview.noBody')
+      );
+    case 'send_template':
+      return (cfg.template_name as string) || t('preview.pickTemplate');
+    case 'wait': {
+      const unit = cfg.unit as string | undefined;
+      return t('preview.waitFor', {
+        amount: String(cfg.amount ?? '?'),
+        unit:
+          unit === 'minutes' || unit === 'hours' || unit === 'days'
+            ? t(`config.units.${unit}`).toLowerCase()
+            : (unit ?? ''),
+      });
+    }
+    case 'condition':
+      return t('preview.when', { subject: String(cfg.subject ?? '?') });
+    case 'send_webhook':
+      return (cfg.url as string) || t('preview.noUrl');
     default:
-      return ""
+      return '';
   }
 }
 
@@ -1739,9 +2148,9 @@ function previewFor(step: BuilderStep): string {
 // ------------------------------------------------------------
 
 interface ApiStep {
-  step_type: string
-  step_config: Record<string, unknown>
-  branches?: { yes?: ApiStep[]; no?: ApiStep[] }
+  step_type: string;
+  step_config: Record<string, unknown>;
+  branches?: { yes?: ApiStep[]; no?: ApiStep[] };
 }
 
 export function toApiSteps(steps: BuilderStep[]): ApiStep[] {
@@ -1751,7 +2160,7 @@ export function toApiSteps(steps: BuilderStep[]): ApiStep[] {
     branches: s.branches
       ? { yes: toApiSteps(s.branches.yes), no: toApiSteps(s.branches.no) }
       : undefined,
-  }))
+  }));
 }
 
 /**
@@ -1759,10 +2168,10 @@ export function toApiSteps(steps: BuilderStep[]): ApiStep[] {
  * builder-local shape with client ids.
  */
 export interface ServerStepNode {
-  id: string
-  step_type: string
-  step_config: Record<string, unknown>
-  branches: { yes: ServerStepNode[]; no: ServerStepNode[] }
+  id: string;
+  step_type: string;
+  step_config: Record<string, unknown>;
+  branches: { yes: ServerStepNode[]; no: ServerStepNode[] };
 }
 
 export function fromServerSteps(nodes: ServerStepNode[]): BuilderStep[] {
@@ -1771,11 +2180,11 @@ export function fromServerSteps(nodes: ServerStepNode[]): BuilderStep[] {
     step_type: n.step_type as AutomationStepType,
     step_config: n.step_config ?? {},
     branches:
-      n.step_type === "condition"
+      n.step_type === 'condition'
         ? {
             yes: fromServerSteps(n.branches?.yes ?? []),
             no: fromServerSteps(n.branches?.no ?? []),
           }
         : undefined,
-  }))
+  }));
 }

@@ -1754,6 +1754,49 @@
       "daysAgo": "hace {n}d"
     },
     "builder": {
+      "preview": {
+        "noText": "Sin texto aún",
+        "noBody": "Sin contenido aún",
+        "pickTemplate": "Elige una plantilla",
+        "aiFinal": "IA · último intento",
+        "aiContext": "La IA escribe según la conversación",
+        "when": "Si {subject}",
+        "noUrl": "Sin URL",
+        "waitFor": "Espera {amount} {unit}"
+      },
+      "picker": {
+        "title": "Agregar paso",
+        "search": "Buscar paso…",
+        "empty": "No se encontró ningún paso.",
+        "groups": {
+          "messages": "Mensajes",
+          "contact": "Contacto y conversación",
+          "deals": "Negocios",
+          "logic": "Lógica",
+          "integrations": "Integraciones"
+        },
+        "desc": {
+          "send_message": "Envía un texto al contacto.",
+          "send_buttons": "Mensaje con hasta 3 botones de respuesta.",
+          "send_list": "Mensaje con una lista de opciones.",
+          "send_template": "Envía una plantilla aprobada por Meta — funciona fuera de la ventana de 24h.",
+          "ai_followup": "La IA escribe el recordatorio a partir de la conversación.",
+          "add_tag": "Etiqueta al contacto.",
+          "remove_tag": "Quita una etiqueta del contacto.",
+          "assign_conversation": "Pasa la conversación a alguien del equipo.",
+          "update_contact_field": "Guarda un valor en un campo del contacto.",
+          "close_conversation": "Cierra la conversación.",
+          "create_deal": "Abre un negocio en el embudo.",
+          "wait": "Espera antes del siguiente paso.",
+          "condition": "Sigue por Sí o No según una regla.",
+          "send_webhook": "Avisa a otro sistema por una URL."
+        }
+      },
+      "needsSetup": "Falta configurar",
+      "stepN": "Paso {n}",
+      "close": "Cerrar",
+      "whenThis": "Cuando esto ocurra",
+      "editHint": "Los cambios valen cuando guardes.",
       "steps": {
         "send_message": "Enviar mensaje",
         "send_buttons": "Enviar botones",

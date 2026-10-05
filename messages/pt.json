@@ -1754,6 +1754,49 @@
       "daysAgo": "há {n}d"
     },
     "builder": {
+      "preview": {
+        "noText": "Sem texto ainda",
+        "noBody": "Sem conteúdo ainda",
+        "pickTemplate": "Escolha um modelo",
+        "aiFinal": "IA · última tentativa",
+        "aiContext": "IA escreve pelo contexto da conversa",
+        "when": "Se {subject}",
+        "noUrl": "Sem URL",
+        "waitFor": "Aguarda {amount} {unit}"
+      },
+      "picker": {
+        "title": "Adicionar passo",
+        "search": "Buscar passo…",
+        "empty": "Nenhum passo encontrado.",
+        "groups": {
+          "messages": "Mensagens",
+          "contact": "Contato e conversa",
+          "deals": "Negócios",
+          "logic": "Lógica",
+          "integrations": "Integrações"
+        },
+        "desc": {
+          "send_message": "Manda um texto para o contato.",
+          "send_buttons": "Mensagem com até 3 botões de resposta.",
+          "send_list": "Mensagem com uma lista de opções.",
+          "send_template": "Manda um modelo aprovado pela Meta — funciona fora da janela de 24h.",
+          "ai_followup": "A IA escreve o lembrete a partir da conversa.",
+          "add_tag": "Marca o contato com uma tag.",
+          "remove_tag": "Tira uma tag do contato.",
+          "assign_conversation": "Passa a conversa para alguém da equipe.",
+          "update_contact_field": "Grava um valor num campo do contato.",
+          "close_conversation": "Encerra a conversa.",
+          "create_deal": "Abre um negócio no funil.",
+          "wait": "Espera um tempo antes do próximo passo.",
+          "condition": "Segue por Sim ou Não conforme uma regra.",
+          "send_webhook": "Avisa outro sistema por uma URL."
+        }
+      },
+      "needsSetup": "Falta configurar",
+      "stepN": "Passo {n}",
+      "close": "Fechar",
+      "whenThis": "Quando isto acontecer",
+      "editHint": "As alterações valem quando você salvar.",
       "steps": {
         "send_message": "Enviar mensagem",
         "send_buttons": "Enviar botões",

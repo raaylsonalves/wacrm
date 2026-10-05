@@ -1754,6 +1754,49 @@
       "daysAgo": "{n}d ago"
     },
     "builder": {
+      "preview": {
+        "noText": "No text yet",
+        "noBody": "No content yet",
+        "pickTemplate": "Pick a template",
+        "aiFinal": "AI · last attempt",
+        "aiContext": "AI writes from the conversation",
+        "when": "If {subject}",
+        "noUrl": "No URL",
+        "waitFor": "Waits {amount} {unit}"
+      },
+      "picker": {
+        "title": "Add step",
+        "search": "Search steps…",
+        "empty": "No step found.",
+        "groups": {
+          "messages": "Messages",
+          "contact": "Contact & conversation",
+          "deals": "Deals",
+          "logic": "Logic",
+          "integrations": "Integrations"
+        },
+        "desc": {
+          "send_message": "Sends a text to the contact.",
+          "send_buttons": "A message with up to 3 reply buttons.",
+          "send_list": "A message with a list of options.",
+          "send_template": "Sends a Meta-approved template — works outside the 24h window.",
+          "ai_followup": "The AI writes the reminder from the conversation.",
+          "add_tag": "Tags the contact.",
+          "remove_tag": "Removes a tag from the contact.",
+          "assign_conversation": "Hands the conversation to a teammate.",
+          "update_contact_field": "Writes a value into a contact field.",
+          "close_conversation": "Closes the conversation.",
+          "create_deal": "Opens a deal in the pipeline.",
+          "wait": "Waits before the next step.",
+          "condition": "Goes Yes or No depending on a rule.",
+          "send_webhook": "Notifies another system at a URL."
+        }
+      },
+      "needsSetup": "Needs setup",
+      "stepN": "Step {n}",
+      "close": "Close",
+      "whenThis": "When this happens",
+      "editHint": "Changes apply when you save.",
       "steps": {
         "send_message": "Send Message",
         "send_buttons": "Send Buttons",
