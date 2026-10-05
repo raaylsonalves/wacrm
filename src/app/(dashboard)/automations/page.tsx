@@ -232,7 +232,7 @@ export default function AutomationsPage() {
               onToggle={(next) => toggleActive(a, next)}
               onEdit={() => router.push(`/automations/${a.id}/edit`)}
               onDuplicate={() => duplicate(a)}
-              onLogs={() => router.push(`/automations/${a.id}/logs`)}
+              onLogs={() => router.push(`/automations/${a.id}/edit?tab=runs`)}
               onDelete={() => setPendingDelete(a)}
               t={t}
             />

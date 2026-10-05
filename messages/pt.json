@@ -1704,6 +1704,23 @@
       "loadError": "Falha ao carregar ({status})",
       "back": "Voltar às automações"
     },
+    "runs": {
+      "total": "Execuções",
+      "successRate": "Com sucesso",
+      "withProblems": "Com problema",
+      "filter": {
+        "all": "Todas",
+        "failed": "Com problema"
+      },
+      "noProblems": "Nenhuma execução com problema.",
+      "steps": "{count, plural, one {# passo} other {# passos}}",
+      "runDetail": "Detalhes da execução",
+      "stepStatus": {
+        "success": "Concluído",
+        "skipped": "Pulado",
+        "failed": "Falhou"
+      }
+    },
     "logs": {
       "title": "Logs de execução",
       "loadError": "Falha ao carregar os logs",
@@ -1763,6 +1780,10 @@
         "when": "Se {subject}",
         "noUrl": "Sem URL",
         "waitFor": "Aguarda {amount} {unit}"
+      },
+      "tabs": {
+        "flow": "Fluxo",
+        "runs": "Execuções"
       },
       "picker": {
         "title": "Adicionar passo",

@@ -15,24 +15,10 @@ import {
   ArrowLeft,
   Plus,
   Trash2,
-  MessageSquare,
-  FileText,
-  Tag,
-  TagIcon,
-  UserCheck,
-  PencilLine,
-  Briefcase,
-  Hourglass,
-  GitBranch,
-  Webhook,
-  CircleSlash,
   Zap,
   Loader2,
   ArrowDown,
   ArrowUp,
-  MousePointerClick,
-  List,
-  Sparkles,
   AlertTriangle,
   Search,
   X,
@@ -73,8 +59,9 @@ import {
   type StepPath,
 } from '@/lib/automations/builder-tree';
 import { validateStepsForActivation } from '@/lib/automations/validate';
-import { TONE_SOFT } from '@/lib/tones';
 import { cn } from '@/lib/utils';
+import { GROUP_ORDER, GROUP_TONE, STEP_META } from './step-meta';
+import { AutomationRuns } from './automation-runs';
 
 // ------------------------------------------------------------
 // Types (builder-local — mirror the flattened rows we POST)
@@ -97,73 +84,6 @@ export interface BuilderInitial {
   is_active: boolean;
   steps: BuilderStep[];
 }
-
-// ------------------------------------------------------------
-// Step metadata — one source of truth for icon + label + border color
-// ------------------------------------------------------------
-
-type StepGroup = 'messages' | 'contact' | 'deals' | 'logic' | 'integrations';
-
-interface StepMeta {
-  label: string;
-  icon: typeof Zap;
-  /** Picker section and card colour. */
-  group: StepGroup;
-}
-
-const STEP_META: Record<AutomationStepType, StepMeta> = {
-  send_message: {
-    label: 'send_message',
-    icon: MessageSquare,
-    group: 'messages',
-  },
-  send_buttons: {
-    label: 'send_buttons',
-    icon: MousePointerClick,
-    group: 'messages',
-  },
-  send_list: { label: 'send_list', icon: List, group: 'messages' },
-  send_template: { label: 'send_template', icon: FileText, group: 'messages' },
-  ai_followup: { label: 'ai_followup', icon: Sparkles, group: 'messages' },
-  add_tag: { label: 'add_tag', icon: Tag, group: 'contact' },
-  remove_tag: { label: 'remove_tag', icon: TagIcon, group: 'contact' },
-  assign_conversation: {
-    label: 'assign_conversation',
-    icon: UserCheck,
-    group: 'contact',
-  },
-  update_contact_field: {
-    label: 'update_contact_field',
-    icon: PencilLine,
-    group: 'contact',
-  },
-  close_conversation: {
-    label: 'close_conversation',
-    icon: CircleSlash,
-    group: 'contact',
-  },
-  create_deal: { label: 'create_deal', icon: Briefcase, group: 'deals' },
-  wait: { label: 'wait', icon: Hourglass, group: 'logic' },
-  condition: { label: 'condition', icon: GitBranch, group: 'logic' },
-  send_webhook: { label: 'send_webhook', icon: Webhook, group: 'integrations' },
-};
-
-/** v2 pastel per group, so a glance at the canvas says what a step does. */
-const GROUP_TONE: Record<StepGroup, string> = {
-  messages: TONE_SOFT.lilac,
-  contact: TONE_SOFT.mint,
-  deals: TONE_SOFT.salmon,
-  logic: TONE_SOFT.blue,
-  integrations: 'bg-muted text-foreground',
-};
-
-const GROUP_ORDER: StepGroup[] = [
-  'messages',
-  'contact',
-  'deals',
-  'logic',
-  'integrations',
-];
 
 const ADDABLE_STEPS: AutomationStepType[] = [
   'send_message',
@@ -689,7 +609,14 @@ function SendTemplateFields({
 // Main builder component
 // ------------------------------------------------------------
 
-export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
+export function AutomationBuilder({
+  initial,
+  initialTab = 'flow',
+}: {
+  initial: BuilderInitial;
+  /** Saved automations open on the flow or, from a "Ver execuções" link, on runs. */
+  initialTab?: 'flow' | 'runs';
+}) {
   const router = useRouter();
   const t = useTranslations('Automations.builder');
   const isEditing = !!initial.id;
@@ -698,6 +625,9 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
   // v8: the canvas stays compact; the selected step (or "trigger") opens
   // its settings in the side panel, like a record view.
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [tab, setTab] = useState<'flow' | 'runs'>(
+    initial.id ? initialTab : 'flow'
+  );
   const numbers = useMemo(() => numberSteps(state.steps), [state.steps]);
 
   function patchTop<K extends keyof BuilderInitial>(
@@ -809,6 +739,34 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
           placeholder={t('untitled')}
           className="text-foreground placeholder:text-muted-foreground focus:bg-muted min-w-0 flex-1 rounded-md bg-transparent px-2 py-1 text-sm font-semibold focus:outline-none sm:text-base"
         />
+        {isEditing && (
+          <div
+            role="tablist"
+            aria-label={t('tabs.flow')}
+            className="bg-muted hidden shrink-0 rounded-full p-1 sm:flex"
+          >
+            {(['flow', 'runs'] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                role="tab"
+                aria-selected={tab === k}
+                onClick={() => {
+                  setTab(k);
+                  setExpandedId(null);
+                }}
+                className={cn(
+                  'min-h-8 rounded-full px-3.5 text-[13px] font-semibold transition-colors duration-150 ease-out',
+                  tab === k
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {t(`tabs.${k}`)}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="text-muted-foreground flex items-center gap-2 text-xs">
           <span className="hidden sm:inline">{t('active')}</span>
           <Switch
@@ -826,66 +784,95 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
           {isEditing ? t('save') : t('saveDraft')}
         </Button>
       </header>
-
-      {/* Canvas */}
-      <div className="relative flex-1 overflow-y-auto">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px]" />
-        <div
-          className={cn(
-            'relative mx-auto flex max-w-2xl flex-col items-center gap-0 px-4 py-10 transition-[padding] duration-200 ease-out',
-            expandedId && 'lg:max-w-none lg:pr-[468px]'
-          )}
-        >
-          <ResourcesProvider>
-            <TriggerCard
-              type={state.trigger_type}
-              selected={expandedId === 'trigger'}
-              onSelect={() =>
-                setExpandedId(expandedId === 'trigger' ? null : 'trigger')
-              }
-              t={t}
-            />
-            <StepList
-              steps={state.steps}
-              basePath={[]}
-              scope={{ kind: 'root' }}
-              numbers={numbers}
-              expandedId={expandedId}
-              setExpandedId={setExpandedId}
-              updateStep={updateStep}
-              addStepAt={addStepAt}
-              deleteStepAt={deleteStepAt}
-              moveStepAt={moveStepAt}
-            />
-            <BuilderPanel
-              selectedId={expandedId}
-              onClose={() => setExpandedId(null)}
-              steps={state.steps}
-              numbers={numbers}
-              triggerType={state.trigger_type}
-              triggerConfig={state.trigger_config}
-              onTriggerTypeChange={(tVal) => {
-                patchTop('trigger_type', tVal);
-                // Picking the follow-up trigger fills sensible defaults so
-                // the silence field isn't a blank box.
-                if (
-                  tVal === 'conversation_silence' &&
-                  !state.trigger_config.silence_after
-                ) {
-                  patchTop('trigger_config', {
-                    ...state.trigger_config,
-                    silence_after: { amount: 4, unit: 'hours' },
-                  });
-                }
+      {isEditing && (
+        <div className="border-border flex gap-1.5 border-b px-3 py-2 sm:hidden">
+          {(['flow', 'runs'] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              aria-pressed={tab === k}
+              onClick={() => {
+                setTab(k);
+                setExpandedId(null);
               }}
-              onTriggerConfigChange={(c) => patchTop('trigger_config', c)}
-              updateStep={updateStep}
-              deleteStepAt={deleteStepAt}
-              moveStepAt={moveStepAt}
-            />
-          </ResourcesProvider>
+              className={cn(
+                'min-h-9 flex-1 rounded-full text-[13px] font-semibold transition-colors duration-150 ease-out',
+                tab === k
+                  ? 'bg-foreground text-background'
+                  : 'text-muted-foreground'
+              )}
+            >
+              {t(`tabs.${k}`)}
+            </button>
+          ))}
         </div>
-      </div>
+      )}
+
+      {tab === 'runs' && initial.id ? (
+        <div className="relative flex-1 overflow-y-auto">
+          <AutomationRuns automationId={initial.id} />
+        </div>
+      ) : (
+        /* Canvas */
+        <div className="relative flex-1 overflow-y-auto">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,var(--border)_1px,transparent_1px)] [background-size:20px_20px]" />
+          <div
+            className={cn(
+              'relative mx-auto flex max-w-2xl flex-col items-center gap-0 px-4 py-10 transition-[padding] duration-200 ease-out',
+              expandedId && 'lg:max-w-none lg:pr-[468px]'
+            )}
+          >
+            <ResourcesProvider>
+              <TriggerCard
+                type={state.trigger_type}
+                selected={expandedId === 'trigger'}
+                onSelect={() =>
+                  setExpandedId(expandedId === 'trigger' ? null : 'trigger')
+                }
+                t={t}
+              />
+              <StepList
+                steps={state.steps}
+                basePath={[]}
+                scope={{ kind: 'root' }}
+                numbers={numbers}
+                expandedId={expandedId}
+                setExpandedId={setExpandedId}
+                updateStep={updateStep}
+                addStepAt={addStepAt}
+                deleteStepAt={deleteStepAt}
+                moveStepAt={moveStepAt}
+              />
+              <BuilderPanel
+                selectedId={expandedId}
+                onClose={() => setExpandedId(null)}
+                steps={state.steps}
+                numbers={numbers}
+                triggerType={state.trigger_type}
+                triggerConfig={state.trigger_config}
+                onTriggerTypeChange={(tVal) => {
+                  patchTop('trigger_type', tVal);
+                  // Picking the follow-up trigger fills sensible defaults so
+                  // the silence field isn't a blank box.
+                  if (
+                    tVal === 'conversation_silence' &&
+                    !state.trigger_config.silence_after
+                  ) {
+                    patchTop('trigger_config', {
+                      ...state.trigger_config,
+                      silence_after: { amount: 4, unit: 'hours' },
+                    });
+                  }
+                }}
+                onTriggerConfigChange={(c) => patchTop('trigger_config', c)}
+                updateStep={updateStep}
+                deleteStepAt={deleteStepAt}
+                moveStepAt={moveStepAt}
+              />
+            </ResourcesProvider>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1704,6 +1704,23 @@
       "loadError": "Error al cargar ({status})",
       "back": "Volver a automatizaciones"
     },
+    "runs": {
+      "total": "Ejecuciones",
+      "successRate": "Con éxito",
+      "withProblems": "Con problemas",
+      "filter": {
+        "all": "Todas",
+        "failed": "Con problemas"
+      },
+      "noProblems": "Ninguna ejecución con problemas.",
+      "steps": "{count, plural, one {# paso} other {# pasos}}",
+      "runDetail": "Detalles de la ejecución",
+      "stepStatus": {
+        "success": "Completado",
+        "skipped": "Omitido",
+        "failed": "Falló"
+      }
+    },
     "logs": {
       "title": "Registros de ejecución",
       "loadError": "Error al cargar los registros",
@@ -1763,6 +1780,10 @@
         "when": "Si {subject}",
         "noUrl": "Sin URL",
         "waitFor": "Espera {amount} {unit}"
+      },
+      "tabs": {
+        "flow": "Flujo",
+        "runs": "Ejecuciones"
       },
       "picker": {
         "title": "Agregar paso",

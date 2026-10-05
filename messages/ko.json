@@ -1704,6 +1704,23 @@
       "loadError": "불러오지 못했습니다 ({status})",
       "back": "자동화로 돌아가기"
     },
+    "runs": {
+      "total": "실행",
+      "successRate": "성공",
+      "withProblems": "문제 있음",
+      "filter": {
+        "all": "전체",
+        "failed": "문제 있음"
+      },
+      "noProblems": "문제가 있는 실행이 없어요.",
+      "steps": "{count, plural, other {#단계}}",
+      "runDetail": "실행 상세",
+      "stepStatus": {
+        "success": "완료",
+        "skipped": "건너뜀",
+        "failed": "실패"
+      }
+    },
     "logs": {
       "title": "실행 로그",
       "loadError": "로그를 불러오지 못했습니다",
@@ -1763,6 +1780,10 @@
         "when": "{subject}이면",
         "noUrl": "URL 없음",
         "waitFor": "{amount} {unit} 대기"
+      },
+      "tabs": {
+        "flow": "흐름",
+        "runs": "실행"
       },
       "picker": {
         "title": "단계 추가",

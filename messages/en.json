@@ -1704,6 +1704,23 @@
       "loadError": "Failed to load ({status})",
       "back": "Back to Automations"
     },
+    "runs": {
+      "total": "Runs",
+      "successRate": "Succeeded",
+      "withProblems": "With problems",
+      "filter": {
+        "all": "All",
+        "failed": "With problems"
+      },
+      "noProblems": "No runs with problems.",
+      "steps": "{count, plural, one {# step} other {# steps}}",
+      "runDetail": "Run details",
+      "stepStatus": {
+        "success": "Done",
+        "skipped": "Skipped",
+        "failed": "Failed"
+      }
+    },
     "logs": {
       "title": "Execution logs",
       "loadError": "Failed to load logs",
@@ -1763,6 +1780,10 @@
         "when": "If {subject}",
         "noUrl": "No URL",
         "waitFor": "Waits {amount} {unit}"
+      },
+      "tabs": {
+        "flow": "Flow",
+        "runs": "Runs"
       },
       "picker": {
         "title": "Add step",
