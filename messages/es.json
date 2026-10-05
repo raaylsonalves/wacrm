@@ -815,6 +815,10 @@
     "pause": "Pausar",
     "resume": "Reanudar",
     "cancel": "Cancelar",
+    "stats": {
+      "active": "Campañas activas",
+      "replyRate": "Tasa de respuesta"
+    },
     "status": {
       "draft": "Borrador",
       "running": "En curso",

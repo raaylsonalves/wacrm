@@ -815,6 +815,10 @@
     "pause": "일시정지",
     "resume": "재개",
     "cancel": "취소",
+    "stats": {
+      "active": "진행 중인 캠페인",
+      "replyRate": "응답률"
+    },
     "status": {
       "draft": "초안",
       "running": "진행 중",

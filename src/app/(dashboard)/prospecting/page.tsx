@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { useCan } from '@/hooks/use-can';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -58,9 +58,10 @@ interface Campaign {
   id: string;
   name: string;
   status: 'draft' | 'running' | 'paused' | 'completed' | 'cancelled';
-  config: { channel_kind: 'waha' | 'cloud' };
+  config: { channel_kind: 'waha' | 'cloud'; template_name?: string | null };
   error: string | null;
   next_send_at: string;
+  created_at: string;
   funnel: Funnel | null;
 }
 
@@ -73,8 +74,56 @@ function reasonText(t: ReturnType<typeof useTranslations>, error: string) {
   return rest.length ? `${label} — ${rest.join(' · ')}` : label;
 }
 
-// Leads → approached → replied → qualified, in the v2 tones.
-const FUNNEL_TONE = ['bg-tone-lilac', 'bg-tone-blue', 'bg-tone-salmon', 'bg-tone-mint'];
+const STATUS_TONE: Record<Campaign['status'], string> = {
+  draft: 'bg-muted text-muted-foreground',
+  running: 'bg-tone-salmon-soft text-tone-salmon-ink',
+  paused: 'bg-tone-blue-soft text-tone-blue-ink',
+  completed: 'bg-tone-mint-soft text-tone-mint-ink',
+  cancelled: 'bg-muted text-muted-foreground',
+};
+const LEAD_TONE: Record<string, string> = {
+  queued: 'bg-muted text-muted-foreground',
+  sent: 'bg-tone-blue-soft text-tone-blue-ink',
+  replied: 'bg-tone-salmon-soft text-tone-salmon-ink',
+  qualified: 'bg-tone-mint-soft text-tone-mint-ink',
+  opted_out: 'bg-tone-pink-soft text-tone-pink-ink',
+  skipped: 'bg-muted text-muted-foreground',
+  failed: 'bg-tone-pink-soft text-tone-pink-ink',
+};
+
+function pct(n: number, of: number) {
+  return of ? Math.round((n / of) * 100) : 0;
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-border bg-card rounded-[20px] border px-4 py-3">
+      <div className="text-muted-foreground truncate text-xs font-semibold">{label}</div>
+      <div className="text-xl font-extrabold tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+// One funnel step: count, share of the leads, and a bar in its tone.
+function Step({ label, n, of, color }: { label: string; n: number; of: number; color: string }) {
+  const p = pct(n, of);
+  return (
+    <div className="min-w-0 flex-1">
+      <div className="text-muted-foreground flex items-baseline justify-between gap-2 text-[11.5px] font-semibold">
+        <span className="truncate">{label}</span>
+        <span className="text-foreground tabular-nums">
+          {n} <span className="text-muted-foreground font-medium">· {p}%</span>
+        </span>
+      </div>
+      <div className="bg-muted mt-1 h-1.5 overflow-hidden rounded-full">
+        <div
+          className={`h-full rounded-full transition-[width] duration-500 ease-out ${color}`}
+          style={{ width: `${p}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 /**
  * Prospecting campaigns (specs/prospecting-csv-import.md, part B): one list,
  * one agent, one number — WAHA (the agent writes each approach) or the
@@ -150,6 +199,7 @@ export default function ProspectingPage() {
         </Card>
       ) : (
         <div className="space-y-4">
+          <Summary campaigns={campaigns} t={t} />
           {campaigns.map((c) => (
             <CampaignCard key={c.id} c={c} version={reloadKey} canManage={canManage} onAct={act} t={t} />
           ))}
@@ -166,6 +216,21 @@ export default function ProspectingPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function Summary({ campaigns, t }: { campaigns: Campaign[]; t: ReturnType<typeof useTranslations> }) {
+  const active = campaigns.filter((c) => c.status === 'running' || c.status === 'paused').length;
+  const sent = campaigns.reduce((a, c) => a + (c.funnel?.sent ?? 0), 0);
+  const replied = campaigns.reduce((a, c) => a + (c.funnel?.replied ?? 0), 0);
+  const qualified = campaigns.reduce((a, c) => a + (c.funnel?.qualified ?? 0), 0);
+  return (
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <Stat label={t('stats.active')} value={String(active)} />
+      <Stat label={t('funnel.sent')} value={String(sent)} />
+      <Stat label={t('stats.replyRate')} value={`${pct(replied, sent)}%`} />
+      <Stat label={t('funnel.qualified')} value={String(qualified)} />
     </div>
   );
 }
@@ -192,19 +257,43 @@ function CampaignCard({
         [t('funnel.qualified'), f.qualified],
       ]
     : [];
-  const top = Math.max(1, steps[0]?.[1] ?? 1);
+  const leads = steps[0]?.[1] ?? 0;
+  const live = c.status === 'running';
   return (
-    <Card>
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2">
-        <div>
-          <CardTitle className="text-base">{c.name}</CardTitle>
-          <CardDescription>
-            {t(`status.${c.status}`)} · {t(`channel.${c.config.channel_kind}`)}
-            {c.error && ` · ${t.has(`errors.${c.error}`) ? t(`errors.${c.error}`) : c.error}`}
-          </CardDescription>
+    <div className="border-border bg-card space-y-4 rounded-[22px] border p-4">
+      <div className="flex items-start gap-3">
+        <span className="bg-tone-lilac-soft text-tone-lilac-ink flex size-10 shrink-0 items-center justify-center rounded-xl">
+          <Target className="size-[18px]" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="truncate text-sm font-bold">{c.name}</span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-bold ${STATUS_TONE[c.status]}`}
+            >
+              {live && (
+                <span className="relative flex size-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-75" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-current" />
+                </span>
+              )}
+              {t(`status.${c.status}`)}
+            </span>
+          </div>
+          <p className="text-muted-foreground truncate text-xs">
+            {t(`channel.${c.config.channel_kind}`)}
+            {c.config.template_name && ` · ${c.config.template_name}`}
+            {' · '}
+            {new Date(c.created_at).toLocaleDateString()}
+          </p>
+          {c.error && (
+            <p className="text-tone-pink-ink mt-1 text-xs">
+              {t.has(`errors.${c.error}`) ? t(`errors.${c.error}`) : c.error}
+            </p>
+          )}
         </div>
         {canManage && (
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-1.5">
             {c.status === 'running' && (
               <Button size="sm" variant="outline" onClick={() => onAct(c.id, 'pause')}>
                 <Pause className="size-3.5" />
@@ -225,34 +314,33 @@ function CampaignCard({
             )}
           </div>
         )}
-      </CardHeader>
+      </div>
       {f && (
-        <CardContent className="space-y-2">
-          {steps.map(([label, n], i) => (
-            <div key={label} className="flex items-center gap-3 text-sm">
-              <span className="text-muted-foreground w-28 shrink-0">{label}</span>
-              <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
-                <div
-                  className={`h-full rounded-full transition-[width] duration-500 ease-out ${FUNNEL_TONE[i] ?? 'bg-tone-lilac'}`}
-                  style={{ width: `${(n / top) * 100}%` }}
-                />
-              </div>
-              <span className="w-10 text-right tabular-nums">{n}</span>
+        <>
+          <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
+            <div className="shrink-0">
+              <div className="text-muted-foreground text-[11.5px] font-semibold">{t('funnel.leads')}</div>
+              <div className="text-sm font-extrabold tabular-nums">{leads}</div>
             </div>
-          ))}
-          <p className="text-muted-foreground text-xs">
-            {t('funnel.details', {
-              queued: f.queued,
-              failed: f.failed,
-              skipped: f.skipped,
-              optedOut: f.opted_out,
-            })}
-            {(f.followed_up ?? 0) > 0 && ` · ${t('funnel.followedUp', { count: f.followed_up ?? 0 })}`}
-          </p>
+            <Step label={t('funnel.sent')} n={f.sent} of={leads} color="bg-tone-blue" />
+            <Step label={t('funnel.replied')} n={f.replied} of={leads} color="bg-tone-salmon" />
+            <Step label={t('funnel.qualified')} n={f.qualified} of={leads} color="bg-tone-mint" />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-muted-foreground text-xs">
+              {t('funnel.details', {
+                queued: f.queued,
+                failed: f.failed,
+                skipped: f.skipped,
+                optedOut: f.opted_out,
+              })}
+              {(f.followed_up ?? 0) > 0 && ` · ${t('funnel.followedUp', { count: f.followed_up ?? 0 })}`}
+            </p>
+          </div>
           <LeadList campaignId={c.id} version={version} t={t} />
-        </CardContent>
+        </>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -305,7 +393,7 @@ function LeadList({
         (leads === null ? (
           <Loader2 className="text-muted-foreground mx-auto size-4 animate-spin" />
         ) : (
-          <div className="max-h-80 overflow-auto rounded-md border">
+          <div className="mt-2 max-h-80 overflow-auto rounded-xl border">
             <table className="w-full text-xs">
               <thead className="bg-muted/50 sticky top-0">
                 <tr>
@@ -326,7 +414,11 @@ function LeadList({
                         <div className="text-muted-foreground">{l.contact?.phone}</div>
                       </td>
                       <td className="px-2 py-1">
-                        {t(`leads.state.${st}`)}
+                        <span
+                          className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${LEAD_TONE[st] ?? LEAD_TONE.queued}`}
+                        >
+                          {t(`leads.state.${st}`)}
+                        </span>
                         {l.error && (st === 'skipped' || st === 'failed') && (
                           <span className="text-muted-foreground"> · {reasonText(t, l.error)}</span>
                         )}
