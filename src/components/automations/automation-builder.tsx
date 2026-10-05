@@ -2150,7 +2150,9 @@ function previewFor(
           : t('preview.waitMinutes', { amount });
     }
     case 'condition':
-      return t('preview.when', { subject: String(cfg.subject ?? '?') });
+      return t('preview.when', {
+        subject: t(`config.subjects.${String(cfg.subject ?? 'tag_presence')}`),
+      });
     case 'send_webhook':
       return (cfg.url as string) || t('preview.noUrl');
     default:

@@ -1720,6 +1720,9 @@
       "unsaved": "Simulates what's on screen, even unsaved."
     },
     "runs": {
+      "errors": {
+        "aiNotConfigured": "AI isn't set up for this account — add a key in Settings → AI."
+      },
       "total": "Runs",
       "successRate": "Succeeded",
       "withProblems": "With problems",

@@ -1720,6 +1720,9 @@
       "unsaved": "Simula o que está na tela, mesmo sem salvar."
     },
     "runs": {
+      "errors": {
+        "aiNotConfigured": "A IA não está configurada nesta conta — adicione a chave em Configurações → IA."
+      },
       "total": "Execuções",
       "successRate": "Com sucesso",
       "withProblems": "Com problema",

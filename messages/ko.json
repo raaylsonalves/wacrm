@@ -1720,6 +1720,9 @@
       "unsaved": "저장하지 않아도 화면에 있는 그대로 시뮬레이션해요."
     },
     "runs": {
+      "errors": {
+        "aiNotConfigured": "이 계정에 AI가 설정되지 않았어요 — 설정 → AI에서 키를 추가하세요."
+      },
       "total": "실행",
       "successRate": "성공",
       "withProblems": "문제 있음",

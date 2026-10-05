@@ -269,7 +269,7 @@ function RunDetail({
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">
         {log.error_message && (
           <p className="bg-tone-pink-soft text-tone-pink-ink mb-4 rounded-2xl px-3 py-2.5 text-xs leading-relaxed">
-            {log.error_message}
+            {errorText(tRuns, log.error_message)}
           </p>
         )}
         {steps.length === 0 ? (
@@ -372,6 +372,17 @@ function TimelineStep({
       </div>
     </li>
   );
+}
+
+// The engine stores raw English errors; known ones get a translated,
+// actionable line, anything else is shown as stored.
+const KNOWN_ERRORS: Record<string, string> = {
+  'AI is not configured for this account': 'errors.aiNotConfigured',
+};
+
+function errorText(tRuns: ReturnType<typeof useTranslations>, msg: string) {
+  const hit = Object.keys(KNOWN_ERRORS).find((k) => msg.includes(k));
+  return hit ? tRuns(KNOWN_ERRORS[hit]) : msg;
 }
 
 function initials(name: string) {
