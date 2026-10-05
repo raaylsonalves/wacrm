@@ -101,6 +101,18 @@ export default function ProspectingPage() {
     };
   }, [reloadKey]);
 
+  // The cron sends in the background; while a campaign runs, keep the
+  // funnel and the lead list current instead of showing the state from
+  // when the page opened.
+  const anyRunning = campaigns?.some((c) => c.status === 'running') ?? false;
+  useEffect(() => {
+    if (!anyRunning) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') load();
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [anyRunning, load]);
+
   async function act(id: string, action: 'pause' | 'resume' | 'cancel') {
     const res = await fetch(`/api/prospecting/campaigns/${id}`, {
       method: 'PATCH',
@@ -139,7 +151,7 @@ export default function ProspectingPage() {
       ) : (
         <div className="space-y-4">
           {campaigns.map((c) => (
-            <CampaignCard key={c.id} c={c} canManage={canManage} onAct={act} t={t} />
+            <CampaignCard key={c.id} c={c} version={reloadKey} canManage={canManage} onAct={act} t={t} />
           ))}
         </div>
       )}
@@ -160,11 +172,13 @@ export default function ProspectingPage() {
 
 function CampaignCard({
   c,
+  version,
   canManage,
   onAct,
   t,
 }: {
   c: Campaign;
+  version: number;
   canManage: boolean;
   onAct: (id: string, action: 'pause' | 'resume' | 'cancel') => void;
   t: ReturnType<typeof useTranslations>;
@@ -235,7 +249,7 @@ function CampaignCard({
             })}
             {(f.followed_up ?? 0) > 0 && ` · ${t('funnel.followedUp', { count: f.followed_up ?? 0 })}`}
           </p>
-          <LeadList campaignId={c.id} t={t} />
+          <LeadList campaignId={c.id} version={version} t={t} />
         </CardContent>
       )}
     </Card>
@@ -243,12 +257,20 @@ function CampaignCard({
 }
 
 /** What happened to each lead of a campaign, loaded on demand. */
-function LeadList({ campaignId, t }: { campaignId: string; t: ReturnType<typeof useTranslations> }) {
+function LeadList({
+  campaignId,
+  version,
+  t,
+}: {
+  campaignId: string;
+  version: number;
+  t: ReturnType<typeof useTranslations>;
+}) {
   const [open, setOpen] = useState(false);
   const [leads, setLeads] = useState<Lead[] | null>(null);
 
   useEffect(() => {
-    if (!open || leads) return;
+    if (!open) return;
     let alive = true;
     fetch(`/api/prospecting/campaigns/${campaignId}`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : { leads: [] }))
@@ -257,7 +279,7 @@ function LeadList({ campaignId, t }: { campaignId: string; t: ReturnType<typeof 
     return () => {
       alive = false;
     };
-  }, [open, leads, campaignId]);
+  }, [open, version, campaignId]);
 
   const stageOf = (l: Lead) =>
     l.qualified_at
