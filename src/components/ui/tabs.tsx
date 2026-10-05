@@ -34,7 +34,7 @@ const tabsListVariants = cva(
         // than a shared track, and the row itself scrolls horizontally
         // instead of shrinking tabs to fit (paired with
         // ui/scroll-edges.tsx for the scroll affordance).
-        pill: 'h-auto w-full justify-start gap-2 overflow-x-auto bg-transparent p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        pill: 'h-auto w-full justify-start gap-2 overflow-x-auto bg-transparent p-0 py-0.5 [scrollbar-width:none] group-data-horizontal/tabs:h-auto [&::-webkit-scrollbar]:hidden',
       },
     },
     defaultVariants: {
