@@ -20,6 +20,11 @@ import type {
   AssignConversationStepConfig,
 } from '@/types';
 import { supabaseAdmin } from './admin-client';
+import {
+  conditionHolds,
+  interpolateVars,
+  type ConditionFacts,
+} from './simulate';
 import { addContactTagIfAbsent } from '@/lib/contacts/tag-write';
 import {
   MAX_TAG_CHAIN_DEPTH,
@@ -217,7 +222,8 @@ export async function resumePendingExecution(pending: {
       `[automations] resume: automation ${pending.automation_id} is inactive, cancelling pending wait ${pending.id}`
     );
     await markPending(pending.id, 'failed');
-    if (enrollmentId) await endEnrollment(enrollmentId, 'cancelled', 'automation_off');
+    if (enrollmentId)
+      await endEnrollment(enrollmentId, 'cancelled', 'automation_off');
     return;
   }
 
@@ -559,7 +565,7 @@ async function runStep(
       // what makes a number look automated. Picked by conversation id, so
       // one conversation always gets the same phrasing.
       const chosen = cfg.variants?.length
-        ? pickVariant([cfg.text, ...cfg.variants], conversationId) ?? cfg.text
+        ? (pickVariant([cfg.text, ...cfg.variants], conversationId) ?? cfg.text)
         : cfg.text;
       const text = interpolate(chosen, args);
       if (!text.trim()) throw new Error('send_message has empty text');
@@ -1042,55 +1048,40 @@ async function evaluateCondition(
   cfg: ConditionStepConfig,
   args: ExecuteArgs
 ): Promise<boolean> {
+  // Load only the fact this condition reads; the comparison itself is
+  // conditionHolds — shared with the builder's "Simular" so a dry run
+  // takes the same branch a real run would.
   const db = supabaseAdmin();
-  switch (cfg.subject) {
-    case 'tag_presence': {
-      if (!args.contactId || !cfg.operand) return false;
-      // contact_tags has no account_id column (its RLS keys off the parent
-      // contact), so tenant scoping here relies on the contact-ownership
-      // guard in runAutomationsForTrigger.
-      const { count } = await db
-        .from('contact_tags')
-        .select('id', { count: 'exact', head: true })
-        .eq('contact_id', args.contactId)
-        .eq('tag_id', cfg.operand);
-      return (count ?? 0) > 0;
-    }
-    case 'contact_field': {
-      if (!args.contactId || !cfg.operand) return false;
-      // Scope to the account so the condition can't be turned into a
-      // cross-tenant read oracle via the service-role client.
-      const { data } = await db
-        .from('contacts')
-        .select(cfg.operand)
-        .eq('id', args.contactId)
-        .eq('account_id', args.automation.account_id)
-        .maybeSingle();
-      const v = (data as Record<string, unknown> | null)?.[cfg.operand];
-      return v != null && String(v) === String(cfg.value ?? '');
-    }
-    case 'message_content': {
-      const text = (args.context.message_text ?? '').toString();
-      return text.toLowerCase().includes((cfg.value ?? '').toLowerCase());
-    }
-    case 'time_of_day': {
-      // operand form "HH:mm-HH:mm" — true if now is within that window
-      // (supports over-midnight ranges like "18:00-09:00").
-      const [from, to] = (cfg.operand ?? '').split('-');
-      if (!from || !to) return false;
-      const now = new Date();
-      const mins = now.getHours() * 60 + now.getMinutes();
-      const parse = (s: string) => {
-        const [h, m] = s.split(':').map(Number);
-        return (h || 0) * 60 + (m || 0);
-      };
-      const f = parse(from);
-      const t = parse(to);
-      return f <= t ? mins >= f && mins < t : mins >= f || mins < t;
-    }
-    default:
-      return false;
+  const facts: ConditionFacts = {
+    tagIds: [],
+    contact: null,
+    messageText: (args.context.message_text ?? '').toString(),
+    now: new Date(),
+  };
+  if (cfg.subject === 'tag_presence') {
+    if (!args.contactId || !cfg.operand) return false;
+    // contact_tags has no account_id column (its RLS keys off the parent
+    // contact), so tenant scoping here relies on the contact-ownership
+    // guard in runAutomationsForTrigger.
+    const { count } = await db
+      .from('contact_tags')
+      .select('id', { count: 'exact', head: true })
+      .eq('contact_id', args.contactId)
+      .eq('tag_id', cfg.operand);
+    if ((count ?? 0) > 0) facts.tagIds = [cfg.operand];
+  } else if (cfg.subject === 'contact_field') {
+    if (!args.contactId || !cfg.operand) return false;
+    // Scope to the account so the condition can't be turned into a
+    // cross-tenant read oracle via the service-role client.
+    const { data } = await db
+      .from('contacts')
+      .select(cfg.operand)
+      .eq('id', args.contactId)
+      .eq('account_id', args.automation.account_id)
+      .maybeSingle();
+    facts.contact = (data as Record<string, unknown> | null) ?? null;
   }
+  return conditionHolds(cfg, facts);
 }
 
 function waitMs(cfg: WaitStepConfig): number {
@@ -1104,12 +1095,9 @@ function waitMs(cfg: WaitStepConfig): number {
 }
 
 function interpolate(s: string, args: ExecuteArgs): string {
-  return s.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key) => {
-    const [ns, prop] = String(key).split('.');
-    if (ns === 'message' && prop === 'text')
-      return String(args.context.message_text ?? '');
-    if (ns === 'vars' && prop) return String(args.context.vars?.[prop] ?? '');
-    return '';
+  return interpolateVars(s, {
+    messageText: args.context.message_text,
+    vars: args.context.vars,
   });
 }
 
@@ -1152,7 +1140,10 @@ async function finalizeLog(
     .eq('id', logId);
 }
 
-async function markPending(id: string, status: 'done' | 'failed' | 'cancelled') {
+async function markPending(
+  id: string,
+  status: 'done' | 'failed' | 'cancelled'
+) {
   await supabaseAdmin()
     .from('automation_pending_executions')
     .update({ status })

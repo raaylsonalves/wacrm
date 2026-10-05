@@ -1704,6 +1704,21 @@
       "loadError": "불러오지 못했습니다 ({status})",
       "back": "자동화로 돌아가기"
     },
+    "simulate": {
+      "button": "시뮬레이션",
+      "title": "연락처로 시뮬레이션",
+      "notice": "아무것도 보내지 않아요 — 자동화가 갈 경로만 미리 보여줘요.",
+      "contact": "연락처",
+      "sample": "고객 메시지 (예시)",
+      "samplePlaceholder": "예: 예약하고 싶어요",
+      "run": "시뮬레이션",
+      "empty": "연락처를 고르고 시뮬레이션을 눌러 경로를 확인하세요.",
+      "wouldSend": "보낼 메시지",
+      "wouldFollow": "{branch} 쪽으로 진행",
+      "noSteps": "이 자동화에는 아직 단계가 없어요.",
+      "ended": "실행 끝",
+      "unsaved": "저장하지 않아도 화면에 있는 그대로 시뮬레이션해요."
+    },
     "runs": {
       "total": "실행",
       "successRate": "성공",
@@ -1779,7 +1794,9 @@
         "aiContext": "AI가 대화를 바탕으로 작성",
         "when": "{subject}이면",
         "noUrl": "URL 없음",
-        "waitFor": "{amount} {unit} 대기"
+        "waitMinutes": "{amount, plural, other {#분 대기}}",
+        "waitHours": "{amount, plural, other {#시간 대기}}",
+        "waitDays": "{amount, plural, other {#일 대기}}"
       },
       "tabs": {
         "flow": "흐름",

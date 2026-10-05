@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   Search,
   X,
+  FlaskConical,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,9 @@ import { validateStepsForActivation } from '@/lib/automations/validate';
 import { cn } from '@/lib/utils';
 import { GROUP_ORDER, GROUP_TONE, STEP_META } from './step-meta';
 import { AutomationRuns } from './automation-runs';
+import { simulate, type SimResult } from '@/lib/automations/simulate';
+import { ContactPicker } from '@/components/pipelines/contact-picker';
+import type { ContactLite } from '@/hooks/queries/use-crm-lookups';
 
 // ------------------------------------------------------------
 // Types (builder-local — mirror the flattened rows we POST)
@@ -620,15 +624,20 @@ export function AutomationBuilder({
   const router = useRouter();
   const t = useTranslations('Automations.builder');
   const isEditing = !!initial.id;
+  const tSim = useTranslations('Automations.simulate');
   const [state, setState] = useState<BuilderInitial>(initial);
   const [saving, setSaving] = useState(false);
   // v8: the canvas stays compact; the selected step (or "trigger") opens
   // its settings in the side panel, like a record view.
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [simOpen, setSimOpen] = useState(false);
   const [tab, setTab] = useState<'flow' | 'runs'>(
     initial.id ? initialTab : 'flow'
   );
   const numbers = useMemo(() => numberSteps(state.steps), [state.steps]);
+  useEffect(() => {
+    if (expandedId) setSimOpen(false);
+  }, [expandedId]);
 
   function patchTop<K extends keyof BuilderInitial>(
     key: K,
@@ -767,6 +776,19 @@ export function AutomationBuilder({
             ))}
           </div>
         )}
+        {tab === 'flow' && (
+          <Button
+            variant="outline"
+            onClick={() => {
+              setExpandedId(null);
+              setSimOpen(true);
+            }}
+            className="shrink-0"
+          >
+            <FlaskConical className="size-4" />
+            <span className="hidden sm:inline">{tSim('button')}</span>
+          </Button>
+        )}
         <div className="text-muted-foreground flex items-center gap-2 text-xs">
           <span className="hidden sm:inline">{t('active')}</span>
           <Switch
@@ -819,16 +841,23 @@ export function AutomationBuilder({
           <div
             className={cn(
               'relative mx-auto flex max-w-2xl flex-col items-center gap-0 px-4 py-10 transition-[padding] duration-200 ease-out',
-              expandedId && 'lg:max-w-none lg:pr-[468px]'
+              (expandedId || simOpen) && 'lg:max-w-none lg:pr-[468px]'
             )}
           >
             <ResourcesProvider>
+              <SimulatePanel
+                open={simOpen}
+                onClose={() => setSimOpen(false)}
+                steps={state.steps}
+                triggerType={state.trigger_type}
+              />
               <TriggerCard
                 type={state.trigger_type}
                 selected={expandedId === 'trigger'}
-                onSelect={() =>
-                  setExpandedId(expandedId === 'trigger' ? null : 'trigger')
-                }
+                onSelect={() => {
+                  setSimOpen(false);
+                  setExpandedId(expandedId === 'trigger' ? null : 'trigger');
+                }}
                 t={t}
               />
               <StepList
@@ -2112,14 +2141,13 @@ function previewFor(
     case 'send_template':
       return (cfg.template_name as string) || t('preview.pickTemplate');
     case 'wait': {
-      const unit = cfg.unit as string | undefined;
-      return t('preview.waitFor', {
-        amount: String(cfg.amount ?? '?'),
-        unit:
-          unit === 'minutes' || unit === 'hours' || unit === 'days'
-            ? t(`config.units.${unit}`).toLowerCase()
-            : (unit ?? ''),
-      });
+      const amount = Number(cfg.amount);
+      if (!Number.isFinite(amount)) return '';
+      return cfg.unit === 'days'
+        ? t('preview.waitDays', { amount })
+        : cfg.unit === 'hours'
+          ? t('preview.waitHours', { amount })
+          : t('preview.waitMinutes', { amount });
     }
     case 'condition':
       return t('preview.when', { subject: String(cfg.subject ?? '?') });
@@ -2174,4 +2202,203 @@ export function fromServerSteps(nodes: ServerStepNode[]): BuilderStep[] {
           }
         : undefined,
   }));
+}
+
+// ------------------------------------------------------------
+// Simular: a dry run for one contact, nothing sent
+// ------------------------------------------------------------
+
+const MESSAGE_TRIGGERS: AutomationTriggerType[] = [
+  'new_message_received',
+  'first_inbound_message',
+  'keyword_match',
+];
+
+function SimulatePanel({
+  open,
+  onClose,
+  steps,
+  triggerType,
+}: {
+  open: boolean;
+  onClose: () => void;
+  steps: BuilderStep[];
+  triggerType: AutomationTriggerType;
+}) {
+  const t = useTranslations('Automations.builder');
+  const tSim = useTranslations('Automations.simulate');
+  const [contact, setContact] = useState<ContactLite | null>(null);
+  const [sample, setSample] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<SimResult[] | null>(null);
+  const byCid = useMemo(() => {
+    const m = new Map<string, BuilderStep>();
+    const walk = (list: BuilderStep[]) =>
+      list.forEach((st) => {
+        m.set(st.cid, st);
+        if (st.branches) {
+          walk(st.branches.yes);
+          walk(st.branches.no);
+        }
+      });
+    walk(steps);
+    return m;
+  }, [steps]);
+
+  async function run() {
+    if (!contact) return;
+    setBusy(true);
+    const supabase = createClient();
+    // RLS-scoped reads of the facts a condition may look at.
+    const [{ data: row }, { data: tags }] = await Promise.all([
+      supabase.from('contacts').select('*').eq('id', contact.id).maybeSingle(),
+      supabase
+        .from('contact_tags')
+        .select('tag_id')
+        .eq('contact_id', contact.id),
+    ]);
+    setResult(
+      simulate(steps, {
+        tagIds: ((tags ?? []) as { tag_id: string }[]).map((r) => r.tag_id),
+        contact: (row as Record<string, unknown> | null) ?? null,
+        messageText: sample,
+        now: new Date(),
+      })
+    );
+    setBusy(false);
+  }
+
+  return (
+    <SidePanel
+      open={open}
+      onClose={onClose}
+      label={tSim('title')}
+      className="top-[76px]"
+    >
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex items-start gap-2 px-5 pt-4 pb-3">
+          <div className="min-w-0 flex-1">
+            <PanelHeading
+              icon={<FlaskConical className="size-[18px]" />}
+              tone="bg-foreground text-background"
+              kicker={tSim('unsaved')}
+              title={tSim('title')}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('close')}
+            className="hover:bg-muted flex size-9 shrink-0 items-center justify-center rounded-full transition-colors duration-150 ease-out"
+          >
+            <X className="size-4.5" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">
+          <p className="bg-tone-blue-soft text-tone-blue-ink mb-4 rounded-2xl px-3 py-2.5 text-xs leading-relaxed">
+            {tSim('notice')}
+          </p>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-muted-foreground text-[12.5px] font-bold">
+              {tSim('contact')}
+            </span>
+            <ContactPicker
+              value={contact}
+              onChange={(c) => {
+                setContact(c);
+                setResult(null);
+              }}
+            />
+          </div>
+          {MESSAGE_TRIGGERS.includes(triggerType) && (
+            <label className="mt-4 flex flex-col gap-1.5">
+              <span className="text-muted-foreground text-[12.5px] font-bold">
+                {tSim('sample')}
+              </span>
+              <Textarea
+                value={sample}
+                onChange={(e) => {
+                  setSample(e.target.value);
+                  setResult(null);
+                }}
+                placeholder={tSim('samplePlaceholder')}
+                className="min-h-16"
+              />
+            </label>
+          )}
+          <Button
+            className="mt-4 w-full"
+            disabled={!contact || busy || steps.length === 0}
+            onClick={() => void run()}
+          >
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <FlaskConical className="size-4" />
+            )}
+            {tSim('run')}
+          </Button>
+
+          <div className="mt-5">
+            {steps.length === 0 ? (
+              <p className="text-muted-foreground text-sm">{tSim('noSteps')}</p>
+            ) : !result ? (
+              <p className="text-muted-foreground text-sm">{tSim('empty')}</p>
+            ) : (
+              <ol className="stagger flex flex-col gap-2.5">
+                {result.map((r, i) => {
+                  const st = byCid.get(r.cid);
+                  const meta = STEP_META[r.step_type as AutomationStepType];
+                  if (!st || !meta) return null;
+                  const Icon = meta.icon;
+                  return (
+                    <li
+                      key={`${r.cid}-${i}`}
+                      className="flex items-start gap-3"
+                      style={{ paddingLeft: r.depth * 20 }}
+                    >
+                      <span
+                        className={cn(
+                          'flex size-9 shrink-0 items-center justify-center rounded-xl',
+                          GROUP_TONE[meta.group]
+                        )}
+                      >
+                        <Icon className="size-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-bold">
+                          {t(`steps.${meta.label}`)}
+                        </div>
+                        {r.text !== undefined ? (
+                          <div className="bg-tone-lilac-soft text-tone-lilac-ink mt-1 rounded-2xl rounded-tl-md px-3 py-2 text-[13px] whitespace-pre-wrap">
+                            <span className="mb-0.5 block text-[11px] font-bold opacity-80">
+                              {tSim('wouldSend')}
+                            </span>
+                            {r.text || t('preview.noText')}
+                          </div>
+                        ) : r.branch ? (
+                          <div className="text-xs font-bold">
+                            {tSim('wouldFollow', {
+                              branch: t(`branches.${r.branch}`),
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground truncate text-xs">
+                            {previewFor(st, t)}
+                          </div>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+                <li className="text-muted-foreground pl-12 text-xs font-semibold">
+                  {tSim('ended')}
+                </li>
+              </ol>
+            )}
+          </div>
+        </div>
+      </div>
+    </SidePanel>
+  );
 }

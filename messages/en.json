@@ -1704,6 +1704,21 @@
       "loadError": "Failed to load ({status})",
       "back": "Back to Automations"
     },
+    "simulate": {
+      "button": "Simulate",
+      "title": "Simulate with a contact",
+      "notice": "Nothing is sent — this only previews the path the automation would take.",
+      "contact": "Contact",
+      "sample": "Customer message (example)",
+      "samplePlaceholder": "E.g. I'd like to book a slot",
+      "run": "Simulate",
+      "empty": "Pick a contact and tap Simulate to see the path.",
+      "wouldSend": "Would send",
+      "wouldFollow": "Would follow: {branch}",
+      "noSteps": "This automation has no steps yet.",
+      "ended": "End of run",
+      "unsaved": "Simulates what's on screen, even unsaved."
+    },
     "runs": {
       "total": "Runs",
       "successRate": "Succeeded",
@@ -1779,7 +1794,9 @@
         "aiContext": "AI writes from the conversation",
         "when": "If {subject}",
         "noUrl": "No URL",
-        "waitFor": "Waits {amount} {unit}"
+        "waitMinutes": "{amount, plural, one {Waits # minute} other {Waits # minutes}}",
+        "waitHours": "{amount, plural, one {Waits # hour} other {Waits # hours}}",
+        "waitDays": "{amount, plural, one {Waits # day} other {Waits # days}}"
       },
       "tabs": {
         "flow": "Flow",

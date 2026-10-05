@@ -1704,6 +1704,21 @@
       "loadError": "Error al cargar ({status})",
       "back": "Volver a automatizaciones"
     },
+    "simulate": {
+      "button": "Simular",
+      "title": "Simular con un contacto",
+      "notice": "No se envía nada — es solo una vista previa del camino que haría la automatización.",
+      "contact": "Contacto",
+      "sample": "Mensaje del cliente (ejemplo)",
+      "samplePlaceholder": "Ej.: Quiero agendar un horario",
+      "run": "Simular",
+      "empty": "Elige un contacto y toca Simular para ver el camino.",
+      "wouldSend": "Enviaría",
+      "wouldFollow": "Seguiría por: {branch}",
+      "noSteps": "La automatización aún no tiene pasos.",
+      "ended": "Fin de la ejecución",
+      "unsaved": "Simula lo que está en pantalla, aunque no esté guardado."
+    },
     "runs": {
       "total": "Ejecuciones",
       "successRate": "Con éxito",
@@ -1779,7 +1794,9 @@
         "aiContext": "La IA escribe según la conversación",
         "when": "Si {subject}",
         "noUrl": "Sin URL",
-        "waitFor": "Espera {amount} {unit}"
+        "waitMinutes": "{amount, plural, one {Espera # minuto} other {Espera # minutos}}",
+        "waitHours": "{amount, plural, one {Espera # hora} other {Espera # horas}}",
+        "waitDays": "{amount, plural, one {Espera # día} other {Espera # días}}"
       },
       "tabs": {
         "flow": "Flujo",
