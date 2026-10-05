@@ -805,6 +805,11 @@ BEGIN
     RAISE EXCEPTION 'deals_record_events trigger is missing — migration 104 did not apply';
   END IF;
 
+  IF to_regprocedure('public.merge_duplicate_contacts()') IS NOT NULL
+     AND has_function_privilege('anon', 'public.merge_duplicate_contacts()', 'EXECUTE') THEN
+    RAISE EXCEPTION 'anon can still execute merge_duplicate_contacts — migration 105 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;
