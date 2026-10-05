@@ -2132,6 +2132,30 @@
       "backToFlows": "← Back to flows",
       "loadError": "Couldn't load flow."
     },
+    "runs": {
+      "total": "Runs",
+      "completedRate": "Completed",
+      "withProblems": "With problems",
+      "filter": {
+        "all": "All",
+        "failed": "With problems"
+      },
+      "noProblems": "No runs with problems.",
+      "events": "{count, plural, one {# event} other {# events}}",
+      "runDetail": "Run",
+      "close": "Close",
+      "event": {
+        "started": "Flow started",
+        "node_entered": "Entered node",
+        "message_sent": "Message sent",
+        "reply_received": "Customer replied",
+        "fallback_fired": "Reply not recognised",
+        "handoff": "Handed to an agent",
+        "timeout": "Timed out",
+        "error": "Error",
+        "completed": "Flow completed"
+      }
+    },
     "logs": {
       "title": "Runs",
       "description": "The 50 most recent times this flow ran. Expand a row to see the engine's per-step log.",
@@ -2340,6 +2364,10 @@
       "tagNone": "{mode} tag (none picked)"
     },
     "header": {
+      "tabs": {
+        "flow": "Flow",
+        "runs": "Runs"
+      },
       "backToFlows": "Back to Flows",
       "namePlaceholder": "Flow name",
       "unsavedHint": "Unsaved changes — hit Save to persist",

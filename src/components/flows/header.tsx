@@ -17,7 +17,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, History, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -26,10 +26,16 @@ import { useFlowEditor } from './flow-editor-state';
 
 export type EditorView = 'canvas' | 'list';
 
+export type EditorTab = 'flow' | 'runs';
+
 export function EditorHeader({
+  tab,
+  onTab,
   view,
   onView,
 }: {
+  tab: EditorTab;
+  onTab: (t: EditorTab) => void;
   view: EditorView;
   /** Omitted on phones, where only the list view exists. */
   onView?: (v: EditorView) => void;
@@ -95,7 +101,7 @@ export function EditorHeader({
         />
       </div>
 
-      {onView && (
+      {onView && tab === 'flow' && (
         <div
           role="tablist"
           aria-label={tB('editorView')}
@@ -121,18 +127,12 @@ export function EditorHeader({
         </div>
       )}
 
-      <Button
-        variant="outline"
-        onClick={() => router.push(`/flows/${flow.id}/runs`)}
-        className="shrink-0"
-        title={t('runs')}
-      >
-        <History className="size-4" />
-        <span className="hidden lg:inline">{t('runs')}</span>
-        <span className="bg-muted text-muted-foreground rounded-full px-1.5 text-[11px] font-bold tabular-nums">
-          {flow.execution_count}
-        </span>
-      </Button>
+      <TabSwitch
+        tab={tab}
+        onTab={onTab}
+        count={flow.execution_count}
+        className="hidden sm:flex"
+      />
       <button
         type="button"
         onClick={() => void deleteFlow()}
@@ -168,5 +168,50 @@ export function EditorHeader({
         {t('save')}
       </Button>
     </header>
+  );
+}
+
+/** Fluxo | Execuções — in the bar from sm up, its own row on phones. */
+export function TabSwitch({
+  tab,
+  onTab,
+  count,
+  className,
+}: {
+  tab: EditorTab;
+  onTab: (t: EditorTab) => void;
+  count: number;
+  className?: string;
+}) {
+  const t = useTranslations('Flows.header');
+  return (
+    <div
+      role="tablist"
+      aria-label={t('tabs.flow')}
+      className={cn('bg-muted shrink-0 gap-1 rounded-full p-1', className)}
+    >
+      {(['flow', 'runs'] as const).map((k) => (
+        <button
+          key={k}
+          type="button"
+          role="tab"
+          aria-selected={tab === k}
+          onClick={() => onTab(k)}
+          className={cn(
+            'inline-flex min-h-8 flex-1 items-center justify-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors duration-150 ease-out',
+            tab === k
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {t(`tabs.${k}`)}
+          {k === 'runs' && (
+            <span className="bg-muted text-muted-foreground rounded-full px-1.5 text-[11px] font-bold tabular-nums">
+              {count}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
   );
 }

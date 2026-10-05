@@ -29,10 +29,16 @@ import { useEffect, useState } from 'react';
 import { FlowBuilder } from './flow-builder';
 import { FlowCanvas } from './flow-canvas';
 import { FlowEditorProvider } from './flow-editor-state';
-import { EditorHeader, type EditorView } from './header';
+import {
+  EditorHeader,
+  TabSwitch,
+  type EditorTab,
+  type EditorView,
+} from './header';
+import { FlowRuns } from './flow-runs';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ValidationPanel } from './validation-panel';
 import type { FlowRow, FlowNodeRow } from '@/lib/flows/types';
-import { useTranslations } from 'next-intl';
 
 /**
  * Below this viewport width we force list view and hide the toggle.
@@ -52,7 +58,6 @@ interface Props {
 }
 
 export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
-  const t = useTranslations('Flows.builder');
 
   // Read the persisted choice in the useState initializer. Safe even
   // though this is a client component because the parent page only
@@ -76,6 +81,21 @@ export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
   const isMobile = useMatchMedia(MOBILE_BREAKPOINT);
   const effectiveView: View = isMobile ? 'list' : view;
 
+  // Fluxo | Execuções, mirrored in ?tab= so the old /runs URL can
+  // redirect straight to the runs tab.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<EditorTab>(
+    searchParams.get('tab') === 'runs' ? 'runs' : 'flow'
+  );
+  const chooseTab = (next: EditorTab) => {
+    setTab(next);
+    router.replace(next === 'runs' ? `${pathname}?tab=runs` : pathname, {
+      scroll: false,
+    });
+  };
+
   const choose = (next: View) => {
     setView(next);
     try {
@@ -91,13 +111,27 @@ export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
           then the stage edge to edge, then the readiness bar. */}
       <div className="bg-background fixed inset-0 z-30 flex flex-col">
         <EditorHeader
+          tab={tab}
+          onTab={chooseTab}
           view={effectiveView}
           onView={isMobile ? undefined : choose}
         />
+        <div className="border-border flex border-b px-3 py-2 sm:hidden">
+          <TabSwitch
+            tab={tab}
+            onTab={chooseTab}
+            count={initialFlow.execution_count}
+            className="flex w-full"
+          />
+        </div>
 
         {/* ---- stage: the active view, owning its own overflow ---- */}
         <div className="bg-card-2 relative min-h-0 flex-1 overflow-hidden">
-          {effectiveView === 'canvas' ? (
+          {tab === 'runs' ? (
+            <div className="bg-background absolute inset-0 overflow-y-auto">
+              <FlowRuns />
+            </div>
+          ) : effectiveView === 'canvas' ? (
             <FlowCanvas />
           ) : (
             <div className="absolute inset-0 overflow-y-auto">
@@ -107,7 +141,10 @@ export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
         </div>
 
         {/* ---- validation / activate-readiness bar ---- */}
-        <div className="border-border bg-card/80 border-t px-3 py-2.5 sm:px-4">
+        <div
+          hidden={tab === 'runs'}
+          className="border-border bg-card/80 border-t px-3 py-2.5 sm:px-4"
+        >
           <ValidationPanel />
         </div>
       </div>

@@ -2132,6 +2132,30 @@
       "backToFlows": "← Voltar aos fluxos",
       "loadError": "Não foi possível carregar o fluxo."
     },
+    "runs": {
+      "total": "Execuções",
+      "completedRate": "Concluídas",
+      "withProblems": "Com problema",
+      "filter": {
+        "all": "Todas",
+        "failed": "Com problema"
+      },
+      "noProblems": "Nenhuma execução com problema.",
+      "events": "{count, plural, one {# evento} other {# eventos}}",
+      "runDetail": "Execução",
+      "close": "Fechar",
+      "event": {
+        "started": "Fluxo iniciado",
+        "node_entered": "Entrou no nó",
+        "message_sent": "Mensagem enviada",
+        "reply_received": "Cliente respondeu",
+        "fallback_fired": "Resposta não reconhecida",
+        "handoff": "Transferido para agente",
+        "timeout": "Tempo esgotado",
+        "error": "Erro",
+        "completed": "Fluxo concluído"
+      }
+    },
     "logs": {
       "title": "Execuções",
       "description": "As 50 execuções mais recentes deste fluxo. Expanda uma linha para ver o log do motor etapa por etapa.",
@@ -2340,6 +2364,10 @@
       "tagNone": "{mode} tag (nenhuma escolhida)"
     },
     "header": {
+      "tabs": {
+        "flow": "Fluxo",
+        "runs": "Execuções"
+      },
       "backToFlows": "Voltar aos fluxos",
       "namePlaceholder": "Nome do fluxo",
       "unsavedHint": "Alterações não salvas — clique em Salvar para mantê-las",
