@@ -846,7 +846,7 @@
       "entryStage": "Entry stage",
       "qualifiedStage": "Qualified stage",
       "template": "Approved template",
-      "noTemplates": "No approved template in this account. Create one under Channels → Templates and wait for Meta's approval.",
+      "noTemplates": "No approved template in this account. Create one in Settings → Templates and wait for Meta's approval.",
       "token": {
         "first_name": "First name",
         "name": "Full name",
@@ -861,7 +861,7 @@
       "legalPlaceholder": "E.g. shops with a public contact, approached to offer a service for their segment.",
       "dailyLimit": "Daily limit",
       "interval": "Interval between sends (minutes)",
-      "pacingHint": "Sends Monday to Friday, 9am to 6pm (São Paulo time), with a random delay so it doesn't look automated.",
+      "pacingHint": "Sends only on the days and hours above (Brasília time), with some jitter in the interval so it doesn't look automated.",
       "startHour": "Send from (hour)",
       "endHour": "Until (hour)",
       "weekdays": "Sending days",

@@ -846,7 +846,7 @@
       "entryStage": "Entry stage",
       "qualifiedStage": "Qualified stage",
       "template": "Approved template",
-      "noTemplates": "No approved template in this account. Create one under Channels → Templates and wait for Meta's approval.",
+      "noTemplates": "이 계정에 승인된 템플릿이 없어요. 설정 → 템플릿에서 만들고 Meta 승인을 기다리세요.",
       "token": {
         "first_name": "First name",
         "name": "Full name",
@@ -861,7 +861,7 @@
       "legalPlaceholder": "E.g. shops with a public contact, approached to offer a service for their segment.",
       "dailyLimit": "Daily limit",
       "interval": "Interval between sends (minutes)",
-      "pacingHint": "Sends Monday to Friday, 9am to 6pm (São Paulo time), with a random delay so it doesn't look automated.",
+      "pacingHint": "위의 요일과 시간에만 보내요(브라질리아 시간). 자동 발송처럼 보이지 않도록 간격에 약간의 변화를 줘요.",
       "startHour": "Send from (hour)",
       "endHour": "Until (hour)",
       "weekdays": "Sending days",

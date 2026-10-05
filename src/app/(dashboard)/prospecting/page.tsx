@@ -64,6 +64,9 @@ interface Campaign {
   funnel: Funnel | null;
 }
 
+
+// Leads → approached → replied → qualified, in the v2 tones.
+const FUNNEL_TONE = ['bg-tone-lilac', 'bg-tone-blue', 'bg-tone-salmon', 'bg-tone-mint'];
 /**
  * Prospecting campaigns (specs/prospecting-csv-import.md, part B): one list,
  * one agent, one number — WAHA (the agent writes each approach) or the
@@ -203,11 +206,14 @@ function CampaignCard({
       </CardHeader>
       {f && (
         <CardContent className="space-y-2">
-          {steps.map(([label, n]) => (
+          {steps.map(([label, n], i) => (
             <div key={label} className="flex items-center gap-3 text-sm">
               <span className="text-muted-foreground w-28 shrink-0">{label}</span>
               <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
-                <div className="bg-primary h-full" style={{ width: `${(n / top) * 100}%` }} />
+                <div
+                  className={`h-full rounded-full transition-[width] duration-500 ease-out ${FUNNEL_TONE[i] ?? 'bg-tone-lilac'}`}
+                  style={{ width: `${(n / top) * 100}%` }}
+                />
               </div>
               <span className="w-10 text-right tabular-nums">{n}</span>
             </div>
@@ -318,6 +324,7 @@ function LeadList({ campaignId, t }: { campaignId: string; t: ReturnType<typeof 
 /** An approved template plus a source for each {{n}} body variable. */
 function TemplateFields({
   templates,
+  loaded,
   value,
   onChange,
   params,
@@ -325,6 +332,8 @@ function TemplateFields({
   t,
 }: {
   templates: TemplateOption[];
+  /** False until the templates query has answered. */
+  loaded: boolean;
   value: string;
   onChange: (v: string) => void;
   params: string[];
@@ -342,7 +351,7 @@ function TemplateFields({
   return (
     <div className="space-y-2">
       <Select value={value || null} onValueChange={(v) => onChange(v ?? '')}>
-        <SelectTrigger>
+        <SelectTrigger className="w-full">
           <SelectValue placeholder={t('form.pick')}>
             {(v: string) => v?.replace('|', ' · ') || t('form.pick')}
           </SelectValue>
@@ -355,8 +364,8 @@ function TemplateFields({
           ))}
         </SelectContent>
       </Select>
-      {templates.length === 0 && (
-        <p className="text-xs text-amber-700 dark:text-amber-300">{t('form.noTemplates')}</p>
+      {loaded && templates.length === 0 && (
+        <p className="text-tone-salmon-ink text-xs">{t('form.noTemplates')}</p>
       )}
       {template && (
         <p className="bg-muted/50 rounded-md p-2 text-xs whitespace-pre-wrap">{template.body_text}</p>
@@ -419,6 +428,7 @@ function NewCampaignDialog({
   const [pipelines, setPipelines] = useState<Option[]>([]);
   const [stages, setStages] = useState<Option[]>([]);
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   const [name, setName] = useState('');
   const [listId, setListId] = useState('');
@@ -462,6 +472,7 @@ function NewCampaignDialog({
       setWaha((ch.data ?? []).map((x) => ({ id: x.id, name: x.label })));
       setPipelines((pl.data ?? []).map((x) => ({ id: x.id, name: x.name })));
       setTemplates((tpl.data ?? []) as TemplateOption[]);
+      setLoaded(true);
       setAgents(((ag.agents ?? []) as Option[]).map((a) => ({ id: a.id, name: a.name })));
     })();
   }, [open, accountId, supabase]);
@@ -542,7 +553,7 @@ function NewCampaignDialog({
     placeholder: string,
   ) => (
     <Select value={value || null} onValueChange={(v) => onChange(v ?? '')}>
-      <SelectTrigger>
+      <SelectTrigger className="w-full">
         <SelectValue placeholder={placeholder}>{(v: string) => labelOf(options, v) || placeholder}</SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -606,6 +617,7 @@ function NewCampaignDialog({
               <Label>{t('form.template')}</Label>
               <TemplateFields
                 templates={templates}
+                loaded={loaded}
                 value={templateKey}
                 onChange={setTemplateKey}
                 params={params}
@@ -717,6 +729,7 @@ function NewCampaignDialog({
                     <Label>{t('form.followupTemplate')}</Label>
                     <TemplateFields
                       templates={templates}
+                loaded={loaded}
                       value={followupKey}
                       onChange={setFollowupKey}
                       params={followupParams}

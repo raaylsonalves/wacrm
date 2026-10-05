@@ -846,7 +846,7 @@
       "entryStage": "Etapa de entrada",
       "qualifiedStage": "Etapa de qualificado",
       "template": "Template aprovado",
-      "noTemplates": "Nenhum template aprovado nesta conta. Crie um em Canais → Templates e aguarde a aprovação da Meta.",
+      "noTemplates": "Nenhum template aprovado nesta conta. Crie um em Configurações → Modelos e aguarde a aprovação da Meta.",
       "token": {
         "first_name": "Primeiro nome",
         "name": "Nome completo",
@@ -861,7 +861,7 @@
       "legalPlaceholder": "Ex.: oficinas com contato público no Google, abordadas para oferecer um serviço do segmento.",
       "dailyLimit": "Limite por dia",
       "interval": "Intervalo entre envios (minutos)",
-      "pacingHint": "Envia de segunda a sexta, das 9h às 18h (horário de Brasília), com uma variação no intervalo para não parecer robô.",
+      "pacingHint": "Envia só nos dias e horários acima (horário de Brasília), com uma variação no intervalo para não parecer robô.",
       "startHour": "Enviar a partir de (hora)",
       "endHour": "Até (hora)",
       "weekdays": "Dias de envio",
