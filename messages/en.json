@@ -1412,6 +1412,11 @@
   },
   "Broadcasts": {
     "page": {
+      "stats": {
+        "total": "Broadcasts",
+        "recipients": "Recipients",
+        "readRate": "Read rate"
+      },
       "title": "Broadcasts",
       "subtitle": "Send bulk messages to your contacts using approved templates.",
       "newBroadcast": "New Broadcast",

@@ -5,10 +5,10 @@
  * /broadcasts/page.tsx and /broadcasts/[id]/page.tsx with slight
  * drift risk. One source of truth now.
  *
- * Badge shape: bg-*-500/10 + text-*-400 + border-*-500/20. The
- * translucent fills sit fine on both light and dark surfaces; neutral
- * statuses use text-muted-foreground so the label stays legible in
- * light mode (a solid slate-400 would be too faint on white).
+ * Badge shape: the v2 pastel tones (bg-tone-*-soft + text-tone-*-ink),
+ * which carry their own light/dark values; neutral statuses use the
+ * muted pair. The border stays transparent so callers that add a
+ * `border` class keep their size without drawing a line.
  */
 
 import type { BroadcastStatus, RecipientStatus } from "@/types";
@@ -26,55 +26,55 @@ export interface StatusDisplay {
 export const broadcastStatusConfig: Record<BroadcastStatus, StatusDisplay> = {
   draft: {
     label: "draft",
-    classes: "bg-slate-500/10 text-muted-foreground border-slate-500/20",
+    classes: "bg-muted text-muted-foreground border-transparent",
   },
   scheduled: {
     label: "scheduled",
-    classes: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+    classes: "bg-tone-blue-soft text-tone-blue-ink border-transparent",
   },
   sending: {
     label: "sending",
-    classes: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
+    classes: "bg-tone-salmon-soft text-tone-salmon-ink border-transparent",
     pulse: true,
   },
   sent: {
     label: "sent",
-    classes: "bg-primary/10 text-primary border-primary/20",
+    classes: "bg-tone-mint-soft text-tone-mint-ink border-transparent",
   },
   failed: {
     label: "failed",
-    classes: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+    classes: "bg-tone-pink-soft text-tone-pink-ink border-transparent",
   },
   cancelled: {
     label: "cancelled",
-    classes: "bg-slate-500/10 text-muted-foreground border-slate-500/20",
+    classes: "bg-muted text-muted-foreground border-transparent",
   },
 };
 
 export const recipientStatusConfig: Record<RecipientStatus, StatusDisplay> = {
   pending: {
     label: "pending",
-    classes: "bg-slate-500/10 text-muted-foreground border-slate-500/20",
+    classes: "bg-muted text-muted-foreground border-transparent",
   },
   sent: {
     label: "sent",
-    classes: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+    classes: "bg-tone-blue-soft text-tone-blue-ink border-transparent",
   },
   delivered: {
     label: "delivered",
-    classes: "bg-primary/10 text-primary border-primary/20",
+    classes: "bg-tone-mint-soft text-tone-mint-ink border-transparent",
   },
   read: {
     label: "read",
-    classes: "bg-primary/10 text-primary border-primary/20",
+    classes: "bg-tone-mint-soft text-tone-mint-ink border-transparent",
   },
   replied: {
     label: "replied",
-    classes: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+    classes: "bg-tone-lilac-soft text-tone-lilac-ink border-transparent",
   },
   failed: {
     label: "failed",
-    classes: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+    classes: "bg-tone-pink-soft text-tone-pink-ink border-transparent",
   },
 };
 

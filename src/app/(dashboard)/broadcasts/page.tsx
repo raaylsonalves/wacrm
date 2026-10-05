@@ -5,14 +5,6 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Broadcast } from '@/types';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Radio, Plus } from 'lucide-react';
 import { useCan } from '@/hooks/use-can';
 import { GatedButton } from '@/components/ui/gated-button';
@@ -33,28 +25,42 @@ function percent(numerator: number, denominator: number): number {
   return Math.round((numerator / denominator) * 100);
 }
 
-function RateCell({
+function RateBar({
+  label,
   value,
   total,
   color,
 }: {
+  label: string;
   value: number;
   total: number;
-  /** Tailwind bg class for the fill, e.g. "bg-primary" */
+  /** Tailwind bg class for the fill. */
   color: string;
 }) {
   const pct = percent(value, total);
   return (
-    <div className="flex items-center gap-2">
-      <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
-        {pct}%
-      </span>
-      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+    <div className="min-w-0 flex-1">
+      <div className="text-muted-foreground flex items-baseline justify-between gap-2 text-[11.5px] font-semibold">
+        <span className="truncate">{label}</span>
+        <span className="text-foreground tabular-nums">{pct}%</span>
+      </div>
+      <div className="bg-muted mt-1 h-1.5 overflow-hidden rounded-full">
         <div
-          className={`h-1.5 rounded-full ${color}`}
+          className={`h-full rounded-full transition-[width] duration-500 ease-out ${color}`}
           style={{ width: `${pct}%` }}
         />
       </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-border bg-card rounded-[20px] border px-4 py-3">
+      <div className="text-muted-foreground truncate text-xs font-semibold">
+        {label}
+      </div>
+      <div className="text-xl font-extrabold tabular-nums">{value}</div>
     </div>
   );
 }
@@ -91,6 +97,17 @@ export default function BroadcastsPage() {
   useEffect(() => {
     fetchBroadcasts();
   }, []);
+
+  const stats = useMemo(() => {
+    const sent = broadcasts.filter((b) => b.total_recipients > 0);
+    const recipients = sent.reduce((n, b) => n + b.total_recipients, 0);
+    const read = sent.reduce((n, b) => n + b.read_count, 0);
+    return {
+      total: broadcasts.length,
+      recipients,
+      readRate: recipients ? `${percent(read, recipients)}%` : '—',
+    };
+  }, [broadcasts]);
 
   const anySending = useMemo(
     () => broadcasts.some((b) => b.status === 'sending'),
@@ -160,7 +177,7 @@ export default function BroadcastsPage() {
           aria-label={t('broadcastInProgress')}
           className="broadcast-indeterminate fixed inset-x-0 top-0 z-40 h-0.5 overflow-hidden bg-muted"
         >
-          <div className="broadcast-indeterminate-bar h-0.5 bg-primary" />
+          <div className="broadcast-indeterminate-bar bg-foreground h-0.5" />
           <style jsx>{`
             .broadcast-indeterminate-bar {
               width: 33%;
@@ -216,83 +233,90 @@ export default function BroadcastsPage() {
           </GatedButton>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">{t('table.name')}</TableHead>
-                <TableHead className="hidden text-muted-foreground md:table-cell">{t('table.template')}</TableHead>
-                <TableHead className="hidden text-right text-muted-foreground sm:table-cell">
-                  {t('table.recipients')}
-                </TableHead>
-                <TableHead className="hidden text-muted-foreground lg:table-cell">{t('table.delivery')}</TableHead>
-                <TableHead className="hidden text-muted-foreground lg:table-cell">{t('table.read')}</TableHead>
-                <TableHead className="text-muted-foreground">{t('table.status')}</TableHead>
-                <TableHead className="hidden text-muted-foreground sm:table-cell">{t('table.date')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {broadcasts.map((broadcast) => {
-                const status = getBroadcastStatus(broadcast.status);
-                return (
-                  <TableRow
-                    key={broadcast.id}
-                    className="cursor-pointer border-border hover:bg-muted/50"
+        <>
+          <div className="grid grid-cols-3 gap-2.5">
+            <Stat label={t('stats.total')} value={String(stats.total)} />
+            <Stat
+              label={t('stats.recipients')}
+              value={stats.recipients.toLocaleString(APP_LOCALE)}
+            />
+            <Stat label={t('stats.readRate')} value={stats.readRate} />
+          </div>
+          <ul className="stagger grid gap-2.5 xl:grid-cols-2">
+            {broadcasts.map((broadcast) => {
+              const status = getBroadcastStatus(broadcast.status);
+              return (
+                <li key={broadcast.id}>
+                  <button
+                    type="button"
                     onClick={() => router.push(`/broadcasts/${broadcast.id}`)}
+                    className="border-border bg-card flex w-full flex-col gap-3 rounded-[22px] border p-4 text-left transition-[box-shadow,transform] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgb(0_0_0/0.08)]"
                   >
-                    <TableCell className="font-medium text-foreground">
-                      {broadcast.name}
-                    </TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">
-                      {broadcast.template_name}
-                    </TableCell>
-                    <TableCell className="hidden text-right text-muted-foreground tabular-nums sm:table-cell">
-                      {broadcast.total_recipients}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <RateCell
+                    <div className="flex w-full items-start gap-3">
+                      <span className="bg-tone-lilac-soft text-tone-lilac-ink flex size-10 shrink-0 items-center justify-center rounded-xl">
+                        <Radio className="size-[18px]" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold">
+                          {broadcast.name}
+                        </span>
+                        <span className="text-muted-foreground block truncate text-xs">
+                          {broadcast.template_name}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 flex-col items-end gap-1">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-bold ${status.classes}`}
+                        >
+                          {status.pulse && (
+                            <span className="relative flex size-1.5">
+                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-75" />
+                              <span className="relative inline-flex size-1.5 rounded-full bg-current" />
+                            </span>
+                          )}
+                          {tStatus(status.label)}
+                        </span>
+                        <span className="text-muted-foreground text-[11px]">
+                          {broadcast.status === 'scheduled' &&
+                          broadcast.scheduled_at
+                            ? new Date(broadcast.scheduled_at).toLocaleString(
+                                APP_LOCALE,
+                                { dateStyle: 'short', timeStyle: 'short' }
+                              )
+                            : new Date(broadcast.created_at).toLocaleDateString(
+                                APP_LOCALE
+                              )}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="flex w-full items-end gap-4">
+                      <div className="shrink-0">
+                        <div className="text-muted-foreground text-[11.5px] font-semibold">
+                          {t('table.recipients')}
+                        </div>
+                        <div className="text-sm font-extrabold tabular-nums">
+                          {broadcast.total_recipients.toLocaleString(APP_LOCALE)}
+                        </div>
+                      </div>
+                      <RateBar
+                        label={t('table.delivery')}
                         value={broadcast.delivered_count}
                         total={broadcast.total_recipients}
-                        color="bg-primary"
+                        color="bg-tone-mint"
                       />
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <RateCell
+                      <RateBar
+                        label={t('table.read')}
                         value={broadcast.read_count}
                         total={broadcast.total_recipients}
-                        color="bg-blue-500"
+                        color="bg-tone-blue"
                       />
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium ${status.classes}`}
-                      >
-                        {status.pulse && (
-                          <span className="relative flex h-1.5 w-1.5">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-yellow-400 opacity-75" />
-                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-yellow-400" />
-                          </span>
-                        )}
-                        {tStatus(status.label)}
-                      </span>
-                      {broadcast.status === 'scheduled' && broadcast.scheduled_at && (
-                        <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                          {new Date(broadcast.scheduled_at).toLocaleString(APP_LOCALE, {
-                            dateStyle: 'short',
-                            timeStyle: 'short',
-                          })}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden text-muted-foreground sm:table-cell">
-                      {new Date(broadcast.created_at).toLocaleDateString(APP_LOCALE)}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </div>
   );

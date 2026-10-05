@@ -1412,6 +1412,11 @@
   },
   "Broadcasts": {
     "page": {
+      "stats": {
+        "total": "발송",
+        "recipients": "수신자",
+        "readRate": "읽음 비율"
+      },
       "title": "브로드캐스트",
       "subtitle": "승인된 템플릿을 사용해 연락처에 대량 메시지를 보내세요.",
       "newBroadcast": "새 브로드캐스트",

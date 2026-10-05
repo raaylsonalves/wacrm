@@ -1412,6 +1412,11 @@
   },
   "Broadcasts": {
     "page": {
+      "stats": {
+        "total": "Disparos",
+        "recipients": "Destinatários",
+        "readRate": "Taxa de leitura"
+      },
       "title": "Disparos",
       "subtitle": "Envie mensagens em massa para seus contatos usando modelos aprovados.",
       "newBroadcast": "Novo disparo",

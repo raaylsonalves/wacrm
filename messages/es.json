@@ -1412,6 +1412,11 @@
   },
   "Broadcasts": {
     "page": {
+      "stats": {
+        "total": "Envíos",
+        "recipients": "Destinatarios",
+        "readRate": "Tasa de lectura"
+      },
       "title": "Difusiones",
       "subtitle": "Envía mensajes masivos a tus contactos usando plantillas aprobadas.",
       "newBroadcast": "Nueva difusión",

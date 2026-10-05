@@ -80,10 +80,11 @@ interface FunnelStep {
  * always render a full bar at the top and proportional tails.
  */
 function FunnelChart({ steps }: { steps: FunnelStep[] }) {
+  const t = useTranslations('Broadcasts.detail');
   const max = Math.max(...steps.map((s) => s.value), 1);
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <h3 className="mb-4 text-sm font-medium text-foreground">Funnel</h3>
+    <div className="rounded-[22px] border border-border bg-card p-4">
+      <h3 className="mb-4 text-sm font-bold text-foreground">{t('funnel')}</h3>
       <div className="space-y-2">
         {steps.map((step) => {
           const pctOfMax = Math.max(5, Math.round((step.value / max) * 100));
@@ -347,10 +348,10 @@ export default function BroadcastDetailPage() {
   const isStalled = broadcast.status === 'sending' && pendingCount > 0;
 
   const funnelSteps: FunnelStep[] = [
-    { label: t('stats.sent'), value: broadcast.sent_count, color: 'bg-primary' },
-    { label: t('stats.delivered'), value: broadcast.delivered_count, color: 'bg-teal-500' },
-    { label: t('stats.read'), value: broadcast.read_count, color: 'bg-blue-500' },
-    { label: t('stats.replied'), value: broadcast.replied_count, color: 'bg-indigo-500' },
+    { label: t('stats.sent'), value: broadcast.sent_count, color: 'bg-tone-lilac-soft' },
+    { label: t('stats.delivered'), value: broadcast.delivered_count, color: 'bg-tone-mint-soft' },
+    { label: t('stats.read'), value: broadcast.read_count, color: 'bg-tone-blue-soft' },
+    { label: t('stats.replied'), value: broadcast.replied_count, color: 'bg-tone-salmon-soft' },
   ];
 
   return (
@@ -510,35 +511,35 @@ export default function BroadcastDetailPage() {
           value={broadcast.sent_count}
           total={broadcast.total_recipients}
           icon={<Send className="h-4 w-4" />}
-          color="bg-primary/10 text-primary"
+          color="bg-tone-lilac-soft text-tone-lilac-ink"
         />
         <StatCard
           label={t('stats.delivered')}
           value={broadcast.delivered_count}
           total={broadcast.total_recipients}
           icon={<CheckCheck className="h-4 w-4" />}
-          color="bg-teal-500/10 text-teal-600 dark:text-teal-400"
+          color="bg-tone-mint-soft text-tone-mint-ink"
         />
         <StatCard
           label={t('stats.read')}
           value={broadcast.read_count}
           total={broadcast.total_recipients}
           icon={<Eye className="h-4 w-4" />}
-          color="bg-blue-500/10 text-blue-600 dark:text-blue-400"
+          color="bg-tone-blue-soft text-tone-blue-ink"
         />
         <StatCard
           label={t('stats.replied')}
           value={broadcast.replied_count}
           total={broadcast.total_recipients}
           icon={<MessageCircle className="h-4 w-4" />}
-          color="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+          color="bg-tone-salmon-soft text-tone-salmon-ink"
         />
         <StatCard
           label={t('stats.failed')}
           value={broadcast.failed_count}
           total={broadcast.total_recipients}
           icon={<AlertCircle className="h-4 w-4" />}
-          color="bg-red-500/10 text-red-600 dark:text-red-400"
+          color="bg-tone-pink-soft text-tone-pink-ink"
         />
       </div>
 
