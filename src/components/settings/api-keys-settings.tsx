@@ -95,7 +95,7 @@ export function ApiKeysSettings() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();

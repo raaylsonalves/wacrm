@@ -1191,6 +1191,7 @@ function ConversationItem({
       <div className="relative shrink-0">
         <div className={cn('flex h-[42px] w-[42px] items-center justify-center overflow-hidden rounded-full text-[13px] font-bold', TONE_SOLID[toneFor(displayName)])}>
           {contact?.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- contact avatars come from arbitrary hosts; next/image would need every one allow-listed
             <img
               src={contact.avatar_url}
               alt=""

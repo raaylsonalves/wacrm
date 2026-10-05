@@ -186,7 +186,7 @@ export function AiConfig({
     } finally {
       setLoading(false);
     }
-  }, [agentId]);
+  }, [agentId, t]);
 
   useEffect(() => {
     const key = `${accountId}:${agentId ?? ''}`;

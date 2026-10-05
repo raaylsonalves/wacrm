@@ -11,7 +11,6 @@ import {
   Mail,
   Copy,
   Check,
-  User,
   Tag as TagIcon,
   DollarSign,
   StickyNote,
@@ -245,6 +244,7 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
           <div className="flex flex-col items-center text-center">
             <div className={cn("flex h-16 w-16 items-center justify-center overflow-hidden rounded-full text-xl font-bold", TONE_SOLID[toneFor(displayName)])}>
               {contact.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element -- contact avatars come from arbitrary hosts; next/image would need every one allow-listed
                 <img
                   src={contact.avatar_url}
                   alt={displayName}

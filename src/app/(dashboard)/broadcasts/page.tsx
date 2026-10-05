@@ -96,6 +96,7 @@ export default function BroadcastsPage() {
 
   useEffect(() => {
     fetchBroadcasts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   const stats = useMemo(() => {
@@ -148,6 +149,7 @@ export default function BroadcastsPage() {
       stopPolling();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchBroadcasts is redefined each render; listing it would re-arm the poller every render
   }, [anySending]);
 
   if (loading) {

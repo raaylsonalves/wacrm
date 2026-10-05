@@ -22,7 +22,6 @@ import { ContactSidebar } from '@/components/inbox/contact-sidebar';
 import { ChannelStatusBanner } from '@/components/inbox/channel-status-banner';
 import { DEAL_STAGE_EVENT } from '@/components/inbox/deal-stage-chip';
 import { PushNudgeBanner } from '@/components/notifications/push-nudge-banner';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 

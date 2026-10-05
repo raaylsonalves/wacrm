@@ -48,7 +48,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble, TemplateLookupContext, type TemplateShape } from "./message-bubble";
 import { DealStageChip } from "./deal-stage-chip";
 import { CaseChip } from "./case-chip";
@@ -975,7 +974,7 @@ export function MessageThread({
         preview: buildReplyPreview(msg, tQuote),
       });
     },
-    [authorLabelFor],
+    [authorLabelFor, tQuote],
   );
 
   // Single reaction-set primitive. emoji === "" removes; otherwise adds/swaps.

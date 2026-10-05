@@ -60,6 +60,8 @@ export async function GET(
     if (!agent)
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
 
+    // Destructured only to keep the secrets out of `safe`.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { api_key, embeddings_api_key: _emb, fallbacks, ...safe } = agent;
     const tiers = (fallbacks ?? []) as { provider: string; model: string; api_key?: string }[];
     return NextResponse.json({

@@ -279,6 +279,7 @@ export function WhatsAppConfig() {
     if (loadedAccountIdRef.current === accountId) return;
     loadedAccountIdRef.current = accountId;
     fetchConfig(accountId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on user?.id; the user object changes identity on every token refresh
   }, [authLoading, profileLoading, user?.id, accountId, fetchConfig]);
 
   async function handleToggleMirrorMedia(next: boolean) {

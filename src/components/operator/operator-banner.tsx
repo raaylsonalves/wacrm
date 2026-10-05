@@ -102,6 +102,7 @@ export function OperatorBanner() {
             <DialogDescription>{t('staleBody')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
+            {/* eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload on purpose: switching accounts must drop every cached query */}
             <Button onClick={() => window.location.assign('/dashboard')}>
               {t('reload')}
             </Button>

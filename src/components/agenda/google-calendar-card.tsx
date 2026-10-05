@@ -94,6 +94,7 @@ export function GoogleCalendarCard() {
           <Button
             size="sm"
             onClick={() =>
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload on purpose: an API route that redirects to Google OAuth
               window.location.assign('/api/integrations/google-calendar/start')
             }
           >
@@ -113,6 +114,7 @@ export function GoogleCalendarCard() {
                 size="sm"
                 variant="outline"
                 onClick={() =>
+                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload on purpose: an API route that redirects to Google OAuth
                   window.location.assign(
                     '/api/integrations/google-calendar/start'
                   )

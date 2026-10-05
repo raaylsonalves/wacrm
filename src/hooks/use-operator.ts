@@ -63,6 +63,7 @@ export async function switchAccount(accountId: string): Promise<string | null> {
     p_account: accountId,
   });
   if (error) return error.message;
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload on purpose: switching accounts must drop every cached query
   window.location.assign('/dashboard');
   return null;
 }

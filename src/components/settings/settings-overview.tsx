@@ -142,6 +142,7 @@ export function SettingsOverview({
     return () => {
       cancelled = true;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on user?.id; the user object changes identity on every token refresh
   }, [user?.id, accountId, canManageMembers]);
 
   const displayName = profile?.full_name || profile?.email || t('yourAccount');

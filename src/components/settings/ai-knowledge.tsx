@@ -62,7 +62,7 @@ export function AiKnowledgeCard({
     } finally {
       setLoading(false);
     }
-  }, [agentId]);
+  }, [agentId, t]);
 
   useEffect(() => {
     const key = `${accountId}:${agentId ?? ''}`;
