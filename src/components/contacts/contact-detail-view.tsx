@@ -679,7 +679,7 @@ export function ContactDetailView({
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     placeholder={t('notesTab.placeholder')}
-                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px] resize-none text-sm"
+                    className="min-h-[60px] resize-none text-sm"
                   />
                   <Button
                     onClick={addNote}

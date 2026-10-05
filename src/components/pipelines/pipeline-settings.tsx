@@ -257,7 +257,6 @@ export function PipelineSettings({
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="border-border bg-muted text-foreground"
                 />
               </div>
 
@@ -320,7 +319,7 @@ export function PipelineSettings({
                     value={newStageName}
                     onChange={(e) => setNewStageName(e.target.value)}
                     placeholder={t("newStageNamePlaceholder")}
-                    className="border-border bg-muted text-sm text-foreground"
+                    className="text-sm"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleAddStage();
                     }}

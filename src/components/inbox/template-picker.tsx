@@ -270,7 +270,6 @@ export function TemplatePicker({
                   value={headerText}
                   onChange={(e) => setHeaderText(e.target.value)}
                   placeholder={t('headerValuePlaceholder')}
-                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                 />
               </div>
             )}
@@ -285,7 +284,6 @@ export function TemplatePicker({
                     setParams(next);
                   }}
                   placeholder={t('bodyValuePlaceholder', { val: `{{${v}}}` })}
-                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                 />
               </div>
             ))}
@@ -304,7 +302,6 @@ export function TemplatePicker({
                     }))
                   }
                   placeholder={t('urlSuffixValuePlaceholder')}
-                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                 />
                 <p className="text-muted-foreground text-[10px] break-all">
                   {t('finalUrl', {

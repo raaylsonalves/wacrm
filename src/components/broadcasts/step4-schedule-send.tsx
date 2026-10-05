@@ -117,7 +117,6 @@ export function Step4ScheduleSend({
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           placeholder={t('scheduleSend.broadcastNamePlaceholder')}
-          className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
         />
       </div>
 
@@ -181,7 +180,7 @@ export function Step4ScheduleSend({
               type="datetime-local"
               value={when}
               onChange={(e) => setWhen(e.target.value)}
-              className="border-border bg-muted text-foreground sm:max-w-xs"
+              className="sm:max-w-xs"
             />
             <p className={cn('text-xs', when && !scheduleOk ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>
               {when && !scheduleOk ? t('scheduleSend.tooSoon') : t('scheduleSend.laterHint')}

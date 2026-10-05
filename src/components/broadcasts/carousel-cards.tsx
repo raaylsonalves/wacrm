@@ -111,7 +111,7 @@ export function CarouselCardsEditor({
                     value={value}
                     onChange={(e) => set(card.index, e.target.value)}
                     placeholder={t('urlPlaceholder')}
-                    className="border-border bg-muted text-foreground h-8 text-xs"
+                    className="h-8 text-xs"
                   />
                   <input
                     ref={(el) => {

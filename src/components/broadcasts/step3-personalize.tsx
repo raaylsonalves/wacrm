@@ -277,7 +277,6 @@ export function Step3Personalize({
             value={headerMediaUrl}
             onChange={(e) => onHeaderMediaUrlChange(e.target.value)}
             placeholder={t('personalize.imageUrlPlaceholder')}
-            className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
           />
           <p className="mt-1.5 text-xs text-muted-foreground">
             {t('personalize.headerImageDesc')}
@@ -343,7 +342,7 @@ export function Step3Personalize({
                         })
                       }
                     >
-                      <SelectTrigger className="w-full border-border bg-muted text-foreground">
+                      <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="border-border bg-popover">
@@ -367,7 +366,6 @@ export function Step3Personalize({
                           updateVariable(key, { value: e.target.value })
                         }
                         placeholder={t('personalize.enterValue')}
-                        className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                       />
                     ) : mapping.type === 'field' ? (
                       <Select
@@ -376,7 +374,7 @@ export function Step3Personalize({
                           updateVariable(key, { value: val || '' })
                         }
                       >
-                        <SelectTrigger className="w-full border-border bg-muted text-foreground">
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder={t('personalize.selectContactField')} />
                         </SelectTrigger>
                         <SelectContent className="border-border bg-popover">
@@ -394,7 +392,7 @@ export function Step3Personalize({
                           updateVariable(key, { value: val || '' })
                         }
                       >
-                        <SelectTrigger className="w-full border-border bg-muted text-foreground">
+                        <SelectTrigger className="w-full">
                           <SelectValue
                             placeholder={
                               loadingFields

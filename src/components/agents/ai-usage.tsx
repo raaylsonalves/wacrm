@@ -132,7 +132,7 @@ export function AiUsageCard() {
             value={String(days)}
             onValueChange={(v) => setDays(Number(v))}
           >
-            <SelectTrigger className="w-32 flex-shrink-0">
+            <SelectTrigger className="min-w-36 flex-shrink-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

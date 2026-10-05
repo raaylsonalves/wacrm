@@ -197,7 +197,6 @@ export function QuickRepliesManager() {
                   value={draft.title}
                   onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                   placeholder={t("namePlaceholder")}
-                  className="bg-muted text-foreground"
                 />
               </div>
               <div className="flex gap-2">
@@ -217,7 +216,7 @@ export function QuickRepliesManager() {
                   value={draft.content_text}
                   onChange={(e) => setDraft({ ...draft, content_text: e.target.value })}
                   placeholder={t("textPlaceholder")}
-                  className="min-h-28 bg-muted text-foreground"
+                  className="min-h-28"
                 />
               ) : (
                 <InteractiveBuilder

@@ -120,7 +120,7 @@ export function InteractiveBuilder({
               maxLength={INTERACTIVE_LIMITS.bodyMaxLength}
               onChange={(e) => setField({ body: e.target.value })}
               placeholder={t("bodyPlaceholder")}
-              className="min-h-20 bg-muted text-foreground"
+              className="min-h-20"
             />
           </Field>
 
@@ -133,7 +133,6 @@ export function InteractiveBuilder({
                 value={value.header ?? ""}
                 maxLength={INTERACTIVE_LIMITS.headerTextMaxLength}
                 onChange={(e) => setField({ header: e.target.value })}
-                className="bg-muted text-foreground"
               />
             </Field>
             <Field
@@ -144,7 +143,6 @@ export function InteractiveBuilder({
                 value={value.footer ?? ""}
                 maxLength={INTERACTIVE_LIMITS.footerMaxLength}
                 onChange={(e) => setField({ footer: e.target.value })}
-                className="bg-muted text-foreground"
               />
             </Field>
           </div>
@@ -345,7 +343,6 @@ function ListEditor({
           value={value.button_label}
           maxLength={INTERACTIVE_LIMITS.buttonTitleMaxLength}
           onChange={(e) => onChange({ ...value, button_label: e.target.value })}
-          className="bg-muted text-foreground"
         />
       </Field>
 

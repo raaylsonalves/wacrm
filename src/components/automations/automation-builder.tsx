@@ -341,7 +341,6 @@ function TagSelect({
         placeholder={t("tags.placeholder")}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-muted text-foreground"
       />
     )
   }
@@ -434,7 +433,6 @@ function AgentSelect({
         placeholder={t("agents.placeholder")}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-muted text-foreground"
       />
     )
   }
@@ -482,7 +480,6 @@ function DealPipelineFields({
             onChange={(e) =>
               onChange({ pipeline_id: e.target.value, stage_id: stageId })
             }
-            className="bg-muted text-foreground"
           />
         </FieldBlock>
         <FieldBlock label={t("pipelines.stageIdLabel")}>
@@ -491,7 +488,6 @@ function DealPipelineFields({
             onChange={(e) =>
               onChange({ pipeline_id: pipelineId, stage_id: e.target.value })
             }
-            className="bg-muted text-foreground"
           />
         </FieldBlock>
       </>
@@ -581,7 +577,6 @@ function SendTemplateFields({
             onChange={(e) =>
               onChange({ template_name: e.target.value, language })
             }
-            className="bg-muted text-foreground"
           />
         </FieldBlock>
         <FieldBlock label={t("templates.languageLabel")}>
@@ -590,7 +585,6 @@ function SendTemplateFields({
             onChange={(e) =>
               onChange({ template_name: templateName, language: e.target.value })
             }
-            className="bg-muted text-foreground"
           />
         </FieldBlock>
       </>
@@ -900,7 +894,6 @@ function TriggerCard({
                   onChange={(e) =>
                     onConfigChange({ ...config, schedule: e.target.value })
                   }
-                  className="bg-muted text-foreground"
                 />
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   {t("scheduleHint")}
@@ -955,7 +948,7 @@ function SilenceConfig({
                 },
               })
             }
-            className="w-24 bg-muted text-foreground"
+            className="w-24"
           />
           <select
             value={sa.unit ?? "hours"}
@@ -1030,7 +1023,7 @@ function SilenceConfig({
               onChange={(e) =>
                 set({ send_window: { ...win, start_hour: Number(e.target.value) } })
               }
-              className="w-20 bg-muted text-foreground"
+              className="w-20"
             />
             <span>{t("silence.to")}</span>
             <Input
@@ -1041,7 +1034,7 @@ function SilenceConfig({
               onChange={(e) =>
                 set({ send_window: { ...win, end_hour: Number(e.target.value) } })
               }
-              className="w-20 bg-muted text-foreground"
+              className="w-20"
             />
             <span className="text-xs text-muted-foreground">{win.tz}</span>
           </div>
@@ -1112,7 +1105,6 @@ function KeywordMatchConfig({
             }
           }}
           placeholder={t("keywordsHint")}
-          className="bg-muted text-foreground"
         />
       </div>
       <div>
@@ -1471,7 +1463,7 @@ function StepEditor({
             value={(cfg.text as string) ?? ""}
             onChange={(e) => set({ text: e.target.value })}
             placeholder={t("config.placeholderMessageText")}
-            className="min-h-24 bg-muted text-foreground"
+            className="min-h-24"
           />
         </FieldBlock>
       )
@@ -1486,7 +1478,7 @@ function StepEditor({
               value={(cfg.instruction as string) ?? ""}
               onChange={(e) => set({ instruction: e.target.value })}
               placeholder={t("config.aiFollowupInstructionPlaceholder")}
-              className="min-h-16 bg-muted text-foreground"
+              className="min-h-16"
             />
           </FieldBlock>
           <label className="mb-2 flex items-start gap-2 text-xs text-foreground">
@@ -1508,7 +1500,7 @@ function StepEditor({
               value={(cfg.fallback_text as string) ?? ""}
               onChange={(e) => set({ fallback_text: e.target.value })}
               placeholder={t("config.aiFollowupFallbackPlaceholder")}
-              className="min-h-14 bg-muted text-foreground"
+              className="min-h-14"
             />
           </FieldBlock>
         </>
@@ -1584,7 +1576,6 @@ function StepEditor({
               value={(cfg.value as string) ?? ""}
               onChange={(e) => set({ value: e.target.value })}
               placeholder={t.raw("config.placeholderValue")}
-              className="bg-muted text-foreground"
             />
           </FieldBlock>
         </>
@@ -1602,7 +1593,6 @@ function StepEditor({
             <Input
               value={(cfg.title as string) ?? ""}
               onChange={(e) => set({ title: e.target.value })}
-              className="bg-muted text-foreground"
             />
           </FieldBlock>
           <FieldBlock label={t("config.valueLabel")}>
@@ -1610,7 +1600,6 @@ function StepEditor({
               type="number"
               value={(cfg.value as number) ?? 0}
               onChange={(e) => set({ value: Number(e.target.value) })}
-              className="bg-muted text-foreground"
             />
           </FieldBlock>
         </>
@@ -1624,7 +1613,6 @@ function StepEditor({
               min={1}
               value={(cfg.amount as number) ?? 1}
               onChange={(e) => set({ amount: Math.max(1, Number(e.target.value)) })}
-              className="bg-muted text-foreground"
             />
           </FieldBlock>
           <FieldBlock label={t("config.unitLabel")}>
@@ -1668,7 +1656,6 @@ function StepEditor({
               }
               value={(cfg.operand as string) ?? ""}
               onChange={(e) => set({ operand: e.target.value })}
-              className="bg-muted text-foreground"
             />
           </FieldBlock>
           {(cfg.subject === "contact_field" || cfg.subject === "message_content") && (
@@ -1676,7 +1663,6 @@ function StepEditor({
               <Input
                 value={(cfg.value as string) ?? ""}
                 onChange={(e) => set({ value: e.target.value })}
-                className="bg-muted text-foreground"
               />
             </FieldBlock>
           )}
@@ -1689,7 +1675,6 @@ function StepEditor({
             <Input
               value={(cfg.url as string) ?? ""}
               onChange={(e) => set({ url: e.target.value })}
-              className="bg-muted text-foreground"
             />
           </FieldBlock>
           <FieldBlock label={t("config.bodyTemplateLabel")}>

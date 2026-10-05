@@ -798,7 +798,6 @@ export function WhatsAppConfig() {
                   placeholder={t('phoneNumberIdPlaceholder')}
                   value={phoneNumberId}
                   onChange={(e) => setPhoneNumberId(e.target.value)}
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 
@@ -808,7 +807,6 @@ export function WhatsAppConfig() {
                   placeholder={t('wabaIdPlaceholder')}
                   value={wabaId}
                   onChange={(e) => setWabaId(e.target.value)}
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 
@@ -831,7 +829,7 @@ export function WhatsAppConfig() {
                         setTokenEdited(true);
                       }
                     }}
-                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground pr-10"
+                    className="pr-10"
                   />
                   <button
                     type="button"
@@ -860,7 +858,6 @@ export function WhatsAppConfig() {
                   placeholder={t('webhookVerifyTokenPlaceholder')}
                   value={verifyToken}
                   onChange={(e) => setVerifyToken(e.target.value)}
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 />
                 <p className="text-muted-foreground text-xs">
                   {t('webhookVerifyTokenHint')}
@@ -883,7 +880,7 @@ export function WhatsAppConfig() {
                   onChange={(e) =>
                     setPin(e.target.value.replace(/\D/g, '').slice(0, 6))
                   }
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground tracking-widest"
+                  className="tracking-widest"
                 />
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   <span dangerouslySetInnerHTML={{ __html: t('pinHint') }} />
