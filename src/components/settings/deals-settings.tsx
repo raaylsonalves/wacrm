@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Coins } from "lucide-react";
@@ -90,18 +97,22 @@ export function DealsSettings() {
         <CardContent className="space-y-4">
           <div className="grid gap-2 sm:max-w-xs">
             <Label className="text-muted-foreground">{t("currencyLabel")}</Label>
-            <select
+            <Select
               value={selected}
-              onChange={(e) => setSelected(e.target.value)}
+              onValueChange={(v) => v && setSelected(v)}
               disabled={!canEditSettings || profileLoading}
-              className="h-9 w-full rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {CURRENCIES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.code} — {tCurrency.has(c.code) ? tCurrency(c.code) : c.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.code} — {tCurrency.has(c.code) ? tCurrency(c.code) : c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {!canEditSettings && (
               <p className="text-xs text-muted-foreground">
                 {t("adminOnlyHint")}

@@ -2387,6 +2387,16 @@
       "descriptionLabel": "플로우 설명"
     }
   },
+  "TemplateStatus": {
+    "DRAFT": "초안",
+    "PENDING": "검토 중",
+    "APPROVED": "승인됨",
+    "REJECTED": "거절됨",
+    "PAUSED": "일시 중지",
+    "DISABLED": "비활성화",
+    "IN_APPEAL": "이의 제기 중",
+    "PENDING_DELETION": "삭제 대기"
+  },
   "Settings": {
     "pageTitle": "설정",
     "pageDesc": "계정과 워크스페이스에 관한 모든 것을 한곳에서 관리하세요. 관리할 섹션을 선택하세요.",
@@ -2966,7 +2976,7 @@
     },
     "apiKeys": {
       "title": "API 키",
-      "description": "키는 공개 REST API(<apiCode>/api/v1</apiCode>)를 인증해 직접 자동화를 구축할 수 있게 해줍니다. <headerCode>Authorization: Bearer &lt;key&gt;</headerCode> 형식으로 전송하세요.",
+      "description": "키는 공개 REST API(<apiCode>/api/v1</apiCode>)를 인증해 직접 자동화를 구축할 수 있게 해줍니다. <headerCode>Authorization: Bearer '<'key'>'</headerCode> 형식으로 전송하세요.",
       "newApiKey": "새 API 키",
       "noApiKeys": "아직 API 키가 없습니다.",
       "createOneHint": "<bold>새 API 키</bold>를 클릭해 만드세요.",

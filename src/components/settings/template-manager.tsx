@@ -131,6 +131,7 @@ function emptyButton(type: TemplateButton['type']): TemplateButton {
 
 export function TemplateManager() {
   const t = useTranslations('Settings.templates');
+  const tStatus = useTranslations('TemplateStatus');
   const supabase = createClient();
   const { user, accountId, loading: authLoading } = useAuth();
 
@@ -572,7 +573,7 @@ export function TemplateManager() {
                         {template.category}
                       </Badge>
                       <Badge className={`text-xs border ${status.classes}`}>
-                        {status.label}
+                        {tStatus(statusKey)}
                       </Badge>
                       {template.language && (
                         <span className="text-xs text-muted-foreground uppercase">

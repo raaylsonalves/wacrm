@@ -2387,6 +2387,16 @@
       "descriptionLabel": "Descrição do fluxo"
     }
   },
+  "TemplateStatus": {
+    "DRAFT": "Rascunho",
+    "PENDING": "Em análise",
+    "APPROVED": "Aprovado",
+    "REJECTED": "Rejeitado",
+    "PAUSED": "Pausado",
+    "DISABLED": "Desativado",
+    "IN_APPEAL": "Em recurso",
+    "PENDING_DELETION": "Exclusão pendente"
+  },
   "Settings": {
     "pageTitle": "Configurações",
     "pageDesc": "Tudo em um só lugar — sua conta e seu espaço de trabalho. Escolha uma seção para gerenciá-la.",
@@ -2954,7 +2964,7 @@
     },
     "apiKeys": {
       "title": "Chaves de API",
-      "description": "As chaves autenticam a API REST pública (<apiCode>/api/v1</apiCode>) para que você crie suas próprias automações. Envie-as como <headerCode>Authorization: Bearer &lt;key&gt;</headerCode>.",
+      "description": "As chaves autenticam a API REST pública (<apiCode>/api/v1</apiCode>) para que você crie suas próprias automações. Envie-as como <headerCode>Authorization: Bearer '<'key'>'</headerCode>.",
       "newApiKey": "Nova chave de API",
       "noApiKeys": "Nenhuma chave de API ainda.",
       "createOneHint": "Clique em <bold>Nova chave de API</bold> para criar uma.",
