@@ -1726,7 +1726,18 @@
     },
     "runs": {
       "errors": {
-        "aiNotConfigured": "La IA no está configurada en esta cuenta — agrega la clave en Configuración → IA."
+        "aiNotConfigured": "La IA no está configurada en esta cuenta — agrega la clave en Configuración → IA.",
+        "needsContact": "Este paso necesita un contacto y la ejecución no tenía ninguno.",
+        "needsTag": "Elige la etiqueta de este paso.",
+        "emptyText": "El mensaje de este paso está vacío.",
+        "followupOnly": "El paso de IA solo funciona dentro de una secuencia de seguimiento.",
+        "needsTemplate": "Elige la plantilla de este paso.",
+        "needsPipeline": "Elige el embudo y la etapa del negocio.",
+        "needsUrl": "Indica la URL del webhook.",
+        "urlNotAllowed": "Esa dirección de webhook no está permitida (red privada o inválida).",
+        "wrongAccount": "La conversación no pertenece a esta cuenta.",
+        "noConversation": "Aún no hay conversación con este contacto para el seguimiento.",
+        "noFollowupText": "La IA no generó un mensaje de seguimiento."
       },
       "total": "Ejecuciones",
       "successRate": "Con éxito",

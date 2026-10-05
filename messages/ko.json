@@ -1726,7 +1726,18 @@
     },
     "runs": {
       "errors": {
-        "aiNotConfigured": "이 계정에 AI가 설정되지 않았어요 — 설정 → AI에서 키를 추가하세요."
+        "aiNotConfigured": "이 계정에 AI가 설정되지 않았어요 — 설정 → AI에서 키를 추가하세요.",
+        "needsContact": "이 단계에는 연락처가 필요하지만 실행에 연락처가 없었어요.",
+        "needsTag": "이 단계의 태그를 선택하세요.",
+        "emptyText": "이 단계의 메시지가 비어 있어요.",
+        "followupOnly": "AI 단계는 팔로업 시퀀스 안에서만 작동해요.",
+        "needsTemplate": "이 단계의 템플릿을 선택하세요.",
+        "needsPipeline": "거래의 파이프라인과 단계를 선택하세요.",
+        "needsUrl": "웹훅 URL을 입력하세요.",
+        "urlNotAllowed": "허용되지 않는 웹훅 주소예요(사설 네트워크 또는 잘못된 주소).",
+        "wrongAccount": "이 대화는 이 계정에 속하지 않아요.",
+        "noConversation": "이 연락처와 팔로업할 대화가 아직 없어요.",
+        "noFollowupText": "AI가 팔로업 메시지를 만들지 못했어요."
       },
       "total": "실행",
       "successRate": "성공",

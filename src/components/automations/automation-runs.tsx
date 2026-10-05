@@ -313,7 +313,9 @@ function TimelineStep({
 }) {
   const meta = STEP_META[result.step_type];
   const Icon = meta?.icon;
-  const detail = stepDetailText(t, tBuilder, result.detail);
+  const raw = stepDetailText(t, tBuilder, result.detail);
+  const detail =
+    raw && result.status === 'failed' ? errorText(tRuns, raw) : raw;
   const StatusIcon =
     result.status === 'success'
       ? Check
@@ -376,13 +378,25 @@ function TimelineStep({
 
 // The engine stores raw English errors; known ones get a translated,
 // actionable line, anything else is shown as stored.
-const KNOWN_ERRORS: Record<string, string> = {
-  'AI is not configured for this account': 'errors.aiNotConfigured',
-};
+const KNOWN_ERRORS: [string, string][] = [
+  ['AI is not configured', 'errors.aiNotConfigured'],
+  ['needs a contact', 'errors.needsContact'],
+  ['cannot resolve conversation: no contact', 'errors.needsContact'],
+  ['needs contact + tag_id', 'errors.needsTag'],
+  ['send_message has empty text', 'errors.emptyText'],
+  ['ai_followup only runs inside a follow-up sequence', 'errors.followupOnly'],
+  ['send_template needs template_name', 'errors.needsTemplate'],
+  ['create_deal needs pipeline + stage', 'errors.needsPipeline'],
+  ['send_webhook needs url', 'errors.needsUrl'],
+  ['send_webhook: destination not allowed', 'errors.urlNotAllowed'],
+  ['conversation not in this account', 'errors.wrongAccount'],
+  ['no conversation to follow up on', 'errors.noConversation'],
+  ['the model produced no follow-up text', 'errors.noFollowupText'],
+];
 
 function errorText(tRuns: ReturnType<typeof useTranslations>, msg: string) {
-  const hit = Object.keys(KNOWN_ERRORS).find((k) => msg.includes(k));
-  return hit ? tRuns(KNOWN_ERRORS[hit]) : msg;
+  const hit = KNOWN_ERRORS.find(([k]) => msg.includes(k));
+  return hit ? tRuns(hit[1]) : msg;
 }
 
 function initials(name: string) {

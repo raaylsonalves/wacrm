@@ -1726,7 +1726,18 @@
     },
     "runs": {
       "errors": {
-        "aiNotConfigured": "AI isn't set up for this account — add a key in Settings → AI."
+        "aiNotConfigured": "AI isn't set up for this account — add a key in Settings → AI.",
+        "needsContact": "This step needs a contact, and the run had none.",
+        "needsTag": "Pick this step's tag.",
+        "emptyText": "This step's message is empty.",
+        "followupOnly": "The AI step only works inside a follow-up sequence.",
+        "needsTemplate": "Pick this step's template.",
+        "needsPipeline": "Pick the deal's pipeline and stage.",
+        "needsUrl": "Enter the webhook URL.",
+        "urlNotAllowed": "That webhook address isn't allowed (private network or invalid).",
+        "wrongAccount": "The conversation doesn't belong to this account.",
+        "noConversation": "There's no conversation with this contact to follow up on yet.",
+        "noFollowupText": "The AI didn't produce a follow-up message."
       },
       "total": "Runs",
       "successRate": "Succeeded",
