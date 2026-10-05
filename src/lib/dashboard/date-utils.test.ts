@@ -105,18 +105,20 @@ describe("lastNDayKeys", () => {
 });
 
 describe("mondayIndex", () => {
+  // Local noon: a bare "YYYY-MM-DD" parses as UTC midnight, which is
+  // the previous day west of Greenwich (e.g. America/Sao_Paulo).
   it("maps Monday → 0 and Sunday → 6", () => {
-    expect(mondayIndex(new Date("2026-05-18"))).toBe(0); // Mon
-    expect(mondayIndex(new Date("2026-05-19"))).toBe(1); // Tue
-    expect(mondayIndex(new Date("2026-05-23"))).toBe(5); // Sat
-    expect(mondayIndex(new Date("2026-05-24"))).toBe(6); // Sun
+    expect(mondayIndex(new Date("2026-05-18T12:00"))).toBe(0); // Mon
+    expect(mondayIndex(new Date("2026-05-19T12:00"))).toBe(1); // Tue
+    expect(mondayIndex(new Date("2026-05-23T12:00"))).toBe(5); // Sat
+    expect(mondayIndex(new Date("2026-05-24T12:00"))).toBe(6); // Sun
   });
 
   it("aligns with DOW_SHORT_MON_FIRST labels", () => {
-    expect(DOW_SHORT_MON_FIRST[mondayIndex(new Date("2026-05-18"))]).toBe(
+    expect(DOW_SHORT_MON_FIRST[mondayIndex(new Date("2026-05-18T12:00"))]).toBe(
       "Mon",
     );
-    expect(DOW_SHORT_MON_FIRST[mondayIndex(new Date("2026-05-24"))]).toBe(
+    expect(DOW_SHORT_MON_FIRST[mondayIndex(new Date("2026-05-24T12:00"))]).toBe(
       "Sun",
     );
   });
