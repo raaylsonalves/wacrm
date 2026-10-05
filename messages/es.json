@@ -519,6 +519,7 @@
     "templatePicker": {
       "sendTemplate": "Enviar plantilla",
       "fillPlaceholders": "Completa las variables para renderizar esta plantilla. Meta exige que todas las variables estén definidas.",
+      "reviewBeforeSend": "Revisa el mensaje antes de enviarlo al contacto.",
       "pickTemplate": "Elige una plantilla aprobada de WhatsApp para enviar a este contacto.",
       "noApprovedTemplates": "No hay plantillas aprobadas",
       "noApprovedTemplatesHint": "Aprueba una plantilla en el Administrador de WhatsApp de Meta y luego sincronízala desde Configuración → Plantillas.",

@@ -527,33 +527,37 @@ export function ContactDetailView({
               defaultValue="details"
               className="flex min-h-0 flex-1 flex-col"
             >
-              <div className="relative mx-4 mt-3">
-                {/* The scroll container is a plain div, not TabsList itself —
+              <div className="border-border mx-4 mt-3 border-b pb-3">
+                <div className="relative">
+                  {/* The scroll container is a plain div, not TabsList itself —
                     base-ui's Tabs.List didn't forward the ref down to its
                     DOM node reliably, which silently broke overflow
                     detection (the scroll arrows never appeared even though
                     the row was genuinely overflowing). */}
-                <div
-                  ref={tabsScrollRef}
-                  className="border-border [scrollbar-width:none] overflow-x-auto border-b pb-3 [&::-webkit-scrollbar]:hidden"
-                >
-                  <TabsList variant="pill" className="w-max">
-                    <TabsTrigger value="details">
-                      {t('tabs.details')}
-                    </TabsTrigger>
-                    <TabsTrigger value="tags">{t('tabs.tags')}</TabsTrigger>
-                    <TabsTrigger value="notes">{t('tabs.notes')}</TabsTrigger>
-                    <TabsTrigger value="custom">{t('tabs.custom')}</TabsTrigger>
-                    <TabsTrigger value="deals">{t('tabs.deals')}</TabsTrigger>
-                  </TabsList>
+                  <div
+                    ref={tabsScrollRef}
+                    className="[scrollbar-width:none] overflow-x-auto py-0.5 [&::-webkit-scrollbar]:hidden"
+                  >
+                    <TabsList variant="pill" className="w-max">
+                      <TabsTrigger value="details">
+                        {t('tabs.details')}
+                      </TabsTrigger>
+                      <TabsTrigger value="tags">{t('tabs.tags')}</TabsTrigger>
+                      <TabsTrigger value="notes">{t('tabs.notes')}</TabsTrigger>
+                      <TabsTrigger value="custom">
+                        {t('tabs.custom')}
+                      </TabsTrigger>
+                      <TabsTrigger value="deals">{t('tabs.deals')}</TabsTrigger>
+                    </TabsList>
+                  </div>
+                  <ScrollEdgeFades
+                    canLeft={tabsCanLeft}
+                    canRight={tabsCanRight}
+                    onLeft={() => tabsScrollByDir(-1)}
+                    onRight={() => tabsScrollByDir(1)}
+                    fadeFrom="from-card"
+                  />
                 </div>
-                <ScrollEdgeFades
-                  canLeft={tabsCanLeft}
-                  canRight={tabsCanRight}
-                  onLeft={() => tabsScrollByDir(-1)}
-                  onRight={() => tabsScrollByDir(1)}
-                  fadeFrom="from-popover"
-                />
               </div>
 
               {/* Details Tab */}

@@ -519,6 +519,7 @@
     "templatePicker": {
       "sendTemplate": "Enviar modelo",
       "fillPlaceholders": "Preencha as variáveis para renderizar este modelo. A Meta exige que todas as variáveis sejam definidas.",
+      "reviewBeforeSend": "Confira a mensagem antes de enviar para o contato.",
       "pickTemplate": "Escolha um modelo aprovado do WhatsApp para enviar a este contato.",
       "noApprovedTemplates": "Nenhum modelo aprovado",
       "noApprovedTemplatesHint": "Aprove um modelo no Gerenciador do WhatsApp da Meta e depois sincronize em Configurações → Modelos.",
