@@ -14,10 +14,10 @@ import { cn } from '@/lib/utils';
 export type ChipVariant = 'owner' | 'admin' | 'ok' | 'warn' | 'muted';
 
 const VARIANTS: Record<ChipVariant, string> = {
-  owner: 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-300',
+  owner: 'border-tone-salmon-ink/30 bg-tone-salmon-soft text-tone-salmon-ink',
   admin: 'border-primary-soft-2 bg-primary-soft text-primary',
-  ok: 'border-emerald-500/35 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
-  warn: 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-300',
+  ok: 'border-tone-mint-ink/30 bg-tone-mint-soft text-tone-mint-ink',
+  warn: 'border-tone-salmon-ink/30 bg-tone-salmon-soft text-tone-salmon-ink',
   muted: 'border-border bg-muted text-muted-foreground',
 };
 

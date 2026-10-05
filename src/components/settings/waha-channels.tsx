@@ -54,11 +54,11 @@ const STATUS_META: Record<
   connecting: {
     icon: Clock,
     className:
-      'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+      'border-tone-salmon-ink/30 bg-tone-salmon-soft text-tone-salmon-ink',
   },
   disconnected: {
     icon: XCircle,
-    className: 'border-red-600/40 bg-red-600/10 text-red-700 dark:text-red-400',
+    className: 'border-tone-pink-ink/30 bg-tone-pink-soft text-tone-pink-ink',
   },
 };
 
@@ -336,7 +336,7 @@ export function WahaChannels() {
                     variant="ghost"
                     disabled={deletingId === channel.id}
                     onClick={() => handleDelete(channel)}
-                    className="text-muted-foreground hover:text-red-600"
+                    className="text-muted-foreground hover:text-tone-pink-ink"
                   >
                     {deletingId === channel.id ? (
                       <Loader2 className="size-3.5 animate-spin" />
@@ -475,7 +475,7 @@ export function WahaChannels() {
           {connectMode === 'qr' ? (
             <div className="flex flex-col items-center gap-3 py-4">
               {qrError ? (
-                <Badge variant="outline" className="text-red-600">
+                <Badge variant="outline" className="text-tone-pink-ink">
                   {qrError}
                 </Badge>
               ) : qrDataUri ? (
@@ -525,7 +525,7 @@ export function WahaChannels() {
                     />
                   </div>
                   {pairingError && (
-                    <Badge variant="outline" className="text-red-600">
+                    <Badge variant="outline" className="text-tone-pink-ink">
                       {pairingError}
                     </Badge>
                   )}

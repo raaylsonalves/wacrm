@@ -257,7 +257,7 @@ export function BrandingSettings() {
               />
             </div>
             {colorInvalid ? (
-              <p className="text-xs text-red-600 dark:text-red-400">{t("invalidColor")}</p>
+              <p className="text-xs text-tone-pink-ink">{t("invalidColor")}</p>
             ) : (
               <p className="text-xs text-muted-foreground">{t("brandColorHint")}</p>
             )}

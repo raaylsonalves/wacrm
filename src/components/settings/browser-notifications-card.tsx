@@ -152,7 +152,7 @@ export function BrowserNotificationsCard({ className }: { className?: string }) 
             <p className="text-xs text-muted-foreground">{t(statusKey)}</p>
 
             {permission === 'denied' && (
-              <p className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+              <p className="flex items-start gap-2 rounded-md border border-tone-salmon-ink/30 bg-tone-salmon-soft px-3 py-2 text-xs text-tone-salmon-ink">
                 <CircleAlert className="mt-0.5 size-3.5 shrink-0" />
                 <span>{t('deniedHint')}</span>
               </p>

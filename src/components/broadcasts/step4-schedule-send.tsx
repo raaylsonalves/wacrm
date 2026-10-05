@@ -182,7 +182,7 @@ export function Step4ScheduleSend({
               onChange={(e) => setWhen(e.target.value)}
               className="sm:max-w-xs"
             />
-            <p className={cn('text-xs', when && !scheduleOk ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>
+            <p className={cn('text-xs', when && !scheduleOk ? 'text-tone-pink-ink' : 'text-muted-foreground')}>
               {when && !scheduleOk ? t('scheduleSend.tooSoon') : t('scheduleSend.laterHint')}
             </p>
           </div>

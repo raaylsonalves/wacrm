@@ -146,7 +146,7 @@ export function CarouselCardsEditor({
                   </Button>
                 </div>
                 {(bad || !value.trim()) && (
-                  <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                  <p className="text-[11px] text-tone-salmon-ink">
                     {bad ? t('invalid') : t('missing')}
                   </p>
                 )}

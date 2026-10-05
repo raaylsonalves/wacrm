@@ -26,7 +26,7 @@ export const ROLE_META: Record<
     icon: Crown,
     label: 'owner',
     variant: 'owner',
-    className: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    className: 'border-tone-salmon-ink/30 bg-tone-salmon-soft text-tone-salmon-ink',
   },
   admin: {
     icon: Shield,
