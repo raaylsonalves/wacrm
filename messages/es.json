@@ -3516,6 +3516,23 @@
       "cancelled": "Cancelada",
       "no_show": "No asistió"
     },
+    "panel": {
+      "title": "Cita",
+      "moreActions": "Más acciones",
+      "close": "Cerrar",
+      "delete": "Eliminar cita",
+      "deleted": "Cita eliminada",
+      "when": "Cuándo",
+      "details": "Detalles",
+      "length": "Duración",
+      "minutes": "{n} min",
+      "addNotes": "Agregar observaciones…",
+      "hint": "Haz clic en un campo para editar · se guarda solo · Esc cierra",
+      "open": "Abrir",
+      "schedule": "Agendar",
+      "createAndOpen": "Agendar y abrir",
+      "quickHint": "Responsable, estado y observaciones los completas en la cita."
+    },
     "dialog": {
       "newTitle": "Nueva cita",
       "editTitle": "Editar cita",

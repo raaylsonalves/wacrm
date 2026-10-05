@@ -19,7 +19,11 @@ import {
   type AppointmentSettings,
 } from '@/lib/appointments/slots';
 import type { AccountMember } from '@/types';
-import { AppointmentDialog, type AppointmentDraft } from '@/components/agenda/appointment-dialog';
+import {
+  AppointmentQuickCreate,
+  type AppointmentDraft,
+} from '@/components/agenda/appointment-quick-create';
+import { AppointmentPanel } from '@/components/agenda/appointment-panel';
 import { AgendaSettingsDialog } from '@/components/agenda/agenda-settings-dialog';
 import { eventToneClass, type Appointment } from '@/components/agenda/types';
 import { WeekTimeGrid } from '@/components/agenda/week-time-grid';
@@ -54,7 +58,9 @@ export default function AgendaPage() {
   // Time the owner blocked in Google Calendar (migration 096).
   const [blocks, setBlocks] = useState<{ google_event_id: string; starts_at: string; ends_at: string; all_day: boolean }[]>([]);
   const [members, setMembers] = useState<AccountMember[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  // v8: new appointments start in the quick create; an existing one opens
+  // in the side panel and edits in place.
+  const [quickOpen, setQuickOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [draft, setDraft] = useState<AppointmentDraft | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -197,17 +203,23 @@ export default function AgendaPage() {
   }
 
   function openNew(day?: Date, time?: string) {
-    setEditing(null);
     setDraft({ date: dayKey(day ?? cursor ?? new Date()), time: time ?? settings.day_start.slice(0, 5) });
-    setOpenCount((n) => n + 1);
-    setDialogOpen(true);
+    setQuickOpen(true);
   }
 
   function openEdit(a: Appointment) {
     setEditing(a);
-    setDraft(null);
-    setOpenCount((n) => n + 1);
-    setDialogOpen(true);
+  }
+
+  // "Agendar e abrir": the new row may sit outside the loaded range, so
+  // read it directly rather than waiting for it to show up in the list.
+  async function openCreated(id: string) {
+    const { data } = await createClient()
+      .from('appointments')
+      .select('*, contact:contacts(id, name, phone)')
+      .eq('id', id)
+      .maybeSingle();
+    if (data) setEditing(data as Appointment);
   }
 
   // Picking an appointment on the grid: with the side column (lg+) show
@@ -537,16 +549,23 @@ export default function AgendaPage() {
         })}
       </p>
 
-      <AppointmentDialog
-        key={`appt-${openCount}`}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
+      <AppointmentPanel
         appointment={editing}
+        timezone={tz}
+        members={members}
+        onClose={() => setEditing(null)}
+        onChanged={load}
+      />
+      <AppointmentQuickCreate
+        open={quickOpen}
+        onOpenChange={setQuickOpen}
         draft={draft}
         timezone={tz}
         slotMinutes={settings.slot_minutes}
-        members={members}
-        onSaved={load}
+        onCreated={(id, openPanel) => {
+          void load();
+          if (openPanel) void openCreated(id);
+        }}
       />
       {canEditSettings && (
         <AgendaSettingsDialog

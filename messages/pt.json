@@ -3516,6 +3516,23 @@
       "cancelled": "Cancelado",
       "no_show": "Não compareceu"
     },
+    "panel": {
+      "title": "Agendamento",
+      "moreActions": "Mais ações",
+      "close": "Fechar",
+      "delete": "Excluir agendamento",
+      "deleted": "Agendamento excluído",
+      "when": "Quando",
+      "details": "Detalhes",
+      "length": "Duração",
+      "minutes": "{n} min",
+      "addNotes": "Adicionar observações…",
+      "hint": "Clique em um campo para editar · salva sozinho · Esc fecha",
+      "open": "Abrir",
+      "schedule": "Agendar",
+      "createAndOpen": "Agendar e abrir",
+      "quickHint": "Responsável, status e observações você completa no agendamento."
+    },
     "dialog": {
       "newTitle": "Novo agendamento",
       "editTitle": "Editar agendamento",

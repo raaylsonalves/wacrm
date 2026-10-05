@@ -3528,6 +3528,23 @@
       "cancelled": "Cancelled",
       "no_show": "No-show"
     },
+    "panel": {
+      "title": "Appointment",
+      "moreActions": "More actions",
+      "close": "Close",
+      "delete": "Delete appointment",
+      "deleted": "Appointment deleted",
+      "when": "When",
+      "details": "Details",
+      "length": "Length",
+      "minutes": "{n} min",
+      "addNotes": "Add notes…",
+      "hint": "Click a field to edit · saves on its own · Esc closes",
+      "open": "Open",
+      "schedule": "Schedule",
+      "createAndOpen": "Schedule and open",
+      "quickHint": "Owner, status and notes can be set on the appointment."
+    },
     "dialog": {
       "newTitle": "New appointment",
       "editTitle": "Edit appointment",

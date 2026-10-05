@@ -3528,6 +3528,23 @@
       "cancelled": "취소",
       "no_show": "노쇼"
     },
+    "panel": {
+      "title": "예약",
+      "moreActions": "더 보기",
+      "close": "닫기",
+      "delete": "예약 삭제",
+      "deleted": "예약이 삭제되었어요",
+      "when": "일시",
+      "details": "세부 정보",
+      "length": "소요 시간",
+      "minutes": "{n}분",
+      "addNotes": "메모 추가…",
+      "hint": "필드를 클릭해 편집 · 자동 저장 · Esc로 닫기",
+      "open": "열기",
+      "schedule": "예약하기",
+      "createAndOpen": "예약하고 열기",
+      "quickHint": "담당자, 상태, 메모는 예약 화면에서 설정할 수 있어요."
+    },
     "dialog": {
       "newTitle": "새 예약",
       "editTitle": "예약 편집",

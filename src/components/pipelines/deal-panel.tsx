@@ -26,6 +26,7 @@ import { CURRENCIES, formatCurrency } from '@/lib/currency';
 import { InlineField } from '@/components/ui/inline-field';
 import { ContactPicker } from '@/components/pipelines/contact-picker';
 import { SaveState, SidePanel } from '@/components/ui/side-panel';
+import { PickRow } from '@/components/ui/pick-row';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -438,42 +439,3 @@ function DealPanelBody({
 }
 
 /** "Tudo salvo" at rest, "Salvando…" while writing, a mint "✓ Salvo" flash after. */
-/** A details row that opens a short menu of choices (owner, currency). */
-function PickRow({
-  label,
-  value,
-  options,
-  selected,
-  onPick,
-}: {
-  label: string;
-  value: string;
-  options: { id: string; label: string }[];
-  selected: string;
-  onPick: (id: string) => void;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="hover:bg-muted data-popup-open:bg-muted -mx-2.5 flex min-h-11 w-[calc(100%+1.25rem)] items-center gap-3 rounded-[14px] px-2.5 text-left transition-colors duration-150 ease-out">
-        <span className="text-muted-foreground w-36 shrink-0 text-[12.5px]">
-          {label}
-        </span>
-        <span className="min-w-0 flex-1 truncate text-right text-sm font-semibold">
-          {value}
-        </span>
-        <ChevronDown className="text-muted-foreground size-3.5 shrink-0" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="max-h-72 w-64">
-        {options.map((o) => (
-          <DropdownMenuItem
-            key={o.id || 'none'}
-            onClick={() => o.id !== selected && onPick(o.id)}
-          >
-            <span className="flex-1 truncate">{o.label}</span>
-            {o.id === selected && <Check className="size-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}

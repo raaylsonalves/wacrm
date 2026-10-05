@@ -31,7 +31,7 @@ export function InlineField({
   /** What the value looks like at rest; defaults to the raw value. */
   display?: React.ReactNode;
   placeholder?: string;
-  type?: 'text' | 'number' | 'date';
+  type?: 'text' | 'number' | 'date' | 'time';
   multiline?: boolean;
   inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
   disabled?: boolean;
