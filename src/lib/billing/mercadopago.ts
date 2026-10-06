@@ -211,7 +211,15 @@ export const createPixOrder = (
           },
         ],
       },
-      payer: { email: input.payerEmail },
+      // Sandbox rule: a Pix order only gets approved by Mercado Pago when
+      // payer.first_name is APRO (test Pix cannot be paid from a bank app).
+      // Test credentials start with TEST-; production never sends this.
+      payer: {
+        email: input.payerEmail,
+        ...(accessTokenFor('pix')?.startsWith('TEST-')
+          ? { first_name: 'APRO' }
+          : {}),
+      },
     },
     idempotencyKey
   );

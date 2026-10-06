@@ -9,12 +9,16 @@
 // webhook moves the account to `active`.
 // ============================================================
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
 import { canManageBilling } from '@/lib/auth/roles';
 import { supabaseAdmin } from '@/lib/ai/admin-client';
-import { MercadoPagoError, createPreapproval } from '@/lib/billing/mercadopago';
+import {
+  MercadoPagoError,
+  cancelOrder,
+  createPreapproval,
+} from '@/lib/billing/mercadopago';
 import {
   isBillingCycle,
   isPlanId,
@@ -148,6 +152,29 @@ export async function POST(request: Request) {
       .from('billing_subscriptions')
       .update({ mp_preapproval_id: preapproval.id })
       .eq('id', sub.id);
+
+    // The customer switched from Pix to card: close any Pix still waiting,
+    // otherwise paying it later would charge them twice. Best effort; the
+    // order also expires on its own.
+    const { data: openPix } = await db
+      .from('billing_pix_orders')
+      .select('mp_order_id')
+      .eq('account_id', ctx.accountId)
+      .eq('status', 'pending');
+    for (const o of openPix ?? []) {
+      if (o.mp_order_id) {
+        await cancelOrder(o.mp_order_id as string, randomUUID()).catch(
+          () => undefined
+        );
+      }
+    }
+    if (openPix && openPix.length > 0) {
+      await db
+        .from('billing_pix_orders')
+        .update({ status: 'canceled' })
+        .eq('account_id', ctx.accountId)
+        .eq('status', 'pending');
+    }
 
     return NextResponse.json({ ok: true, status: 'pending' }, { status: 201 });
   } catch (err) {
