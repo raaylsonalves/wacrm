@@ -31,6 +31,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   // always visible and this stays at `false` (ignored by the component).
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+  // Account the onboarding/payment check has cleared. The app stays hidden
+  // until it matches, so a fresh account never sees the dashboard flash
+  // before being sent to /onboarding.
+  const [clearedFor, setClearedFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -52,7 +56,12 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       .eq('id', accountId)
       .maybeSingle()
       .then(({ data }) => {
-        if (cancelled || !data) return;
+        if (cancelled) return;
+        // No row / error: let the app render; the server gate still applies.
+        if (!data) {
+          setClearedFor(accountId);
+          return;
+        }
         if (!data.onboarded_at) router.replace('/onboarding');
         // Nothing paid yet: the owner goes to the payment step. Teammates
         // cannot pay, so they are left alone.
@@ -62,6 +71,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           data.owner_user_id === user?.id
         ) {
           router.replace('/onboarding/payment');
+        } else {
+          setClearedFor(accountId);
         }
       });
     return () => {
@@ -73,10 +84,13 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   // fades out on top of the app once it can render. It keeps the same
   // tree position in both branches so it isn't remounted (and replayed)
   // when loading flips.
+  // Signed in but no account resolved: nothing to check, show the app (the
+  // access alert explains it).
+  const gateOpen = !accountId || clearedFor === accountId;
   return (
     <>
-      <SplashScreen ready={!loading} />
-      {loading || !user ? null : (
+      <SplashScreen ready={!loading && gateOpen} />
+      {loading || !user || !gateOpen ? null : (
         <div className="bg-background flex h-screen overflow-hidden lg:gap-3 lg:p-3">
           {/* Reports this tab's online/away presence once we know a user is
           signed in. Headless — renders nothing. */}
