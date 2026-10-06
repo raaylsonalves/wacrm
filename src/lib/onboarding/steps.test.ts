@@ -15,6 +15,8 @@ describe('nextStep', () => {
 
   it('returns the first incomplete step, skipping done/skipped ones', () => {
     let state = markStepDone({}, 'welcome');
+    state = markStepDone(state, 'profile');
+    state = markStepDone(state, 'profile');
     state = markStepSkipped(state, 'channel');
     expect(nextStep(state)?.segment).toBe('ai-agent');
   });

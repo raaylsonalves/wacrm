@@ -64,6 +64,7 @@ export function AiConfig({
   hideHeader = false,
   showName = false,
   agentId,
+  initialPrompt,
 }: {
   /** A non-default agent: same form, saved through /api/ai/agents/[id].
    *  Account-wide parts (embeddings key, knowledge base) stay on the
@@ -73,6 +74,9 @@ export function AiConfig({
   hideHeader?: boolean;
   /** Show the agent's name (the agent page); onboarding doesn't. */
   showName?: boolean;
+  /** Business context to start from while nothing is saved yet
+   *  (onboarding builds it from the company profile). */
+  initialPrompt?: string;
 } = {}) {
   const { accountId, accountRole, profileLoading } = useAuth();
   const router = useRouter();
@@ -103,7 +107,7 @@ export function AiConfig({
   const [embeddingsKey, setEmbeddingsKey] = useState('');
   const [embeddingsKeyEdited, setEmbeddingsKeyEdited] = useState(false);
   const [hasStoredEmbeddingsKey, setHasStoredEmbeddingsKey] = useState(false);
-  const [systemPrompt, setSystemPrompt] = useState('');
+  const [systemPrompt, setSystemPrompt] = useState(initialPrompt ?? '');
   const [isActive, setIsActive] = useState(false);
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
   // Agenda tools opt-in (offer_slots / book_appointment —
@@ -153,7 +157,7 @@ export function AiConfig({
         setName(data.name ?? '');
         setProvider(data.provider);
         setModel(data.model);
-        setSystemPrompt(data.system_prompt ?? '');
+        setSystemPrompt(data.system_prompt ?? initialPrompt ?? '');
         setIsActive(data.is_active);
         setAutoReplyEnabled(data.auto_reply_enabled);
         setAgendaEnabled(Boolean(data.agenda_enabled));
@@ -186,7 +190,7 @@ export function AiConfig({
     } finally {
       setLoading(false);
     }
-  }, [agentId, t]);
+  }, [agentId, t, initialPrompt]);
 
   useEffect(() => {
     const key = `${accountId}:${agentId ?? ''}`;

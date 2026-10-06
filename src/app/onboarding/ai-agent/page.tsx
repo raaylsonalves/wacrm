@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Bot } from 'lucide-react';
 import { AiConfig } from '@/components/settings/ai-config';
+import { buildPromptContext, sanitizeProfile } from '@/lib/onboarding/profile';
 import { useOnboarding } from '../onboarding-context';
 import { StepFooter } from '../step-footer';
 
@@ -12,7 +13,26 @@ import { StepFooter } from '../step-footer';
 export default function OnboardingAiAgentPage() {
   const t = useTranslations('Onboarding.aiAgent');
   const router = useRouter();
-  const { markDone, markSkipped } = useOnboarding();
+  const tp = useTranslations('Onboarding.profile');
+  const { state, displayName, markDone, markSkipped } = useOnboarding();
+
+  // Starts the assistant's business context from the company profile
+  // answered earlier (empty when that step was skipped).
+  const initialPrompt = buildPromptContext(
+    sanitizeProfile(state.profile?.profile),
+    displayName,
+    {
+      business: (name) => tp('prompt.business', { name }),
+      segment: (value) => tp('prompt.segment', { value }),
+      goals: (value) => tp('prompt.goals', { value }),
+      tone: (value) => tp('prompt.tone', { value }),
+      about: (value) => tp('prompt.about', { value }),
+      hours: (value) => tp('prompt.hours', { value }),
+      segmentLabel: (v) => tp(`segment.${v}`),
+      goalLabel: (v) => tp(`goal.${v}`),
+      toneLabel: (v) => tp(`tone.${v}`),
+    }
+  );
 
   async function handleContinue() {
     await markDone('ai-agent');
@@ -35,7 +55,7 @@ export default function OnboardingAiAgentPage() {
       <p className="text-muted-foreground mt-1 text-sm">{t('description')}</p>
 
       <div className="mt-6">
-        <AiConfig />
+        <AiConfig initialPrompt={initialPrompt || undefined} />
       </div>
 
       <StepFooter onContinue={handleContinue} onSkip={handleSkip} />

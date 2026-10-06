@@ -3955,6 +3955,91 @@
       "description": "Esto es lo que se configuró — y lo que te saltaste.",
       "skippedNote": "Te saltaste: {steps}. Puedes terminarlo cuando quieras desde Configuración.",
       "goToInboxBtn": "Ir a la Bandeja de entrada"
+    },
+    "stepProfile": "Empresa",
+    "profile": {
+      "title": "Cuéntanos sobre tu empresa",
+      "description": "Todo es opcional. Las respuestas ayudan a configurar la IA y a sugerir el plan adecuado.",
+      "saveFailed": "No se pudieron guardar las respuestas",
+      "q": {
+        "segment": "¿Cuál es tu rubro?",
+        "goals": "¿Qué quieres hacer con el CRM?",
+        "goalsHint": "Puedes marcar varias.",
+        "team": "¿Cuántas personas atienden?",
+        "volume": "¿Cuántas conversaciones por día?",
+        "channel": "¿Cómo es tu WhatsApp hoy?",
+        "tone": "¿Cómo debe hablar la IA?",
+        "toneHint": "Puedes cambiarlo después.",
+        "about": "¿Qué vendes u ofreces?",
+        "hours": "Horario de atención"
+      },
+      "aboutPlaceholder": "Ej.: corte, barba y cejas. Corte $10. Solo con cita.",
+      "hoursPlaceholder": "Ej.: lun a sáb, 9 a 19 h",
+      "segment": {
+        "beauty": "Belleza y estética",
+        "health": "Salud y clínicas",
+        "retail": "Comercio y e-commerce",
+        "services": "Servicios",
+        "education": "Educación",
+        "finance": "Finanzas y crédito",
+        "realestate": "Inmobiliario",
+        "other": "Otro"
+      },
+      "goal": {
+        "support": "Atender clientes",
+        "scheduling": "Agendar citas",
+        "sales": "Vender",
+        "prospecting": "Prospectar clientes",
+        "broadcasts": "Envíos masivos",
+        "loans": "Préstamos"
+      },
+      "team": {
+        "1": "Solo yo",
+        "2-3": "2 a 3",
+        "4-8": "4 a 8",
+        "9-20": "9 a 20",
+        "20+": "Más de 20"
+      },
+      "volume": {
+        "lt20": "Menos de 20",
+        "20-100": "20 a 100",
+        "100-500": "100 a 500",
+        "500+": "Más de 500"
+      },
+      "channel": {
+        "official": "API oficial de Meta",
+        "regular": "Número común (WhatsApp Business)",
+        "none": "Aún no tengo"
+      },
+      "tone": {
+        "friendly": "Amistoso y cercano",
+        "formal": "Formal",
+        "direct": "Directo y conciso"
+      },
+      "suggest": {
+        "title": "Plan sugerido: {plan} · R$ {price}/mes",
+        "custom": "Por el tamaño del equipo, lo ideal es un plan a medida. Nordia te hace un presupuesto.",
+        "chosen": "Plan elegido en el sitio: {plan}.",
+        "plan": {
+          "essencial": "Essencial",
+          "profissional": "Profissional",
+          "escala": "Escala"
+        },
+        "why": {
+          "team": "Por el tamaño del equipo.",
+          "volume": "Por el volumen de conversaciones.",
+          "prospecting": "La prospección empieza en Profissional.",
+          "broadcasts": "Los envíos masivos empiezan en Profissional."
+        }
+      },
+      "prompt": {
+        "business": "Empresa: {name}",
+        "segment": "Rubro: {value}",
+        "goals": "La atención debe ayudar con: {value}",
+        "tone": "Tono de voz: {value}",
+        "about": "Sobre el negocio: {value}",
+        "hours": "Horario de atención: {value}"
+      }
     }
   }
 }

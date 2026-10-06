@@ -12,6 +12,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { SCREEN_SIZE, screenHtml, type ScreenId } from './screens';
 import { DemoFlow } from './demo';
+import {
+  PLAN_MONTHLY_BRL,
+  annualMonthlyBrl,
+  type PlanId,
+} from '@/lib/billing/plans';
 import { LEAD_INTERESTS, type LeadInterest } from '@/lib/landing/lead';
 import './landing.css';
 
@@ -249,11 +254,18 @@ const SEGMENTS = [
   },
 ];
 
-const PLANS = [
+const PLANS: {
+  id: PlanId;
+  name: string;
+  price: number;
+  hot?: boolean;
+  pitch: string;
+  items: string[];
+}[] = [
   {
     id: 'essencial',
     name: 'Essencial',
-    price: 197,
+    price: PLAN_MONTHLY_BRL.essencial,
     pitch: 'Para começar a atender com IA.',
     items: [
       '1 número de WhatsApp',
@@ -266,7 +278,7 @@ const PLANS = [
   {
     id: 'profissional',
     name: 'Profissional',
-    price: 397,
+    price: PLAN_MONTHLY_BRL.profissional,
     hot: true,
     pitch: 'Para equipes que vendem e agendam todo dia.',
     items: [
@@ -281,7 +293,7 @@ const PLANS = [
   {
     id: 'escala',
     name: 'Escala',
-    price: 797,
+    price: PLAN_MONTHLY_BRL.escala,
     pitch: 'Para operações com vários setores.',
     items: [
       '5 números',
@@ -1323,9 +1335,7 @@ export function Landing() {
             {PLANS.map((p) => {
               // Annual = 10 months' worth spread over 12 monthly charges, so
               // nothing is paid upfront and a cancellation just stops them.
-              const per = annual
-                ? Math.round(((p.price * 10) / 12) * 100) / 100
-                : p.price;
+              const per = annual ? annualMonthlyBrl(p.id) : p.price;
               const billing = annual
                 ? `Cobrado todo mês no ${pix ? 'Pix' : 'cartão'}, 2 meses grátis`
                 : pix

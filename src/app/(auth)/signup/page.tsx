@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { isPlanId } from "@/lib/billing/plans";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,6 +80,11 @@ function SignupPageInner() {
       options: {
         data: {
           full_name: fullName,
+          // Plan picked on the marketing page, read back by onboarding.
+          // Only a known plan id is kept, never a price.
+          ...(isPlanId(searchParams.get("plano"))
+            ? { selected_plan: searchParams.get("plano") }
+            : {}),
         },
         emailRedirectTo,
       },

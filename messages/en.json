@@ -3967,6 +3967,91 @@
       "description": "Here's what got configured — and what you skipped.",
       "skippedNote": "You skipped: {steps}. You can finish these anytime in Settings.",
       "goToInboxBtn": "Go to the Inbox"
+    },
+    "stepProfile": "Company",
+    "profile": {
+      "title": "Tell us about your business",
+      "description": "Everything here is optional. Your answers help shape the AI assistant and suggest the right plan.",
+      "saveFailed": "Could not save your answers",
+      "q": {
+        "segment": "What is your industry?",
+        "goals": "What do you want to do with the CRM?",
+        "goalsHint": "Pick as many as you like.",
+        "team": "How many people answer customers?",
+        "volume": "How many conversations a day?",
+        "channel": "What is your WhatsApp like today?",
+        "tone": "How should the AI sound?",
+        "toneHint": "You can change this later.",
+        "about": "What do you sell or offer?",
+        "hours": "Opening hours"
+      },
+      "aboutPlaceholder": "e.g. haircuts and beard trims. Haircut $9. By appointment only.",
+      "hoursPlaceholder": "e.g. Mon to Sat, 9am to 7pm",
+      "segment": {
+        "beauty": "Beauty and wellness",
+        "health": "Health and clinics",
+        "retail": "Retail and e-commerce",
+        "services": "Services",
+        "education": "Education",
+        "finance": "Finance and credit",
+        "realestate": "Real estate",
+        "other": "Other"
+      },
+      "goal": {
+        "support": "Customer support",
+        "scheduling": "Scheduling",
+        "sales": "Sales",
+        "prospecting": "Prospecting",
+        "broadcasts": "Bulk broadcasts",
+        "loans": "Loans"
+      },
+      "team": {
+        "1": "Just me",
+        "2-3": "2 to 3",
+        "4-8": "4 to 8",
+        "9-20": "9 to 20",
+        "20+": "More than 20"
+      },
+      "volume": {
+        "lt20": "Under 20",
+        "20-100": "20 to 100",
+        "100-500": "100 to 500",
+        "500+": "Over 500"
+      },
+      "channel": {
+        "official": "Official Meta API",
+        "regular": "Regular number (WhatsApp Business)",
+        "none": "I do not have one yet"
+      },
+      "tone": {
+        "friendly": "Friendly and warm",
+        "formal": "Formal",
+        "direct": "Direct and concise"
+      },
+      "suggest": {
+        "title": "Suggested plan: {plan} · R$ {price}/month",
+        "custom": "For a team this size a custom plan fits best. Nordia will quote it for you.",
+        "chosen": "Plan chosen on the website: {plan}.",
+        "plan": {
+          "essencial": "Essencial",
+          "profissional": "Profissional",
+          "escala": "Escala"
+        },
+        "why": {
+          "team": "Based on your team size.",
+          "volume": "Based on your conversation volume.",
+          "prospecting": "Prospecting starts at Profissional.",
+          "broadcasts": "Broadcasts start at Profissional."
+        }
+      },
+      "prompt": {
+        "business": "Business: {name}",
+        "segment": "Industry: {value}",
+        "goals": "Support should help with: {value}",
+        "tone": "Tone of voice: {value}",
+        "about": "About the business: {value}",
+        "hours": "Opening hours: {value}"
+      }
     }
   }
 }
