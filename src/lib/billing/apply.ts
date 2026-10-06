@@ -1,0 +1,243 @@
+// Applies a verified Mercado Pago notification to our own tables. Called by
+// the webhook with the service-role client, so tenancy is OURS to enforce:
+// the account is only ever resolved from our own billing rows (matched by
+// the Mercado Pago ids / the external_reference WE generated), never from
+// anything in the notification or the browser.
+
+import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  MercadoPagoError,
+  getAuthorizedPayment,
+  getOrder,
+  getPreapproval,
+} from './mercadopago';
+import {
+  chargeOutcome,
+  isFullyPaid,
+  nextPeriodEnd,
+  pixOrderStatus,
+  subscriptionStatusFromPreapproval,
+  toCents,
+} from './transitions';
+import type { BillingSource } from './webhook-signature';
+
+export type ApplyResult =
+  | 'applied'
+  | 'ignored_topic'
+  | 'unknown_resource'
+  | 'amount_mismatch'
+  | 'already_applied';
+
+/** Never overwrite `exempt`: operator-released accounts stay released. */
+async function setAccountStatus(
+  db: SupabaseClient,
+  accountId: string,
+  status: 'active' | 'past_due' | 'canceled'
+) {
+  const { error } = await db
+    .from('accounts')
+    .update({ subscription_status: status })
+    .eq('id', accountId)
+    .neq('subscription_status', 'exempt');
+  if (error) throw error;
+}
+
+/** Records one paid charge once. The synthetic event row is the lock: a
+ *  second notification about the same charge hits the unique constraint. */
+async function claimCharge(
+  db: SupabaseClient,
+  source: BillingSource,
+  key: string
+): Promise<boolean> {
+  const { error } = await db.from('billing_events').insert({
+    source,
+    event_id: `charge:${key}`,
+    topic: 'charge',
+    raw: {},
+    processed_at: new Date().toISOString(),
+  });
+  if (!error) return true;
+  if (error.code === '23505') return false;
+  throw error;
+}
+
+async function registerPaidCharge(
+  db: SupabaseClient,
+  accountId: string,
+  paidAt: Date
+) {
+  const { data: sub, error } = await db
+    .from('billing_subscriptions')
+    .select('id, charges_paid, charges_total, current_period_end')
+    .eq('account_id', accountId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!sub) return;
+  const charges = (sub.charges_paid as number) + 1;
+  const end = nextPeriodEnd(
+    sub.current_period_end ? new Date(sub.current_period_end as string) : null,
+    paidAt
+  );
+  const done = isFullyPaid(charges, sub.charges_total as number | null);
+  const { error: upErr } = await db
+    .from('billing_subscriptions')
+    .update({
+      charges_paid: charges,
+      current_period_end: end.toISOString(),
+      status: done ? 'canceled' : 'active',
+      grace_until: null,
+    })
+    .eq('id', sub.id);
+  if (upErr) throw upErr;
+  // A finished annual plan simply stops: access runs to the period end.
+  await setAccountStatus(db, accountId, 'active');
+}
+
+async function applyOrder(
+  db: SupabaseClient,
+  dataId: string
+): Promise<ApplyResult> {
+  const order = await getOrder(dataId);
+  const ref = order.external_reference;
+  if (!ref) return 'unknown_resource';
+  const { data: row, error } = await db
+    .from('billing_pix_orders')
+    .select('id, account_id, status, amount_cents')
+    .eq('external_reference', ref)
+    .maybeSingle();
+  if (error) throw error;
+  if (!row) return 'unknown_resource';
+  if (row.status === 'paid') return 'already_applied';
+
+  const status = pixOrderStatus(order.status);
+  if (status === 'paid' && toCents(order.total_amount) !== row.amount_cents) {
+    console.error('[billing] Pix order amount mismatch', { ref });
+    return 'amount_mismatch';
+  }
+
+  // Conditional update: only the first notification flips pending -> paid.
+  const patch: Record<string, unknown> = { status, mp_order_id: order.id };
+  if (status === 'paid') patch.paid_at = new Date().toISOString();
+  const { data: changed, error: upErr } = await db
+    .from('billing_pix_orders')
+    .update(patch)
+    .eq('id', row.id)
+    .neq('status', 'paid')
+    .select('id');
+  if (upErr) throw upErr;
+  if (status === 'paid' && changed && changed.length > 0) {
+    await registerPaidCharge(db, row.account_id as string, new Date());
+  }
+  return 'applied';
+}
+
+async function applyPreapproval(
+  db: SupabaseClient,
+  dataId: string
+): Promise<ApplyResult> {
+  const pre = await getPreapproval(dataId);
+  const { data: sub, error } = await db
+    .from('billing_subscriptions')
+    .select('id, account_id, amount_cents')
+    .eq('mp_preapproval_id', pre.id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!sub) return 'unknown_resource';
+
+  const status = subscriptionStatusFromPreapproval(pre.status);
+  const amount = toCents(pre.auto_recurring?.transaction_amount);
+  if (status === 'active' && amount !== sub.amount_cents) {
+    console.error('[billing] preapproval amount mismatch', { id: sub.id });
+    return 'amount_mismatch';
+  }
+  const patch: Record<string, unknown> = { status };
+  if (status === 'canceled') patch.canceled_at = new Date().toISOString();
+  const { error: upErr } = await db
+    .from('billing_subscriptions')
+    .update(patch)
+    .eq('id', sub.id);
+  if (upErr) throw upErr;
+  if (status !== 'pending') {
+    await setAccountStatus(db, sub.account_id as string, status);
+  }
+  return 'applied';
+}
+
+async function applyAuthorizedPayment(
+  db: SupabaseClient,
+  dataId: string
+): Promise<ApplyResult> {
+  const ap = await getAuthorizedPayment(dataId);
+  if (!ap.preapproval_id) return 'unknown_resource';
+  const { data: sub, error } = await db
+    .from('billing_subscriptions')
+    .select('id, account_id, amount_cents')
+    .eq('mp_preapproval_id', ap.preapproval_id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!sub) return 'unknown_resource';
+
+  const outcome = chargeOutcome(ap.status);
+  if (outcome === 'paid') {
+    if (toCents(ap.transaction_amount) !== sub.amount_cents) {
+      console.error('[billing] charge amount mismatch', { id: sub.id });
+      return 'amount_mismatch';
+    }
+    if (!(await claimCharge(db, 'subs', String(ap.id)))) {
+      return 'already_applied';
+    }
+    await registerPaidCharge(db, sub.account_id as string, new Date());
+    return 'applied';
+  }
+  if (outcome === 'retrying' || outcome === 'failed') {
+    // Mercado Pago retries a declined charge up to 4 times in 10 days:
+    // past_due now, with a grace window the app can enforce later.
+    const grace = new Date(Date.now() + 7 * 86_400_000).toISOString();
+    const { error: upErr } = await db
+      .from('billing_subscriptions')
+      .update({ status: 'past_due', grace_until: grace })
+      .eq('id', sub.id)
+      .neq('status', 'canceled');
+    if (upErr) throw upErr;
+    await setAccountStatus(db, sub.account_id as string, 'past_due');
+    return 'applied';
+  }
+  return 'ignored_topic';
+}
+
+export async function applyNotification(
+  db: SupabaseClient,
+  source: BillingSource,
+  topic: string,
+  dataId: string
+): Promise<ApplyResult> {
+  try {
+    return await dispatch(db, source, topic, dataId);
+  } catch (err) {
+    // Mercado Pago says this id does not exist / is malformed: retrying
+    // can never fix it, so acknowledge instead of asking for redelivery.
+    if (
+      err instanceof MercadoPagoError &&
+      (err.status === 400 || err.status === 404)
+    ) {
+      return 'unknown_resource';
+    }
+    throw err;
+  }
+}
+
+async function dispatch(
+  db: SupabaseClient,
+  source: BillingSource,
+  topic: string,
+  dataId: string
+): Promise<ApplyResult> {
+  if (source === 'pix' && topic === 'order') return applyOrder(db, dataId);
+  if (source === 'subs' && topic === 'subscription_preapproval') {
+    return applyPreapproval(db, dataId);
+  }
+  if (source === 'subs' && topic === 'subscription_authorized_payment') {
+    return applyAuthorizedPayment(db, dataId);
+  }
+  return 'ignored_topic';
+}
