@@ -117,8 +117,18 @@ async function mpPost<T>(
     cache: 'no-store',
   });
   if (!res.ok) {
+    // Mercado Pago's own reason ("Unsupported_credit_card_for_recurring_
+    // payment", "Both payer and collector must be real or test users"…) is
+    // what tells sandbox rules apart from real problems. It carries no
+    // secrets, so it goes in the message for the server log.
+    const reason = await res
+      .json()
+      .then((j: { message?: string; code?: string }) =>
+        [j.code, j.message].filter(Boolean).join(': ')
+      )
+      .catch(() => '');
     throw new MercadoPagoError(
-      `Mercado Pago POST ${path.split('/').filter(Boolean)[0]} answered ${res.status}`,
+      `Mercado Pago POST ${path.split('/').filter(Boolean)[0]} answered ${res.status}${reason ? ` (${reason.slice(0, 200)})` : ''}`,
       res.status
     );
   }
@@ -213,10 +223,12 @@ export const createPixOrder = (
       },
       // Sandbox rule: a Pix order only gets approved by Mercado Pago when
       // payer.first_name is APRO (test Pix cannot be paid from a bank app).
-      // Test credentials start with TEST-; production never sends this.
+      // Test credentials do not look different from live ones, so sandbox
+      // is an explicit switch (MERCADOPAGO_SANDBOX=1); never set it in
+      // production.
       payer: {
         email: input.payerEmail,
-        ...(accessTokenFor('pix')?.startsWith('TEST-')
+        ...(process.env.MERCADOPAGO_SANDBOX === '1'
           ? { first_name: 'APRO' }
           : {}),
       },
