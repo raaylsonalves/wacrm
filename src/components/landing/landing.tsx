@@ -1322,7 +1322,7 @@ export function Landing() {
               return (
                 <div
                   key={p.id}
-                  className={`lp-plan${p.hot ? 'lp-plan-hot' : ''}`}
+                  className={p.hot ? 'lp-plan lp-plan-hot' : 'lp-plan'}
                 >
                   <span
                     style={{
@@ -1350,7 +1350,14 @@ export function Landing() {
                       </span>
                     )}
                   </span>
-                  <span style={{ fontSize: 14, lineHeight: 1.5, color: muted }}>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      lineHeight: 1.5,
+                      minHeight: 42,
+                      color: muted,
+                    }}
+                  >
                     {p.pitch}
                   </span>
                   <span
@@ -1400,7 +1407,12 @@ export function Landing() {
             >
               <span style={{ fontSize: 18, fontWeight: 800 }}>Sob medida</span>
               <span
-                style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--muted)' }}
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1.5,
+                  minHeight: 42,
+                  color: 'var(--muted)',
+                }}
               >
                 Módulos, integrações e telas que ainda não existem no CRM.
               </span>
