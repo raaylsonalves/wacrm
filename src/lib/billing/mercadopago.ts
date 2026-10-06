@@ -55,6 +55,17 @@ export interface MpOrder {
   status_detail?: string;
   total_amount?: string;
   external_reference?: string;
+  transactions?: {
+    payments?: Array<{
+      id?: string;
+      status?: string;
+      payment_method?: {
+        ticket_url?: string;
+        qr_code?: string;
+        qr_code_base64?: string;
+      };
+    }>;
+  };
 }
 
 export interface MpPreapproval {
@@ -149,5 +160,67 @@ export const createPreapproval = (
         ...(input.endDate ? { end_date: input.endDate.toISOString() } : {}),
       },
     },
+    idempotencyKey
+  );
+
+export interface PixPayment {
+  qrCode: string | null;
+  qrCodeBase64: string | null;
+  ticketUrl: string | null;
+}
+
+/** The QR / copia-e-cola / ticket link out of a created Pix order. */
+export function extractPixPayment(order: MpOrder): PixPayment {
+  const m = order.transactions?.payments?.[0]?.payment_method;
+  return {
+    qrCode: m?.qr_code ?? null,
+    qrCodeBase64: m?.qr_code_base64 ?? null,
+    ticketUrl: m?.ticket_url ?? null,
+  };
+}
+
+export interface CreatePixOrderInput {
+  externalReference: string;
+  /** Centavos; sent to Mercado Pago as a "197.00" string. */
+  amountCents: number;
+  payerEmail: string;
+  /** ISO 8601 duration, 30 minutes to 30 days. */
+  expiresIn: string;
+}
+
+/** A single Pix charge through the Orders API (automatic processing). */
+export const createPixOrder = (
+  input: CreatePixOrderInput,
+  idempotencyKey: string
+) => {
+  const amount = (input.amountCents / 100).toFixed(2);
+  return mpPost<MpOrder>(
+    'pix',
+    '/v1/orders',
+    {
+      type: 'online',
+      total_amount: amount,
+      external_reference: input.externalReference,
+      processing_mode: 'automatic',
+      transactions: {
+        payments: [
+          {
+            amount,
+            payment_method: { id: 'pix', type: 'bank_transfer' },
+            expiration_time: input.expiresIn,
+          },
+        ],
+      },
+      payer: { email: input.payerEmail },
+    },
+    idempotencyKey
+  );
+};
+
+export const cancelOrder = (id: string, idempotencyKey: string) =>
+  mpPost<MpOrder>(
+    'pix',
+    `/v1/orders/${encodeURIComponent(id)}/cancel`,
+    {},
     idempotencyKey
   );
