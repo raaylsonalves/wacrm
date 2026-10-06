@@ -11,6 +11,7 @@ import { useState, type FormEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { SCREEN_SIZE, screenHtml, type ScreenId } from './screens';
+import { LEAD_INTERESTS, type LeadInterest } from '@/lib/landing/lead';
 import './landing.css';
 
 const SALES_WHATSAPP = (process.env.NEXT_PUBLIC_SALES_WHATSAPP ?? '').replace(
@@ -59,7 +60,7 @@ function Phone({
       </div>
       <Image
         className="lp-phone-frame"
-        src="/landing/iphone-frame.png"
+        src="/landing/iphone-frame-v3.png"
         alt=""
         width={444}
         height={903}
@@ -369,12 +370,13 @@ const FAQ = [
   ],
 ];
 
-const NEEDS = [
-  'Landing page',
-  'Agendamento',
-  'Integração',
-  'Implantação do CRM',
-];
+const FORM_ERRORS: Record<string, string> = {
+  invalid_phone: 'Confira o WhatsApp: use DDD + número, como (85) 99999-0000.',
+  rate: 'Muitas tentativas seguidas. Tente de novo em alguns minutos.',
+  not_configured:
+    'O formulário ainda não está ativo. Fale com a gente pelo WhatsApp.',
+  failed: 'Não conseguimos enviar agora. Tente de novo em instantes.',
+};
 
 const brl = (n: number) =>
   n.toLocaleString('pt-BR', {
@@ -386,8 +388,13 @@ export function Landing() {
   const [annual, setAnnual] = useState(false);
   const [pix, setPix] = useState(true);
   const [open, setOpen] = useState(0);
-  const [need, setNeed] = useState(NEEDS[0]);
+  const [need, setNeed] = useState<LeadInterest>(LEAD_INTERESTS[0]);
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [website, setWebsite] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const payNote = annual
     ? pix
@@ -397,14 +404,25 @@ export function Landing() {
       ? 'Mensal no Pix: cobrança todo mês. Cancele quando quiser.'
       : 'Mensal no cartão: renovação automática. Cancele quando quiser.';
 
-  function contact(e: FormEvent) {
+  async function sendLead(e: FormEvent) {
     e.preventDefault();
-    const text = `Olá! Sou ${name.trim() || 'um interessado'} e quero um orçamento de: ${need}.`;
-    window.open(
-      `https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent(text)}`,
-      '_blank',
-      'noopener'
-    );
+    if (sending) return;
+    setFormError(null);
+    setSending(true);
+    try {
+      const res = await fetch('/api/landing/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, interest: need, website }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (res.ok) setSent(true);
+      else setFormError(res.status === 429 ? 'rate' : (data.error ?? 'failed'));
+    } catch {
+      setFormError('failed');
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -1087,63 +1105,34 @@ export function Landing() {
       </section>
 
       {/* ============ UMA CONVERSA, DO COMEÇO AO FIM ============ */}
-      <section
-        className="lp-sec"
-        style={{
-          background: 'var(--paper)',
-          borderTop: '1px solid var(--line)',
-          borderBottom: '1px solid var(--line)',
-          padding: '110px 20px',
-        }}
-      >
-        <div className="lp-wrap lp-flow">
-          <div className="lp-flow-head">
+      <section className="lp-sec lp-day">
+        <div className="lp-wrap">
+          <div className="lp-day-head lp-rise">
             <span className="lp-eyebrow">Um dia na barbearia</span>
             <h2 className="lp-h2">
               Uma conversa, do primeiro contato ao retorno.
             </h2>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 16,
-                lineHeight: 1.6,
-                color: 'var(--muted)',
-                maxWidth: 420,
-              }}
-            >
-              Quem fez cada passo fica registrado: a IA, uma automação ou alguém
-              da equipe.
+            <p>
+              Cada passo fica registrado com quem fez: a IA, uma automação ou
+              alguém da equipe.
             </p>
           </div>
-          <ol className="lp-flow-list">
+          <ol className="lp-steps">
+            <span className="lp-steps-line" aria-hidden="true">
+              <span className="lp-steps-fill" />
+            </span>
             {FLOW.map((f) => (
-              <li key={f.time} className="lp-flow-item lp-rise">
-                <span className="lp-flow-time">
-                  {f.time}
-                  <span
-                    style={{
-                      borderRadius: 999,
-                      padding: '2px 9px',
-                      fontSize: 11.5,
-                      background: f.tone[0],
-                      color: f.tone[1],
-                    }}
-                  >
-                    {f.who}
-                  </span>
-                </span>
-                <b style={{ fontSize: 17, letterSpacing: '-0.01em' }}>
-                  {f.title}
-                </b>
+              <li key={f.time} className="lp-step">
+                <span className="lp-step-dot" aria-hidden="true" />
+                <span className="lp-step-time lp-serif">{f.time}</span>
                 <span
-                  style={{
-                    fontSize: 14.5,
-                    lineHeight: 1.55,
-                    color: 'var(--muted)',
-                  }}
+                  className="lp-step-who"
+                  style={{ background: f.tone[0], color: f.tone[1] }}
                 >
-                  {f.body}
+                  {f.who}
                 </span>
+                <b>{f.title}</b>
+                <span className="lp-step-body">{f.body}</span>
               </li>
             ))}
           </ol>
@@ -1217,45 +1206,92 @@ export function Landing() {
               </div>
             </div>
           </div>
-          {SALES_WHATSAPP ? (
-            <form className="lp-form" onSubmit={contact}>
-              <b style={{ fontSize: 20, letterSpacing: '-0.02em' }}>
-                Fale com a gente
-              </b>
-              <label htmlFor="lp-nome">
-                Nome
-                <input
-                  id="lp-nome"
-                  type="text"
-                  autoComplete="name"
-                  placeholder="Seu nome"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </label>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>Interesse</span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {NEEDS.map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className="lp-tag"
-                    aria-pressed={need === n}
-                    onClick={() => setNeed(n)}
+          <form className="lp-form" onSubmit={sendLead} noValidate>
+            <b style={{ fontSize: 20, letterSpacing: '-0.02em' }}>
+              Fale com a gente
+            </b>
+            {sent ? (
+              <div className="lp-sent" role="status">
+                <b>Recebemos seu contato.</b>
+                <span>Vamos te chamar no WhatsApp em horário comercial.</span>
+                {SALES_WHATSAPP && (
+                  <a
+                    href={`https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent(`Olá! Sou ${name.trim() || 'um interessado'} e quero um orçamento de: ${need}.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="lp-btn lp-btn-line"
                   >
-                    {n}
-                  </button>
-                ))}
+                    Prefiro falar agora no WhatsApp
+                  </a>
+                )}
               </div>
-              <button
-                type="submit"
-                className="lp-btn lp-btn-dark"
-                style={{ marginTop: 4 }}
-              >
-                Continuar no WhatsApp
-              </button>
-            </form>
-          ) : null}
+            ) : (
+              <>
+                <label htmlFor="lp-nome">
+                  Nome
+                  <input
+                    id="lp-nome"
+                    type="text"
+                    autoComplete="name"
+                    placeholder="Seu nome"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </label>
+                <label htmlFor="lp-zap">
+                  WhatsApp
+                  <input
+                    id="lp-zap"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="(85) 99999-0000"
+                    value={phone}
+                    aria-invalid={formError === 'invalid_phone'}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </label>
+                {/* Honeypot: hidden from people, filled by bots. */}
+                <input
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  className="lp-hp"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                />
+                <span style={{ fontSize: 13, fontWeight: 700 }}>Interesse</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {LEAD_INTERESTS.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className="lp-tag"
+                      aria-pressed={need === n}
+                      onClick={() => setNeed(n)}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                {formError && (
+                  <span className="lp-form-error" role="alert">
+                    {FORM_ERRORS[formError] ?? FORM_ERRORS.failed}
+                  </span>
+                )}
+                <button
+                  type="submit"
+                  className="lp-btn lp-btn-dark"
+                  style={{ marginTop: 4 }}
+                  disabled={sending}
+                >
+                  {sending ? 'Enviando…' : 'Quero ser chamado'}
+                </button>
+              </>
+            )}
+          </form>
         </div>
       </section>
 
@@ -1368,7 +1404,7 @@ export function Landing() {
               return (
                 <div
                   key={p.id}
-                  className={`lp-plan${p.hot ? 'lp-plan-hot' : ''}`}
+                  className={`lp-plan${p.hot ? ' lp-plan-hot' : ''}`}
                 >
                   <span
                     style={{
@@ -1549,64 +1585,6 @@ export function Landing() {
               )}
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* ============ CTA FINAL ============ */}
-      <section className="lp-sec" style={{ padding: '0 20px 90px' }}>
-        <div
-          className="lp-wrap lp-rise"
-          style={{
-            borderRadius: 32,
-            background: '#ece4fc',
-            padding: 'clamp(36px, 6vw, 80px)',
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 28,
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 14,
-              maxWidth: 640,
-            }}
-          >
-            <h2
-              className="lp-serif"
-              style={{
-                margin: 0,
-                fontWeight: 500,
-                fontSize: 'clamp(34px, 4.8vw, 62px)',
-                lineHeight: 1.02,
-                letterSpacing: '-0.025em',
-              }}
-            >
-              Seu próximo cliente já está no WhatsApp.
-            </h2>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 17,
-                lineHeight: 1.6,
-                color: '#4a3794',
-              }}
-            >
-              Coloque a IA para responder hoje e veja amanhã o que ela agendou e
-              vendeu.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <Link href="/signup" className="lp-btn lp-btn-dark">
-              Começar agora
-            </Link>
-            <a href="#studio" className="lp-btn lp-btn-line">
-              Falar com a equipe
-            </a>
-          </div>
         </div>
       </section>
 
