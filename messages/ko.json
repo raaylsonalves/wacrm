@@ -22,6 +22,11 @@
         "deleteContacts": "연락처를 삭제할",
         "sendMessages": "메시지를 보낼"
       }
+    },
+    "confirmDialog": {
+      "title": "확실한가요?",
+      "cancel": "취소",
+      "confirm": "확인"
     }
   },
   "LoginPage": {

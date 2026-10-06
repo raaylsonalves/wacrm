@@ -84,6 +84,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { confirmDialog } from '@/components/confirm-dialog';
 import { neighborId, useInboxShortcuts } from '@/hooks/use-inbox-shortcuts';
 import { SkeletonList } from '@/components/ui/skeleton';
 
@@ -126,7 +127,8 @@ const STATUS_LABEL_KEY: Record<ConversationStatus, string> = {
   closed: 'statusClosed',
 };
 
-type InboxFilter = ConversationStatus | 'all' | 'unread' | 'snoozed' | 'waiting_human';
+type InboxFilter =
+  ConversationStatus | 'all' | 'unread' | 'snoozed' | 'waiting_human';
 
 const SNOOZE_PRESETS: SnoozePreset[] = ['1h', '3h', 'tomorrow'];
 
@@ -153,9 +155,9 @@ export function ConversationList({
 
   // Upcoming appointments, one query for the whole list — they put a
   // conversation in the "Scheduled" queue and on its next-action line.
-  const [appointments, setAppointments] = useState<Map<string, UpcomingAppointment>>(
-    () => new Map()
-  );
+  const [appointments, setAppointments] = useState<
+    Map<string, UpcomingAppointment>
+  >(() => new Map());
   useEffect(() => {
     if (!accountId) return;
     let alive = true;
@@ -168,7 +170,10 @@ export function ConversationList({
       .order('starts_at', { ascending: true })
       .limit(500)
       .then(({ data, error }) => {
-        if (alive && !error) setAppointments(earliestByContact((data ?? []) as UpcomingAppointment[]));
+        if (alive && !error)
+          setAppointments(
+            earliestByContact((data ?? []) as UpcomingAppointment[])
+          );
       });
     return () => {
       alive = false;
@@ -285,9 +290,9 @@ export function ConversationList({
   // than per row (specs/channel-routing-responsibles.md) — a row's
   // eligible-assignee set is a pure lookup against this map, no
   // per-conversation round trip.
-  const [routingPolicyMap, setRoutingPolicyMap] = useState<Map<string, string[]>>(
-    new Map()
-  );
+  const [routingPolicyMap, setRoutingPolicyMap] = useState<
+    Map<string, string[]>
+  >(new Map());
   useEffect(() => {
     let cancelled = false;
     fetch('/api/settings/channel-routing')
@@ -296,10 +301,15 @@ export function ConversationList({
         if (cancelled || !payload) return;
         const entries: ChannelPolicyEntry[] = (payload.channels ?? [])
           .filter((c: { restricted: boolean }) => c.restricted)
-          .map((c: { channelId: string | null; responsibleUserIds: string[] }) => ({
-            channelId: c.channelId,
-            responsibleUserIds: c.responsibleUserIds,
-          }));
+          .map(
+            (c: {
+              channelId: string | null;
+              responsibleUserIds: string[];
+            }) => ({
+              channelId: c.channelId,
+              responsibleUserIds: c.responsibleUserIds,
+            })
+          );
         setRoutingPolicyMap(policiesToMap(entries));
       })
       .catch(() => {
@@ -394,12 +404,14 @@ export function ConversationList({
 
   const handleRowClearHistory = useCallback(
     async (conversationId: string) => {
-      const res = await fetch(
-        `/api/conversations/${conversationId}/messages`,
-        { method: 'DELETE' }
-      );
+      const res = await fetch(`/api/conversations/${conversationId}/messages`, {
+        method: 'DELETE',
+      });
       if (!res.ok) {
-        console.error('Failed to clear conversation history:', await res.text());
+        console.error(
+          'Failed to clear conversation history:',
+          await res.text()
+        );
         toast.error(t('clearHistoryFailed'));
         return;
       }
@@ -473,7 +485,9 @@ export function ConversationList({
           snoozed: isSnoozed(c, nowTick),
           lastSenderType: c.last_message_sender_type,
           lastMessageAt: c.last_message_at,
-          nextAppointmentAt: c.contact_id ? appointments.get(c.contact_id)?.starts_at : null,
+          nextAppointmentAt: c.contact_id
+            ? appointments.get(c.contact_id)?.starts_at
+            : null,
           now: nowTick,
         })
       );
@@ -481,7 +495,11 @@ export function ConversationList({
     return map;
   }, [conversations, aiOn, appointments, nowTick]);
   const queueCounts = useMemo(() => {
-    const counts: Record<WorkQueue, number> = { reply: 0, waiting: 0, scheduled: 0 };
+    const counts: Record<WorkQueue, number> = {
+      reply: 0,
+      waiting: 0,
+      scheduled: 0,
+    };
     for (const q of queueById.values()) if (q) counts[q] += 1;
     return counts;
   }, [queueById]);
@@ -504,7 +522,10 @@ export function ConversationList({
       // The AI stopped (hand-off / pause) and no person took it yet — the
       // amber dot on the avatar.
       result = result.filter(
-        (c) => c.status !== 'closed' && !c.assigned_agent_id && !!c.ai_autoreply_disabled
+        (c) =>
+          c.status !== 'closed' &&
+          !c.assigned_agent_id &&
+          !!c.ai_autoreply_disabled
       );
     } else if (filter !== 'all' && filter !== 'snoozed') {
       result = result.filter((c) => c.status === filter);
@@ -576,10 +597,13 @@ export function ConversationList({
       }
     },
     reply: () => {
-      document.querySelector<HTMLTextAreaElement>('[data-inbox-composer]')?.focus();
+      document
+        .querySelector<HTMLTextAreaElement>('[data-inbox-composer]')
+        ?.focus();
     },
     snooze: () => {
-      if (activeConv && activeConv.status !== 'closed') setSnoozeDialogOpen(true);
+      if (activeConv && activeConv.status !== 'closed')
+        setSnoozeDialogOpen(true);
     },
     help: () => setShortcutsHelpOpen(true),
   });
@@ -618,7 +642,7 @@ export function ConversationList({
     // w-full on mobile so the list occupies the whole viewport when it's
     // the single pane showing; fixed 320px on desktop where it shares the
     // row with the thread + contact sidebar.
-    <div className="flex h-full w-full flex-col lg:w-72 lg:bg-card 2xl:w-80">
+    <div className="lg:bg-card flex h-full w-full flex-col lg:w-72 2xl:w-80">
       {/* Search + Filter */}
       <div className="border-border space-y-2.5 p-3 lg:border-b">
         {/* Desktop page heading (v2): the shell header steps aside on the
@@ -627,7 +651,7 @@ export function ConversationList({
           {tHeader('inbox')}
         </h1>
         {/* The inbox as a to-do list — tap a queue, tap again to clear. */}
-        <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 [scrollbar-width:none] lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
+        <div className="-mx-3 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-3 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
           {(
             [
               ['reply', CornerUpLeft],
@@ -672,7 +696,7 @@ export function ConversationList({
             value={search}
             onChange={handleSearchChange}
             placeholder={t('searchPlaceholder')}
-            className="bg-card border-border text-foreground placeholder-muted-foreground focus:border-primary/50 h-11 rounded-full pl-9 text-sm lg:bg-muted lg:h-10 lg:border-transparent"
+            className="bg-card border-border text-foreground placeholder-muted-foreground focus:border-primary/50 lg:bg-muted h-11 rounded-full pl-9 text-sm lg:h-10 lg:border-transparent"
           />
         </div>
 
@@ -937,7 +961,9 @@ export function ConversationList({
                 aiOn={aiOn}
                 queue={queueById.get(conv.id) ?? null}
                 appointment={
-                  conv.contact_id ? (appointments.get(conv.contact_id) ?? null) : null
+                  conv.contact_id
+                    ? (appointments.get(conv.contact_id) ?? null)
+                    : null
                 }
                 responseTimeTargetMinutes={responseTimeTargetMinutes}
                 channelLabel={
@@ -1127,8 +1153,9 @@ function ConversationItem({
   // closed (then only a template goes out).
   const win = windowState({
     isOfficialApi: !conversation.whatsapp_channel_id,
-    lastCustomerMessageAt: (conversation as { last_customer_message_at?: string | null })
-      .last_customer_message_at,
+    lastCustomerMessageAt: (
+      conversation as { last_customer_message_at?: string | null }
+    ).last_customer_message_at,
     now: new Date(now),
   });
   const windowBadge =
@@ -1189,7 +1216,12 @@ function ConversationItem({
       {/* Avatar — the photo when we have one (WAHA numbers), initials
           otherwise; the dot says who is answering. */}
       <div className="relative shrink-0">
-        <div className={cn('flex h-[42px] w-[42px] items-center justify-center overflow-hidden rounded-full text-[13px] font-bold', TONE_SOLID[toneFor(displayName)])}>
+        <div
+          className={cn(
+            'flex h-[42px] w-[42px] items-center justify-center overflow-hidden rounded-full text-[13px] font-bold',
+            TONE_SOLID[toneFor(displayName)]
+          )}
+        >
           {contact?.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element -- contact avatars come from arbitrary hosts; next/image would need every one allow-listed
             <img
@@ -1365,9 +1397,13 @@ function ConversationItem({
             {queue === 'scheduled' && appointment && (
               <span className="ml-auto shrink-0 opacity-80">
                 {isToday(new Date(appointment.starts_at))
-                  ? t('queueWhen.today', { time: format(new Date(appointment.starts_at), 'HH:mm') })
+                  ? t('queueWhen.today', {
+                      time: format(new Date(appointment.starts_at), 'HH:mm'),
+                    })
                   : isTomorrow(new Date(appointment.starts_at))
-                    ? t('queueWhen.tomorrow', { time: format(new Date(appointment.starts_at), 'HH:mm') })
+                    ? t('queueWhen.tomorrow', {
+                        time: format(new Date(appointment.starts_at), 'HH:mm'),
+                      })
                     : format(new Date(appointment.starts_at), 'dd/MM HH:mm')}
               </span>
             )}
@@ -1604,8 +1640,8 @@ function ConversationItem({
                 disabled={pendingKey !== null}
                 closeOnClick={false}
                 variant="destructive"
-                onClick={() => {
-                  if (!window.confirm(t('clearHistoryConfirm'))) return;
+                onClick={async () => {
+                  if (!(await confirmDialog(t('clearHistoryConfirm')))) return;
                   runPending('clear-history', () =>
                     onClearHistory(conversation.id)
                   );

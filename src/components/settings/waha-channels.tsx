@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { SettingsPanelHead } from './settings-panel-head';
 import { cn } from '@/lib/utils';
+import { confirmDialog } from '@/components/confirm-dialog';
 
 type ChannelStatus = 'connecting' | 'connected' | 'disconnected';
 
@@ -251,7 +252,8 @@ export function WahaChannels() {
   }
 
   async function handleDelete(channel: WahaChannel) {
-    if (!window.confirm(t('deleteConfirm', { label: channel.label }))) return;
+    if (!(await confirmDialog(t('deleteConfirm', { label: channel.label }))))
+      return;
     setDeletingId(channel.id);
     try {
       const res = await fetch(`/api/whatsapp/waha/channels/${channel.id}`, {

@@ -30,6 +30,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import type { AiAgentSummary } from './ai-agents-list';
+import { confirmDialog } from '@/components/confirm-dialog';
 
 interface RouterMember {
   agent_id: string;
@@ -151,7 +152,7 @@ export function AiRouters({ agents }: { agents: AiAgentSummary[] }) {
   }
 
   async function handleDelete(router: RouterRow) {
-    if (!window.confirm(t('deleteRouterConfirm', { name: router.name })))
+    if (!(await confirmDialog(t('deleteRouterConfirm', { name: router.name }))))
       return;
     try {
       const res = await fetch(`/api/ai/routers/${router.id}`, {

@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Loader2, Pause, Play, Plus, Target, X } from 'l
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useCan } from '@/hooks/use-can';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SkeletonList } from '@/components/ui/skeleton';
@@ -141,6 +142,31 @@ export default function ProspectingPage() {
     }, 15_000);
     return () => window.clearInterval(timer);
   }, [anyRunning, load]);
+
+  // A campaign that already sent everything is "completed", but its leads
+  // keep replying and getting qualified. Refresh when a customer writes:
+  // once right away (replied) and once after the agent had time to answer
+  // and maybe qualify. RLS scopes the stream to this account.
+  const hasCampaigns = (campaigns?.length ?? 0) > 0;
+  useEffect(() => {
+    if (!hasCampaigns) return;
+    const supabase = createClient();
+    const timers: number[] = [];
+    const channel = supabase
+      .channel('prospecting:replies')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: 'sender_type=eq.customer' },
+        () => {
+          timers.push(window.setTimeout(load, 2_000), window.setTimeout(load, 25_000));
+        },
+      )
+      .subscribe();
+    return () => {
+      timers.forEach((id) => window.clearTimeout(id));
+      void supabase.removeChannel(channel);
+    };
+  }, [hasCampaigns, load]);
 
   async function act(id: string, action: 'pause' | 'resume' | 'cancel') {
     const res = await fetch(`/api/prospecting/campaigns/${id}`, {

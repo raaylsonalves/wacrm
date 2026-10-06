@@ -1,11 +1,12 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata, Viewport } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
-import { Plus_Jakarta_Sans } from "next/font/google";
-import Script from "next/script";
-import "./globals.css";
-import { ThemeProvider } from "@/hooks/use-theme";
-import { ThemedToaster } from "@/components/themed-toaster";
+import { Plus_Jakarta_Sans } from 'next/font/google';
+import Script from 'next/script';
+import './globals.css';
+import { ThemeProvider } from '@/hooks/use-theme';
+import { ThemedToaster } from '@/components/themed-toaster';
+import { ConfirmHost } from '@/components/confirm-dialog';
 import {
   DEFAULT_MODE,
   DEFAULT_THEME,
@@ -13,34 +14,34 @@ import {
   MODES,
   STORAGE_KEY,
   THEME_IDS,
-} from "@/lib/themes";
+} from '@/lib/themes';
 
 const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-sans",
-  subsets: ["latin"],
+  variable: '--font-sans',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "wacrm",
-    template: "%s — wacrm",
+    default: 'wacrm',
+    template: '%s — wacrm',
   },
-  description: "Self-hostable CRM template for WhatsApp.",
+  description: 'Self-hostable CRM template for WhatsApp.',
   robots: {
     index: false,
     follow: false,
   },
   icons: {
-    icon: [{ url: "/icon" }],
-    apple: [{ url: "/apple-icon" }],
+    icon: [{ url: '/icon' }],
+    apple: [{ url: '/apple-icon' }],
   },
   // iOS "Add to Home Screen" launches full-screen with this (the
   // manifest alone isn't read for this on older iOS versions) — and
   // Web Push on iOS only works from the installed app at all.
   appleWebApp: {
     capable: true,
-    title: "wacrm",
-    statusBarStyle: "black-translucent",
+    title: 'wacrm',
+    statusBarStyle: 'black-translucent',
   },
   formatDetection: {
     email: false,
@@ -51,10 +52,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f3eee6" },
-    { media: "(prefers-color-scheme: dark)", color: "#141318" },
+    { media: '(prefers-color-scheme: light)', color: '#f3eee6' },
+    { media: '(prefers-color-scheme: dark)', color: '#141318' },
   ],
-  colorScheme: "dark light",
+  colorScheme: 'dark light',
 };
 
 // Inline boot script — runs before React hydrates so the user's
@@ -119,11 +120,12 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }}
         />
       </head>
-      <body className="min-h-full bg-background text-foreground font-sans">
+      <body className="bg-background text-foreground min-h-full font-sans">
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ThemeProvider>
             {children}
             <ThemedToaster />
+            <ConfirmHost />
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { confirmDialog } from '@/components/confirm-dialog';
 
 export interface AiAgentSummary {
   id: string;
@@ -118,7 +119,8 @@ export function AiAgentsList({
   }
 
   async function handleDelete(agent: AiAgentSummary) {
-    if (!window.confirm(t('deleteConfirm', { name: agent.name }))) return;
+    if (!(await confirmDialog(t('deleteConfirm', { name: agent.name }))))
+      return;
     setDeletingId(agent.id);
     try {
       const res = await fetch(`/api/ai/agents/${agent.id}`, {

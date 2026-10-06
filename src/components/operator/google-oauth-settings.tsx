@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { CalendarCog, Copy, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { confirmDialog } from '@/components/confirm-dialog';
 
 interface State {
   source: 'env' | 'database' | null;
@@ -63,7 +64,7 @@ export function GoogleOAuthSettings() {
   }
 
   async function remove() {
-    if (!window.confirm(t('confirmRemove'))) return;
+    if (!(await confirmDialog(t('confirmRemove')))) return;
     await fetch('/api/platform/google-oauth', { method: 'DELETE' });
     void load();
   }

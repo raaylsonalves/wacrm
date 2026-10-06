@@ -8,6 +8,7 @@ import { CalendarCheck, Loader2, Unlink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { dateFnsLocale } from '@/lib/date-fns-locale';
+import { confirmDialog } from '@/components/confirm-dialog';
 
 interface Status {
   enabled: boolean;
@@ -60,7 +61,7 @@ export function GoogleCalendarCard() {
   const c = status.connection;
 
   async function disconnect() {
-    if (!window.confirm(t('confirmDisconnect'))) return;
+    if (!(await confirmDialog(t('confirmDisconnect')))) return;
     setBusy(true);
     const res = await fetch('/api/integrations/google-calendar', {
       method: 'DELETE',

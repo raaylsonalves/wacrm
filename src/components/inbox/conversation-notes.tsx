@@ -13,6 +13,7 @@ import { useCan } from '@/hooks/use-can';
 import { dateFnsLocale } from '@/lib/date-fns-locale';
 import { Button } from '@/components/ui/button';
 import type { ConversationNote } from '@/types';
+import { confirmDialog } from '@/components/confirm-dialog';
 
 /**
  * Teammate-only notes on one conversation (migration 070). Lives in its
@@ -59,7 +60,6 @@ export function ConversationNotes({
     };
   }, [conversationId]);
 
-
   async function handleAdd() {
     const body = draft.trim();
     if (!body || !user || !accountId) return;
@@ -85,7 +85,7 @@ export function ConversationNotes({
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm(t('deleteConfirm'))) return;
+    if (!(await confirmDialog(t('deleteConfirm')))) return;
     const { error } = await createClient()
       .from('conversation_notes')
       .delete()

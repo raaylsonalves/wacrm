@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { contactHandle } from '@/lib/whatsapp/wa-identity';
+import { confirmDialog } from '@/components/confirm-dialog';
 
 interface ContactDetailViewProps {
   open: boolean;
@@ -283,7 +284,7 @@ export function ContactDetailView({
 
   async function anonymizeContact() {
     if (!contactId) return;
-    if (!window.confirm(t('lgpd.anonymizeConfirm'))) return;
+    if (!(await confirmDialog(t('lgpd.anonymizeConfirm')))) return;
 
     setAnonymizing(true);
     try {

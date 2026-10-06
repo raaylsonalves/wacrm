@@ -22,6 +22,11 @@
         "deleteContacts": "eliminar contactos",
         "sendMessages": "enviar mensajes"
       }
+    },
+    "confirmDialog": {
+      "title": "¿Estás seguro?",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar"
     }
   },
   "LoginPage": {

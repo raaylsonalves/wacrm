@@ -38,6 +38,7 @@ import {
   AccordionContent,
 } from '@/components/ui/accordion';
 import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
+import { confirmDialog } from '@/components/confirm-dialog';
 
 const MASKED_TOKEN = '••••••••••••••••';
 
@@ -279,7 +280,7 @@ export function WhatsAppConfig() {
     if (loadedAccountIdRef.current === accountId) return;
     loadedAccountIdRef.current = accountId;
     fetchConfig(accountId);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on user?.id; the user object changes identity on every token refresh
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on user?.id; the user object changes identity on every token refresh
   }, [authLoading, profileLoading, user?.id, accountId, fetchConfig]);
 
   async function handleToggleMirrorMedia(next: boolean) {
@@ -483,7 +484,7 @@ export function WhatsAppConfig() {
   }
 
   async function handleReset() {
-    if (!confirm(t('resetConfirm'))) {
+    if (!(await confirmDialog(t('resetConfirm')))) {
       return;
     }
 
@@ -581,12 +582,12 @@ export function WhatsAppConfig() {
           {showResetBanner && (
             <Alert className="border-tone-salmon-ink/30 bg-tone-salmon-soft">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="mt-0.5 size-5 shrink-0 text-tone-salmon-ink" />
+                <AlertTriangle className="text-tone-salmon-ink mt-0.5 size-5 shrink-0" />
                 <div className="flex-1">
-                  <AlertTitle className="mb-1 text-tone-salmon-ink">
+                  <AlertTitle className="text-tone-salmon-ink mb-1">
                     {t('tokenCorrupted')}
                   </AlertTitle>
-                  <AlertDescription className="text-sm text-tone-salmon-ink">
+                  <AlertDescription className="text-tone-salmon-ink text-sm">
                     {statusMessage}
                   </AlertDescription>
                   <Button
@@ -616,12 +617,12 @@ export function WhatsAppConfig() {
           {saveFailure && (
             <Alert className="border-tone-pink-ink/30 bg-tone-pink-soft">
               <div className="flex items-start gap-3">
-                <XCircle className="mt-0.5 size-5 shrink-0 text-tone-pink-ink" />
+                <XCircle className="text-tone-pink-ink mt-0.5 size-5 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <AlertTitle className="mb-1 text-tone-pink-ink">
+                  <AlertTitle className="text-tone-pink-ink mb-1">
                     {t('lastSaveFailed')}
                   </AlertTitle>
-                  <AlertDescription className="text-sm text-tone-pink-ink">
+                  <AlertDescription className="text-tone-pink-ink text-sm">
                     {saveFailure.message}
                   </AlertDescription>
                   {saveFailure.meta && renderMetaDetails(saveFailure.meta)}
@@ -636,7 +637,7 @@ export function WhatsAppConfig() {
               {connectionStatus === 'connected' ? (
                 <CheckCircle2 className="text-primary size-4" />
               ) : (
-                <XCircle className="size-4 text-tone-pink-ink" />
+                <XCircle className="text-tone-pink-ink size-4" />
               )}
               <AlertTitle className="text-foreground mb-0">
                 {connectionStatus === 'connected'
@@ -686,14 +687,16 @@ export function WhatsAppConfig() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   {isRegistered ? (
-                    <CheckCircle2 className="size-4 text-tone-mint-ink" />
+                    <CheckCircle2 className="text-tone-mint-ink size-4" />
                   ) : (
-                    <AlertTriangle className="size-4 text-tone-salmon-ink" />
+                    <AlertTriangle className="text-tone-salmon-ink size-4" />
                   )}
                   <AlertTitle
                     className={
                       'mb-0 ' +
-                      (isRegistered ? 'text-tone-mint-ink' : 'text-tone-salmon-ink')
+                      (isRegistered
+                        ? 'text-tone-mint-ink'
+                        : 'text-tone-salmon-ink')
                     }
                   >
                     {isRegistered ? t('registered') : t('notRegistered')}
@@ -758,9 +761,9 @@ export function WhatsAppConfig() {
                     {Object.entries(registrationProbe.checks).map(([k, v]) => (
                       <li key={k} className="flex items-center gap-1.5">
                         {v === true ? (
-                          <CheckCircle2 className="size-3 shrink-0 text-tone-mint-ink" />
+                          <CheckCircle2 className="text-tone-mint-ink size-3 shrink-0" />
                         ) : v === false ? (
-                          <XCircle className="size-3 shrink-0 text-tone-pink-ink" />
+                          <XCircle className="text-tone-pink-ink size-3 shrink-0" />
                         ) : (
                           <span className="border-border size-3 shrink-0 rounded-full border" />
                         )}
@@ -769,7 +772,7 @@ export function WhatsAppConfig() {
                     ))}
                   </ul>
                   {(registrationProbe.errors ?? []).length > 0 && (
-                    <ul className="space-y-0.5 pt-1 text-tone-pink-ink">
+                    <ul className="text-tone-pink-ink space-y-0.5 pt-1">
                       {registrationProbe.errors?.map((e, i) => (
                         <li key={i}>• {e}</li>
                       ))}
@@ -947,7 +950,7 @@ export function WhatsAppConfig() {
                       {t('mirrorInboundDesc')}
                     </p>
                     {!mirrorMedia && (
-                      <p className="mt-1 text-xs text-tone-salmon-ink">
+                      <p className="text-tone-salmon-ink mt-1 text-xs">
                         {t('mirrorInboundOffWarning')}
                       </p>
                     )}
