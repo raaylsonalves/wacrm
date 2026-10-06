@@ -56,7 +56,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         // Nothing paid yet: the owner goes to the payment step. Teammates
         // cannot pay, so they are left alone.
         else if (
-          data.subscription_status === 'pending' &&
+          (data.subscription_status === 'pending' ||
+            data.subscription_status === 'canceled') &&
           data.owner_user_id === user?.id
         ) {
           router.replace('/onboarding/payment');

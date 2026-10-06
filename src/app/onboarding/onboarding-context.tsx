@@ -95,7 +95,8 @@ export function OnboardingProvider({
       // dashboard sends them back to the payment step, which must stay
       // reachable or the two redirects would loop.
       const owesPayment =
-        account?.subscription_status === 'pending' &&
+        (account?.subscription_status === 'pending' ||
+          account?.subscription_status === 'canceled') &&
         window.location.pathname.startsWith('/onboarding/payment');
       if (account?.onboarded_at && !owesPayment) {
         router.replace('/dashboard');

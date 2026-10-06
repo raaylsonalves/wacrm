@@ -6,7 +6,8 @@ describe('isAccountUsable', () => {
     expect(isAccountUsable('pending')).toBe(false);
     expect(isAccountUsable('')).toBe(false);
     expect(isAccountUsable('hacked')).toBe(false);
-    for (const s of ['active', 'exempt', 'past_due', 'canceled']) {
+    expect(isAccountUsable('canceled')).toBe(false);
+    for (const s of ['active', 'exempt', 'past_due']) {
       expect(isAccountUsable(s)).toBe(true);
     }
   });

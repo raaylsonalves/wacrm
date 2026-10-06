@@ -196,8 +196,22 @@ async function applyPreapproval(
     .update(patch)
     .eq('id', sub.id);
   if (upErr) throw upErr;
-  if (status !== 'pending') {
-    await setAccountStatus(db, sub.account_id as string, status);
+  if (status === 'canceled') {
+    // Cancelled: access runs to the end of the period already paid, then
+    // the sweep closes the account. Close it now only if there is none.
+    const { data: paid } = await db
+      .from('billing_subscriptions')
+      .select('current_period_end')
+      .eq('id', sub.id)
+      .maybeSingle();
+    const end = paid?.current_period_end
+      ? new Date(paid.current_period_end as string)
+      : null;
+    if (!end || end.getTime() <= Date.now()) {
+      await setAccountStatus(db, sub.account_id, 'canceled');
+    }
+  } else if (status !== 'pending') {
+    await setAccountStatus(db, sub.account_id, status);
   }
   return 'applied';
 }

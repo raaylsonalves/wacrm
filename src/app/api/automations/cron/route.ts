@@ -10,6 +10,7 @@ import { retryPendingRelays } from '@/lib/cases/relay'
 import { dispatchPendingPushes } from '@/lib/notifications/notify'
 import { runScheduledBroadcasts } from '@/lib/whatsapp/broadcast-schedule'
 import { runCalendarSync } from '@/lib/google-calendar/sync'
+import { runBillingSweep } from '@/lib/billing/sweep'
 import { sweepAppointmentReminders, sweepSlaBreaches } from '@/lib/notifications/sweeps'
 
 /**
@@ -145,11 +146,18 @@ export async function GET(request: Request) {
   // Google OAuth client configured. Never throws.
   const calendar = await runCalendarSync(supabaseAdmin())
 
+  // Billing: Pix renewals, grace periods and period-end closing
+  // (specs/mercadopago-checkout.md). Never lets one account stop the tick.
+  const billing = await runBillingSweep(supabaseAdmin()).catch((err) => {
+    console.error('[cron] billing sweep failed:', err)
+    return null
+  })
+
   const notifications = {
     sla: await sweepSlaBreaches(supabaseAdmin()),
     reminders: await sweepAppointmentReminders(supabaseAdmin()),
     push: await dispatchPendingPushes(supabaseAdmin()),
   }
 
-  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays, broadcasts, calendar, notifications })
+  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays, broadcasts, calendar, notifications, billing })
 }

@@ -21,15 +21,11 @@ export function canInviteMembers(status: SubscriptionStatus | null): boolean {
 }
 
 /**
- * May this account use the app at all? `pending` (nothing paid, not
- * released) may not. past_due / canceled stay usable here until the grace
- * and period-end rules are enforced; unknown values fail closed.
+ * May this account use the app at all? Not while nothing is paid
+ * (`pending`) and not once a subscription has ended (`canceled`: the sweep
+ * only sets it after the paid period or the grace is over). `past_due`
+ * keeps access during its grace window. Unknown values fail closed.
  */
 export function isAccountUsable(status: string): boolean {
-  return (
-    status === 'active' ||
-    status === 'exempt' ||
-    status === 'past_due' ||
-    status === 'canceled'
-  );
+  return status === 'active' || status === 'exempt' || status === 'past_due';
 }
