@@ -10,6 +10,7 @@ import { BottomNav } from '@/components/layout/bottom-nav';
 import { OperatorBanner } from '@/components/operator/operator-banner';
 import { ModuleGuard } from '@/components/layout/module-guard';
 import { AccountAccessAlert } from '@/components/layout/account-access-alert';
+import { BillingBanner } from '@/components/billing/billing-banner';
 import { BrandColorEffect } from '@/components/layout/brand-color-effect';
 import { AccountTabBranding } from '@/components/layout/account-tab-branding';
 import { PresenceHeartbeat } from '@/components/presence/presence-heartbeat';
@@ -102,6 +103,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               {/* Above every page: writes are being rejected and here's why.
               Renders nothing unless the account/role failed to resolve. */}
               <AccountAccessAlert />
+              {/* Owner-only: a late payment or a Pix waiting to be paid. */}
+              <BillingBanner />
               {/* Pages a client account did not buy never mount (migration 091). */}
               <ModuleGuard>{children}</ModuleGuard>
             </main>

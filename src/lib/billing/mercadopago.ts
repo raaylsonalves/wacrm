@@ -224,3 +224,35 @@ export const cancelOrder = (id: string, idempotencyKey: string) =>
     {},
     idempotencyKey
   );
+
+async function mpPut<T>(
+  source: BillingSource,
+  path: string,
+  body: unknown
+): Promise<T> {
+  const token = accessTokenFor(source);
+  if (!token) throw new MercadoPagoError('access token not configured', 500);
+  const res = await fetch(`${API}${path}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    throw new MercadoPagoError(
+      `Mercado Pago PUT ${path.split('/').filter(Boolean)[0]} answered ${res.status}`,
+      res.status
+    );
+  }
+  return (await res.json()) as T;
+}
+
+/** Stops a card subscription at Mercado Pago (no further charges). */
+export const cancelPreapproval = (id: string) =>
+  mpPut<MpPreapproval>('subs', `/preapproval/${encodeURIComponent(id)}`, {
+    status: 'cancelled',
+  });

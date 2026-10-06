@@ -2990,7 +2990,8 @@
       "response-time": "Tempo de resposta",
       "branding": "Identidade visual",
       "members": "Membros da equipe",
-      "api": "Chaves de API"
+      "api": "Chaves de API",
+      "billing": "Cobrança"
     },
     "groups": {
       "account": "Conta",
@@ -3330,6 +3331,47 @@
       "editDoc": "Editar",
       "deleteDoc": "Excluir",
       "loading": "Carregando…"
+    },
+    "billing": {
+      "title": "Cobrança",
+      "description": "Plano, forma de pagamento e próximas cobranças da sua conta.",
+      "noPlan": "Nenhum plano ativo",
+      "price": "Valor",
+      "perMonth": "R$ {price}/mês",
+      "method": "Pagamento",
+      "methodPix": "Pix",
+      "methodCard": "Cartão de crédito",
+      "cycleMonthly": "mensal",
+      "cycleAnnual": "anual",
+      "nextCharge": "Próxima cobrança",
+      "accessUntil": "Acesso até",
+      "status": {
+        "pending": "Aguardando pagamento",
+        "active": "Ativa",
+        "past_due": "Em atraso",
+        "canceled": "Cancelada",
+        "exempt": "Liberada"
+      },
+      "pastDue": "Há um pagamento em atraso. Regularize para não perder o acesso.",
+      "canceledNote": "A assinatura foi cancelada. Você continua com acesso até o fim do período já pago.",
+      "pixOpenTitle": "Pix em aberto",
+      "pixQrAlt": "QR code do Pix",
+      "pixExpires": "Pague até {date}.",
+      "copy": "Copiar",
+      "copyFailed": "Não foi possível copiar",
+      "subscribe": "Assinar de novo",
+      "payNow": "Pagar agora",
+      "cancelAction": "Cancelar assinatura",
+      "cancelConfirm": "Cancelar a assinatura? As próximas cobranças param e o acesso continua até o fim do período já pago.",
+      "cancelFailed": "Não foi possível cancelar agora. Tente de novo em instantes.",
+      "cancelled": "Assinatura cancelada",
+      "exempt": "Esta conta foi liberada pela Nordia e não tem cobrança.",
+      "ownerOnly": "Só o dono da conta pode alterar a cobrança.",
+      "banner": {
+        "late": "Há um pagamento em atraso na sua conta.",
+        "renewal": "O Pix da próxima cobrança está disponível.",
+        "action": "Ver cobrança"
+      }
     }
   },
   "SignupPage": {

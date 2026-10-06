@@ -2,6 +2,7 @@ import {
   Building2,
   Clock,
   Coins,
+  CreditCard,
   FileText,
   KeyRound,
   LayoutGrid,
@@ -36,6 +37,7 @@ export const SETTINGS_SECTIONS = [
   'response-time',
   'branding',
   'members',
+  'billing',
   'api',
 ] as const;
 
@@ -64,6 +66,7 @@ export const SECTION_META: Record<SettingsSection, SectionMeta> = {
   'response-time': { id: 'response-time', label: 'Response time', icon: Clock, group: 'workspace' },
   branding: { id: 'branding', label: 'Branding', icon: Building2, group: 'workspace' },
   members: { id: 'members', label: 'Team members', icon: UsersRound, group: 'workspace' },
+  billing: { id: 'billing', label: 'Billing', icon: CreditCard, group: 'workspace' },
   api: { id: 'api', label: 'API keys', icon: KeyRound, group: 'workspace' },
 };
 

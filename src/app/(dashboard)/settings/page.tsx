@@ -23,6 +23,7 @@ import { DealsSettings } from '@/components/settings/deals-settings';
 import { ResponseTimeSettings } from '@/components/settings/response-time-settings';
 import { BrandingSettings } from '@/components/settings/branding-settings';
 import { MembersTab } from '@/components/settings/members-tab';
+import { BillingPanel } from '@/components/settings/billing-panel';
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
 import {
   resolveSection,
@@ -115,6 +116,7 @@ function SettingsPageInner() {
     'response-time': <ResponseTimeSettings />,
     branding: <BrandingSettings />,
     members: <MembersTab />,
+    billing: <BillingPanel />,
     api: <ApiKeysSettings />,
   };
 

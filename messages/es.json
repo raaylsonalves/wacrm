@@ -2990,7 +2990,8 @@
       "response-time": "Tiempo de respuesta",
       "branding": "Identidad de marca",
       "members": "Miembros del equipo",
-      "api": "Claves de API"
+      "api": "Claves de API",
+      "billing": "Facturación"
     },
     "groups": {
       "account": "Cuenta",
@@ -3330,6 +3331,47 @@
       "editDoc": "Editar",
       "deleteDoc": "Eliminar",
       "loading": "Cargando…"
+    },
+    "billing": {
+      "title": "Facturación",
+      "description": "Tu plan, forma de pago y próximos cobros.",
+      "noPlan": "Sin plan activo",
+      "price": "Valor",
+      "perMonth": "R$ {price}/mes",
+      "method": "Pago",
+      "methodPix": "Pix",
+      "methodCard": "Tarjeta de crédito",
+      "cycleMonthly": "mensual",
+      "cycleAnnual": "anual",
+      "nextCharge": "Próximo cobro",
+      "accessUntil": "Acceso hasta",
+      "status": {
+        "pending": "Esperando pago",
+        "active": "Activa",
+        "past_due": "Atrasada",
+        "canceled": "Cancelada",
+        "exempt": "Liberada"
+      },
+      "pastDue": "Hay un pago atrasado. Regularízalo para no perder el acceso.",
+      "canceledNote": "La suscripción fue cancelada. Mantienes el acceso hasta el fin del período ya pagado.",
+      "pixOpenTitle": "Pix abierto",
+      "pixQrAlt": "Código QR de Pix",
+      "pixExpires": "Paga hasta el {date}.",
+      "copy": "Copiar",
+      "copyFailed": "No se pudo copiar",
+      "subscribe": "Suscribirse de nuevo",
+      "payNow": "Pagar ahora",
+      "cancelAction": "Cancelar suscripción",
+      "cancelConfirm": "¿Cancelar la suscripción? Los próximos cobros se detienen y el acceso sigue hasta el fin del período ya pagado.",
+      "cancelFailed": "No se pudo cancelar ahora. Inténtalo de nuevo en unos instantes.",
+      "cancelled": "Suscripción cancelada",
+      "exempt": "Esta cuenta fue liberada por Nordia y no tiene cobro.",
+      "ownerOnly": "Solo el dueño de la cuenta puede cambiar la facturación.",
+      "banner": {
+        "late": "Hay un pago atrasado en tu cuenta.",
+        "renewal": "El Pix del próximo cobro está disponible.",
+        "action": "Ver facturación"
+      }
     }
   },
   "SignupPage": {

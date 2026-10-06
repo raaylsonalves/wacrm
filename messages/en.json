@@ -3000,7 +3000,8 @@
       "response-time": "Response time",
       "branding": "Branding",
       "members": "Team members",
-      "api": "API keys"
+      "api": "API keys",
+      "billing": "Billing"
     },
     "groups": {
       "account": "Account",
@@ -3342,6 +3343,47 @@
       "editDoc": "Edit",
       "deleteDoc": "Delete",
       "loading": "Loading…"
+    },
+    "billing": {
+      "title": "Billing",
+      "description": "Your plan, payment method and upcoming charges.",
+      "noPlan": "No active plan",
+      "price": "Price",
+      "perMonth": "R$ {price}/month",
+      "method": "Payment",
+      "methodPix": "Pix",
+      "methodCard": "Credit card",
+      "cycleMonthly": "monthly",
+      "cycleAnnual": "annual",
+      "nextCharge": "Next charge",
+      "accessUntil": "Access until",
+      "status": {
+        "pending": "Awaiting payment",
+        "active": "Active",
+        "past_due": "Past due",
+        "canceled": "Canceled",
+        "exempt": "Released"
+      },
+      "pastDue": "A payment is overdue. Settle it to keep your access.",
+      "canceledNote": "The subscription was cancelled. You keep access until the end of the period already paid.",
+      "pixOpenTitle": "Open Pix",
+      "pixQrAlt": "Pix QR code",
+      "pixExpires": "Pay by {date}.",
+      "copy": "Copy",
+      "copyFailed": "Could not copy",
+      "subscribe": "Subscribe again",
+      "payNow": "Pay now",
+      "cancelAction": "Cancel subscription",
+      "cancelConfirm": "Cancel the subscription? Future charges stop and access continues until the end of the period already paid.",
+      "cancelFailed": "Could not cancel right now. Please try again shortly.",
+      "cancelled": "Subscription cancelled",
+      "exempt": "This account was released by Nordia and is not billed.",
+      "ownerOnly": "Only the account owner can change billing.",
+      "banner": {
+        "late": "A payment on your account is overdue.",
+        "renewal": "The Pix for your next charge is available.",
+        "action": "View billing"
+      }
     }
   },
   "SignupPage": {

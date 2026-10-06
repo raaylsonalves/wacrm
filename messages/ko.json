@@ -3000,7 +3000,8 @@
       "response-time": "응답 시간",
       "branding": "브랜딩",
       "members": "팀원",
-      "api": "API 키"
+      "api": "API 키",
+      "billing": "결제"
     },
     "groups": {
       "account": "계정",
@@ -3342,6 +3343,47 @@
       "editDoc": "수정",
       "deleteDoc": "삭제",
       "loading": "불러오는 중…"
+    },
+    "billing": {
+      "title": "결제",
+      "description": "요금제, 결제 수단 및 예정된 청구 내역입니다.",
+      "noPlan": "활성 요금제 없음",
+      "price": "금액",
+      "perMonth": "월 R$ {price}",
+      "method": "결제 수단",
+      "methodPix": "Pix",
+      "methodCard": "신용카드",
+      "cycleMonthly": "월간",
+      "cycleAnnual": "연간",
+      "nextCharge": "다음 청구일",
+      "accessUntil": "이용 가능 기간",
+      "status": {
+        "pending": "결제 대기",
+        "active": "활성",
+        "past_due": "연체",
+        "canceled": "해지됨",
+        "exempt": "면제"
+      },
+      "pastDue": "연체된 결제가 있습니다. 이용을 유지하려면 결제를 완료해 주세요.",
+      "canceledNote": "구독이 해지되었습니다. 이미 결제한 기간이 끝날 때까지 이용할 수 있습니다.",
+      "pixOpenTitle": "진행 중인 Pix",
+      "pixQrAlt": "Pix QR 코드",
+      "pixExpires": "{date}까지 결제해 주세요.",
+      "copy": "복사",
+      "copyFailed": "복사하지 못했습니다",
+      "subscribe": "다시 구독",
+      "payNow": "지금 결제",
+      "cancelAction": "구독 해지",
+      "cancelConfirm": "구독을 해지할까요? 이후 청구는 중단되며 이미 결제한 기간이 끝날 때까지 이용할 수 있습니다.",
+      "cancelFailed": "지금은 해지할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+      "cancelled": "구독이 해지되었습니다",
+      "exempt": "이 계정은 Nordia에서 면제 처리되어 청구되지 않습니다.",
+      "ownerOnly": "결제는 계정 소유자만 변경할 수 있습니다.",
+      "banner": {
+        "late": "계정에 연체된 결제가 있습니다.",
+        "renewal": "다음 청구용 Pix를 사용할 수 있습니다.",
+        "action": "결제 보기"
+      }
     }
   },
   "SignupPage": {
