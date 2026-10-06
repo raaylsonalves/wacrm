@@ -76,6 +76,7 @@ export function InviteMemberDialog({
 }: InviteMemberDialogProps) {
   const t = useTranslations('Settings.invite');
   const tRoles = useTranslations('Settings.roles');
+  const tLocked = useTranslations('Onboarding.team.locked');
   const { account } = useAuth();
   const [role, setRole] = useState<InviteRole>('agent');
   const [expiry, setExpiry] = useState<string>('7');
@@ -117,7 +118,11 @@ export function InviteMemberDialog({
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        toast.error(payload.error || 'Failed to create invitation');
+        toast.error(
+          payload.error === 'subscription_required'
+            ? tLocked('message')
+            : payload.error || 'Failed to create invitation'
+        );
         return;
       }
 

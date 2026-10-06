@@ -229,6 +229,15 @@ export async function POST(request: Request) {
       .select("id, role, label, expires_at, created_at")
       .single();
 
+    // Migration 106: the trigger refuses invitations until the account is
+    // active or released for trial.
+    if (error?.message?.includes("account_not_active")) {
+      return NextResponse.json(
+        { error: "subscription_required" },
+        { status: 402 },
+      );
+    }
+
     if (error || !data) {
       console.error("[POST /api/account/invitations] insert error:", error);
       return NextResponse.json(

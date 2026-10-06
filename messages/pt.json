@@ -3948,7 +3948,10 @@
     "team": {
       "title": "Convide sua equipe",
       "description": "Agora que o agente funciona, traga as pessoas que vão usá-lo com você. Opcional — você pode convidar gente depois em Configurações.",
-      "inviteBtn": "Convidar colega"
+      "inviteBtn": "Convidar colega",
+      "locked": {
+        "message": "Convidar a equipe fica disponível depois da confirmação do pagamento. Se você está testando com a Nordia, peça a liberação da conta."
+      }
     },
     "done": {
       "title": "Tudo pronto",

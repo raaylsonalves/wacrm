@@ -73,6 +73,8 @@ import {
   PresenceDot,
 } from '@/components/presence/presence-dot';
 import { InviteMemberDialog } from './invite-member-dialog';
+import { useSubscriptionStatus } from '@/hooks/use-subscription-status';
+import { canInviteMembers } from '@/lib/billing/status';
 import { SettingsPanelHead } from './settings-panel-head';
 import { ROLE_META } from './role-meta';
 
@@ -127,7 +129,11 @@ function fmtExpiresIn(iso: string, t: (key: string, values?: Record<string, stri
 export function MembersTab() {
   const t = useTranslations('Settings.members');
   const tRoles = useTranslations('Settings.roles');
-  const { user, canManageMembers } = useAuth();
+  const tLocked = useTranslations('Onboarding.team.locked');
+  const { user, canManageMembers, accountId } = useAuth();
+  const subscriptionStatus = useSubscriptionStatus(accountId);
+  const inviteLocked =
+    subscriptionStatus !== null && !canInviteMembers(subscriptionStatus);
   const { getPresence, getRow, now } = usePresence();
 
   const [members, setMembers] = useState<Member[]>([]);
@@ -287,7 +293,11 @@ export function MembersTab() {
         description={t('description')}
         action={
           <RequireRole min="admin">
-            <Button onClick={() => setInviteOpen(true)}>
+            <Button
+              onClick={() => setInviteOpen(true)}
+              disabled={inviteLocked}
+              title={inviteLocked ? tLocked('message') : undefined}
+            >
               <Plus className="size-4" />
               {t('inviteMember')}
             </Button>

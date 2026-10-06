@@ -4,7 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { UsersRound, UserPlus } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSubscriptionStatus } from '@/hooks/use-subscription-status';
+import { canInviteMembers } from '@/lib/billing/status';
 import { InviteMemberDialog } from '@/components/settings/invite-member-dialog';
 import { useOnboarding } from '../onboarding-context';
 import { StepFooter } from '../step-footer';
@@ -20,7 +23,10 @@ import { StepFooter } from '../step-footer';
 export default function OnboardingTeamPage() {
   const t = useTranslations('Onboarding.team');
   const router = useRouter();
-  const { markDone, markSkipped } = useOnboarding();
+  const { accountId, markDone, markSkipped } = useOnboarding();
+  const status = useSubscriptionStatus(accountId);
+  const locked = status !== null && !canInviteMembers(status);
+  const tLocked = useTranslations('Onboarding.team.locked');
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invited, setInvited] = useState(false);
 
@@ -45,10 +51,17 @@ export default function OnboardingTeamPage() {
       <p className="text-muted-foreground mt-1 text-sm">{t('description')}</p>
 
       <div className="mt-6">
-        <Button onClick={() => setInviteOpen(true)} variant="outline">
-          <UserPlus className="size-4" />
-          {t('inviteBtn')}
-        </Button>
+        {locked ? (
+          <div className="bg-muted text-muted-foreground flex items-start gap-2 rounded-xl p-3 text-sm">
+            <Lock className="mt-0.5 size-4 shrink-0" />
+            <p>{tLocked('message')}</p>
+          </div>
+        ) : (
+          <Button onClick={() => setInviteOpen(true)} variant="outline">
+            <UserPlus className="size-4" />
+            {t('inviteBtn')}
+          </Button>
+        )}
       </div>
 
       <InviteMemberDialog

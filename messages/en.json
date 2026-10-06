@@ -3960,7 +3960,10 @@
     "team": {
       "title": "Invite your team",
       "description": "Now that the agent works, bring in the people who'll use it with you. Optional — you can always invite people later from Settings.",
-      "inviteBtn": "Invite a teammate"
+      "inviteBtn": "Invite a teammate",
+      "locked": {
+        "message": "Inviting your team unlocks once your payment is confirmed. If you are trialling with Nordia, ask for your account to be released."
+      }
     },
     "done": {
       "title": "You're all set",

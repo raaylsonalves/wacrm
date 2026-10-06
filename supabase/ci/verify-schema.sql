@@ -810,6 +810,26 @@ BEGIN
     RAISE EXCEPTION 'anon can still execute merge_duplicate_contacts — migration 105 did not apply';
   END IF;
 
+  -- 106 gates team invitations on accounts.subscription_status. A
+  -- missing column/trigger would leave invitations open to unpaid
+  -- accounts, or let a customer mark their own account exempt.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'accounts'
+      AND column_name = 'subscription_status'
+  ) THEN
+    RAISE EXCEPTION 'accounts.subscription_status is missing — migration 106 did not apply';
+  END IF;
+  IF (
+    SELECT COUNT(*) FROM pg_trigger
+    WHERE tgname IN (
+      'enforce_subscription_status_column',
+      'enforce_invitation_requires_active_account'
+    ) AND NOT tgisinternal
+  ) <> 2 THEN
+    RAISE EXCEPTION 'subscription_status triggers are missing — migration 106 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;
