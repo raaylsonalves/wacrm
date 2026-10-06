@@ -27,3 +27,33 @@ export function isPlanId(v: unknown): v is PlanId {
 export function annualMonthlyBrl(plan: PlanId): number {
   return Math.round(((PLAN_MONTHLY_BRL[plan] * 10) / 12) * 100) / 100;
 }
+
+export const BILLING_CYCLES = ['monthly', 'annual'] as const;
+export type BillingCycle = (typeof BILLING_CYCLES)[number];
+export const PAYMENT_METHODS = ['pix', 'card'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export function isBillingCycle(v: unknown): v is BillingCycle {
+  return BILLING_CYCLES.includes(v as BillingCycle);
+}
+
+export interface Quote {
+  /** What each monthly charge costs, in centavos. */
+  amountCents: number;
+  /** Charges to take before the plan ends; null = until cancelled. */
+  chargesTotal: number | null;
+}
+
+/**
+ * The only place a charge amount is decided. The checkout takes plan +
+ * cycle from the client and prices them here, so a tampered request can
+ * never change what is billed.
+ */
+export function quoteSubscription(plan: PlanId, cycle: BillingCycle): Quote {
+  const monthly =
+    cycle === 'annual' ? annualMonthlyBrl(plan) : PLAN_MONTHLY_BRL[plan];
+  return {
+    amountCents: Math.round(monthly * 100),
+    chargesTotal: cycle === 'annual' ? 12 : null,
+  };
+}

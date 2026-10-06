@@ -103,6 +103,11 @@ export function canDeleteAccount(role: AccountRole): boolean {
   return role === 'owner';
 }
 
+/** Owner only: start, change or cancel the paid subscription. */
+export function canManageBilling(role: AccountRole): boolean {
+  return role === 'owner';
+}
+
 /** Owner only: hand the account to another member. */
 export function canTransferOwnership(role: AccountRole): boolean {
   return role === 'owner';

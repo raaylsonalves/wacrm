@@ -85,3 +85,69 @@ export const getAuthorizedPayment = (id: string) =>
     'subs',
     `/authorized_payments/${encodeURIComponent(id)}`
   );
+
+async function mpPost<T>(
+  source: BillingSource,
+  path: string,
+  body: unknown,
+  idempotencyKey: string
+): Promise<T> {
+  const token = accessTokenFor(source);
+  if (!token) throw new MercadoPagoError('access token not configured', 500);
+  const res = await fetch(`${API}${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'X-Idempotency-Key': idempotencyKey,
+    },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    throw new MercadoPagoError(
+      `Mercado Pago POST ${path.split('/').filter(Boolean)[0]} answered ${res.status}`,
+      res.status
+    );
+  }
+  return (await res.json()) as T;
+}
+
+export interface CreatePreapprovalInput {
+  reason: string;
+  externalReference: string;
+  payerEmail: string;
+  cardTokenId: string;
+  amount: number;
+  /** Set for plans that end (annual = 12 months); omitted otherwise. */
+  endDate?: Date;
+  backUrl: string;
+}
+
+/** Card subscription charged monthly, created authorized from a card token
+ *  produced in the browser (the card number never reaches this server). */
+export const createPreapproval = (
+  input: CreatePreapprovalInput,
+  idempotencyKey: string
+) =>
+  mpPost<MpPreapproval>(
+    'subs',
+    '/preapproval',
+    {
+      reason: input.reason,
+      external_reference: input.externalReference,
+      payer_email: input.payerEmail,
+      card_token_id: input.cardTokenId,
+      status: 'authorized',
+      back_url: input.backUrl,
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: 'months',
+        transaction_amount: input.amount,
+        currency_id: 'BRL',
+        ...(input.endDate ? { end_date: input.endDate.toISOString() } : {}),
+      },
+    },
+    idempotencyKey
+  );
