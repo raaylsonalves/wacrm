@@ -2,8 +2,7 @@
 
 // ============================================================
 // Public marketing page for the Nordia CRM. Rendered at "/" only when
-// NEXT_PUBLIC_LANDING_PAGE=on (see src/app/page.tsx); a signed-in user
-// never sees it (middleware sends "/" to /dashboard). Copy is pt-BR on
+// NEXT_PUBLIC_LANDING_PAGE=on (see src/app/page.tsx). Copy is pt-BR on
 // purpose: it is this deployment's storefront, not app UI, so it lives
 // here instead of messages/*.json.
 // ============================================================
