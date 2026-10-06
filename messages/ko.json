@@ -836,7 +836,8 @@
       "replied": "응답함",
       "qualified": "적격",
       "details": "대기 {queued} · 실패 {failed} · 건너뜀 {skipped} · 수신거부 {optedOut}",
-      "followedUp": "{count, plural, =1 {후속 메시지 1명} other {후속 메시지 #명}}"
+      "followedUp": "{count, plural, =1 {후속 메시지 1명} other {후속 메시지 #명}}",
+      "spent": "지금까지 메시지 비용 약 {amount}"
     },
     "form": {
       "name": "Campaign name",
@@ -928,7 +929,9 @@
         "opted_out": "Opted out",
         "skipped": "Skipped",
         "failed": "Failed"
-      }
+      },
+      "byNiche": "업종별",
+      "nicheLine": "리드 {leads} · 발송 {sent} · 응답 {replied} · 적격 {qualified}"
     },
     "reasons": {
       "opted_out": "asked not to be messaged",
@@ -939,6 +942,125 @@
       "cancelled": "campaign cancelled",
       "empty_reply": "the AI wrote no message",
       "unknown": "unknown error"
+    },
+    "wizard": {
+      "next": "계속 · {step}",
+      "steps": {
+        "list": "목록",
+        "message": "메시지",
+        "pace": "발송 속도",
+        "review": "에이전트 및 검토"
+      },
+      "list": {
+        "source": {
+          "file": "스프레드시트 첨부",
+          "list": "기존 목록 사용"
+        },
+        "tooLarge": "파일이 5MB를 넘어요.",
+        "noPhone": "스프레드시트에서 전화번호 열을 찾지 못했어요.",
+        "fileMeta": "{rows}행",
+        "mapsDetected": "Google 지도 내보내기 인식됨",
+        "replace": "파일 바꾸기",
+        "drop": "스프레드시트 선택 (.csv)",
+        "dropHint": "Google 지도 내보내기 또는 전화번호 열이 있는 스프레드시트. 최대 5,000행.",
+        "column": {
+          "phone": "전화번호",
+          "name": "이름",
+          "email": "이메일",
+          "company": "회사",
+          "tags": "태그",
+          "niche": "업종"
+        },
+        "ignored": "{count, plural, other {#개 열 무시}}",
+        "existingHint": "목록은 태그예요. 가져올 때마다 \"lista:…\" 태그가 만들어지고, 나누면 업종마다 \"nicho:…\" 태그가 생겨요.",
+        "phones": "전화번호",
+        "mobile": "휴대폰",
+        "landline": "유선 전화",
+        "landlineHint": "WhatsApp 없음, 제외",
+        "invalid": "잘못된 번호",
+        "duplicate": "파일 내 중복",
+        "phonesHint": "휴대폰만 포함돼요. 수신 거부한 사람도 제외돼요.",
+        "niches": "업종",
+        "nichesHint": "업종별 휴대폰 수",
+        "noNiche": "업종 없음",
+        "split": "업종마다 태그 만들기 (퍼널에 각각 표시)",
+        "noNicheColumn": "스프레드시트에 업종이나 카테고리 열이 없어서 모두 하나의 목록에 들어가요."
+      },
+      "origin": {
+        "title": "이 연락처는 어디서 왔나요?",
+        "public_business": {
+          "label": "공개 연락처가 있는 업체",
+          "hint": "Google 지도, 웹사이트, SNS. 기업 간 영업 연락.",
+          "legal": "공개된 업체 전화번호(예: Google 지도)가 있는 업체에 해당 업종의 서비스를 제안하기 위해 연락."
+        },
+        "opt_in": {
+          "label": "연락에 동의함",
+          "hint": "고객, 가입 또는 양식.",
+          "legal": "업체의 메시지 수신에 동의한 연락처."
+        },
+        "bought": "구매한 목록에는 연락하지 않아요. 스팸 신고로 번호가 정지돼요."
+      },
+      "message": {
+        "channel": "어떤 번호로 보낼까요?",
+        "cloudHint": "승인된 템플릿으로 시작하며 메시지마다 Meta 요금이 부과돼요. 리드가 답하면 AI가 이어받아요.",
+        "wahaHint": "메시지당 비용은 없지만 정지 위험이 있어요. 정지 방지 규칙에 따라 보내요.",
+        "noWaha": "연결된 WAHA 번호가 없어요. 메시지당 비용 없이 영업하려면 연결에서 하나 연결하세요.",
+        "approvedOnly": "Meta가 승인한 템플릿만 표시돼요",
+        "preview": "미리보기",
+        "wahaPreview": "AI가 입력한 설명을 바탕으로 리드마다 다른 메시지를 쓰고 마지막에 \"STOP이라고 답장\"을 붙여요."
+      },
+      "pace": {
+        "when": "보낼 시간",
+        "timezone": "브라질리아 시간. 시간 밖에서는 다음 시작 시간까지 기다려요.",
+        "meta": {
+          "title": "Meta 한도",
+          "error": "Meta를 조회하지 못했어요 ({error}). 시작하기 전에 연결에서 토큰을 확인하세요.",
+          "number": "번호",
+          "tier": "계정 한도",
+          "perDay": "24시간에 {count}명",
+          "unlimited": "무제한",
+          "quality": "품질",
+          "q": {
+            "GREEN": "높음",
+            "YELLOW": "보통",
+            "RED": "낮음",
+            "UNKNOWN": "평가 없음"
+          },
+          "tierHint": "Meta는 번호가 24시간 동안 새로 연락할 수 있는 사람 수를 제한하고, 발송량과 품질에 따라 한도를 올려요. 공식 번호에는 워밍업이나 간격이 없고, 일일 한도까지 묶음으로 보내요."
+        },
+        "cost": {
+          "title": "비용",
+          "perMessage": "Meta 계정의 메시지당 요금",
+          "total": "{count, plural, other {예상 비용 (메시지 #개)}}",
+          "hint": "Meta는 전달된 템플릿마다 카테고리({category})와 수신자 국가의 요금을 부과해요. 콜드 연락은 보통 마케팅이에요. 요금은 국가와 발송량에 따라 달라요:",
+          "link": "Meta 요금표"
+        },
+        "antiban": {
+          "title": "정지 방지 (WAHA)",
+          "jitter": "자동 발송처럼 보이지 않도록 발송마다 간격이 달라져요.",
+          "warmup": "워밍업: 오늘 이 번호는 하루 최대 {count}개까지 보낼 수 있고, 연결 기간이 길수록 한도가 올라가요.",
+          "warmupGeneric": "워밍업: 새 번호는 하루 몇 개만 보내고, 연결 기간이 길수록 한도가 올라가요.",
+          "optout": "모든 메시지 끝에 \"STOP이라고 답장\"이 붙고, 수신 거부한 사람에게는 다시 연락하지 않아요.",
+          "pause": "번호 문제로 발송이 실패하면 캠페인이 자동으로 일시 중지돼요."
+        }
+      },
+      "review": {
+        "funnel": "파이프라인",
+        "dealHint": "거래는 가져올 때가 아니라 리드에게 연락할 때 만들어져요.",
+        "firstNow": "발송 시간 안이라면 첫 메시지가 몇 초 안에 나가요."
+      },
+      "aside": {
+        "leads": "캠페인에 들어갈 리드",
+        "niches": "{count, plural, other {업종 #개}}",
+        "channel": "번호",
+        "duration": "예상 기간",
+        "days": "{count, plural, other {발송일 #일}}",
+        "cost": "예상 비용",
+        "coldWaha": "WAHA로 콜드 목록에 보내면 일부러 천천히 보내요. 서두르면 번호를 잃어요."
+      },
+      "errors": {
+        "import_failed": "스프레드시트를 가져오지 못했어요. 아무것도 보내지 않았어요."
+      }
     }
   },
   "AiAckNotice": {
@@ -1184,7 +1306,8 @@
         "bad_email": "잘못된 이메일",
         "opted_out": "수신 거부함",
         "exists": "이미 있음 (변경 없음)",
-        "failed": "저장 실패"
+        "failed": "저장 실패",
+        "other_niche": "캠페인에서 제외된 업종"
       },
       "errors": {
         "file_too_large": "5MB보다 큰 파일입니다.",

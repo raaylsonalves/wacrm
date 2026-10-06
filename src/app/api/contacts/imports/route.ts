@@ -2,7 +2,9 @@
 // POST /api/contacts/imports  (agent+) — import a CSV of contacts
 // (specs/prospecting-csv-import.md, part A).
 //
-// Multipart: file, name, consent_basis, legal_basis_ref?, update_policy.
+// Multipart: file, name, consent_basis, legal_basis_ref?, update_policy,
+// niche_tags? ('1': tag each contact "nicho:<niche>"), niches? (JSON list:
+// import only those niches — the prospecting wizard's filter).
 // Parsed on the SERVER (the old importer ran in the browser tab, so
 // closing it left half a file imported). Every row gets an outcome; a bad
 // row is reported with its line and reason, never sinks the rest.
@@ -27,6 +29,7 @@ import {
   type SkipReason,
   type UpdatePolicy,
 } from '@/lib/contacts/import-plan'
+import { NICHE_PREFIX, nicheTag } from '@/lib/contacts/niche'
 import {
   assignImportedContactTags,
   resolveImportTagIds,
@@ -75,6 +78,23 @@ export async function POST(request: Request) {
     if (table.length - 1 > CSV_MAX_ROWS) return bad('too_many_rows')
     const plan = planImport(table)
     if (!plan.columns.includes('phone')) return bad('phone_column_missing')
+    const nicheTags = form.get('niche_tags') === '1'
+    let onlyNiches: Set<string> | null = null
+    try {
+      const raw = JSON.parse(String(form.get('niches') ?? 'null'))
+      if (Array.isArray(raw)) onlyNiches = new Set(raw.map((n) => String(n)))
+    } catch {
+      return bad('invalid niches')
+    }
+    if (onlyNiches) {
+      const keep = plan.rows.filter((r) => onlyNiches!.has(r.niche ?? ''))
+      for (const r of plan.rows) {
+        if (!onlyNiches.has(r.niche ?? '')) plan.skipped.push({ line: r.line, reason: 'other_niche', raw: r.niche ?? '' })
+      }
+      plan.rows = keep
+    }
+    const tagsOf = (r: (typeof plan.rows)[number]) =>
+      nicheTags && r.niche ? [...r.tags, nicheTag(r.niche)] : r.tags
 
     const { data: imp, error: impErr } = await supabase
       .from('contact_imports')
@@ -142,7 +162,7 @@ export async function POST(request: Request) {
         continue
       }
       updated++
-      assignments.push({ contactId: found.id, tagNames: [listTag, ...row.tags] })
+      assignments.push({ contactId: found.id, tagNames: [listTag, ...tagsOf(row)] })
     }
 
     for (let i = 0; i < toInsert.length; i += 200) {
@@ -161,7 +181,7 @@ export async function POST(request: Request) {
       if (!error && data && data.length === chunk.length) {
         data.forEach((c, j) => {
           created++
-          assignments.push({ contactId: c.id as string, tagNames: [listTag, ...chunk[j].tags] })
+          assignments.push({ contactId: c.id as string, tagNames: [listTag, ...tagsOf(chunk[j])] })
         })
         continue
       }
@@ -174,7 +194,7 @@ export async function POST(request: Request) {
           .single()
         if (!oneErr && one) {
           created++
-          assignments.push({ contactId: one.id as string, tagNames: [listTag, ...r.tags] })
+          assignments.push({ contactId: one.id as string, tagNames: [listTag, ...tagsOf(r)] })
         } else {
           const dup = (oneErr as { code?: string } | null)?.code === '23505'
           skipped.push({ line: r.line, reason: dup ? 'exists' : 'failed', raw: r.phone })
@@ -182,18 +202,20 @@ export async function POST(request: Request) {
       }
     }
 
-    // The list tag is always created (it is how the list is found later);
-    // other tag names from the file follow the usual "admins create tags" rule.
+    // The list and niche tags are always created (they are how the list is
+    // found and split later); other tag names from the file follow the
+    // usual "admins create tags" rule.
+    const own = (n: string) => n === listTag || n.startsWith(NICHE_PREFIX)
     const { tagIdByKey: listIds } = await resolveImportTagIds(supabase, {
       accountId,
       userId,
-      tagNames: [listTag],
+      tagNames: [listTag, ...assignments.flatMap((a) => a.tagNames.filter(own))],
       canCreateTags: true,
     })
     const { tagIdByKey } = await resolveImportTagIds(supabase, {
       accountId,
       userId,
-      tagNames: assignments.flatMap((a) => a.tagNames.slice(1)),
+      tagNames: assignments.flatMap((a) => a.tagNames.filter((n) => !own(n))),
       canCreateTags: canEditSettings(role),
     })
     for (const [k, v] of listIds) tagIdByKey.set(k, v)
@@ -237,6 +259,7 @@ export async function POST(request: Request) {
       id: importId,
       name,
       list_tag: listTag,
+      list_tag_id: listIds.get(listTag.toLowerCase()) ?? null,
       consent_basis: basis,
       rows_total: table.length - 1,
       created,

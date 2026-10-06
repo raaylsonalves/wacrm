@@ -16,6 +16,7 @@ import { AiError } from '@/lib/ai/types'
 import { sendMessageToConversation, SendMessageError } from '@/lib/whatsapp/send-message'
 import { prepareCandidate } from './activate'
 import {
+  CLOUD_BURST,
   buildApproachPrompt,
   buildFollowupPrompt,
   failureScope,
@@ -71,14 +72,33 @@ export async function runProspectingTick(
 
   for (const c of (data ?? []) as CampaignRow[]) {
     summary.campaigns++
-    try {
-      const r = await tickCampaign(db, c, now)
+    // WAHA sends one message per pass (anti-ban pacing). The official API
+    // has no ban to dodge — Meta's tier is the limit — so it sends a burst,
+    // each turn still claimed and capped like any other.
+    const burst = c.config.channel_kind === 'cloud' ? CLOUD_BURST : 1
+    let row: CampaignRow = c
+    for (let i = 0; i < burst; i++) {
+      let r: TickResult
+      try {
+        r = await tickCampaign(db, row, i === 0 ? now : new Date())
+      } catch (err) {
+        console.error(`[prospecting ${c.id}] tick failed:`, err)
+        break
+      }
       if (r === 'sent') summary.sent++
       if (r === 'followup') summary.followups++
       if (r === 'failed') summary.failed++
       if (r === 'paused') summary.paused++
-    } catch (err) {
-      console.error(`[prospecting ${c.id}] tick failed:`, err)
+      if (r !== 'sent' && r !== 'followup' && r !== 'failed') break
+      if (i + 1 === burst) break
+      const { data: next } = await db
+        .from('prospecting_campaigns')
+        .select('id, account_id, name, config, next_send_at')
+        .eq('id', c.id)
+        .eq('status', 'running')
+        .maybeSingle()
+      if (!next || new Date(next.next_send_at as string).getTime() > Date.now()) break
+      row = next as CampaignRow
     }
   }
   return summary

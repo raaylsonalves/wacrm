@@ -836,7 +836,8 @@
       "replied": "Respondieron",
       "qualified": "Calificados",
       "details": "{queued} en cola · {failed} con fallo · {skipped} omitidos · {optedOut} pidieron salir",
-      "followedUp": "{count, plural, =1 {1 recibió seguimiento} other {# recibieron seguimiento}}"
+      "followedUp": "{count, plural, =1 {1 recibió seguimiento} other {# recibieron seguimiento}}",
+      "spent": "≈ {amount} en mensajes hasta ahora"
     },
     "form": {
       "name": "Campaign name",
@@ -928,7 +929,9 @@
         "opted_out": "Pidió salir",
         "skipped": "Omitido",
         "failed": "Falló"
-      }
+      },
+      "byNiche": "Por nicho",
+      "nicheLine": "{leads} leads · {sent} contactados · {replied} resp. · {qualified} calif."
     },
     "reasons": {
       "opted_out": "asked not to be messaged",
@@ -939,6 +942,125 @@
       "cancelled": "campaign cancelled",
       "empty_reply": "the AI wrote no message",
       "unknown": "unknown error"
+    },
+    "wizard": {
+      "next": "Continuar · {step}",
+      "steps": {
+        "list": "Lista",
+        "message": "Mensaje",
+        "pace": "Ritmo",
+        "review": "Agente y revisión"
+      },
+      "list": {
+        "source": {
+          "file": "Adjuntar planilla",
+          "list": "Usar una lista existente"
+        },
+        "tooLarge": "El archivo supera los 5 MB.",
+        "noPhone": "No encontramos una columna de teléfono en la planilla.",
+        "fileMeta": "{rows} filas",
+        "mapsDetected": "exportación de Google Maps reconocida",
+        "replace": "Cambiar archivo",
+        "drop": "Elegir planilla (.csv)",
+        "dropHint": "Exportación de Google Maps o cualquier planilla con una columna de teléfono. Hasta 5.000 filas.",
+        "column": {
+          "phone": "Teléfono",
+          "name": "Nombre",
+          "email": "Email",
+          "company": "Empresa",
+          "tags": "Etiquetas",
+          "niche": "Nicho"
+        },
+        "ignored": "{count, plural, =1 {1 columna ignorada} other {# columnas ignoradas}}",
+        "existingHint": "Las listas son etiquetas: cada importación crea una \"lista:…\" y, si se separa, una \"nicho:…\" por segmento.",
+        "phones": "Teléfonos",
+        "mobile": "Celulares",
+        "landline": "Fijos",
+        "landlineHint": "sin WhatsApp, quedan fuera",
+        "invalid": "Inválidos",
+        "duplicate": "Repetidos en la planilla",
+        "phonesHint": "Solo entran celulares. Quien pidió salir también queda fuera.",
+        "niches": "Nichos",
+        "nichesHint": "celulares por nicho",
+        "noNiche": "Sin nicho",
+        "split": "Crear una etiqueta por nicho (el embudo muestra cada uno)",
+        "noNicheColumn": "La planilla no tiene columna de nicho o categoría; todos entran en una sola lista."
+      },
+      "origin": {
+        "title": "¿De dónde vienen estos contactos?",
+        "public_business": {
+          "label": "Empresas con contacto público",
+          "hint": "Google Maps, sitios, redes. Contacto comercial entre empresas.",
+          "legal": "Empresas con teléfono comercial público (p. ej., Google Maps), contactadas para ofrecer un servicio de su segmento."
+        },
+        "opt_in": {
+          "label": "Autorizaron el contacto",
+          "hint": "Clientes, registros o formularios.",
+          "legal": "Contactos que autorizaron recibir mensajes de la empresa."
+        },
+        "bought": "Las listas compradas no se contactan: las denuncias tumban el número."
+      },
+      "message": {
+        "channel": "¿Desde qué número?",
+        "cloudHint": "Abre con una plantilla aprobada y Meta cobra cada mensaje. La IA toma la conversación cuando el lead responde.",
+        "wahaHint": "Sin costo por mensaje, pero con riesgo de bloqueo: el envío sigue las reglas anti-bloqueo.",
+        "noWaha": "No hay número WAHA conectado. Conecta uno en Conexiones para prospectar sin costo por mensaje.",
+        "approvedOnly": "Solo aparecen plantillas aprobadas por Meta",
+        "preview": "Vista previa",
+        "wahaPreview": "La IA escribe un mensaje distinto para cada lead a partir de lo que describiste y termina con \"responde SALIR\"."
+      },
+      "pace": {
+        "when": "Cuándo enviar",
+        "timezone": "Hora de Brasilia. Fuera del horario, los envíos esperan la próxima apertura.",
+        "meta": {
+          "title": "Límite de Meta",
+          "error": "No se pudo consultar a Meta ({error}). Revisa el token en Conexiones antes de iniciar.",
+          "number": "Número",
+          "tier": "Límite de la cuenta",
+          "perDay": "{count} personas / 24h",
+          "unlimited": "Ilimitado",
+          "quality": "Calidad",
+          "q": {
+            "GREEN": "Alta",
+            "YELLOW": "Media",
+            "RED": "Baja",
+            "UNKNOWN": "Sin calificación"
+          },
+          "tierHint": "Meta limita cuántas personas nuevas puede contactar el número en 24h y sube ese límite con volumen y calidad. Por el número oficial no hay calentamiento ni intervalo: los mensajes salen en lotes, hasta el límite diario."
+        },
+        "cost": {
+          "title": "Costo",
+          "perMessage": "Valor por mensaje en tu cuenta de Meta",
+          "total": "{count, plural, =1 {Costo estimado (1 mensaje)} other {Costo estimado (# mensajes)}}",
+          "hint": "Meta cobra cada plantilla entregada al precio de su categoría ({category}) y del país de quien la recibe. El contacto en frío suele ser Marketing. Los valores cambian por país y volumen:",
+          "link": "tabla de precios de Meta"
+        },
+        "antiban": {
+          "title": "Anti-bloqueo (WAHA)",
+          "jitter": "El intervalo varía en cada envío para no parecer un robot.",
+          "warmup": "Calentamiento: hoy este número puede enviar hasta {count} por día; el techo sube con la antigüedad de la conexión.",
+          "warmupGeneric": "Calentamiento: los números nuevos empiezan con pocos envíos por día y el techo sube con la antigüedad de la conexión.",
+          "optout": "Todo mensaje termina con \"responde SALIR\"; quien sale nunca vuelve a ser contactado.",
+          "pause": "Si un envío falla por un problema del número, la campaña se pausa sola."
+        }
+      },
+      "review": {
+        "funnel": "En el embudo",
+        "dealHint": "El negocio se crea solo cuando se contacta al lead, no al importar.",
+        "firstNow": "Dentro del horario, el primer mensaje sale en segundos."
+      },
+      "aside": {
+        "leads": "Entrarán en la campaña",
+        "niches": "{count, plural, =1 {en 1 nicho} other {en # nichos}}",
+        "channel": "Número",
+        "duration": "Previsión",
+        "days": "{count, plural, =1 {1 día de envío} other {# días de envío}}",
+        "cost": "Costo estimado",
+        "coldWaha": "Lista fría por WAHA: el envío es lento a propósito. Apurarse aquí cuesta el número."
+      },
+      "errors": {
+        "import_failed": "No se pudo importar la planilla. No se envió nada."
+      }
     }
   },
   "AiAckNotice": {
@@ -1184,7 +1306,8 @@
         "bad_email": "Email inválido",
         "opted_out": "Pidió no recibir mensajes",
         "exists": "Ya existía (sin cambios)",
-        "failed": "No se pudo guardar"
+        "failed": "No se pudo guardar",
+        "other_niche": "Nicho fuera de la campaña"
       },
       "errors": {
         "file_too_large": "Archivo mayor de 5 MB.",

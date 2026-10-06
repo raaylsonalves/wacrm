@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { decodeCsv, detectDelimiter, mapHeaders, parseCsv } from '@/lib/csv/parse'
 import { normalizeImportPhone } from './br-phone'
-import { mergeConsentBasis, planImport, updateFor } from './import-plan'
+import { mergeConsentBasis, nicheCounts, planImport, updateFor } from './import-plan'
 
 describe('parseCsv', () => {
   it('handles the Brazilian Excel file: ; delimiter, quotes, line break in a cell', () => {
@@ -69,6 +69,32 @@ describe('planImport', () => {
   })
 })
 
+describe('planImport — Google Maps export', () => {
+  const header = ['Name', 'Fulladdress', 'Categories', 'Phone', 'Review Count', 'Average Rating', 'Google Maps URL', 'Email']
+  it('reads Name as the business and the first category as the niche', () => {
+    const plan = planImport([
+      header,
+      ['Ricardo Veiculos', 'Av. X', 'Revendedora de carros usados,Concessionária', '(85) 99981-1979', '189', '3.8', 'https://maps', 'exportProcessing'],
+      ['Viasul Jeep', 'Av. Y', 'Concessionária Jeep', '(85) 3512-0097', '531', '4.5', 'https://maps', ''],
+      ['Moto Z', 'Av. Z', 'Revendedora de carros usados', '85 98888-7777', '', '', '', ''],
+    ])
+    expect(plan.businessList).toBe(true)
+    expect(plan.rows[0]).toMatchObject({
+      name: null,
+      company: 'Ricardo Veiculos',
+      email: null,
+      niche: 'Revendedora de carros usados',
+    })
+    expect(plan.skipped.map((s) => s.reason)).toEqual(['landline'])
+    expect(nicheCounts(plan.rows)).toEqual([['Revendedora de carros usados', 2]])
+  })
+  it('a plain list keeps Name as the person', () => {
+    const plan = planImport([['Nome', 'Celular', 'Nicho'], ['Ana', '11987654321', 'Padaria']])
+    expect(plan.businessList).toBe(false)
+    expect(plan.rows[0]).toMatchObject({ name: 'Ana', company: null, niche: 'Padaria' })
+  })
+})
+
 describe('consent + update policy', () => {
   it('a basis is only ever upgraded', () => {
     expect(mergeConsentBasis(null, 'unknown')).toBe('unknown')
@@ -76,7 +102,7 @@ describe('consent + update policy', () => {
     expect(mergeConsentBasis('opt_in', 'third_party_list')).toBe('opt_in')
   })
   it('fill_empty never overwrites, overwrite does, skip touches nothing', () => {
-    const row = { line: 2, phone: '1', name: 'Novo', email: 'n@x.com', company: null, tags: [] }
+    const row = { line: 2, phone: '1', name: 'Novo', email: 'n@x.com', company: null, tags: [], niche: null }
     expect(updateFor('fill_empty', { name: 'Antigo', email: null }, row)).toEqual({ email: 'n@x.com' })
     expect(updateFor('overwrite', { name: 'Antigo' }, row)).toEqual({ name: 'Novo', email: 'n@x.com' })
     expect(updateFor('skip', {}, row)).toBeNull()

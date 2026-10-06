@@ -10,6 +10,7 @@ import { audit } from '@/lib/audit'
 import { checkCampaignReady } from '@/lib/prospecting/activate'
 import { runProspectingTick } from '@/lib/prospecting/tick'
 import type { CampaignConfig } from '@/lib/prospecting/logic'
+import { nicheOf } from '@/lib/contacts/niche'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -23,14 +24,23 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const { data, error } = await db
       .from('prospecting_candidates')
       .select(
-        'id, status, error, conversation_id, sent_at, replied_at, qualified_at, opted_out_at, followups_sent, contact:contacts(name, phone, company)',
+        'id, status, error, conversation_id, sent_at, replied_at, qualified_at, opted_out_at, followups_sent, contact:contacts(name, phone, company, contact_tags(tag:tags(name)))',
       )
       .eq('campaign_id', id)
       .eq('account_id', accountId)
       .order('created_at', { ascending: true })
       .limit(1000)
     if (error) return NextResponse.json({ error: 'failed' }, { status: 500 })
-    return NextResponse.json({ leads: data ?? [] })
+    // The niche tag (from a split import) groups the funnel by segment.
+    type Row = (typeof data)[number] & {
+      contact: { name: string | null; phone: string; company: string | null; contact_tags?: { tag: { name: string } | null }[] } | null
+    }
+    const leads = ((data ?? []) as unknown as Row[]).map(({ contact, ...l }) => ({
+      ...l,
+      niche: nicheOf((contact?.contact_tags ?? []).map((ct) => ct.tag?.name ?? '')),
+      contact: contact ? { name: contact.name, phone: contact.phone, company: contact.company } : null,
+    }))
+    return NextResponse.json({ leads })
   } catch (err) {
     return toErrorResponse(err)
   }

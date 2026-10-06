@@ -25,7 +25,12 @@ export interface CampaignConfig {
   /** One token per body variable: 'name' | 'company' | 'first_name' | literal text. */
   template_params: string[]
   daily_limit: number
+  /** WAHA: minutes between sends (plus jitter). Cloud: 0 — Meta's tier is
+   *  the limit, so each pass sends a burst (CLOUD_BURST). */
   interval_minutes: number
+  /** Cloud only: what one message costs the account (its own Meta rate,
+   *  in its billing currency) — for the cost estimate; never charged here. */
+  cost_per_message: number | null
   /** Local sending window, hours [start, end), and weekdays (0 = Sunday). */
   window_start_hour: number
   window_end_hour: number
@@ -43,6 +48,11 @@ export interface CampaignConfig {
   followup_template_params: string[]
 }
 
+/** Sends per pass for an official-API campaign. Anti-ban pacing (interval,
+ *  jitter, warm-up) is a WAHA concern; Meta enforces its own tiers. */
+export const CLOUD_BURST = 10
+export const MAX_DAILY = { waha: 50, cloud: 1000 } as const
+
 export const DEFAULTS = {
   daily_limit: 10,
   interval_minutes: 15,
@@ -57,6 +67,12 @@ const clampInt = (v: unknown, min: number, max: number, dflt: number) => {
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : dflt
 }
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
+const parseCost = (v: unknown): number | null => {
+  const n = typeof v === 'string' ? Number(v.replace(',', '.')) : Number(v)
+  return v === null || v === undefined || v === '' || !Number.isFinite(n) || n < 0 || n > 100
+    ? null
+    : Math.round(n * 10000) / 10000
+}
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** Validate a submitted config. Returns the normalized config or the first
@@ -110,8 +126,10 @@ export function parseCampaignConfig(
       template_params: Array.isArray(raw.template_params)
         ? raw.template_params.map((p) => str(p, 200)).slice(0, 10)
         : [],
-      daily_limit: clampInt(raw.daily_limit, 1, 50, DEFAULTS.daily_limit),
-      interval_minutes: clampInt(raw.interval_minutes, 5, 1440, DEFAULTS.interval_minutes),
+      daily_limit: clampInt(raw.daily_limit, 1, MAX_DAILY[kind], DEFAULTS.daily_limit),
+      interval_minutes:
+        kind === 'cloud' ? 0 : clampInt(raw.interval_minutes, 5, 1440, DEFAULTS.interval_minutes),
+      cost_per_message: kind === 'cloud' ? parseCost(raw.cost_per_message) : null,
       window_start_hour: start,
       window_end_hour: end,
       weekdays,
@@ -128,6 +146,11 @@ export function parseCampaignConfig(
         : [],
     },
   }
+}
+
+/** Messages a campaign will send at most: first touches plus follow-ups. */
+export function maxMessages(leads: number, c: Pick<CampaignConfig, 'followup_enabled' | 'followup_max'>): number {
+  return leads * (1 + (c.followup_enabled ? c.followup_max : 0))
 }
 
 /** Cut-off: a lead last touched before this instant may get a follow-up. */

@@ -6,6 +6,9 @@
 //   POST — create a campaign from a list (a tag, e.g. "lista:…") and start
 //          it: candidates, deals and pinned conversations are created now;
 //          sending is done by the cron, one lead at a time.
+//          `validate_only: true` runs every check and creates nothing — the
+//          wizard calls it before importing a file for the campaign, so a
+//          campaign that can't start doesn't leave a half-done import.
 //
 // Writes use the service role (the tables have no write policy); every
 // query carries the caller's account id.
@@ -82,21 +85,27 @@ export async function POST(request: Request) {
     }
     const name = typeof body.name === 'string' ? body.name.trim().slice(0, 120) : ''
     if (!name) return NextResponse.json({ error: 'name_required' }, { status: 400 })
+    const validateOnly = body.validate_only === true
     const sourceTagId = typeof body.source_tag_id === 'string' ? body.source_tag_id : ''
-    if (!UUID.test(sourceTagId)) return NextResponse.json({ error: 'list_required' }, { status: 400 })
+    if (!validateOnly && !UUID.test(sourceTagId)) {
+      return NextResponse.json({ error: 'list_required' }, { status: 400 })
+    }
+    const importId = typeof body.import_id === 'string' && UUID.test(body.import_id) ? body.import_id : null
 
     const parsed = parseCampaignConfig((body.config ?? {}) as Record<string, unknown>)
     if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
     const config = parsed.config
 
     const db = supabaseAdmin()
-    const { data: tag } = await db
-      .from('tags')
-      .select('id')
-      .eq('id', sourceTagId)
-      .eq('account_id', accountId)
-      .maybeSingle()
-    if (!tag) return NextResponse.json({ error: 'list_required' }, { status: 400 })
+    if (!validateOnly) {
+      const { data: tag } = await db
+        .from('tags')
+        .select('id')
+        .eq('id', sourceTagId)
+        .eq('account_id', accountId)
+        .maybeSingle()
+      if (!tag) return NextResponse.json({ error: 'list_required' }, { status: 400 })
+    }
 
     const notReady = await checkCampaignReady(db, accountId, config)
     if (notReady) return NextResponse.json({ error: notReady }, { status: 400 })
@@ -110,12 +119,25 @@ export async function POST(request: Request) {
     if (running && running.length > 0) {
       return NextResponse.json({ error: 'another_running' }, { status: 409 })
     }
+    if (validateOnly) return NextResponse.json({ ok: true })
+
+    let ownImport: string | null = null
+    if (importId) {
+      const { data: imp } = await db
+        .from('contact_imports')
+        .select('id')
+        .eq('id', importId)
+        .eq('account_id', accountId)
+        .maybeSingle()
+      ownImport = (imp?.id as string | undefined) ?? null
+    }
 
     const { data: campaign, error } = await db
       .from('prospecting_campaigns')
       .insert({
         account_id: accountId,
         name,
+        import_id: ownImport,
         status: 'draft',
         config: { ...config, source_tag_id: sourceTagId },
         created_by: userId,

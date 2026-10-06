@@ -86,7 +86,7 @@ export function parseCsv(text: string, delimiter = detectDelimiter(text)): strin
   return rows
 }
 
-export type ContactColumn = 'phone' | 'name' | 'email' | 'company' | 'tags'
+export type ContactColumn = 'phone' | 'name' | 'email' | 'company' | 'tags' | 'niche'
 
 const SYNONYMS: Record<ContactColumn, string[]> = {
   phone: ['telefone', 'celular', 'whatsapp', 'whats', 'fone', 'phone', 'mobile', 'numero', 'número', 'tel', 'telefono', 'teléfono'],
@@ -94,6 +94,9 @@ const SYNONYMS: Record<ContactColumn, string[]> = {
   email: ['email', 'e-mail', 'mail', 'correo'],
   company: ['empresa', 'company', 'negocio', 'negócio', 'razao social', 'razão social', 'loja'],
   tags: ['tags', 'tag', 'etiquetas', 'etiqueta', 'marcadores'],
+  // The business segment a prospecting list is split by. "Categories" is
+  // the Google Maps scrapers' column.
+  niche: ['nicho', 'segmento', 'ramo', 'setor', 'categoria', 'categorias', 'category', 'categories', 'niche', 'segment'],
 }
 
 const norm = (s: string) =>

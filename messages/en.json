@@ -836,7 +836,8 @@
       "replied": "Replied",
       "qualified": "Qualified",
       "details": "{queued} queued · {failed} failed · {skipped} skipped · {optedOut} opted out",
-      "followedUp": "{count, plural, =1 {1 got a follow-up} other {# got a follow-up}}"
+      "followedUp": "{count, plural, =1 {1 got a follow-up} other {# got a follow-up}}",
+      "spent": "≈ {amount} on messages so far"
     },
     "form": {
       "name": "Campaign name",
@@ -928,7 +929,9 @@
         "opted_out": "Opted out",
         "skipped": "Skipped",
         "failed": "Failed"
-      }
+      },
+      "byNiche": "By niche",
+      "nicheLine": "{leads} leads · {sent} approached · {replied} replied · {qualified} qualified"
     },
     "reasons": {
       "opted_out": "asked not to be messaged",
@@ -939,6 +942,125 @@
       "cancelled": "campaign cancelled",
       "empty_reply": "the AI wrote no message",
       "unknown": "unknown error"
+    },
+    "wizard": {
+      "next": "Continue · {step}",
+      "steps": {
+        "list": "List",
+        "message": "Message",
+        "pace": "Pace",
+        "review": "Agent and review"
+      },
+      "list": {
+        "source": {
+          "file": "Attach a spreadsheet",
+          "list": "Use an existing list"
+        },
+        "tooLarge": "The file is over 5 MB.",
+        "noPhone": "We couldn't find a phone column in the spreadsheet.",
+        "fileMeta": "{rows} rows",
+        "mapsDetected": "Google Maps export recognized",
+        "replace": "Replace file",
+        "drop": "Choose a spreadsheet (.csv)",
+        "dropHint": "A Google Maps export or any spreadsheet with a phone column. Up to 5,000 rows.",
+        "column": {
+          "phone": "Phone",
+          "name": "Name",
+          "email": "Email",
+          "company": "Company",
+          "tags": "Tags",
+          "niche": "Niche"
+        },
+        "ignored": "{count, plural, =1 {1 column ignored} other {# columns ignored}}",
+        "existingHint": "Lists are tags: every import creates a \"lista:…\" tag and, when split, one \"nicho:…\" per segment.",
+        "phones": "Phones",
+        "mobile": "Mobile",
+        "landline": "Landlines",
+        "landlineHint": "no WhatsApp, left out",
+        "invalid": "Invalid",
+        "duplicate": "Repeated in the file",
+        "phonesHint": "Only mobiles go in. People who opted out are left out too.",
+        "niches": "Niches",
+        "nichesHint": "mobiles per niche",
+        "noNiche": "No niche",
+        "split": "Create one tag per niche (the funnel shows each)",
+        "noNicheColumn": "The spreadsheet has no niche or category column; everyone goes into one list."
+      },
+      "origin": {
+        "title": "Where do these contacts come from?",
+        "public_business": {
+          "label": "Businesses with a public contact",
+          "hint": "Google Maps, websites, social. Business-to-business outreach.",
+          "legal": "Businesses with a public business phone (e.g. Google Maps), contacted to offer a service for their segment."
+        },
+        "opt_in": {
+          "label": "Agreed to be contacted",
+          "hint": "Customers, sign-ups or forms.",
+          "legal": "Contacts who agreed to receive messages from the business."
+        },
+        "bought": "Bought lists are not contacted: spam reports take the number down."
+      },
+      "message": {
+        "channel": "From which number?",
+        "cloudHint": "Opens with an approved template and Meta charges for each message. The AI takes over when the lead replies.",
+        "wahaHint": "No cost per message, but a ban risk: sending follows the anti-ban rules.",
+        "noWaha": "No WAHA number connected. Connect one in Connections to prospect with no cost per message.",
+        "approvedOnly": "Only templates approved by Meta are listed",
+        "preview": "Preview",
+        "wahaPreview": "The AI writes a different message for each lead from what you described, ending with \"reply STOP\"."
+      },
+      "pace": {
+        "when": "When to send",
+        "timezone": "Brasília time. Outside the window, sends wait for the next opening.",
+        "meta": {
+          "title": "Meta's limit",
+          "error": "Couldn't reach Meta ({error}). Check the token in Connections before starting.",
+          "number": "Number",
+          "tier": "Account limit",
+          "perDay": "{count} people / 24h",
+          "unlimited": "Unlimited",
+          "quality": "Quality",
+          "q": {
+            "GREEN": "High",
+            "YELLOW": "Medium",
+            "RED": "Low",
+            "UNKNOWN": "Not rated"
+          },
+          "tierHint": "Meta limits how many new people the number can reach in 24h and raises that limit with volume and quality. The official number has no warm-up or interval: messages go out in batches, up to the daily limit."
+        },
+        "cost": {
+          "title": "Cost",
+          "perMessage": "Price per message on your Meta account",
+          "total": "{count, plural, =1 {Estimated cost (1 message)} other {Estimated cost (# messages)}}",
+          "hint": "Meta charges each delivered template at the price of its category ({category}) and the recipient's country. Cold outreach is usually Marketing. Prices change by country and volume:",
+          "link": "Meta's pricing"
+        },
+        "antiban": {
+          "title": "Anti-ban (WAHA)",
+          "jitter": "The interval varies on every send, so it doesn't look automated.",
+          "warmup": "Warm-up: today this number may send up to {count} a day; the ceiling grows with the connection age.",
+          "warmupGeneric": "Warm-up: new numbers start with few sends a day and the ceiling grows with the connection age.",
+          "optout": "Every message ends with \"reply STOP\"; whoever leaves is never contacted again.",
+          "pause": "If a send fails because of the number, the campaign pauses itself."
+        }
+      },
+      "review": {
+        "funnel": "In the pipeline",
+        "dealHint": "The deal is created only when the lead is approached, not on import.",
+        "firstNow": "Within the window, the first message goes out in seconds."
+      },
+      "aside": {
+        "leads": "Going into the campaign",
+        "niches": "{count, plural, =1 {in 1 niche} other {in # niches}}",
+        "channel": "Number",
+        "duration": "Estimate",
+        "days": "{count, plural, =1 {1 sending day} other {# sending days}}",
+        "cost": "Estimated cost",
+        "coldWaha": "A cold list over WAHA: sending is slow on purpose. Rushing here costs the number."
+      },
+      "errors": {
+        "import_failed": "Couldn't import the spreadsheet. Nothing was sent."
+      }
     }
   },
   "AiAckNotice": {
@@ -1184,7 +1306,8 @@
         "bad_email": "Invalid email",
         "opted_out": "Asked not to be messaged",
         "exists": "Already existed (unchanged)",
-        "failed": "Could not save"
+        "failed": "Could not save",
+        "other_niche": "Niche left out of the campaign"
       },
       "errors": {
         "file_too_large": "File larger than 5 MB.",

@@ -7,6 +7,7 @@ import {
   nextWindowOpening,
   optOutLine,
   parseCampaignConfig,
+  maxMessages,
   renderTemplateParams,
   warmupCeiling,
 } from './logic'
@@ -51,6 +52,19 @@ describe('parseCampaignConfig', () => {
   it('clamps limits', () => {
     const r = parseCampaignConfig({ ...base, daily_limit: 999, interval_minutes: 1 })
     if (r.ok) expect([r.config.daily_limit, r.config.interval_minutes]).toEqual([50, 5])
+  })
+  it('Cloud: no anti-ban pacing, a higher ceiling and an optional cost', () => {
+    const cloud = { ...base, channel_kind: 'cloud', channel_id: null, template_name: 'ola' }
+    const r = parseCampaignConfig({ ...cloud, daily_limit: 5000, interval_minutes: 30, cost_per_message: '0,35' })
+    if (r.ok) expect(r.config).toMatchObject({ daily_limit: 1000, interval_minutes: 0, cost_per_message: 0.35 })
+    const w = parseCampaignConfig({ ...base, cost_per_message: 1 })
+    if (w.ok) expect(w.config.cost_per_message).toBeNull()
+    const bad = parseCampaignConfig({ ...cloud, cost_per_message: 'abc' })
+    if (bad.ok) expect(bad.config.cost_per_message).toBeNull()
+  })
+  it('counts the follow-ups in the most a campaign can send', () => {
+    expect(maxMessages(100, { followup_enabled: true, followup_max: 2 })).toBe(300)
+    expect(maxMessages(100, { followup_enabled: false, followup_max: 2 })).toBe(100)
   })
 })
 

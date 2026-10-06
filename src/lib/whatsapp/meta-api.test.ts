@@ -3,6 +3,7 @@ import {
   INTERACTIVE_LIMITS,
   sendInteractiveButtons,
   sendInteractiveList,
+  tierLimit,
 } from "./meta-api";
 
 // All assertions in this file run BEFORE the network call. We stub fetch
@@ -267,3 +268,13 @@ describe("sendInteractiveList — validation", () => {
     });
   });
 });
+
+describe('tierLimit', () => {
+  it.each([
+    ['TIER_250', 250],
+    ['TIER_1K', 1000],
+    ['TIER_100K', 100000],
+    ['TIER_UNLIMITED', null],
+    [undefined, null],
+  ])('%s → %s', (tier, want) => expect(tierLimit(tier)).toBe(want))
+})

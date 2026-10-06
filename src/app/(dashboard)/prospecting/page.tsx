@@ -5,30 +5,9 @@ import { useTranslations } from 'next-intl';
 import { ChevronDown, ChevronUp, Loader2, Pause, Play, Plus, Target, X } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
 import { useCan } from '@/hooks/use-can';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { SkeletonList } from '@/components/ui/skeleton';
 
 interface Funnel {
@@ -52,13 +31,15 @@ interface Lead {
   qualified_at: string | null;
   opted_out_at: string | null;
   followups_sent: number;
+  /** From the contact's "nicho:" tag, when the list was split by niche. */
+  niche: string | null;
   contact: { name: string | null; phone: string; company: string | null } | null;
 }
 interface Campaign {
   id: string;
   name: string;
   status: 'draft' | 'running' | 'paused' | 'completed' | 'cancelled';
-  config: { channel_kind: 'waha' | 'cloud'; template_name?: string | null };
+  config: { channel_kind: 'waha' | 'cloud'; template_name?: string | null; cost_per_message?: number | null };
   error: string | null;
   next_send_at: string;
   created_at: string;
@@ -134,7 +115,6 @@ export default function ProspectingPage() {
   const t = useTranslations('Prospecting');
   const canManage = useCan('edit-settings');
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
-  const [creating, setCreating] = useState(false);
 
   const [reloadKey, setReloadKey] = useState(0);
   const load = useCallback(() => setReloadKey((k) => k + 1), []);
@@ -181,7 +161,7 @@ export default function ProspectingPage() {
           <p className="text-muted-foreground max-w-2xl text-sm">{t('subtitle')}</p>
         </div>
         {canManage && (
-          <Button onClick={() => setCreating(true)}>
+          <Button nativeButton={false} render={<Link href="/prospecting/new" />}>
             <Plus className="size-4" />
             {t('new')}
           </Button>
@@ -206,16 +186,6 @@ export default function ProspectingPage() {
         </div>
       )}
 
-      {canManage && (
-        <NewCampaignDialog
-          open={creating}
-          onOpenChange={setCreating}
-          onCreated={() => {
-            setCreating(false);
-            load();
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -336,6 +306,16 @@ function CampaignCard({
               })}
               {(f.followed_up ?? 0) > 0 && ` · ${t('funnel.followedUp', { count: f.followed_up ?? 0 })}`}
             </p>
+            {c.config.channel_kind === 'cloud' && c.config.cost_per_message ? (
+              <p className="text-muted-foreground text-xs">
+                {t('funnel.spent', {
+                  amount: ((f.sent + (f.followed_up ?? 0)) * c.config.cost_per_message).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }),
+                })}
+              </p>
+            ) : null}
           </div>
           <LeadList campaignId={c.id} version={version} t={t} />
         </>
@@ -383,6 +363,21 @@ function LeadList({
               : 'queued';
   const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : '—');
 
+  // Funnel per niche, when the list was split by one.
+  const byNiche = useMemo(() => {
+    const m = new Map<string, { leads: number; sent: number; replied: number; qualified: number }>();
+    for (const l of leads ?? []) {
+      if (!l.niche) continue;
+      const r = m.get(l.niche) ?? { leads: 0, sent: 0, replied: 0, qualified: 0 };
+      r.leads++;
+      if (l.sent_at) r.sent++;
+      if (l.replied_at) r.replied++;
+      if (l.qualified_at) r.qualified++;
+      m.set(l.niche, r);
+    }
+    return [...m.entries()].sort((a, b) => b[1].leads - a[1].leads);
+  }, [leads]);
+
   return (
     <div>
       <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setOpen((v) => !v)}>
@@ -393,7 +388,26 @@ function LeadList({
         (leads === null ? (
           <Loader2 className="text-muted-foreground mx-auto size-4 animate-spin" />
         ) : (
-          <div className="mt-2 max-h-80 overflow-auto rounded-xl border">
+          <div className="mt-2 space-y-3">
+          {byNiche.length > 1 && (
+            <div className="space-y-2 rounded-xl border p-3">
+              <p className="text-xs font-bold">{t('leads.byNiche')}</p>
+              {byNiche.map(([niche, r]) => (
+                <div key={niche} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] items-center gap-3 text-xs">
+                  <span className="truncate font-semibold">{niche}</span>
+                  <span className="bg-muted flex h-2 overflow-hidden rounded-full">
+                    <span className="bg-tone-blue" style={{ width: `${pct(r.sent - r.replied, r.leads)}%` }} />
+                    <span className="bg-tone-salmon" style={{ width: `${pct(r.replied - r.qualified, r.leads)}%` }} />
+                    <span className="bg-tone-mint" style={{ width: `${pct(r.qualified, r.leads)}%` }} />
+                  </span>
+                  <span className="text-muted-foreground tabular-nums">
+                    {t('leads.nicheLine', { leads: r.leads, sent: r.sent, replied: r.replied, qualified: r.qualified })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="max-h-80 overflow-auto rounded-xl border">
             <table className="w-full text-xs">
               <thead className="bg-muted/50 sticky top-0">
                 <tr>
@@ -411,7 +425,10 @@ function LeadList({
                     <tr key={l.id} className="border-t">
                       <td className="px-2 py-1">
                         <div className="font-medium">{l.contact?.company || l.contact?.name || l.contact?.phone}</div>
-                        <div className="text-muted-foreground">{l.contact?.phone}</div>
+                        <div className="text-muted-foreground">
+                          {l.contact?.phone}
+                          {l.niche && ` · ${l.niche}`}
+                        </div>
                       </td>
                       <td className="px-2 py-1">
                         <span
@@ -438,440 +455,8 @@ function LeadList({
               </tbody>
             </table>
           </div>
+          </div>
         ))}
     </div>
-  );
-}
-
-/** An approved template plus a source for each {{n}} body variable. */
-function TemplateFields({
-  templates,
-  loaded,
-  value,
-  onChange,
-  params,
-  onParams,
-  t,
-}: {
-  templates: TemplateOption[];
-  /** False until the templates query has answered. */
-  loaded: boolean;
-  value: string;
-  onChange: (v: string) => void;
-  params: string[];
-  onParams: (p: string[]) => void;
-  t: ReturnType<typeof useTranslations>;
-}) {
-  const template = templates.find((x) => `${x.name}|${x.language}` === value) ?? null;
-  const varCount = useMemo(() => {
-    const nums = [...(template?.body_text ?? '').matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1]));
-    return nums.length ? Math.max(...nums) : 0;
-  }, [template]);
-  const shown = Array.from({ length: varCount }, (_, i) => params[i] ?? 'first_name');
-  const setAt = (i: number, v: string) => onParams(shown.map((x, j) => (j === i ? v : x)));
-
-  return (
-    <div className="space-y-2">
-      <Select value={value || null} onValueChange={(v) => onChange(v ?? '')}>
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder={t('form.pick')}>
-            {(v: string) => v?.replace('|', ' · ') || t('form.pick')}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {templates.map((x) => (
-            <SelectItem key={`${x.name}|${x.language}`} value={`${x.name}|${x.language}`}>
-              {x.name} · {x.language}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {loaded && templates.length === 0 && (
-        <p className="text-tone-salmon-ink text-xs">{t('form.noTemplates')}</p>
-      )}
-      {template && (
-        <p className="bg-muted/50 rounded-md p-2 text-xs whitespace-pre-wrap">{template.body_text}</p>
-      )}
-      {shown.map((p, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <span className="text-muted-foreground w-12 text-xs">{`{{${i + 1}}}`}</span>
-          <Select
-            value={(TOKENS as readonly string[]).includes(p) ? p : 'text'}
-            onValueChange={(v) => setAt(i, v === 'text' ? '' : (v ?? ''))}
-          >
-            <SelectTrigger className="w-44">
-              <SelectValue>{(v: string) => t(`form.token.${v}`)}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {[...TOKENS, 'text'].map((tok) => (
-                <SelectItem key={tok} value={tok}>
-                  {t(`form.token.${tok}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {!(TOKENS as readonly string[]).includes(p) && (
-            <Input value={p} onChange={(e) => setAt(i, e.target.value)} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-interface Option {
-  id: string;
-  name: string;
-}
-interface TemplateOption {
-  name: string;
-  language: string;
-  body_text: string;
-}
-
-const TOKENS = ['first_name', 'name', 'company'] as const;
-
-function NewCampaignDialog({
-  open,
-  onOpenChange,
-  onCreated,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  onCreated: () => void;
-}) {
-  const t = useTranslations('Prospecting');
-  const supabase = createClient();
-  const { accountId } = useAuth();
-
-  const [lists, setLists] = useState<Option[]>([]);
-  const [agents, setAgents] = useState<Option[]>([]);
-  const [waha, setWaha] = useState<Option[]>([]);
-  const [pipelines, setPipelines] = useState<Option[]>([]);
-  const [stages, setStages] = useState<Option[]>([]);
-  const [templates, setTemplates] = useState<TemplateOption[]>([]);
-  const [loaded, setLoaded] = useState(false);
-
-  const [name, setName] = useState('');
-  const [listId, setListId] = useState('');
-  const [channel, setChannel] = useState('cloud'); // 'cloud' | waha channel id
-  const [agentId, setAgentId] = useState('');
-  const [pipelineId, setPipelineId] = useState('');
-  const [entryStage, setEntryStage] = useState('');
-  const [qualifiedStage, setQualifiedStage] = useState('');
-  const [instruction, setInstruction] = useState('');
-  const [criteria, setCriteria] = useState('');
-  const [templateKey, setTemplateKey] = useState('');
-  const [params, setParams] = useState<string[]>([]);
-  const [legal, setLegal] = useState('');
-  const [dailyLimit, setDailyLimit] = useState(10);
-  const [interval, setInterval] = useState(15);
-  const [startHour, setStartHour] = useState(9);
-  const [endHour, setEndHour] = useState(18);
-  const [weekdays, setWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [followup, setFollowup] = useState(false);
-  const [followupDays, setFollowupDays] = useState(3);
-  const [followupMax, setFollowupMax] = useState(1);
-  const [followupKey, setFollowupKey] = useState('');
-  const [followupParams, setFollowupParams] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!open || !accountId) return;
-    void (async () => {
-      const [tags, ch, pl, tpl, ag] = await Promise.all([
-        supabase.from('tags').select('id, name').eq('account_id', accountId).order('name'),
-        supabase.from('whatsapp_waha_channels').select('id, label').eq('account_id', accountId),
-        supabase.from('pipelines').select('id, name').eq('account_id', accountId),
-        supabase
-          .from('message_templates')
-          .select('name, language, body_text')
-          .eq('account_id', accountId)
-          .in('status', ['APPROVED', 'Approved']),
-        fetch('/api/ai/agents', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : { agents: [] })),
-      ]);
-      setLists((tags.data ?? []).map((x) => ({ id: x.id, name: x.name })));
-      setWaha((ch.data ?? []).map((x) => ({ id: x.id, name: x.label })));
-      setPipelines((pl.data ?? []).map((x) => ({ id: x.id, name: x.name })));
-      setTemplates((tpl.data ?? []) as TemplateOption[]);
-      setLoaded(true);
-      setAgents(((ag.agents ?? []) as Option[]).map((a) => ({ id: a.id, name: a.name })));
-    })();
-  }, [open, accountId, supabase]);
-
-  useEffect(() => {
-    if (!pipelineId) return;
-    void supabase
-      .from('pipeline_stages')
-      .select('id, name')
-      .eq('pipeline_id', pipelineId)
-      .order('position')
-      .then(({ data }) => setStages((data ?? []).map((x) => ({ id: x.id, name: x.name }))));
-  }, [pipelineId, supabase]);
-
-  const isCloud = channel === 'cloud';
-  const template = templates.find((x) => `${x.name}|${x.language}` === templateKey) ?? null;
-  const followupTemplate = templates.find((x) => `${x.name}|${x.language}` === followupKey) ?? null;
-  const varsOf = (tpl: TemplateOption | null) => {
-    const nums = [...(tpl?.body_text ?? '').matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1]));
-    return nums.length ? Math.max(...nums) : 0;
-  };
-  const fill = (p: string[], n: number) => Array.from({ length: n }, (_, i) => p[i] ?? 'first_name');
-
-  const labelOf = (list: Option[], id: string) => list.find((x) => x.id === id)?.name ?? '';
-
-  async function submit() {
-    setBusy(true);
-    try {
-      const res = await fetch('/api/prospecting/campaigns', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          source_tag_id: listId,
-          config: {
-            channel_kind: isCloud ? 'cloud' : 'waha',
-            channel_id: isCloud ? null : channel,
-            agent_id: agentId,
-            pipeline_id: pipelineId,
-            entry_stage_id: entryStage,
-            qualified_stage_id: qualifiedStage,
-            instruction,
-            criteria,
-            template_name: template?.name ?? null,
-            template_language: template?.language ?? null,
-            template_params: fill(params, varsOf(template)),
-            legal_basis_ref: legal,
-            daily_limit: dailyLimit,
-            interval_minutes: interval,
-            window_start_hour: startHour,
-            window_end_hour: endHour,
-            weekdays,
-            followup_enabled: followup,
-            followup_after_days: followupDays,
-            followup_max: followupMax,
-            followup_template_name: followupTemplate?.name ?? null,
-            followup_template_language: followupTemplate?.language ?? null,
-            followup_template_params: fill(followupParams, varsOf(followupTemplate)),
-          },
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(t.has(`errors.${data.error}`) ? t(`errors.${data.error}`) : t('errors.generic'));
-        return;
-      }
-      toast.success(t('started', { queued: data.queued ?? 0, skipped: data.skipped ?? 0 }));
-      onCreated();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const pick = (
-    value: string,
-    onChange: (v: string) => void,
-    options: Option[],
-    placeholder: string,
-  ) => (
-    <Select value={value || null} onValueChange={(v) => onChange(v ?? '')}>
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder={placeholder}>{(v: string) => labelOf(options, v) || placeholder}</SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((o) => (
-          <SelectItem key={o.id} value={o.id}>
-            {o.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-
-  const channelOptions: Option[] = [
-    { id: 'cloud', name: t('channel.cloud') },
-    ...waha.map((w) => ({ id: w.id, name: `${t('channel.waha')} — ${w.name}` })),
-  ];
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{t('new')}</DialogTitle>
-          <DialogDescription>{t('newHint')}</DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>{t('form.name')}</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t('form.list')}</Label>
-            {pick(listId, setListId, lists, t('form.pick'))}
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t('form.channel')}</Label>
-            {pick(channel, setChannel, channelOptions, t('form.pick'))}
-          </div>
-          <p className="text-muted-foreground text-xs sm:col-span-2">
-            {isCloud ? t('form.cloudHint') : t('form.wahaHint')}
-          </p>
-          <div className="space-y-1.5">
-            <Label>{t('form.agent')}</Label>
-            {pick(agentId, setAgentId, agents, t('form.pick'))}
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t('form.pipeline')}</Label>
-            {pick(pipelineId, setPipelineId, pipelines, t('form.pick'))}
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t('form.entryStage')}</Label>
-            {pick(entryStage, setEntryStage, stages, t('form.pick'))}
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t('form.qualifiedStage')}</Label>
-            {pick(qualifiedStage, setQualifiedStage, stages, t('form.pick'))}
-          </div>
-
-          {isCloud ? (
-            <div className="space-y-2 sm:col-span-2">
-              <Label>{t('form.template')}</Label>
-              <TemplateFields
-                templates={templates}
-                loaded={loaded}
-                value={templateKey}
-                onChange={setTemplateKey}
-                params={params}
-                onParams={setParams}
-                t={t}
-              />
-            </div>
-          ) : (
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>{t('form.instruction')}</Label>
-              <Textarea
-                value={instruction}
-                onChange={(e) => setInstruction(e.target.value)}
-                rows={3}
-                placeholder={t('form.instructionPlaceholder')}
-              />
-            </div>
-          )}
-
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>{t('form.criteria')}</Label>
-            <Textarea
-              value={criteria}
-              onChange={(e) => setCriteria(e.target.value)}
-              rows={2}
-              placeholder={t('form.criteriaPlaceholder')}
-            />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>{t('form.legal')}</Label>
-            <Textarea
-              value={legal}
-              onChange={(e) => setLegal(e.target.value)}
-              rows={2}
-              placeholder={t('form.legalPlaceholder')}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t('form.dailyLimit')}</Label>
-            <Input
-              type="number"
-              min={1}
-              max={50}
-              value={dailyLimit}
-              onChange={(e) => setDailyLimit(Number(e.target.value))}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t('form.interval')}</Label>
-            <Input
-              type="number"
-              min={5}
-              max={1440}
-              value={interval}
-              onChange={(e) => setInterval(Number(e.target.value))}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t('form.startHour')}</Label>
-            <Input type="number" min={0} max={23} value={startHour} onChange={(e) => setStartHour(Number(e.target.value))} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>{t('form.endHour')}</Label>
-            <Input type="number" min={1} max={24} value={endHour} onChange={(e) => setEndHour(Number(e.target.value))} />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>{t('form.weekdays')}</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {[1, 2, 3, 4, 5, 6, 0].map((d) => (
-                <Button
-                  key={d}
-                  type="button"
-                  size="sm"
-                  variant={weekdays.includes(d) ? 'default' : 'outline'}
-                  className="h-7 px-2 text-xs"
-                  onClick={() =>
-                    setWeekdays((w) => (w.includes(d) ? w.filter((x) => x !== d) : [...w, d]))
-                  }
-                >
-                  {t(`form.day.${d}`)}
-                </Button>
-              ))}
-            </div>
-          </div>
-          <p className="text-muted-foreground text-xs sm:col-span-2">{t('form.pacingHint')}</p>
-
-          <div className="space-y-3 rounded-md border p-3 sm:col-span-2">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium">{t('form.followup')}</p>
-                <p className="text-muted-foreground text-xs">
-                  {isCloud ? t('form.followupCloudHint') : t('form.followupWahaHint')}
-                </p>
-              </div>
-              <Switch checked={followup} onCheckedChange={setFollowup} />
-            </div>
-            {followup && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>{t('form.followupDays')}</Label>
-                  <Input type="number" min={1} max={14} value={followupDays} onChange={(e) => setFollowupDays(Number(e.target.value))} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>{t('form.followupMax')}</Label>
-                  <Input type="number" min={1} max={2} value={followupMax} onChange={(e) => setFollowupMax(Number(e.target.value))} />
-                </div>
-                {isCloud && (
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label>{t('form.followupTemplate')}</Label>
-                    <TemplateFields
-                      templates={templates}
-                loaded={loaded}
-                      value={followupKey}
-                      onChange={setFollowupKey}
-                      params={followupParams}
-                      onParams={setFollowupParams}
-                      t={t}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button onClick={() => void submit()} disabled={busy || !name || !listId || !agentId}>
-            {busy && <Loader2 className="size-4 animate-spin" />}
-            {t('start')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

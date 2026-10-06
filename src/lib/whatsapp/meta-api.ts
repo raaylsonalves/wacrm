@@ -148,6 +148,35 @@ export async function verifyPhoneNumber(
   return response.json()
 }
 
+export interface MetaSendingLimits {
+  display_phone_number?: string
+  quality_rating?: string
+  /** e.g. TIER_250, TIER_1K, TIER_10K, TIER_100K, TIER_UNLIMITED. Meta
+   *  counts it per business portfolio, per rolling 24h, in unique
+   *  people reached by business-initiated messages. */
+  messaging_limit_tier?: string
+}
+
+/** How many new people this number may reach per 24h, and its quality. */
+export async function getSendingLimits(args: VerifyPhoneNumberArgs): Promise<MetaSendingLimits> {
+  const url = `${META_API_BASE}/${args.phoneNumberId}?fields=display_phone_number,quality_rating,messaging_limit_tier`
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${args.accessToken}` },
+    signal: AbortSignal.timeout(META_SEND_TIMEOUT_MS),
+  })
+  if (!response.ok) {
+    await throwMetaError(response, `Meta API error: ${response.status}`)
+  }
+  return response.json()
+}
+
+/** TIER_1K → 1000; unknown or unlimited → null. */
+export function tierLimit(tier: string | undefined): number | null {
+  const m = /^TIER_(\d+)(K)?$/.exec(tier ?? '')
+  if (!m) return null
+  return Number(m[1]) * (m[2] ? 1000 : 1)
+}
+
 // ============================================================
 // Cloud API registration (subscription for inbound webhooks)
 // ============================================================
