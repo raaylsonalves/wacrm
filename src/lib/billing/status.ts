@@ -8,14 +8,14 @@ export const SUBSCRIPTION_STATUSES = [
   'past_due',
   'canceled',
   'exempt',
-] as const
-export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number]
+] as const;
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
 
 export function isSubscriptionStatus(v: unknown): v is SubscriptionStatus {
-  return SUBSCRIPTION_STATUSES.includes(v as SubscriptionStatus)
+  return SUBSCRIPTION_STATUSES.includes(v as SubscriptionStatus);
 }
 
 /** Paid, or released by the operator (trial / own accounts). */
 export function canInviteMembers(status: SubscriptionStatus | null): boolean {
-  return status === 'active' || status === 'exempt'
+  return status === 'active' || status === 'exempt';
 }
