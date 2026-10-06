@@ -83,7 +83,10 @@ describe("getCurrentAccount", () => {
           data: { account_id: "acct-1", account_role: "owner" },
           error: null,
         },
-        accounts: { data: { id: "acct-1", name: "Acme" }, error: null },
+        accounts: {
+          data: { id: "acct-1", name: "Acme", subscription_status: "active" },
+          error: null,
+        },
       },
     });
     createClient.mockReturnValue(client);
@@ -104,6 +107,27 @@ describe("getCurrentAccount", () => {
     expect(calls[0].eqArgs).toEqual([["user_id", "user-1"]]);
     expect(calls[1].columns).not.toMatch(/accounts!/);
     expect(calls[1].eqArgs).toEqual([["id", "acct-1"]]);
+  });
+
+  it("refuses an unpaid account with 402, unless the route allows it", async () => {
+    const { client } = makeClient({
+      user: { id: "user-1" },
+      byTable: {
+        profiles: {
+          data: { account_id: "acct-1", account_role: "owner" },
+          error: null,
+        },
+        accounts: {
+          data: { id: "acct-1", name: "Acme", subscription_status: "pending" },
+          error: null,
+        },
+      },
+    });
+    createClient.mockReturnValue(client);
+    await expect(getCurrentAccount()).rejects.toMatchObject({ status: 402 });
+    await expect(
+      getCurrentAccount({ allowUnpaid: true }),
+    ).resolves.toMatchObject({ subscriptionStatus: "pending" });
   });
 
   it("throws UnauthorizedError when there is no session", async () => {

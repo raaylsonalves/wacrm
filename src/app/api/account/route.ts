@@ -26,7 +26,8 @@ import {
 
 export async function GET() {
   try {
-    const ctx = await getCurrentAccount();
+    // Identity only; reachable before payment so the app can route the owner.
+    const ctx = await getCurrentAccount({ allowUnpaid: true });
     return NextResponse.json({
       account: ctx.account,
       role: ctx.role,

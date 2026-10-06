@@ -9,7 +9,7 @@
 // webhook moves the account to `active`.
 // ============================================================
 
-import { randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
 import { canManageBilling } from '@/lib/auth/roles';
@@ -30,7 +30,7 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
   try {
-    const ctx = await requireRole('owner');
+    const ctx = await requireRole('owner', { allowUnpaid: true });
     if (!canManageBilling(ctx.role)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }
@@ -74,11 +74,20 @@ export async function POST(request: Request) {
     }
     const { data: existing } = await db
       .from('billing_subscriptions')
-      .select('id, status')
+      .select('id, status, mp_preapproval_id')
       .eq('account_id', ctx.accountId)
       .maybeSingle();
     if (existing?.status === 'active') {
       return NextResponse.json({ error: 'already_active' }, { status: 409 });
+    }
+    // A card subscription already exists at Mercado Pago and has not been
+    // cancelled: starting another would charge the customer twice. Cancel
+    // or change it from the billing screen instead.
+    if (existing?.mp_preapproval_id && existing.status !== 'canceled') {
+      return NextResponse.json(
+        { error: 'subscription_exists' },
+        { status: 409 }
+      );
     }
 
     const quote = quoteSubscription(plan, cycle);
@@ -117,7 +126,12 @@ export async function POST(request: Request) {
             quote.chargesTotal !== null ? addYears(new Date(), 1) : undefined,
           backUrl: `${origin}/onboarding/payment`,
         },
-        randomUUID()
+        // Deterministic per (subscription row, card token): a double submit
+        // of the same form returns the same subscription instead of a second.
+        createHash('sha256')
+          .update(`${sub.id}:${cardToken}`)
+          .digest('hex')
+          .slice(0, 32)
       );
     } catch (err) {
       if (err instanceof MercadoPagoError) {

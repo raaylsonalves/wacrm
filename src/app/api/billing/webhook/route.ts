@@ -51,7 +51,10 @@ export async function POST(request: Request) {
     data?: { id?: string | number };
   } | null;
 
-  const dataId = String(queryId ?? body?.data?.id ?? '');
+  // Only the data.id in the URL is covered by the signature. A body id
+  // is unsigned, so it is never used: a captured signature could be replayed
+  // with a different body and steer which resource we look at.
+  const dataId = String(queryId ?? '');
   const topic = String(
     body?.type ?? body?.topic ?? url.searchParams.get('type') ?? ''
   );

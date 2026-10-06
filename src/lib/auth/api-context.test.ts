@@ -7,8 +7,21 @@ import { __resetRateLimitForTests, RATE_LIMITS } from "@/lib/rate-limit";
 
 // Mock the service-role client factory — requireApiKey only stashes
 // the returned client in the context; tests never call through it.
+// requireApiKey also reads the account's subscription status through it.
+let accountStatus: string | null = "active";
 vi.mock("@/lib/flows/admin-client", () => ({
-  supabaseAdmin: () => ({ __isMockAdminClient: true }),
+  supabaseAdmin: () => ({
+    __isMockAdminClient: true,
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({
+            data: accountStatus ? { subscription_status: accountStatus } : null,
+          }),
+        }),
+      }),
+    }),
+  }),
 }));
 
 // Mock the store so we control which row a hash resolves to.
@@ -45,6 +58,7 @@ function row(overrides: Partial<ApiKeyRow> = {}): ApiKeyRow {
 
 beforeEach(() => {
   __resetRateLimitForTests();
+  accountStatus = "active";
   findActiveKeyByHash.mockReset();
   touchLastUsed.mockReset();
 });
@@ -84,6 +98,15 @@ describe("requireApiKey", () => {
       "unauthorized",
       401,
     );
+  });
+
+  it("rejects a key of an unpaid account with 402", async () => {
+    findActiveKeyByHash.mockResolvedValue(row());
+    accountStatus = "pending";
+    await expect(requireApiKey(reqWith(`Bearer ${KEY}`))).rejects.toMatchObject({
+      status: 402,
+      code: "payment_required",
+    });
   });
 
   it("returns a context for a valid key with no scope required", async () => {

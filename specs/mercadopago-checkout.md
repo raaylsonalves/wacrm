@@ -243,3 +243,55 @@ Mercado Pago's **sandbox** credentials and test users/cards.
   copy today; decide which are enforced at launch.
 - Migration and the Mercado Pago credentials need explicit go-ahead before
   anything is applied or configured.
+
+## Security review (2026-10-06)
+
+Reviewed: the path from signup through onboarding, and the payment webhook.
+
+Fixed:
+
+- **Payment gate was client-side only.** The dashboard redirected a
+  `pending` owner to the payment step, but every API route still answered.
+  `getCurrentAccount`/`requireRole` now throw `PaymentRequiredError` (402)
+  for `pending` accounts; billing and identity routes opt out with
+  `allowUnpaid`. `requireApiKey` rejects keys of a `pending` account
+  (`payment_required`, 402). Unknown statuses fail closed.
+- **Webhook trusted an unsigned body id.** Only the `data.id` in the URL is
+  covered by the signature; the body id is now ignored, so a replayed
+  signature cannot steer which resource we read.
+- **Webhook race on card subscriptions.** The preapproval id is stored
+  after Mercado Pago creates it, so an early notification found no row and
+  was acknowledged (lost). The row is now also found by the
+  `external_reference` we sent and adopts the id (only if it has none).
+- **Order identity.** A Pix order must match the `mp_order_id` stored for
+  its reference.
+- **Double charge.** The card checkout refuses to start a second
+  subscription while one exists at Mercado Pago and is not cancelled, and
+  uses a deterministic idempotency key per (row, card token). The Pix
+  checkout refuses to touch a month that is already paid.
+
+Verified OK: `subscription_status` and `owner_user_id` cannot be changed
+by a customer (trigger on `authenticated`); billing tables are read-only
+for clients and `billing_events` is server-only; amounts are re-checked
+against our own rows; the account is resolved only from our rows;
+`exempt` is never overwritten; no card data touches the server; logs carry
+no secrets or bodies; plan/cycle in signup metadata only preselect, the
+server prices the charge.
+
+Known gaps / follow-ups:
+
+- A `pending` account can still read and write its own rows through
+  Supabase RLS from the browser (contacts, messages as data). Outbound
+  actions (send, broadcast, AI, channel connection, API keys) go through
+  gated routes, so no WhatsApp message leaves; tighten with RLS only if
+  that data access matters.
+- `past_due` and `canceled` are still treated as usable. Enforce the
+  7-day grace and period-end read-only rules next.
+- A finished annual plan is marked canceled but the account stays
+  `active` past the paid period; needs the period-end job.
+- The in-memory rate limiter is per instance (documented in
+  `lib/rate-limit.ts`); on several instances the checkout limit is
+  approximate.
+- The CSP is report-only; when it is enforced, allow
+  `sdk.mercadopago.com` (script) and Mercado Pago's frame origin for the
+  Card Payment Brick.

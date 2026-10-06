@@ -33,7 +33,12 @@ import { supabaseAdmin } from '@/lib/flows/admin-client';
 import { findActiveKeyByHash, touchLastUsed } from '@/lib/api-keys/store';
 import { hashApiKey, looksLikeApiKey } from '@/lib/api-keys/keys';
 import { hasScope, type ApiScope } from '@/lib/api-keys/scopes';
-import { forbidden, rateLimited, unauthorized } from '@/lib/api/v1/respond';
+import {
+  ApiError,
+  forbidden,
+  rateLimited,
+  unauthorized,
+} from '@/lib/api/v1/respond';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 export interface ApiKeyContext {
@@ -103,6 +108,20 @@ export async function requireApiKey(
 
   if (scope && !hasScope(row.scopes, scope)) {
     throw forbidden(`This API key is missing the '${scope}' scope`);
+  }
+
+  // An unpaid account's keys are inert, like the dashboard routes.
+  const { data: acct } = await supabaseAdmin()
+    .from('accounts')
+    .select('subscription_status')
+    .eq('id', row.account_id)
+    .maybeSingle();
+  if (!acct || acct.subscription_status === 'pending') {
+    throw new ApiError(
+      'payment_required',
+      'This account has no active subscription',
+      402
+    );
   }
 
   touchLastUsed(row.id);

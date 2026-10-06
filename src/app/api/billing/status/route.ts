@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const ctx = await getCurrentAccount();
+    const ctx = await getCurrentAccount({ allowUnpaid: true });
     const [{ data: account }, { data: sub }, { data: pix }] = await Promise.all(
       [
         ctx.supabase

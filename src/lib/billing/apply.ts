@@ -93,6 +93,45 @@ async function registerPaidCharge(
   await setAccountStatus(db, accountId, 'active');
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+interface SubRow {
+  id: string;
+  account_id: string;
+  amount_cents: number;
+}
+
+/**
+ * The subscription a preapproval belongs to. The preapproval id is stored
+ * right AFTER Mercado Pago creates it, so a notification can arrive in the
+ * gap: fall back to the external_reference we sent (our own row id) and
+ * adopt the id then. Only a row that has no preapproval yet is adopted, so
+ * a notification can never re-point someone else's subscription.
+ */
+async function findSubscription(
+  db: SupabaseClient,
+  preapprovalId: string,
+  externalReference: string | undefined
+): Promise<SubRow | null> {
+  const { data, error } = await db
+    .from('billing_subscriptions')
+    .select('id, account_id, amount_cents')
+    .eq('mp_preapproval_id', preapprovalId)
+    .maybeSingle();
+  if (error) throw error;
+  if (data) return data as SubRow;
+  if (!externalReference || !UUID.test(externalReference)) return null;
+  const { data: adopted, error: adoptErr } = await db
+    .from('billing_subscriptions')
+    .update({ mp_preapproval_id: preapprovalId })
+    .eq('id', externalReference)
+    .is('mp_preapproval_id', null)
+    .select('id, account_id, amount_cents')
+    .maybeSingle();
+  if (adoptErr) throw adoptErr;
+  return (adopted as SubRow | null) ?? null;
+}
+
 async function applyOrder(
   db: SupabaseClient,
   dataId: string
@@ -102,12 +141,17 @@ async function applyOrder(
   if (!ref) return 'unknown_resource';
   const { data: row, error } = await db
     .from('billing_pix_orders')
-    .select('id, account_id, status, amount_cents')
+    .select('id, account_id, status, amount_cents, mp_order_id')
     .eq('external_reference', ref)
     .maybeSingle();
   if (error) throw error;
   if (!row) return 'unknown_resource';
   if (row.status === 'paid') return 'already_applied';
+  // The order we created for this reference is the only one that counts.
+  if (row.mp_order_id && row.mp_order_id !== order.id) {
+    console.error('[billing] order id does not match our reference', { ref });
+    return 'unknown_resource';
+  }
 
   const status = pixOrderStatus(order.status);
   if (status === 'paid' && toCents(order.total_amount) !== row.amount_cents) {
@@ -136,12 +180,7 @@ async function applyPreapproval(
   dataId: string
 ): Promise<ApplyResult> {
   const pre = await getPreapproval(dataId);
-  const { data: sub, error } = await db
-    .from('billing_subscriptions')
-    .select('id, account_id, amount_cents')
-    .eq('mp_preapproval_id', pre.id)
-    .maybeSingle();
-  if (error) throw error;
+  const sub = await findSubscription(db, pre.id, pre.external_reference);
   if (!sub) return 'unknown_resource';
 
   const status = subscriptionStatusFromPreapproval(pre.status);
@@ -169,12 +208,12 @@ async function applyAuthorizedPayment(
 ): Promise<ApplyResult> {
   const ap = await getAuthorizedPayment(dataId);
   if (!ap.preapproval_id) return 'unknown_resource';
-  const { data: sub, error } = await db
-    .from('billing_subscriptions')
-    .select('id, account_id, amount_cents')
-    .eq('mp_preapproval_id', ap.preapproval_id)
-    .maybeSingle();
-  if (error) throw error;
+  let sub = await findSubscription(db, ap.preapproval_id, undefined);
+  if (!sub) {
+    // Not stored yet: ask Mercado Pago whose subscription this is.
+    const pre = await getPreapproval(ap.preapproval_id);
+    sub = await findSubscription(db, pre.id, pre.external_reference);
+  }
   if (!sub) return 'unknown_resource';
 
   const outcome = chargeOutcome(ap.status);

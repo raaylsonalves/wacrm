@@ -42,7 +42,7 @@ function monthStart(now: Date): string {
 
 export async function POST(request: Request) {
   try {
-    const ctx = await requireRole('owner');
+    const ctx = await requireRole('owner', { allowUnpaid: true });
     if (!canManageBilling(ctx.role)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }
@@ -121,6 +121,11 @@ export async function POST(request: Request) {
       open.amount_cents === quote.amountCents &&
       open.expires_at &&
       new Date(open.expires_at as string) > new Date();
+    // This month's charge was already paid: never replace the record or
+    // ask for the same month twice.
+    if (open?.status === 'paid') {
+      return NextResponse.json({ error: 'already_paid' }, { status: 409 });
+    }
     if (stillOpen) {
       return NextResponse.json({ ok: true, pix: toClient(open) });
     }

@@ -30,6 +30,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 import { hasMinRole, isAccountRole, type AccountRole } from "./roles";
+import { isAccountUsable } from "@/lib/billing/status";
 
 // ------------------------------------------------------------
 // Errors
@@ -43,6 +44,20 @@ export class UnauthorizedError extends Error {
   constructor(message = "Unauthorized") {
     super(message);
     this.name = "UnauthorizedError";
+  }
+}
+
+/**
+ * 402: the account exists but has not paid (subscription_status =
+ * 'pending'). The payment gate is enforced here, on the server, for every
+ * route that resolves an account context; the dashboard redirect is only
+ * the friendly half. See specs/mercadopago-checkout.md.
+ */
+export class PaymentRequiredError extends Error {
+  readonly status = 402 as const;
+  constructor(message = "subscription_required") {
+    super(message);
+    this.name = "PaymentRequiredError";
   }
 }
 
@@ -67,7 +82,11 @@ export class ForbiddenError extends Error {
  * server internals out of the wire.
  */
 export function toErrorResponse(err: unknown): NextResponse {
-  if (err instanceof UnauthorizedError || err instanceof ForbiddenError) {
+  if (
+    err instanceof UnauthorizedError ||
+    err instanceof ForbiddenError ||
+    err instanceof PaymentRequiredError
+  ) {
     return NextResponse.json({ error: err.message }, { status: err.status });
   }
   console.error("[toErrorResponse] uncategorized error:", err);
@@ -89,6 +108,13 @@ export interface AccountContext {
   role: AccountRole;
   /** Lightweight account meta — id + name. */
   account: { id: string; name: string };
+  /** accounts.subscription_status (migration 106). */
+  subscriptionStatus: string;
+}
+
+export interface AccountOptions {
+  /** Billing and identity routes the unpaid owner must still reach. */
+  allowUnpaid?: boolean;
 }
 
 /**
@@ -103,7 +129,9 @@ export interface AccountContext {
  * Use `requireRole(min)` instead when the route also needs a
  * minimum-role check — it's a thin wrapper over this.
  */
-export async function getCurrentAccount(): Promise<AccountContext> {
+export async function getCurrentAccount(
+  options: AccountOptions = {},
+): Promise<AccountContext> {
   const supabase = await createClient();
 
   const {
@@ -149,7 +177,7 @@ export async function getCurrentAccount(): Promise<AccountContext> {
   // RLS, so it stays robust against cache staleness and older schemas.
   const { data: account, error: accountErr } = await supabase
     .from("accounts")
-    .select("id, name")
+    .select("id, name, subscription_status")
     .eq("id", data.account_id)
     .maybeSingle();
 
@@ -163,12 +191,18 @@ export async function getCurrentAccount(): Promise<AccountContext> {
     throw new ForbiddenError("Profile is not linked to an account");
   }
 
+  const subscriptionStatus = String(account.subscription_status ?? "pending");
+  if (!options.allowUnpaid && !isAccountUsable(subscriptionStatus)) {
+    throw new PaymentRequiredError();
+  }
+
   return {
     supabase,
     userId: user.id,
     accountId: data.account_id,
     role: data.account_role,
     account: { id: account.id, name: account.name },
+    subscriptionStatus,
   };
 }
 
@@ -179,8 +213,11 @@ export async function getCurrentAccount(): Promise<AccountContext> {
  * `getCurrentAccount`, plus `ForbiddenError("Insufficient role")`
  * when the caller is below `min`.
  */
-export async function requireRole(min: AccountRole): Promise<AccountContext> {
-  const ctx = await getCurrentAccount();
+export async function requireRole(
+  min: AccountRole,
+  options: AccountOptions = {},
+): Promise<AccountContext> {
+  const ctx = await getCurrentAccount(options);
   if (!hasMinRole(ctx.role, min)) {
     throw new ForbiddenError(
       `This action requires the '${min}' role or higher`,
