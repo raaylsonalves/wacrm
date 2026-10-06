@@ -16,14 +16,18 @@
 export interface OnboardingStep {
   segment: string;
   labelKey: string;
+  /** Needs another step to have been completed (not skipped): the AI
+   *  agent and the test reply are pointless without a connected channel,
+   *  so skipping the channel skips them too. */
+  requires?: string;
 }
 
 export const STEPS: readonly OnboardingStep[] = [
   { segment: 'welcome', labelKey: 'stepWelcome' },
   { segment: 'profile', labelKey: 'stepProfile' },
   { segment: 'channel', labelKey: 'stepChannel' },
-  { segment: 'ai-agent', labelKey: 'stepAiAgent' },
-  { segment: 'test', labelKey: 'stepTest' },
+  { segment: 'ai-agent', labelKey: 'stepAiAgent', requires: 'channel' },
+  { segment: 'test', labelKey: 'stepTest', requires: 'channel' },
   { segment: 'notifications', labelKey: 'stepNotifications' },
   { segment: 'team', labelKey: 'stepTeam' },
 ] as const;
@@ -60,7 +64,33 @@ export function isStepComplete(
  *  step has been resolved one way or another — the wizard's router
  *  (`/onboarding/page.tsx`) redirects to `/onboarding/done` on `null`. */
 export function nextStep(state: OnboardingState): OnboardingStep | null {
-  return STEPS.find((s) => !isStepComplete(state, s.segment)) ?? null;
+  return (
+    STEPS.find(
+      (s) =>
+        !isStepComplete(state, s.segment) && !isBlockedByDependency(state, s)
+    ) ?? null
+  );
+}
+
+/** A step whose prerequisite was skipped never needs doing. */
+function isBlockedByDependency(
+  state: OnboardingState,
+  step: OnboardingStep
+): boolean {
+  return Boolean(step.requires && isStepSkipped(state, step.requires));
+}
+
+/** Steps the user may open: everything already resolved, plus the one
+ *  they are on. Anything further ahead stays locked until reached. */
+export function reachableSegments(state: OnboardingState): string[] {
+  const current = nextStep(state)?.segment;
+  const out: string[] = [];
+  for (const s of STEPS) {
+    if (isStepComplete(state, s.segment) || s.segment === current) {
+      out.push(s.segment);
+    }
+  }
+  return out;
 }
 
 /** New state with `segment` marked done — merges rather than replaces
@@ -71,17 +101,37 @@ export function markStepDone(
   segment: string,
   extra: Record<string, unknown> = {}
 ): OnboardingState {
-  return {
+  const next: OnboardingState = {
     ...state,
     [segment]: { ...state[segment], ...extra, done: true, skipped: false },
   };
+  // Completing a prerequisite re-opens the steps its earlier skip closed.
+  for (const step of STEPS) {
+    if (
+      step.requires === segment &&
+      state[step.segment]?.skippedBy === segment
+    ) {
+      next[step.segment] = { skipped: false };
+    }
+  }
+  return next;
 }
 
 export function markStepSkipped(
   state: OnboardingState,
   segment: string
 ): OnboardingState {
-  return { ...state, [segment]: { ...state[segment], skipped: true } };
+  const next: OnboardingState = {
+    ...state,
+    [segment]: { ...state[segment], skipped: true },
+  };
+  // Skipping a prerequisite skips what depends on it, remembering why.
+  for (const step of STEPS) {
+    if (step.requires === segment && !isStepComplete(next, step.segment)) {
+      next[step.segment] = { skipped: true, skippedBy: segment };
+    }
+  }
+  return next;
 }
 
 /** Every incomplete step marked skipped in one go — backs the

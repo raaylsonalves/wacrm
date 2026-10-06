@@ -1,12 +1,18 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Check, Loader2, MessageSquare, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { OnboardingProvider, useOnboarding } from './onboarding-context';
-import { STEPS, isStepDone, isStepSkipped } from '@/lib/onboarding/steps';
+import {
+  STEPS,
+  isStepDone,
+  isStepSkipped,
+  reachableSegments,
+} from '@/lib/onboarding/steps';
 
 export default function OnboardingLayout({
   children,
@@ -26,6 +32,17 @@ function OnboardingShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations('Onboarding');
   const { state, loading, skipOnboarding } = useOnboarding();
   const pathname = usePathname();
+  const router = useRouter();
+  const reachable = reachableSegments(state);
+  const stepSegment = STEPS.find((st) =>
+    pathname.startsWith(`/onboarding/${st.segment}`)
+  )?.segment;
+  const locked = !loading && !!stepSegment && !reachable.includes(stepSegment);
+
+  // Typing a later step's URL must not skip the ones before it.
+  useEffect(() => {
+    if (locked) router.replace('/onboarding');
+  }, [locked, router]);
 
   if (loading) {
     return (
@@ -50,28 +67,37 @@ function OnboardingShell({ children }: { children: React.ReactNode }) {
                 <li key={step.segment}>
                   {/* Every step stays reachable, so a wrong answer can be
                       fixed without finishing the wizard first. */}
-                  <Link
-                    href={`/onboarding/${step.segment}`}
-                    aria-current={
-                      pathname === `/onboarding/${step.segment}`
-                        ? 'step'
-                        : undefined
-                    }
-                    className={cn(
-                      'hover:bg-muted flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors',
-                      pathname === `/onboarding/${step.segment}` &&
-                        'ring-primary/40 ring-1',
-                      done
-                        ? 'bg-primary/10 text-primary'
-                        : skipped
-                          ? 'bg-muted text-muted-foreground'
-                          : 'text-muted-foreground/70'
-                    )}
-                  >
-                    {done && <Check className="size-3" />}
-                    {skipped && <X className="size-3" />}
-                    {t(step.labelKey)}
-                  </Link>
+                  {reachable.includes(step.segment) ? (
+                    <Link
+                      href={`/onboarding/${step.segment}`}
+                      aria-current={
+                        pathname === `/onboarding/${step.segment}`
+                          ? 'step'
+                          : undefined
+                      }
+                      className={cn(
+                        'hover:bg-muted flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors',
+                        pathname === `/onboarding/${step.segment}` &&
+                          'ring-primary/40 ring-1',
+                        done
+                          ? 'bg-primary/10 text-primary'
+                          : skipped
+                            ? 'bg-muted text-muted-foreground'
+                            : 'text-muted-foreground/70'
+                      )}
+                    >
+                      {done && <Check className="size-3" />}
+                      {skipped && <X className="size-3" />}
+                      {t(step.labelKey)}
+                    </Link>
+                  ) : (
+                    <span
+                      aria-disabled="true"
+                      className="text-muted-foreground/50 flex cursor-not-allowed items-center gap-1 rounded-full px-2 py-1 text-xs font-medium"
+                    >
+                      {t(step.labelKey)}
+                    </span>
+                  )}
                 </li>
               );
             })}
