@@ -308,11 +308,15 @@ const FAQ = [
   ],
   [
     'Como funciona o anual no Pix e no cartão?',
-    'No anual você paga 10 meses e usa 12. No Pix é um pagamento único com 5% a mais de desconto; no cartão, parcela em até 12x.',
+    'O anual sai com 2 meses de desconto (você paga o equivalente a 10 e usa 12) e é cobrado todo mês, no Pix ou no cartão. Você não paga o ano adiantado.',
   ],
   [
     'Posso cancelar quando quiser?',
-    'No mensal, sim: o acesso segue até o fim do período pago. No anual, o plano vale até o fim dos 12 meses.',
+    'Sim, nos dois planos. Ao cancelar, as próximas cobranças param e o acesso segue até o fim do mês já pago. Como o anual também é cobrado mensalmente, não há valor adiantado para reaver.',
+  ],
+  [
+    'Tem teste grátis?',
+    'O teste gratuito é feito numa demonstração guiada. Se tiver interesse, chame a gente no WhatsApp e liberamos um ambiente para você experimentar antes de assinar.',
   ],
   [
     'E a LGPD?',
@@ -327,6 +331,12 @@ const FORM_ERRORS: Record<string, string> = {
     'O formulário ainda não está ativo. Fale com a gente pelo WhatsApp.',
   failed: 'Não conseguimos enviar agora. Tente de novo em instantes.',
 };
+
+const SITE_URL = 'https://nordiatech.com.br';
+const demoLink = (msg: string) =>
+  SALES_WHATSAPP
+    ? `https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent(msg)}`
+    : '#studio';
 
 const brl = (n: number) =>
   n.toLocaleString('pt-BR', {
@@ -348,8 +358,8 @@ export function Landing() {
 
   const payNote = annual
     ? pix
-      ? 'Anual no Pix: pagamento único com 5% de desconto, além dos 2 meses grátis.'
-      : 'Anual no cartão: parcele em até 12x sem juros.'
+      ? 'Anual no Pix: cobrança mensal com 2 meses de desconto. Cancele quando quiser.'
+      : 'Anual no cartão: cobrança mensal com 2 meses de desconto. Cancele quando quiser.'
     : pix
       ? 'Mensal no Pix: cobrança todo mês. Cancele quando quiser.'
       : 'Mensal no cartão: renovação automática. Cancele quando quiser.';
@@ -396,6 +406,9 @@ export function Landing() {
               <a href="#segmentos">Segmentos</a>
               <a href="#studio">Nordia Studio</a>
               <a href="#planos">Planos</a>
+              <a href={SITE_URL} target="_blank" rel="noopener noreferrer">
+                Nordia Tech
+              </a>
             </nav>
             <span
               style={{
@@ -1308,16 +1321,16 @@ export function Landing() {
           </p>
           <div className="lp-plans" style={{ marginTop: 10 }}>
             {PLANS.map((p) => {
-              const year = p.price * 10;
-              const yearPix = Math.round(year * 0.95);
-              const per = annual ? (pix ? yearPix : year) / 12 : p.price;
-              const billing = !annual
-                ? pix
-                  ? 'Pix todo mês, sem fidelidade'
-                  : 'Cobrança recorrente no cartão'
+              // Annual = 10 months' worth spread over 12 monthly charges, so
+              // nothing is paid upfront and a cancellation just stops them.
+              const per = annual
+                ? Math.round(((p.price * 10) / 12) * 100) / 100
+                : p.price;
+              const billing = annual
+                ? `Cobrado todo mês no ${pix ? 'Pix' : 'cartão'}, 2 meses grátis`
                 : pix
-                  ? `R$ ${brl(yearPix)} à vista no Pix (5% off)`
-                  : `12x de R$ ${brl(Math.round((year / 12) * 100) / 100)} no cartão`;
+                  ? 'Pix todo mês, sem fidelidade'
+                  : 'Cobrança recorrente no cartão';
               const muted = p.hot ? '#aaa5b5' : 'var(--muted)';
               return (
                 <div
@@ -1372,7 +1385,7 @@ export function Landing() {
                         lineHeight: 1,
                       }}
                     >
-                      {brl(Math.round(per))}
+                      {brl(per)}
                     </span>
                     <span style={{ fontSize: 14, color: muted }}>/mês</span>
                   </span>
@@ -1380,7 +1393,7 @@ export function Landing() {
                     {billing}
                   </span>
                   <Link
-                    href={`/signup?plano=${p.id}`}
+                    href={`/signup?plano=${p.id}&ciclo=${annual ? 'anual' : 'mensal'}&pagamento=${pix ? 'pix' : 'cartao'}`}
                     className="lp-btn"
                     style={
                       p.hot
@@ -1461,6 +1474,18 @@ export function Landing() {
           >
             Mensagens pela API oficial são cobradas pela Meta, direto na sua
             conta. O número próprio não tem custo por mensagem.
+            <br />
+            Quer testar antes? O teste gratuito é feito numa demonstração:{' '}
+            <a
+              href={demoLink('Olá! Quero uma demonstração do Nordia CRM.')}
+              {...(SALES_WHATSAPP
+                ? { target: '_blank', rel: 'noopener noreferrer' }
+                : {})}
+              style={{ color: 'var(--ink)', fontWeight: 700 }}
+            >
+              chame a gente no WhatsApp
+            </a>
+            .
           </p>
         </div>
       </section>
@@ -1576,6 +1601,11 @@ export function Landing() {
               <h3>Nordia</h3>
               <ul>
                 <li>
+                  <a href={SITE_URL} target="_blank" rel="noopener noreferrer">
+                    Conhecer os serviços
+                  </a>
+                </li>
+                <li>
                   <a href="#studio">Nordia Studio</a>
                 </li>
                 <li>
@@ -1593,10 +1623,10 @@ export function Landing() {
               <h3>Legal</h3>
               <ul>
                 <li>
-                  <a href="#termos">Termos de uso</a>
+                  <Link href="/termos">Termos de uso</Link>
                 </li>
                 <li>
-                  <a href="#privacidade">Privacidade e LGPD</a>
+                  <Link href="/privacidade">Privacidade e LGPD</Link>
                 </li>
               </ul>
             </div>
