@@ -112,6 +112,19 @@ secret, so env vars are per application (`MERCADOPAGO_SUBS_*`,
   paid = `active`, unpaid after the grace window = `past_due`. Cancelling
   just stops generating charges. Switch to Pix Automático only if/when its
   API is confirmed.
+- **Pix via Orders API (confirmed in the docs through the Mercado Pago MCP,
+  2026-10-06):** `POST https://api.mercadopago.com/v1/orders` with headers
+  `Authorization: Bearer <access token>` and `X-Idempotency-Key: <uuid>`,
+  body `{type:"online", total_amount:"197.00", external_reference:<our id>,
+processing_mode:"automatic", transactions:{payments:[{amount,
+payment_method:{id:"pix", type:"bank_transfer"}, expiration_time:"P3D"}]},
+payer:{email}}`. Response status `action_required` /
+  `waiting_transfer`, with `ticket_url`, `qr_code` (copia e cola) and
+  `qr_code_base64` to render on our own screen. Expiry between 30 minutes
+  and 30 days (default 24 h); cancel unpaid orders after their due date
+  (`POST /v1/orders/{id}/cancel`). Status changes arrive on the **Order**
+  webhook topic or via `GET /v1/orders/{id}`. Needs a registered Pix key on
+  the seller account. Pix Automático did not appear in the docs searched.
 - **Card without redirect:** Card Payment Brick tokenises the card in the
   browser; the server creates the subscription with
   `POST /preapproval { card_token_id, payer_email, reason, status:
