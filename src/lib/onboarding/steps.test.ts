@@ -51,7 +51,7 @@ describe('markStepSkipped', () => {
   it('marks skipped without setting done', () => {
     const state = markStepSkipped({}, 'team');
     expect(isStepComplete(state, 'team')).toBe(true);
-    expect(state.team.done).toBeUndefined();
+    expect(state.team.done).toBeFalsy();
   });
 });
 
@@ -114,5 +114,12 @@ describe('reachableSegments', () => {
     let state = {};
     for (const step of STEPS) state = markStepDone(state, step.segment);
     expect(reachableSegments(state)).toHaveLength(STEPS.length);
+  });
+});
+
+describe('done and skipped are exclusive', () => {
+  it('skipping a finished step clears done', () => {
+    const state = markStepSkipped(markStepDone({}, 'channel'), 'channel');
+    expect(state.channel).toMatchObject({ skipped: true, done: false });
   });
 });

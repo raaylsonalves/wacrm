@@ -123,7 +123,9 @@ export function markStepSkipped(
 ): OnboardingState {
   const next: OnboardingState = {
     ...state,
-    [segment]: { ...state[segment], skipped: true },
+    // Skipping after finishing replaces the answer: done and skipped are
+    // mutually exclusive.
+    [segment]: { ...state[segment], skipped: true, done: false },
   };
   // Skipping a prerequisite skips what depends on it, remembering why.
   for (const step of STEPS) {

@@ -87,7 +87,7 @@ function OnboardingShell({ children }: { children: React.ReactNode }) {
                       )}
                     >
                       {done && <Check className="size-3" />}
-                      {skipped && <X className="size-3" />}
+                      {skipped && !done && <X className="size-3" />}
                       {t(step.labelKey)}
                     </Link>
                   ) : (
