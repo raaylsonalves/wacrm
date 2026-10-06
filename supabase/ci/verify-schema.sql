@@ -830,6 +830,31 @@ BEGIN
     RAISE EXCEPTION 'subscription_status triggers are missing — migration 106 did not apply';
   END IF;
 
+  -- 107 creates the billing tables. billing_events must stay server-only
+  -- (RLS on, no policy) and its (source, event_id) uniqueness is what makes
+  -- webhook retries idempotent.
+  IF to_regclass('public.billing_subscriptions') IS NULL
+     OR to_regclass('public.billing_pix_orders') IS NULL
+     OR to_regclass('public.billing_events') IS NULL THEN
+    RAISE EXCEPTION 'billing tables are missing — migration 107 did not apply';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'billing_events') THEN
+    RAISE EXCEPTION 'billing_events must have no RLS policies (server-only)';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.billing_events'::regclass AND contype = 'u'
+  ) THEN
+    RAISE EXCEPTION 'billing_events lost its (source, event_id) unique constraint';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename IN ('billing_subscriptions', 'billing_pix_orders')
+      AND cmd <> 'SELECT'
+  ) THEN
+    RAISE EXCEPTION 'billing tables must be read-only for clients (migration 107)';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;
