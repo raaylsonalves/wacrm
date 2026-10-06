@@ -18,6 +18,7 @@ describe('nextStep', () => {
     let state = markStepDone({}, 'welcome');
     state = markStepDone(state, 'profile');
     state = markStepDone(state, 'profile');
+    state = markStepDone(state, 'payment');
     state = markStepSkipped(state, 'channel');
     expect(nextStep(state)?.segment).toBe('notifications');
   });
@@ -99,6 +100,7 @@ describe('dependent steps', () => {
     // Legacy state: channel skipped, dependents never marked.
     let state = markStepDone({}, 'welcome');
     state = markStepDone(state, 'profile');
+    state = markStepDone(state, 'payment');
     state = { ...state, channel: { skipped: true } };
     expect(nextStep(state)?.segment).toBe('notifications');
   });
@@ -108,6 +110,13 @@ describe('reachableSegments', () => {
   it('allows resolved steps and the current one, nothing ahead', () => {
     const state = markStepDone({}, 'welcome');
     expect(reachableSegments(state)).toEqual(['welcome', 'profile']);
+  });
+
+  it('keeps the steps after payment locked until payment is done', () => {
+    let state = markStepDone({}, 'welcome');
+    state = markStepDone(state, 'profile');
+    expect(reachableSegments(state)).toEqual(['welcome', 'profile', 'payment']);
+    expect(reachableSegments(state)).not.toContain('channel');
   });
 
   it('opens every step when all are complete', () => {

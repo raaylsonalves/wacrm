@@ -4060,6 +4060,36 @@
         "hours": "Opening hours: {value}",
         "allDay": "24 hours, every day"
       }
+    },
+    "stepPayment": "Payment",
+    "payment": {
+      "title": "Choose a plan and pay to unlock your account",
+      "description": "Access opens as soon as the payment is confirmed. Cancel any time.",
+      "planLabel": "Plan",
+      "cycleLabel": "Billing",
+      "cycleMonthly": "Monthly",
+      "cycleAnnual": "Annual (2 months free)",
+      "methodLabel": "Payment method",
+      "methodPix": "Pix",
+      "methodCard": "Credit card",
+      "perMonth": "R$ {price}/month",
+      "billedMonthly": "Billed every month. Cancel any time.",
+      "billedAnnual": "Billed every month, with 2 months off. Nothing is paid upfront.",
+      "generatePix": "Generate Pix",
+      "pixScan": "Scan the QR code in your bank app",
+      "pixQrAlt": "Pix QR code",
+      "pixCopy": "Or use Pix copy and paste",
+      "copy": "Copy",
+      "copyFailed": "Could not copy",
+      "pixWaiting": "Waiting for the payment to be confirmed…",
+      "cardFailed": "Could not load the card form. Please try again.",
+      "rejected": "The payment was declined. Check the details or use another card.",
+      "error": "Could not start the payment right now. Please try again shortly.",
+      "notConfigured": "Card payments are not configured in this environment yet.",
+      "confirming": "Confirming the payment…",
+      "stillConfirming": "Confirmation is taking a while. You can close this page: the account unlocks as soon as the payment is confirmed.",
+      "checkAgain": "Check again",
+      "terms": "By paying you accept the <terms>Terms of use</terms> and the <privacy>Privacy policy</privacy>."
     }
   }
 }

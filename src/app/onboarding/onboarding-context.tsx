@@ -81,7 +81,9 @@ export function OnboardingProvider({
 
       const { data: account } = await supabase
         .from('accounts')
-        .select('name, display_name, onboarding_state, onboarded_at')
+        .select(
+          'name, display_name, onboarding_state, onboarded_at, subscription_status'
+        )
         .eq('id', profile.account_id)
         .maybeSingle();
 
@@ -89,7 +91,13 @@ export function OnboardingProvider({
       // session) — the wizard never shows again, even if some
       // individual step was never marked done (spec's acceptance
       // criterion: skipping everything still counts as onboarded).
-      if (account?.onboarded_at) {
+      // ...except an owner who finished the wizard without paying: the
+      // dashboard sends them back to the payment step, which must stay
+      // reachable or the two redirects would loop.
+      const owesPayment =
+        account?.subscription_status === 'pending' &&
+        window.location.pathname.startsWith('/onboarding/payment');
+      if (account?.onboarded_at && !owesPayment) {
         router.replace('/dashboard');
         return;
       }

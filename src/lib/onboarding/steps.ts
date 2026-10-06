@@ -25,6 +25,7 @@ export interface OnboardingStep {
 export const STEPS: readonly OnboardingStep[] = [
   { segment: 'welcome', labelKey: 'stepWelcome' },
   { segment: 'profile', labelKey: 'stepProfile' },
+  { segment: 'payment', labelKey: 'stepPayment' },
   { segment: 'channel', labelKey: 'stepChannel' },
   { segment: 'ai-agent', labelKey: 'stepAiAgent', requires: 'channel' },
   { segment: 'test', labelKey: 'stepTest', requires: 'channel' },

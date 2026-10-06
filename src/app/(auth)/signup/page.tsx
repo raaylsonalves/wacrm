@@ -85,6 +85,20 @@ function SignupPageInner() {
           ...(isPlanId(searchParams.get("plano"))
             ? { selected_plan: searchParams.get("plano") }
             : {}),
+          ...(searchParams.get("ciclo") === "anual" ||
+          searchParams.get("ciclo") === "mensal"
+            ? {
+                selected_cycle:
+                  searchParams.get("ciclo") === "anual" ? "annual" : "monthly",
+              }
+            : {}),
+          ...(searchParams.get("pagamento") === "pix" ||
+          searchParams.get("pagamento") === "cartao"
+            ? {
+                selected_method:
+                  searchParams.get("pagamento") === "pix" ? "pix" : "card",
+              }
+            : {}),
         },
         emailRedirectTo,
       },

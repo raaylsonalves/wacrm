@@ -4048,6 +4048,36 @@
         "hours": "Horário de funcionamento: {value}",
         "allDay": "24 horas, todos os dias"
       }
+    },
+    "stepPayment": "Pagamento",
+    "payment": {
+      "title": "Escolha o plano e pague para liberar a conta",
+      "description": "O acesso é liberado assim que o pagamento é confirmado. Você cancela quando quiser.",
+      "planLabel": "Plano",
+      "cycleLabel": "Ciclo",
+      "cycleMonthly": "Mensal",
+      "cycleAnnual": "Anual (2 meses grátis)",
+      "methodLabel": "Forma de pagamento",
+      "methodPix": "Pix",
+      "methodCard": "Cartão de crédito",
+      "perMonth": "R$ {price}/mês",
+      "billedMonthly": "Cobrado todo mês. Cancele quando quiser.",
+      "billedAnnual": "Cobrado todo mês, com 2 meses de desconto. Nada é pago adiantado.",
+      "generatePix": "Gerar Pix",
+      "pixScan": "Escaneie o QR code no app do seu banco",
+      "pixQrAlt": "QR code do Pix",
+      "pixCopy": "Ou use o Pix copia e cola",
+      "copy": "Copiar",
+      "copyFailed": "Não foi possível copiar",
+      "pixWaiting": "Aguardando a confirmação do pagamento…",
+      "cardFailed": "Não foi possível carregar o formulário do cartão. Tente de novo.",
+      "rejected": "O pagamento foi recusado. Confira os dados ou use outro cartão.",
+      "error": "Não foi possível iniciar o pagamento agora. Tente de novo em instantes.",
+      "notConfigured": "O pagamento por cartão ainda não está configurado neste ambiente.",
+      "confirming": "Confirmando o pagamento…",
+      "stillConfirming": "A confirmação está demorando. Você pode fechar esta página: a conta é liberada assim que o pagamento for confirmado.",
+      "checkAgain": "Verificar de novo",
+      "terms": "Ao pagar, você aceita os <terms>Termos de uso</terms> e a <privacy>Política de privacidade</privacy>."
     }
   }
 }

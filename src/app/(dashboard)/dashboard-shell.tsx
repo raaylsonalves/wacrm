@@ -47,18 +47,25 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     createClient()
       .from('accounts')
-      .select('onboarded_at')
+      .select('onboarded_at, subscription_status, owner_user_id')
       .eq('id', accountId)
       .maybeSingle()
       .then(({ data }) => {
-        if (!cancelled && data && !data.onboarded_at) {
-          router.replace('/onboarding');
+        if (cancelled || !data) return;
+        if (!data.onboarded_at) router.replace('/onboarding');
+        // Nothing paid yet: the owner goes to the payment step. Teammates
+        // cannot pay, so they are left alone.
+        else if (
+          data.subscription_status === 'pending' &&
+          data.owner_user_id === user?.id
+        ) {
+          router.replace('/onboarding/payment');
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [accountId, router]);
+  }, [accountId, router, user?.id]);
 
   // The opening mural covers the screen while the session resolves and
   // fades out on top of the app once it can render. It keeps the same

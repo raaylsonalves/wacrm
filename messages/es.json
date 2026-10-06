@@ -4048,6 +4048,36 @@
         "hours": "Horario de atención: {value}",
         "allDay": "24 horas, todos los días"
       }
+    },
+    "stepPayment": "Pago",
+    "payment": {
+      "title": "Elige un plan y paga para activar tu cuenta",
+      "description": "El acceso se habilita apenas se confirma el pago. Cancelas cuando quieras.",
+      "planLabel": "Plan",
+      "cycleLabel": "Ciclo",
+      "cycleMonthly": "Mensual",
+      "cycleAnnual": "Anual (2 meses gratis)",
+      "methodLabel": "Forma de pago",
+      "methodPix": "Pix",
+      "methodCard": "Tarjeta de crédito",
+      "perMonth": "R$ {price}/mes",
+      "billedMonthly": "Se cobra cada mes. Cancela cuando quieras.",
+      "billedAnnual": "Se cobra cada mes, con 2 meses de descuento. No se paga nada por adelantado.",
+      "generatePix": "Generar Pix",
+      "pixScan": "Escanea el código QR en la app de tu banco",
+      "pixQrAlt": "Código QR de Pix",
+      "pixCopy": "O usa Pix copia y pega",
+      "copy": "Copiar",
+      "copyFailed": "No se pudo copiar",
+      "pixWaiting": "Esperando la confirmación del pago…",
+      "cardFailed": "No se pudo cargar el formulario de la tarjeta. Inténtalo de nuevo.",
+      "rejected": "El pago fue rechazado. Revisa los datos o usa otra tarjeta.",
+      "error": "No se pudo iniciar el pago ahora. Inténtalo de nuevo en unos instantes.",
+      "notConfigured": "El pago con tarjeta aún no está configurado en este entorno.",
+      "confirming": "Confirmando el pago…",
+      "stillConfirming": "La confirmación está tardando. Puedes cerrar esta página: la cuenta se habilita apenas se confirme el pago.",
+      "checkAgain": "Verificar de nuevo",
+      "terms": "Al pagar aceptas los <terms>Términos de uso</terms> y la <privacy>Política de privacidad</privacy>."
     }
   }
 }
