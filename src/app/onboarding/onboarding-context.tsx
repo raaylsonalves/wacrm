@@ -63,7 +63,8 @@ export function OnboardingProvider({
       } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user) {
-        setLoading(false);
+        // Stay on the spinner while redirecting: no step content for a
+        // visitor, not even for a moment.
         router.replace('/login');
         return;
       }
