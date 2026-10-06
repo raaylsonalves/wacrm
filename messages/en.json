@@ -1038,7 +1038,8 @@
           "perMessage": "Price per message on your Meta account",
           "total": "{count, plural, =1 {Estimated cost (1 message)} other {Estimated cost (# messages)}}",
           "hint": "Meta charges each delivered template at the price of its category ({category}) and the recipient's country. Cold outreach is usually Marketing. Prices change by country and volume:",
-          "link": "Meta's pricing"
+          "link": "Meta's pricing",
+          "reference": "reference rate"
         },
         "antiban": {
           "title": "Anti-ban (WAHA)",
@@ -1047,7 +1048,8 @@
           "warmupGeneric": "Warm-up: new numbers start with few sends a day and the ceiling grows with the connection age.",
           "optout": "Every message ends with \"reply STOP\"; whoever leaves is never contacted again.",
           "pause": "If a send fails because of the number, the campaign pauses itself."
-        }
+        },
+        "allDay": "24h, every day"
       },
       "review": {
         "funnel": "In the pipeline",

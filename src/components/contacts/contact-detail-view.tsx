@@ -284,26 +284,28 @@ export function ContactDetailView({
 
   async function anonymizeContact() {
     if (!contactId) return;
-    if (!(await confirmDialog(t('lgpd.anonymizeConfirm')))) return;
-
-    setAnonymizing(true);
-    try {
-      const res = await fetch(`/api/contacts/${contactId}/anonymize`, {
-        method: 'POST',
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(payload?.error || t('lgpd.toastAnonymizeFailed'));
-        return;
-      }
-      toast.success(t('lgpd.toastAnonymized'));
-      fetchContact();
-      onUpdated();
-    } catch {
-      toast.error(t('lgpd.toastAnonymizeFailed'));
-    } finally {
-      setAnonymizing(false);
-    }
+    await confirmDialog(t('lgpd.anonymizeConfirm'), {
+      action: async () => {
+        setAnonymizing(true);
+        try {
+          const res = await fetch(`/api/contacts/${contactId}/anonymize`, {
+            method: 'POST',
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            toast.error(payload?.error || t('lgpd.toastAnonymizeFailed'));
+            return;
+          }
+          toast.success(t('lgpd.toastAnonymized'));
+          fetchContact();
+          onUpdated();
+        } catch {
+          toast.error(t('lgpd.toastAnonymizeFailed'));
+        } finally {
+          setAnonymizing(false);
+        }
+      },
+    });
   }
 
   async function toggleTag(tagId: string) {

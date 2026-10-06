@@ -1038,7 +1038,8 @@
           "perMessage": "Valor por mensaje en tu cuenta de Meta",
           "total": "{count, plural, =1 {Costo estimado (1 mensaje)} other {Costo estimado (# mensajes)}}",
           "hint": "Meta cobra cada plantilla entregada al precio de su categoría ({category}) y del país de quien la recibe. El contacto en frío suele ser Marketing. Los valores cambian por país y volumen:",
-          "link": "tabla de precios de Meta"
+          "link": "tabla de precios de Meta",
+          "reference": "valor de referencia"
         },
         "antiban": {
           "title": "Anti-bloqueo (WAHA)",
@@ -1047,7 +1048,8 @@
           "warmupGeneric": "Calentamiento: los números nuevos empiezan con pocos envíos por día y el techo sube con la antigüedad de la conexión.",
           "optout": "Todo mensaje termina con \"responde SALIR\"; quien sale nunca vuelve a ser contactado.",
           "pause": "Si un envío falla por un problema del número, la campaña se pausa sola."
-        }
+        },
+        "allDay": "24h, todos los días"
       },
       "review": {
         "funnel": "En el embudo",

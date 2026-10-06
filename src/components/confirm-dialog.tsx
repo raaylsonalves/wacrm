@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,10 +20,17 @@ import {
  * layout renders the question with the app's own dialog.
  */
 
-type Request = {
-  message: string;
+type Options = {
   confirmLabel?: string;
   destructive?: boolean;
+  /** Work to run on confirm. The dialog stays open with a spinner until
+   *  it settles, so a slow delete never looks like a dead click. */
+  action?: () => Promise<unknown> | unknown;
+};
+
+type Request = Options & {
+  message: string;
+  busy?: boolean;
   resolve: (ok: boolean) => void;
 };
 
@@ -32,7 +40,7 @@ const emit = () => listeners.forEach((l) => l());
 
 export function confirmDialog(
   message: string,
-  opts: { confirmLabel?: string; destructive?: boolean } = {}
+  opts: Options = {}
 ): Promise<boolean> {
   // A second question replaces the first, which counts as cancelled.
   current?.resolve(false);
@@ -40,6 +48,21 @@ export function confirmDialog(
     current = { message, destructive: true, ...opts, resolve };
     emit();
   });
+}
+
+async function accept() {
+  const req = current;
+  if (!req || req.busy) return;
+  if (req.action) {
+    current = { ...req, busy: true };
+    emit();
+    try {
+      await req.action();
+    } catch (err) {
+      console.error('[confirmDialog] action failed:', err);
+    }
+  }
+  settle(true);
 }
 
 function settle(ok: boolean) {
@@ -62,21 +85,30 @@ export function ConfirmHost() {
     () => null
   );
   return (
-    <Dialog open={req !== null} onOpenChange={(open) => !open && settle(false)}>
+    <Dialog
+      open={req !== null}
+      onOpenChange={(open) => !open && !req?.busy && settle(false)}
+    >
       <DialogContent position="center" showCloseButton={false}>
         <DialogTitle className="text-lg">{t('title')}</DialogTitle>
         <DialogDescription className="whitespace-pre-line">
           {req?.message}
         </DialogDescription>
         <DialogFooter>
-          <Button variant="outline" onClick={() => settle(false)}>
+          <Button
+            variant="outline"
+            disabled={req?.busy}
+            onClick={() => settle(false)}
+          >
             {t('cancel')}
           </Button>
           <Button
             autoFocus
             variant={req?.destructive === false ? 'default' : 'destructive'}
-            onClick={() => settle(true)}
+            disabled={req?.busy}
+            onClick={() => void accept()}
           >
+            {req?.busy && <Loader2 className="size-4 animate-spin" />}
             {req?.confirmLabel ?? t('confirm')}
           </Button>
         </DialogFooter>

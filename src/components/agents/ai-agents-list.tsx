@@ -119,23 +119,27 @@ export function AiAgentsList({
   }
 
   async function handleDelete(agent: AiAgentSummary) {
-    if (!(await confirmDialog(t('deleteConfirm', { name: agent.name }))))
-      return;
-    setDeletingId(agent.id);
-    try {
-      const res = await fetch(`/api/ai/agents/${agent.id}`, {
-        method: 'DELETE',
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload?.error || 'failed');
-      setAgents((prev) => prev.filter((a) => a.id !== agent.id));
-      toast.success(t('toastDeleted'));
-      onAgentsChanged?.();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('toastDeleteFailed'));
-    } finally {
-      setDeletingId(null);
-    }
+    await confirmDialog(t('deleteConfirm', { name: agent.name }), {
+      action: async () => {
+        setDeletingId(agent.id);
+        try {
+          const res = await fetch(`/api/ai/agents/${agent.id}`, {
+            method: 'DELETE',
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(payload?.error || 'failed');
+          setAgents((prev) => prev.filter((a) => a.id !== agent.id));
+          toast.success(t('toastDeleted'));
+          onAgentsChanged?.();
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : t('toastDeleteFailed')
+          );
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    });
   }
 
   return (

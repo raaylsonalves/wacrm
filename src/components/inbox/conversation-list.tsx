@@ -1641,10 +1641,12 @@ function ConversationItem({
                 closeOnClick={false}
                 variant="destructive"
                 onClick={async () => {
-                  if (!(await confirmDialog(t('clearHistoryConfirm')))) return;
-                  runPending('clear-history', () =>
-                    onClearHistory(conversation.id)
-                  );
+                  await confirmDialog(t('clearHistoryConfirm'), {
+                    action: () =>
+                      runPending('clear-history', () =>
+                        onClearHistory(conversation.id)
+                      ),
+                  });
                 }}
               >
                 {pendingKey === 'clear-history' && (

@@ -64,9 +64,12 @@ export function GoogleOAuthSettings() {
   }
 
   async function remove() {
-    if (!(await confirmDialog(t('confirmRemove')))) return;
-    await fetch('/api/platform/google-oauth', { method: 'DELETE' });
-    void load();
+    await confirmDialog(t('confirmRemove'), {
+      action: async () => {
+        await fetch('/api/platform/google-oauth', { method: 'DELETE' });
+        void load();
+      },
+    });
   }
 
   return (

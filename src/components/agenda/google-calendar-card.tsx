@@ -61,15 +61,18 @@ export function GoogleCalendarCard() {
   const c = status.connection;
 
   async function disconnect() {
-    if (!(await confirmDialog(t('confirmDisconnect')))) return;
-    setBusy(true);
-    const res = await fetch('/api/integrations/google-calendar', {
-      method: 'DELETE',
+    await confirmDialog(t('confirmDisconnect'), {
+      action: async () => {
+        setBusy(true);
+        const res = await fetch('/api/integrations/google-calendar', {
+          method: 'DELETE',
+        });
+        setBusy(false);
+        if (!res.ok) return toast.error(t('failed'));
+        toast.success(t('disconnected'));
+        void load();
+      },
     });
-    setBusy(false);
-    if (!res.ok) return toast.error(t('failed'));
-    toast.success(t('disconnected'));
-    void load();
   }
 
   async function setPhone(value: boolean) {

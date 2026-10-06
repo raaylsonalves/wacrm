@@ -408,18 +408,20 @@ export function FlowEditorProvider({
 
   // ---- Delete ----
   const deleteFlow = useCallback(async () => {
-    const yes = await confirmDialog(t('deleteConfirm', { name: state.name }));
-    if (!yes) return;
-    try {
-      const res = await fetch(`/api/flows/${initialFlow.id}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
-      router.push('/flows');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Delete failed';
-      toast.error(msg);
-    }
+    await confirmDialog(t('deleteConfirm', { name: state.name }), {
+      action: async () => {
+        try {
+          const res = await fetch(`/api/flows/${initialFlow.id}`, {
+            method: 'DELETE',
+          });
+          if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+          router.push('/flows');
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Delete failed';
+          toast.error(msg);
+        }
+      },
+    });
   }, [initialFlow.id, router, state.name, t]);
 
   // ---- Node mutations ----

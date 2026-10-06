@@ -252,22 +252,26 @@ export function WahaChannels() {
   }
 
   async function handleDelete(channel: WahaChannel) {
-    if (!(await confirmDialog(t('deleteConfirm', { label: channel.label }))))
-      return;
-    setDeletingId(channel.id);
-    try {
-      const res = await fetch(`/api/whatsapp/waha/channels/${channel.id}`, {
-        method: 'DELETE',
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload?.error || 'failed');
-      setChannels((prev) => prev.filter((c) => c.id !== channel.id));
-      toast.success(t('toastDeleted'));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('toastDeleteFailed'));
-    } finally {
-      setDeletingId(null);
-    }
+    await confirmDialog(t('deleteConfirm', { label: channel.label }), {
+      action: async () => {
+        setDeletingId(channel.id);
+        try {
+          const res = await fetch(`/api/whatsapp/waha/channels/${channel.id}`, {
+            method: 'DELETE',
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(payload?.error || 'failed');
+          setChannels((prev) => prev.filter((c) => c.id !== channel.id));
+          toast.success(t('toastDeleted'));
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : t('toastDeleteFailed')
+          );
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    });
   }
 
   return (

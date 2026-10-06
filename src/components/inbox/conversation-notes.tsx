@@ -85,16 +85,19 @@ export function ConversationNotes({
   }
 
   async function handleDelete(id: string) {
-    if (!(await confirmDialog(t('deleteConfirm')))) return;
-    const { error } = await createClient()
-      .from('conversation_notes')
-      .delete()
-      .eq('id', id);
-    if (error) {
-      toast.error(t('deleteFailed'));
-      return;
-    }
-    setNotes((prev) => prev.filter((n) => n.id !== id));
+    await confirmDialog(t('deleteConfirm'), {
+      action: async () => {
+        const { error } = await createClient()
+          .from('conversation_notes')
+          .delete()
+          .eq('id', id);
+        if (error) {
+          toast.error(t('deleteFailed'));
+          return;
+        }
+        setNotes((prev) => prev.filter((n) => n.id !== id));
+      },
+    });
   }
 
   return (

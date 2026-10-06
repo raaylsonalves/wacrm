@@ -1038,7 +1038,8 @@
           "perMessage": "Valor por mensagem na sua conta Meta",
           "total": "{count, plural, =1 {Custo estimado (1 mensagem)} other {Custo estimado (# mensagens)}}",
           "hint": "A Meta cobra cada template entregue, pelo preço da categoria ({category}) e do país de quem recebe. Abordagem fria costuma ser Marketing. Os valores mudam por país e volume:",
-          "link": "tabela de preços da Meta"
+          "link": "tabela de preços da Meta",
+          "reference": "valor de referência"
         },
         "antiban": {
           "title": "Anti-banimento (WAHA)",
@@ -1047,7 +1048,8 @@
           "warmupGeneric": "Aquecimento: números novos começam com poucos envios por dia e o teto sobe com a idade da conexão.",
           "optout": "Toda mensagem termina com \"responda SAIR\"; quem sai nunca mais é abordado.",
           "pause": "Se um envio falhar por problema do número, a campanha pausa sozinha."
-        }
+        },
+        "allDay": "24h, todos os dias"
       },
       "review": {
         "funnel": "No funil",

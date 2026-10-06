@@ -484,39 +484,39 @@ export function WhatsAppConfig() {
   }
 
   async function handleReset() {
-    if (!(await confirmDialog(t('resetConfirm')))) {
-      return;
-    }
+    await confirmDialog(t('resetConfirm'), {
+      action: async () => {
+        try {
+          setResetting(true);
+          const res = await fetch('/api/whatsapp/config', { method: 'DELETE' });
+          const data = await res.json();
 
-    try {
-      setResetting(true);
-      const res = await fetch('/api/whatsapp/config', { method: 'DELETE' });
-      const data = await res.json();
+          if (!res.ok) {
+            toast.error(data.error || t('resetFailed'));
+            return;
+          }
 
-      if (!res.ok) {
-        toast.error(data.error || t('resetFailed'));
-        return;
-      }
-
-      toast.success(t('resetDone'));
-      setConfig(null);
-      setPhoneNumberId('');
-      setWabaId('');
-      setAccessToken('');
-      setVerifyToken('');
-      setTokenEdited(false);
-      setConnectionStatus('disconnected');
-      setResetReason(null);
-      setStatusMessage('');
-      setStatusMeta(null);
-      setSaveFailure(null);
-      setWabaSubscription(null);
-    } catch (err) {
-      console.error('Reset error:', err);
-      toast.error(t('resetFailed'));
-    } finally {
-      setResetting(false);
-    }
+          toast.success(t('resetDone'));
+          setConfig(null);
+          setPhoneNumberId('');
+          setWabaId('');
+          setAccessToken('');
+          setVerifyToken('');
+          setTokenEdited(false);
+          setConnectionStatus('disconnected');
+          setResetReason(null);
+          setStatusMessage('');
+          setStatusMeta(null);
+          setSaveFailure(null);
+          setWabaSubscription(null);
+        } catch (err) {
+          console.error('Reset error:', err);
+          toast.error(t('resetFailed'));
+        } finally {
+          setResetting(false);
+        }
+      },
+    });
   }
 
   function handleCopyWebhookUrl() {

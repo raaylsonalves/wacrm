@@ -129,13 +129,18 @@ export function QuickRepliesManager() {
 
   const remove = useCallback(
     async (id: string) => {
-      if (!(await confirmDialog(t('deleteConfirm')))) return;
-      const res = await fetch(`/api/quick-replies/${id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        toast.error(t('toastDeleteFailed'));
-        return;
-      }
-      await load();
+      await confirmDialog(t('deleteConfirm'), {
+        action: async () => {
+          const res = await fetch(`/api/quick-replies/${id}`, {
+            method: 'DELETE',
+          });
+          if (!res.ok) {
+            toast.error(t('toastDeleteFailed'));
+            return;
+          }
+          await load();
+        },
+      });
     },
     [load, t]
   );

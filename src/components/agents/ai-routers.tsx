@@ -152,19 +152,23 @@ export function AiRouters({ agents }: { agents: AiAgentSummary[] }) {
   }
 
   async function handleDelete(router: RouterRow) {
-    if (!(await confirmDialog(t('deleteRouterConfirm', { name: router.name }))))
-      return;
-    try {
-      const res = await fetch(`/api/ai/routers/${router.id}`, {
-        method: 'DELETE',
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload?.error || 'failed');
-      setRouters((prev) => prev.filter((r) => r.id !== router.id));
-      toast.success(t('toastDeleted'));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('toastDeleteFailed'));
-    }
+    await confirmDialog(t('deleteRouterConfirm', { name: router.name }), {
+      action: async () => {
+        try {
+          const res = await fetch(`/api/ai/routers/${router.id}`, {
+            method: 'DELETE',
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(payload?.error || 'failed');
+          setRouters((prev) => prev.filter((r) => r.id !== router.id));
+          toast.success(t('toastDeleted'));
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : t('toastDeleteFailed')
+          );
+        }
+      },
+    });
   }
 
   function openEditor(router: RouterRow) {

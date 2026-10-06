@@ -183,17 +183,21 @@ export default function FlowsPage() {
   }
 
   async function handleDelete(flow: FlowRow) {
-    const yes = await confirmDialog(t('deleteConfirm', { name: flow.name }));
-    if (!yes) return;
-    try {
-      const res = await fetch(`/api/flows/${flow.id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
-      setFlows((prev) => prev.filter((f) => f.id !== flow.id));
-      toast.success(t('deleteSuccess'));
-    } catch (err) {
-      console.error(err);
-      toast.error(t('deleteError'));
-    }
+    await confirmDialog(t('deleteConfirm', { name: flow.name }), {
+      action: async () => {
+        try {
+          const res = await fetch(`/api/flows/${flow.id}`, {
+            method: 'DELETE',
+          });
+          if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+          setFlows((prev) => prev.filter((f) => f.id !== flow.id));
+          toast.success(t('deleteSuccess'));
+        } catch (err) {
+          console.error(err);
+          toast.error(t('deleteError'));
+        }
+      },
+    });
   }
 
   if (loading) {

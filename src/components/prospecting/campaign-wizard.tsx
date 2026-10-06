@@ -70,6 +70,9 @@ type Origin = 'public_business' | 'opt_in';
 const TOKENS = ['first_name', 'name', 'company'] as const;
 const STEPS = ['list', 'message', 'pace', 'review'] as const;
 const COST_KEY = 'prospecting.costPerMessage';
+// Meta's Brazil per-message list price (USD) converted at ~R$5,50; only a
+// starting point — the account's real rate replaces it once typed.
+const REF_COST_BRL: Record<string, number> = { MARKETING: 0.35, UTILITY: 0.04, AUTHENTICATION: 0.17 };
 const META_PRICING_URL = 'https://developers.facebook.com/docs/whatsapp/pricing';
 
 const keyOf = (x: TemplateOption) => `${x.name}|${x.language}`;
@@ -273,9 +276,15 @@ export function CampaignWizard() {
   const warmup = wahaChannel ? warmupCeiling('waha', wahaChannel.connectedAt, new Date()) : null;
   const effectiveDaily = Math.max(1, Math.min(dailyLimit, dailyMax, warmup ?? Infinity));
   const days = leads > 0 ? Math.ceil(leads / effectiveDaily) : 0;
-  const costNum = Number(cost.replace(',', '.'));
+  // Until the admin types their own rate, estimate with Meta's Brazil list
+  // price for the template's category, so the total is never blank.
+  const refCost = REF_COST_BRL[template?.category ?? 'MARKETING'] ?? REF_COST_BRL.MARKETING;
+  const typedCost = Number(cost.replace(',', '.'));
+  const usingRef = !cost.trim() || !Number.isFinite(typedCost);
+  const costNum = usingRef ? refCost : typedCost;
   const messages = maxMessages(leads, { followup_enabled: followup, followup_max: followupMax });
-  const costTotal = isCloud && cost && Number.isFinite(costNum) ? messages * costNum : null;
+  const costTotal = isCloud ? messages * costNum : null;
+  const allDay = startHour === 0 && endHour === 24 && weekdays.length === 7;
 
   // ---------------------------------------------------------------- review
   const defaultLegal = tw(`origin.${origin}.legal`);
@@ -284,7 +293,7 @@ export function CampaignWizard() {
   }, [defaultLegal, legalTouched]);
 
   const stepOk = [
-    source === 'file' ? chosenRows.length > 0 : !!listId,
+    source === 'file' ? chosenRows.length > 0 : !!listId && (listCount ?? 0) > 0,
     isCloud
       ? !!template && (!followup || !!followupTemplate)
       : !!wahaChannel && instruction.trim().length >= 10,
@@ -316,7 +325,7 @@ export function CampaignWizard() {
       legal_basis_ref: legal,
       daily_limit: Math.min(dailyLimit, dailyMax),
       interval_minutes: interval,
-      cost_per_message: isCloud && cost ? cost : null,
+      cost_per_message: isCloud ? String(costNum) : null,
       window_start_hour: startHour,
       window_end_hour: endHour,
       weekdays,
@@ -682,7 +691,29 @@ export function CampaignWizard() {
           {step === 2 && (
             <>
               <Panel>
-                <h2 className="text-[15px] font-extrabold">{tw('pace.when')}</h2>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-[15px] font-extrabold">{tw('pace.when')}</h2>
+                  <button
+                    type="button"
+                    aria-pressed={allDay}
+                    onClick={() => {
+                      if (allDay) {
+                        setWeekdays([1, 2, 3, 4, 5]);
+                        setStartHour(9);
+                        setEndHour(18);
+                      } else {
+                        setWeekdays([0, 1, 2, 3, 4, 5, 6]);
+                        setStartHour(0);
+                        setEndHour(24);
+                      }
+                    }}
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${
+                      allDay ? 'bg-tone-lilac-soft text-tone-lilac-ink' : 'border text-muted-foreground'
+                    }`}
+                  >
+                    {tw('pace.allDay')}
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-1.5">
                   {[1, 2, 3, 4, 5, 6, 0].map((d) => (
                     <button
@@ -746,7 +777,7 @@ export function CampaignWizard() {
                         <Input
                           id="pw-cost"
                           inputMode="decimal"
-                          placeholder="0,00"
+                          placeholder={refCost.toFixed(2).replace('.', ',')}
                           value={cost}
                           onChange={(e) => {
                             setCost(e.target.value);
@@ -759,8 +790,10 @@ export function CampaignWizard() {
                         />
                       </div>
                       <Stat
-                        label={tw('pace.cost.total', { count: messages })}
-                        value={costTotal === null ? '—' : money(costTotal)}
+                        label={
+                          tw('pace.cost.total', { count: messages }) + (usingRef ? ` · ${tw('pace.cost.reference')}` : '')
+                        }
+                        value={costTotal === null ? '—' : `≈ ${money(costTotal)}`}
                       />
                     </div>
                     <p className="text-muted-foreground text-xs">
@@ -869,7 +902,7 @@ export function CampaignWizard() {
                   <AsideRow label={tw('aside.duration')} value={days ? tw('aside.days', { count: days }) : '—'} />
                 )}
                 {step >= 2 && isCloud && costTotal !== null && (
-                  <AsideRow label={tw('aside.cost')} value={money(costTotal)} />
+                  <AsideRow label={tw('aside.cost')} value={`≈ ${money(costTotal)}`} />
                 )}
               </dl>
             )}

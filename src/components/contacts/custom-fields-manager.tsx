@@ -154,23 +154,22 @@ export function CustomFieldsPanel() {
   }
 
   async function handleDelete(field: CustomField) {
-    if (
-      !(await confirmDialog(t('deleteConfirm', { name: field.field_name })))
-    ) {
-      return;
-    }
-    setBusyId(field.id);
-    const { error } = await supabase
-      .from('custom_fields')
-      .delete()
-      .eq('id', field.id);
-    setBusyId(null);
-    if (error) {
-      toast.error(t('toastDeleteFailed'));
-      return;
-    }
-    toast.success(t('toastDeleted', { name: field.field_name }));
-    await fetchFields();
+    await confirmDialog(t('deleteConfirm', { name: field.field_name }), {
+      action: async () => {
+        setBusyId(field.id);
+        const { error } = await supabase
+          .from('custom_fields')
+          .delete()
+          .eq('id', field.id);
+        setBusyId(null);
+        if (error) {
+          toast.error(t('toastDeleteFailed'));
+          return;
+        }
+        toast.success(t('toastDeleted', { name: field.field_name }));
+        await fetchFields();
+      },
+    });
   }
 
   return (
