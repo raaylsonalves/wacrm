@@ -38,37 +38,37 @@ const T = {
 type Tone = keyof typeof T;
 
 const chip = (tone: Tone, text: string) =>
-  `<span class="lp-chip" style="background:${T[tone][0]};color:${T[tone][1]}">${text}</span>`;
+  `<span class="lps-chip" style="background:${T[tone][0]};color:${T[tone][1]}">${text}</span>`;
 const d = (i: number, step = 0.35) =>
   `animation-delay:${(i * step).toFixed(2)}s;`;
 const ia = (time: string) =>
-  `<div class="lp-meta"><span style="color:#d4c6ff;font-weight:700">IA</span> · ${time}</div>`;
+  `<div class="lps-meta"><span style="color:#d4c6ff;font-weight:700">IA</span> · ${time}</div>`;
 
 const mobileHead = `<div style="height:54px"></div>`;
 
 // ---------------------------------------------------------------- mobile
 function conversaM() {
-  return `<div class="lp-scr lp-scr-m">${mobileHead}
-  <div class="lp-row" style="padding:8px 14px 12px;border-bottom:1px solid #2f2d37;gap:10px">
-    <span class="lp-av" style="background:#9fd8bd">LF</span>
-    <span class="lp-col" style="flex-grow:1"><b style="font-size:15px">Lucas Ferreira</b><span class="lp-mut" style="font-size:11.5px">+55 85 9 8812-4471</span></span>
+  return `<div class="lps-scr lps-scr-m">${mobileHead}
+  <div class="lps-row" style="padding:8px 14px 12px;border-bottom:1px solid #2f2d37;gap:10px">
+    <span class="lps-av" style="background:#9fd8bd">LF</span>
+    <span class="lps-col" style="flex-grow:1"><b style="font-size:15px">Lucas Ferreira</b><span class="lps-mut" style="font-size:11.5px">+55 85 9 8812-4471</span></span>
     ${chip('lilac', 'Aberta')}
   </div>
-  <div class="lp-col" style="flex-grow:1;padding:14px 12px;gap:8px;overflow:hidden">
-    <span class="lp-day">Hoje</span>
-    <div class="lp-in lp-b-out">E aí, Lucas! Aqui é o assistente virtual da Barbearia Navalha. Bora dar um trato no visual essa semana?${ia('10:46')}</div>
-    <div class="lp-in lp-b-in" style="${d(2)}">Bora! Tô precisando de corte e barba<div class="lp-meta">10:47</div></div>
-    <div class="lp-in lp-b-out" style="${d(4)}">Show! Pro combo corte + barba ainda tenho amanhã:
-      <div class="lp-slots"><span>09:30</span><span class="lp-glow lp-slot-on" style="${d(4)}">14:00</span><span>16:30</span></div>${ia('10:47')}</div>
-    <div class="lp-in lp-b-in" style="${d(7)}">14h fechado<div class="lp-meta">10:48</div></div>
-    <div class="lp-in lp-sys" style="${d(9)}">Agendado pela IA · qua 14:00 · corte + barba</div>
-    <div class="lp-in lp-typing" style="${d(11)}"><span class="lp-dot"></span><span class="lp-dot" style="animation-delay:.15s"></span><span class="lp-dot" style="animation-delay:.3s"></span></div>
+  <div class="lps-col" style="flex-grow:1;padding:14px 12px;gap:8px;overflow:hidden">
+    <span class="lps-day">Hoje</span>
+    <div class="lps-in lps-b-out">E aí, Lucas! Aqui é o assistente virtual da Barbearia Navalha. Bora dar um trato no visual essa semana?${ia('10:46')}</div>
+    <div class="lps-in lps-b-in" style="${d(2)}">Bora! Tô precisando de corte e barba<div class="lps-meta">10:47</div></div>
+    <div class="lps-in lps-b-out" style="${d(4)}">Show! Pro combo corte + barba ainda tenho amanhã:
+      <div class="lps-slots"><span>09:30</span><span class="lps-glow lps-slot-on" style="${d(4)}">14:00</span><span>16:30</span></div>${ia('10:47')}</div>
+    <div class="lps-in lps-b-in" style="${d(7)}">14h fechado<div class="lps-meta">10:48</div></div>
+    <div class="lps-in lps-sys" style="${d(9)}">Agendado pela IA · qua 14:00 · corte + barba</div>
+    <div class="lps-in lps-typing" style="${d(11)}"><span class="lps-dot"></span><span class="lps-dot" style="animation-delay:.15s"></span><span class="lps-dot" style="animation-delay:.3s"></span></div>
   </div>
-  <div class="lp-row" style="padding:8px 12px;border-top:1px solid #2f2d37;justify-content:space-between;font-size:12px;color:#d4c6ff;font-weight:700">
-    <span>O assistente de IA está respondendo</span><span class="lp-pill-dark">Assumir</span>
+  <div class="lps-row" style="padding:8px 12px;border-top:1px solid #2f2d37;justify-content:space-between;font-size:12px;color:#d4c6ff;font-weight:700">
+    <span>O assistente de IA está respondendo</span><span class="lps-pill-dark">Assumir</span>
   </div>
-  <div class="lp-row" style="padding:8px 12px 30px;gap:8px">
-    <span class="lp-composer" style="flex-grow:1">Digite uma mensagem…</span>
+  <div class="lps-row" style="padding:8px 12px 30px;gap:8px">
+    <span class="lps-composer" style="flex-grow:1">Digite uma mensagem…</span>
   </div>
 </div>`;
 }
@@ -81,8 +81,8 @@ function prospecM() {
     status: string,
     tone: Tone
   ) =>
-    `<div class="lp-in lp-card lp-row" style="${d(i + 1)}justify-content:space-between;padding:11px 12px;border-radius:16px">
-      <span class="lp-col" style="gap:2px;min-width:0"><b style="font-size:13.5px">${name}</b><span class="lp-mut" style="font-size:11.5px">${niche}</span></span>${chip(tone, status)}</div>`;
+    `<div class="lps-in lps-card lps-row" style="${d(i + 1)}justify-content:space-between;padding:11px 12px;border-radius:16px">
+      <span class="lps-col" style="gap:2px;min-width:0"><b style="font-size:13.5px">${name}</b><span class="lps-mut" style="font-size:11.5px">${niche}</span></span>${chip(tone, status)}</div>`;
   const bar = (
     label: string,
     val: string,
@@ -90,20 +90,20 @@ function prospecM() {
     color: string,
     i: number
   ) =>
-    `<div><div class="lp-row" style="justify-content:space-between"><span>${label}</span><b>${val}</b></div>
-      <div class="lp-track" style="margin-top:4px"><div class="lp-bar" style="${d(i, 0.4)}width:${w}%;background:${color}"></div></div></div>`;
-  return `<div class="lp-scr lp-scr-m lp-col" style="gap:12px;padding:64px 16px 24px">
+    `<div><div class="lps-row" style="justify-content:space-between"><span>${label}</span><b>${val}</b></div>
+      <div class="lps-track" style="margin-top:4px"><div class="lps-bar" style="${d(i, 0.4)}width:${w}%;background:${color}"></div></div></div>`;
+  return `<div class="lps-scr lps-scr-m lps-col" style="gap:12px;padding:64px 16px 24px">
   <span style="font-size:26px;font-weight:800;letter-spacing:-0.02em">Prospecção</span>
-  <div class="lp-grid2"><div class="lp-card" style="padding:12px"><div class="lp-mut" style="font-size:11.5px">Abordados</div><div class="lp-num">45</div></div>
-    <div class="lp-card" style="padding:12px"><div class="lp-mut" style="font-size:11.5px">Taxa de resposta</div><div class="lp-num">24%</div></div></div>
-  <div class="lp-in lp-card lp-col" style="padding:14px;gap:10px;border-radius:22px">
-    <div class="lp-row" style="gap:8px"><b style="flex-grow:1">Revendas · Fortaleza</b>${chip('salmon', 'Em andamento')}</div>
-    <span class="lp-mut" style="font-size:12px">Número oficial · abertura_revendas · 107 leads</span>
-    <div class="lp-col" style="gap:8px;font-size:12px">
+  <div class="lps-grid2"><div class="lps-card" style="padding:12px"><div class="lps-mut" style="font-size:11.5px">Abordados</div><div class="lps-num">45</div></div>
+    <div class="lps-card" style="padding:12px"><div class="lps-mut" style="font-size:11.5px">Taxa de resposta</div><div class="lps-num">24%</div></div></div>
+  <div class="lps-in lps-card lps-col" style="padding:14px;gap:10px;border-radius:22px">
+    <div class="lps-row" style="gap:8px"><b style="flex-grow:1">Revendas · Fortaleza</b>${chip('salmon', 'Em andamento')}</div>
+    <span class="lps-mut" style="font-size:12px">Número oficial · abertura_revendas · 107 leads</span>
+    <div class="lps-col" style="gap:8px;font-size:12px">
       ${bar('Abordados', '45 · 42%', 42, '#9ab7ea', 0)}${bar('Responderam', '11 · 24%', 24, '#ef9d7f', 1)}${bar('Qualificados', '4 · 9%', 9, '#9fd8bd', 2)}
     </div>
   </div>
-  <span class="lp-mut" style="font-size:13px;font-weight:700;margin-top:4px">Leads</span>
+  <span class="lps-mut" style="font-size:13px;font-weight:700;margin-top:4px">Leads</span>
   ${lead(0, 'Ricardo Veículos', 'Revenda de usados · nota 3.8', 'Qualificado', 'mint')}
   ${lead(1, 'Viasul Jeep Dunas', 'Concessionária · nota 4.5', 'Respondeu', 'salmon')}
   ${lead(2, 'Moto Center Aldeota', 'Loja de motos · nota 4.2', 'Abordado', 'blue')}
@@ -122,7 +122,7 @@ function agendaM() {
   ]
     .map(
       ([wd, n]) =>
-        `<span class="lp-daychip${n === '7' ? ' lp-daychip-on' : ''}"><span style="font-size:11px">${wd}</span><b style="font-size:17px">${n}</b></span>`
+        `<span class="lps-daychip${n === '7' ? ' lps-daychip-on' : ''}"><span style="font-size:11px">${wd}</span><b style="font-size:17px">${n}</b></span>`
     )
     .join('');
   const appt = (
@@ -132,15 +132,15 @@ function agendaM() {
     svc: string,
     ai: boolean
   ) =>
-    `<div class="lp-in lp-card lp-row" style="${d(i, 0.4)}gap:10px;padding:12px;border-radius:18px">
+    `<div class="lps-in lps-card lps-row" style="${d(i, 0.4)}gap:10px;padding:12px;border-radius:18px">
       <span style="width:52px;flex-shrink:0;font-weight:800;font-size:15px">${time}</span>
       <span style="width:4px;align-self:stretch;border-radius:999px;background:${ai ? '#9fd8bd' : '#b9a2f2'}"></span>
-      <span class="lp-col" style="gap:2px;flex-grow:1;min-width:0"><b style="font-size:14px">${name}</b><span class="lp-mut" style="font-size:12px">${svc}</span></span>
+      <span class="lps-col" style="gap:2px;flex-grow:1;min-width:0"><b style="font-size:14px">${name}</b><span class="lps-mut" style="font-size:12px">${svc}</span></span>
       ${chip(ai ? 'mint' : 'lilac', ai ? 'IA' : 'Equipe')}</div>`;
-  return `<div class="lp-scr lp-scr-m lp-col" style="gap:12px;padding:64px 16px 24px">
-  <div class="lp-row" style="justify-content:space-between"><span style="font-size:26px;font-weight:800;letter-spacing:-0.02em">Agenda</span><span class="lp-pill-light">+ Novo</span></div>
+  return `<div class="lps-scr lps-scr-m lps-col" style="gap:12px;padding:64px 16px 24px">
+  <div class="lps-row" style="justify-content:space-between"><span style="font-size:26px;font-weight:800;letter-spacing:-0.02em">Agenda</span><span class="lps-pill-light">+ Novo</span></div>
   <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px">${days}</div>
-  <span class="lp-mut" style="font-size:13px;font-weight:600">Quarta, 7 de outubro · 6 horários</span>
+  <span class="lps-mut" style="font-size:13px;font-weight:600">Quarta, 7 de outubro · 6 horários</span>
   ${appt(0, '09:30', 'Pedro Rocha', 'Barba · com o Rafa', true)}
   ${appt(1, '10:30', 'Bruno Costa', 'Pacote noivo', false)}
   ${appt(2, '11:15', 'Diego Melo', 'Corte', true)}
@@ -188,16 +188,16 @@ const NAV: [string, string][] = [
 function shell(active: string, main: string) {
   const nav = NAV.map(([k, label]) =>
     k === 'g'
-      ? `<span class="lp-snavg">${label}</span>`
-      : `<span class="lp-snav${k === active ? ' lp-snav-on' : ''}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${NAV_ICONS[k]}"/></svg>${label}</span>`
+      ? `<span class="lps-snavg">${label}</span>`
+      : `<span class="lps-snav${k === active ? ' lps-snav-on' : ''}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${NAV_ICONS[k]}"/></svg>${label}</span>`
   ).join('');
-  return `<div class="lp-scr lp-scr-d">
-  <aside class="lp-side">
-    <div class="lp-row" style="gap:10px;padding:0 6px 12px"><span class="lp-av" style="width:34px;height:34px;border-radius:10px;background:#b9a2f2">B</span><b style="font-size:15px">Barbearia Navalha</b></div>
+  return `<div class="lps-scr lps-scr-d">
+  <aside class="lps-side">
+    <div class="lps-row" style="gap:10px;padding:0 6px 12px"><span class="lps-av" style="width:34px;height:34px;border-radius:10px;background:#b9a2f2">B</span><b style="font-size:15px">Barbearia Navalha</b></div>
     ${nav}
-    <div class="lp-row" style="margin-top:auto;gap:10px;padding:10px 6px 0;border-top:1px solid #2f2d37"><span class="lp-av" style="width:32px;height:32px;background:#ef9d7f">RS</span><span class="lp-col"><b>Rafa Souza</b><span class="lp-mut" style="font-size:11px">Administrador</span></span></div>
+    <div class="lps-row" style="margin-top:auto;gap:10px;padding:10px 6px 0;border-top:1px solid #2f2d37"><span class="lps-av" style="width:32px;height:32px;background:#ef9d7f">RS</span><span class="lps-col"><b>Rafa Souza</b><span class="lps-mut" style="font-size:11px">Administrador</span></span></div>
   </aside>
-  <main class="lp-main">${main}</main>
+  <main class="lps-main">${main}</main>
 </div>`;
 }
 
@@ -206,7 +206,7 @@ const title = (t: string) =>
 const stat = (label: string, value: string, bg?: string) =>
   bg
     ? `<div style="background:${bg};color:#1d1b18;border-radius:18px;padding:12px"><div style="font-size:12px;font-weight:600">${label}</div><div style="font-size:22px;font-weight:800">${value}</div></div>`
-    : `<div class="lp-card" style="padding:12px;border-radius:18px"><div class="lp-mut" style="font-size:12px">${label}</div><div style="font-size:22px;font-weight:800">${value}</div></div>`;
+    : `<div class="lps-card" style="padding:12px;border-radius:18px"><div class="lps-mut" style="font-size:12px">${label}</div><div style="font-size:22px;font-weight:800">${value}</div></div>`;
 
 function inbox() {
   const conv = (
@@ -220,45 +220,45 @@ function inbox() {
     tone: Tone,
     on = false
   ) =>
-    `<div class="lp-in lp-row" style="${d(i, 0.25)}gap:10px;padding:10px;border-radius:16px;align-items:flex-start;${on ? 'background:#24232b;' : ''}">
-      <span class="lp-av" style="width:40px;height:40px;background:${bg}">${ini}</span>
-      <span class="lp-col" style="gap:3px;min-width:0;flex-grow:1"><span class="lp-row" style="justify-content:space-between"><b>${name}</b><span class="lp-mut" style="font-size:11px">${when}</span></span>
-      <span class="lp-mut lp-ell" style="font-size:12px">${last}</span>${chip(tone, tag)}</span></div>`;
+    `<div class="lps-in lps-row" style="${d(i, 0.25)}gap:10px;padding:10px;border-radius:16px;align-items:flex-start;${on ? 'background:#24232b;' : ''}">
+      <span class="lps-av" style="width:40px;height:40px;background:${bg}">${ini}</span>
+      <span class="lps-col" style="gap:3px;min-width:0;flex-grow:1"><span class="lps-row" style="justify-content:space-between"><b>${name}</b><span class="lps-mut" style="font-size:11px">${when}</span></span>
+      <span class="lps-mut lps-ell" style="font-size:12px">${last}</span>${chip(tone, tag)}</span></div>`;
   const out = (i: number, text: string, time: string) =>
-    `<div class="lp-in lp-b-out" style="${d(i, 0.7)}max-width:62%">${text}${ia(time)}</div>`;
+    `<div class="lps-in lps-b-out" style="${d(i, 0.7)}max-width:62%">${text}${ia(time)}</div>`;
   const inn = (i: number, text: string, time: string) =>
-    `<div class="lp-in lp-b-in" style="${d(i, 0.7)}max-width:62%">${text}<div class="lp-meta">${time}</div></div>`;
+    `<div class="lps-in lps-b-in" style="${d(i, 0.7)}max-width:62%">${text}<div class="lps-meta">${time}</div></div>`;
   return shell(
     'inbox',
-    `<div class="lp-row" style="gap:14px;height:772px;margin:-10px -8px 0;align-items:stretch">
-    <section class="lp-card lp-col" style="width:280px;flex-shrink:0;border-radius:24px;padding:16px 12px;gap:10px">
+    `<div class="lps-row" style="gap:14px;height:772px;margin:-10px -8px 0;align-items:stretch">
+    <section class="lps-card lps-col" style="width:280px;flex-shrink:0;border-radius:24px;padding:16px 12px;gap:10px">
       <b style="font-size:22px;letter-spacing:-0.02em;padding:0 4px">Caixa de entrada</b>
-      <div class="lp-row" style="gap:6px;flex-wrap:wrap"><span class="lp-ghost">Responder</span><span class="lp-ghost">Aguardando <b>2</b></span><span class="lp-ghost">Agendadas</span></div>
-      <span class="lp-composer">Buscar conversas…</span>
+      <div class="lps-row" style="gap:6px;flex-wrap:wrap"><span class="lps-ghost">Responder</span><span class="lps-ghost">Aguardando <b>2</b></span><span class="lps-ghost">Agendadas</span></div>
+      <span class="lps-composer">Buscar conversas…</span>
       ${conv(0, 'LF', '#9fd8bd', 'Lucas Ferreira', '10:48', 'Fechado! Quarta 14h com o Rafa…', 'IA · agendado', 'mint', true)}
       ${conv(1, 'JP', '#ef9d7f', 'João Pedro', 'há 12 min', 'Vocês fazem pigmentação de barba?', 'Precisa de você', 'salmon')}
       ${conv(2, 'MC', '#b9a2f2', 'Marcos Costa', '10:31', 'Quanto fica o pacote do noivo?', 'IA atendendo', 'lilac')}
       ${conv(3, 'TF', '#9ab7ea', 'Thiago Freitas', 'ontem', 'Modelo · lembrete do seu horário', 'Agendado', 'blue')}
       ${conv(4, 'AL', '#f5b3c6', 'Ana Lima', 'ontem', 'Obrigada! Até sábado', 'Resolvida', 'pink')}
     </section>
-    <section class="lp-card lp-col" style="flex-grow:1;min-width:0;border-radius:24px;overflow:hidden">
-      <div class="lp-row" style="gap:10px;padding:12px 16px;border-bottom:1px solid #2f2d37"><span class="lp-av" style="width:38px;height:38px;background:#9fd8bd">LF</span><span class="lp-col" style="flex-grow:1"><b style="font-size:15px">Lucas Ferreira</b><span class="lp-mut" style="font-size:11.5px">+55 85 9 8812-4471</span></span><span style="color:#d4c6ff;font-weight:700">Aberta</span></div>
-      <div class="lp-col" style="flex-grow:1;padding:16px 20px;gap:9px;overflow:hidden;font-size:13.5px">
+    <section class="lps-card lps-col" style="flex-grow:1;min-width:0;border-radius:24px;overflow:hidden">
+      <div class="lps-row" style="gap:10px;padding:12px 16px;border-bottom:1px solid #2f2d37"><span class="lps-av" style="width:38px;height:38px;background:#9fd8bd">LF</span><span class="lps-col" style="flex-grow:1"><b style="font-size:15px">Lucas Ferreira</b><span class="lps-mut" style="font-size:11.5px">+55 85 9 8812-4471</span></span><span style="color:#d4c6ff;font-weight:700">Aberta</span></div>
+      <div class="lps-col" style="flex-grow:1;padding:16px 20px;gap:9px;overflow:hidden;font-size:13.5px">
         ${out(0, 'E aí, Lucas! Aqui é o assistente virtual da Barbearia Navalha. Bora dar um trato no visual essa semana?', '10:46')}
         ${inn(1, 'Bora! Tô precisando de corte e barba, tem amanhã?', '10:47')}
         ${out(2, 'Tenho 09:30, 14:00 e 16:30 com o Rafa. Qual fica melhor?', '10:47')}
         ${inn(3, '14h fechado', '10:48')}
-        <div class="lp-in lp-sys" style="${d(4, 0.7)}">Agendado pela IA · qua 14:00 · corte + barba</div>
+        <div class="lps-in lps-sys" style="${d(4, 0.7)}">Agendado pela IA · qua 14:00 · corte + barba</div>
         ${out(5, 'Fechado! Quarta 14h com o Rafa. Te mando um lembrete 1h antes.', '10:48')}
       </div>
-      <div class="lp-row" style="padding:8px 16px;justify-content:space-between;color:#d4c6ff;font-weight:700;border-top:1px solid #2f2d37"><span>O assistente de IA está respondendo automaticamente</span><span style="color:#f2f0ec">Assumir</span></div>
-      <div style="padding:8px 16px 14px"><span class="lp-composer" style="display:block">Digite uma mensagem…<span class="lp-cursor">|</span></span></div>
+      <div class="lps-row" style="padding:8px 16px;justify-content:space-between;color:#d4c6ff;font-weight:700;border-top:1px solid #2f2d37"><span>O assistente de IA está respondendo automaticamente</span><span style="color:#f2f0ec">Assumir</span></div>
+      <div style="padding:8px 16px 14px"><span class="lps-composer" style="display:block">Digite uma mensagem…<span class="lps-cursor">|</span></span></div>
     </section>
-    <aside class="lp-col" style="width:230px;flex-shrink:0;gap:12px">
-      <div class="lp-card lp-col" style="border-radius:24px;padding:18px;align-items:center;gap:6px"><span class="lp-av" style="width:56px;height:56px;font-size:18px;background:#9fd8bd">LF</span><b style="font-size:15px">Lucas Ferreira</b>${chip('mint', 'cliente fiel')}</div>
-      <div class="lp-in" style="${d(4, 0.7)}background:#b9a2f2;color:#1d1b18;border-radius:22px;padding:14px"><b style="font-size:12px">Próximo passo</b><div style="margin-top:4px;line-height:1.45">Atendimento qua 14:00. Lembrete automático 1h antes.</div></div>
-      <div class="lp-card" style="border-radius:22px;padding:14px;line-height:1.5"><b class="lp-mut" style="font-size:12px">Resumo da IA</b><div style="margin-top:4px">Corta a cada 4 semanas, prefere tarde. Pediu corte + barba com o Rafa.</div></div>
-      <div class="lp-card" style="border-radius:22px;padding:14px"><b class="lp-mut" style="font-size:12px">Negócios</b><div class="lp-row" style="justify-content:space-between;margin-top:6px"><span>Corte + barba</span><b>R$ 70</b></div></div>
+    <aside class="lps-col" style="width:230px;flex-shrink:0;gap:12px">
+      <div class="lps-card lps-col" style="border-radius:24px;padding:18px;align-items:center;gap:6px"><span class="lps-av" style="width:56px;height:56px;font-size:18px;background:#9fd8bd">LF</span><b style="font-size:15px">Lucas Ferreira</b>${chip('mint', 'cliente fiel')}</div>
+      <div class="lps-in" style="${d(4, 0.7)}background:#b9a2f2;color:#1d1b18;border-radius:22px;padding:14px"><b style="font-size:12px">Próximo passo</b><div style="margin-top:4px;line-height:1.45">Atendimento qua 14:00. Lembrete automático 1h antes.</div></div>
+      <div class="lps-card" style="border-radius:22px;padding:14px;line-height:1.5"><b class="lps-mut" style="font-size:12px">Resumo da IA</b><div style="margin-top:4px">Corta a cada 4 semanas, prefere tarde. Pediu corte + barba com o Rafa.</div></div>
+      <div class="lps-card" style="border-radius:22px;padding:14px"><b class="lps-mut" style="font-size:12px">Negócios</b><div class="lps-row" style="justify-content:space-between;margin-top:6px"><span>Corte + barba</span><b>R$ 70</b></div></div>
     </aside>
   </div>`
   );
@@ -266,7 +266,7 @@ function inbox() {
 
 function prospec() {
   const bar = (w: number, color: string, delay: number) =>
-    `<span class="lp-track" style="display:block;height:7px;margin-top:5px"><span class="lp-bar" style="${d(delay, 0.5)}display:block;width:${w}%;height:7px;background:${color}"></span></span>`;
+    `<span class="lps-track" style="display:block;height:7px;margin-top:5px"><span class="lps-bar" style="${d(delay, 0.5)}display:block;width:${w}%;height:7px;background:${color}"></span></span>`;
   const camp = (
     i: number,
     name: string,
@@ -279,18 +279,18 @@ function prospec() {
     q: [number, number],
     foot: string
   ) =>
-    `<div class="lp-in lp-card lp-col" style="${d(i, 0.5)}border-radius:22px;padding:16px;gap:12px">
-      <div class="lp-row" style="gap:10px"><span class="lp-av" style="width:36px;height:36px;border-radius:12px;background:#2c2442;color:#d4c6ff">◎</span><span class="lp-col" style="flex-grow:1"><span class="lp-row" style="gap:8px"><b style="font-size:15px">${name}</b>${chip(tone, status)}</span><span class="lp-mut" style="font-size:12px">${meta}</span></span></div>
+    `<div class="lps-in lps-card lps-col" style="${d(i, 0.5)}border-radius:22px;padding:16px;gap:12px">
+      <div class="lps-row" style="gap:10px"><span class="lps-av" style="width:36px;height:36px;border-radius:12px;background:#2c2442;color:#d4c6ff">◎</span><span class="lps-col" style="flex-grow:1"><span class="lps-row" style="gap:8px"><b style="font-size:15px">${name}</b>${chip(tone, status)}</span><span class="lps-mut" style="font-size:12px">${meta}</span></span></div>
       <div style="display:grid;grid-template-columns:50px repeat(3,minmax(0,1fr));gap:14px;align-items:end">
-        <span><span class="lp-mut" style="font-size:11.5px">Leads</span><br><b style="font-size:18px">${leads}</b></span>
-        <span><span class="lp-row" style="justify-content:space-between;font-size:11.5px"><span class="lp-mut">Abordados</span><b>${a[0]} · ${a[1]}%</b></span>${bar(a[1], '#9ab7ea', i)}</span>
-        <span><span class="lp-row" style="justify-content:space-between;font-size:11.5px"><span class="lp-mut">Responderam</span><b>${r[0]} · ${r[1]}%</b></span>${bar(r[1], '#ef9d7f', i + 0.6)}</span>
-        <span><span class="lp-row" style="justify-content:space-between;font-size:11.5px"><span class="lp-mut">Qualificados</span><b>${q[0]} · ${q[1]}%</b></span>${bar(q[1], '#9fd8bd', i + 1.2)}</span>
+        <span><span class="lps-mut" style="font-size:11.5px">Leads</span><br><b style="font-size:18px">${leads}</b></span>
+        <span><span class="lps-row" style="justify-content:space-between;font-size:11.5px"><span class="lps-mut">Abordados</span><b>${a[0]} · ${a[1]}%</b></span>${bar(a[1], '#9ab7ea', i)}</span>
+        <span><span class="lps-row" style="justify-content:space-between;font-size:11.5px"><span class="lps-mut">Responderam</span><b>${r[0]} · ${r[1]}%</b></span>${bar(r[1], '#ef9d7f', i + 0.6)}</span>
+        <span><span class="lps-row" style="justify-content:space-between;font-size:11.5px"><span class="lps-mut">Qualificados</span><b>${q[0]} · ${q[1]}%</b></span>${bar(q[1], '#9fd8bd', i + 1.2)}</span>
       </div>
-      <span class="lp-mut" style="font-size:12px">${foot}</span></div>`;
+      <span class="lps-mut" style="font-size:12px">${foot}</span></div>`;
   return shell(
     'prospec',
-    `<div class="lp-row" style="justify-content:space-between">${title('Prospecção')}<span class="lp-pill-light">+ Nova campanha</span></div>
+    `<div class="lps-row" style="justify-content:space-between">${title('Prospecção')}<span class="lps-pill-light">+ Nova campanha</span></div>
     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">${stat('Campanhas ativas', '2')}${stat('Abordados', '152')}${stat('Taxa de resposta', '22%')}${stat('Qualificados', '9')}</div>
     ${camp(0, 'Revendas de veículos · Fortaleza', 'Em andamento', 'salmon', 'Número oficial · abertura_revendas · 06/10/2026', 107, [45, 42], [11, 24], [4, 9], '62 na fila · 0 com falha · 9 pulados · 1 pediu para sair')}
     ${camp(1, 'Clínicas de estética · Aldeota', 'Em andamento', 'salmon', 'Número próprio · dia 3 do aquecimento · próximo envio 14:32', 64, [22, 34], [6, 27], [2, 9], '42 na fila · 0 com falha · 3 pulados · 0 pediram para sair')}
@@ -308,15 +308,15 @@ function negocios() {
     value: string,
     mover = false
   ) =>
-    `<div class="${mover ? 'lp-move' : 'lp-in'}" style="${mover ? 'position:relative;z-index:2;background:#2c2442;border:1px solid #b9a2f2;' : 'background:#24232b;'}border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:6px">
-      ${chip(tone, tag)}<b>${name}</b><span class="lp-mut" style="font-size:12px">${text}</span>
-      <span class="lp-row" style="justify-content:space-between;border-top:1px solid #2f2d37;padding-top:7px;font-size:12px"><span class="lp-mut">${when}</span><b>${value}</b></span></div>`;
+    `<div class="${mover ? 'lps-move' : 'lps-in'}" style="${mover ? 'position:relative;z-index:2;background:#2c2442;border:1px solid #b9a2f2;' : 'background:#24232b;'}border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:6px">
+      ${chip(tone, tag)}<b>${name}</b><span class="lps-mut" style="font-size:12px">${text}</span>
+      <span class="lps-row" style="justify-content:space-between;border-top:1px solid #2f2d37;padding-top:7px;font-size:12px"><span class="lps-mut">${when}</span><b>${value}</b></span></div>`;
   const col = (t: string, n: number, dot: string, cards: string) =>
-    `<div class="lp-card lp-col" style="border-radius:20px;padding:12px;gap:8px;min-height:390px"><span class="lp-row" style="gap:8px;font-weight:700"><span style="width:9px;height:9px;border-radius:999px;background:${dot}"></span>${t} <span class="lp-mut" style="font-weight:500">(${n})</span></span>${cards}</div>`;
+    `<div class="lps-card lps-col" style="border-radius:20px;padding:12px;gap:8px;min-height:390px"><span class="lps-row" style="gap:8px;font-weight:700"><span style="width:9px;height:9px;border-radius:999px;background:${dot}"></span>${t} <span class="lps-mut" style="font-weight:500">(${n})</span></span>${cards}</div>`;
   return shell(
     'negocios',
     `${title('Negócios')}
-    <div class="lp-row" style="justify-content:space-between"><span class="lp-ghost">Pipeline de vendas</span><span class="lp-pill-light">+ Adicionar negócio</span></div>
+    <div class="lps-row" style="justify-content:space-between"><span class="lps-ghost">Pipeline de vendas</span><span class="lps-pill-light">+ Adicionar negócio</span></div>
     <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px">${stat('Total de negócios', '14')}${stat('Valor do pipeline', 'R$ 3.480', '#b9a2f2')}${stat('Ticket médio', 'R$ 248')}${stat('Valor ponderado', 'R$ 1.920', '#9ab7ea')}${stat('Ganhos neste mês', '8', '#9fd8bd')}${stat('Perdidos neste mês', '1', '#ef9d7f')}</div>
     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:start">
       ${col('Novo lead', 4, '#9ab7ea', card('João Pedro', 'Pigmentação de barba', 'Precisa de você', 'salmon', 'há 12 min', 'R$ 90') + card('Marcos Costa', 'Pacote noivo · 3 pessoas', 'IA', 'mint', 'há 1 h', 'R$ 360'))}
@@ -338,7 +338,7 @@ function agenda() {
     ai: boolean
   ) => {
     const [h, m] = start.split(':').map(Number);
-    return `<span class="lp-in" style="${d(k++, 0.3)}position:absolute;left:4px;right:4px;top:${(h - 9) * HH + (m / 60) * HH}px;height:${(dur / 60) * HH - 4}px;box-sizing:border-box;border-radius:12px;padding:5px 8px;font-size:11.5px;line-height:1.3;color:#1d1b18;background:${ai ? '#9fd8bd' : '#b9a2f2'}"><b>${name}</b><br>${start} · ${info}</span>`;
+    return `<span class="lps-in" style="${d(k++, 0.3)}position:absolute;left:4px;right:4px;top:${(h - 9) * HH + (m / 60) * HH}px;height:${(dur / 60) * HH - 4}px;box-sizing:border-box;border-radius:12px;padding:5px 8px;font-size:11.5px;line-height:1.3;color:#1d1b18;background:${ai ? '#9fd8bd' : '#b9a2f2'}"><b>${name}</b><br>${start} · ${info}</span>`;
   };
   const days: [string, string, boolean, string][] = [
     [
@@ -374,7 +374,7 @@ function agenda() {
   const head = days
     .map(
       ([wd, n, today]) =>
-        `<span class="lp-mut" style="text-align:center;padding:6px 0;font-size:12px">${wd}<br><b style="display:inline-block;margin-top:3px;${today ? 'border-radius:999px;padding:1px 8px;background:#f2f0ec;color:#16151a' : 'color:#f2f0ec'}">${n}</b></span>`
+        `<span class="lps-mut" style="text-align:center;padding:6px 0;font-size:12px">${wd}<br><b style="display:inline-block;margin-top:3px;${today ? 'border-radius:999px;padding:1px 8px;background:#f2f0ec;color:#16151a' : 'color:#f2f0ec'}">${n}</b></span>`
     )
     .join('');
   const hours = [
@@ -390,7 +390,7 @@ function agenda() {
   ]
     .map(
       (h) =>
-        `<span class="lp-mut" style="height:${HH}px;font-size:11px">${h}</span>`
+        `<span class="lps-mut" style="height:${HH}px;font-size:11px">${h}</span>`
     )
     .join('');
   const cols = days
@@ -407,16 +407,16 @@ function agenda() {
   ]
     .map(
       ([n, i], j) =>
-        `<span class="lp-in lp-col" style="${d(j, 0.4)}gap:2px;padding:9px 10px;border-radius:14px;background:#24232b"><b>${n}</b><span class="lp-mut" style="font-size:12px">${i}</span></span>`
+        `<span class="lps-in lps-col" style="${d(j, 0.4)}gap:2px;padding:9px 10px;border-radius:14px;background:#24232b"><b>${n}</b><span class="lps-mut" style="font-size:12px">${i}</span></span>`
     )
     .join('');
   return shell(
     'agenda',
     `${title('Agenda')}
-    <div class="lp-row" style="gap:8px"><span class="lp-ghost">‹</span><span class="lp-ghost">Hoje</span><span class="lp-ghost">›</span><span class="lp-mut">6 – 10 de out.</span><span class="lp-pill-light" style="margin-left:auto">Semana</span><span class="lp-pill-light">+ Novo agendamento</span></div>
-    <div class="lp-row" style="gap:12px;align-items:flex-start">
-      <div class="lp-card" style="flex-grow:1;border-radius:22px;padding:10px;display:grid;grid-template-columns:50px repeat(5,minmax(0,1fr))"><span></span>${head}<span class="lp-col">${hours}</span>${cols}</div>
-      <div class="lp-card lp-col" style="width:230px;flex-shrink:0;border-radius:22px;padding:14px;gap:10px"><b class="lp-mut" style="font-size:12px">Próximos da semana</b>${next}</div>
+    <div class="lps-row" style="gap:8px"><span class="lps-ghost">‹</span><span class="lps-ghost">Hoje</span><span class="lps-ghost">›</span><span class="lps-mut">6 – 10 de out.</span><span class="lps-pill-light" style="margin-left:auto">Semana</span><span class="lps-pill-light">+ Novo agendamento</span></div>
+    <div class="lps-row" style="gap:12px;align-items:flex-start">
+      <div class="lps-card" style="flex-grow:1;border-radius:22px;padding:10px;display:grid;grid-template-columns:50px repeat(5,minmax(0,1fr))"><span></span>${head}<span class="lps-col">${hours}</span>${cols}</div>
+      <div class="lps-card lps-col" style="width:230px;flex-shrink:0;border-radius:22px;padding:14px;gap:10px"><b class="lps-mut" style="font-size:12px">Próximos da semana</b>${next}</div>
     </div>`
   );
 }
@@ -431,14 +431,14 @@ function disparos() {
     del: number,
     read: number
   ) =>
-    `<div class="lp-in lp-card lp-col" style="${d(i, 0.4)}border-radius:20px;padding:14px;gap:12px">
-      <div class="lp-row" style="gap:10px"><span class="lp-av" style="width:34px;height:34px;background:#2c2442;color:#d4c6ff">⦿</span><span class="lp-col" style="flex-grow:1"><b style="font-size:14px">${name}</b><span class="lp-mut" style="font-size:11.5px">${tpl}</span></span><span class="lp-col" style="align-items:flex-end;gap:3px">${chip('mint', 'Enviado')}<span class="lp-mut" style="font-size:11px">${date}</span></span></div>
-      <div style="display:grid;grid-template-columns:70px repeat(2,minmax(0,1fr));gap:12px;align-items:end"><span><span class="lp-mut" style="font-size:11px">Destinatários</span><br><b>${n}</b></span>
-        <span><span class="lp-row" style="justify-content:space-between;font-size:11px"><span>Entrega</span><b>${del}%</b></span><span class="lp-track" style="display:block;margin-top:4px"><span class="lp-bar" style="${d(i, 0.4)}display:block;width:${del}%;background:#9fd8bd"></span></span></span>
-        <span><span class="lp-row" style="justify-content:space-between;font-size:11px"><span>Lidas</span><b>${read}%</b></span><span class="lp-track" style="display:block;margin-top:4px"><span class="lp-bar" style="${d(i + 0.5, 0.4)}display:block;width:${read}%;background:#9ab7ea"></span></span></span></div></div>`;
+    `<div class="lps-in lps-card lps-col" style="${d(i, 0.4)}border-radius:20px;padding:14px;gap:12px">
+      <div class="lps-row" style="gap:10px"><span class="lps-av" style="width:34px;height:34px;background:#2c2442;color:#d4c6ff">⦿</span><span class="lps-col" style="flex-grow:1"><b style="font-size:14px">${name}</b><span class="lps-mut" style="font-size:11.5px">${tpl}</span></span><span class="lps-col" style="align-items:flex-end;gap:3px">${chip('mint', 'Enviado')}<span class="lps-mut" style="font-size:11px">${date}</span></span></div>
+      <div style="display:grid;grid-template-columns:70px repeat(2,minmax(0,1fr));gap:12px;align-items:end"><span><span class="lps-mut" style="font-size:11px">Destinatários</span><br><b>${n}</b></span>
+        <span><span class="lps-row" style="justify-content:space-between;font-size:11px"><span>Entrega</span><b>${del}%</b></span><span class="lps-track" style="display:block;margin-top:4px"><span class="lps-bar" style="${d(i, 0.4)}display:block;width:${del}%;background:#9fd8bd"></span></span></span>
+        <span><span class="lps-row" style="justify-content:space-between;font-size:11px"><span>Lidas</span><b>${read}%</b></span><span class="lps-track" style="display:block;margin-top:4px"><span class="lps-bar" style="${d(i + 0.5, 0.4)}display:block;width:${read}%;background:#9ab7ea"></span></span></span></div></div>`;
   return shell(
     'disparos',
-    `<div class="lp-row" style="justify-content:space-between"><span>${title('Disparos')}<br><span class="lp-mut">Envie mensagens em massa para seus contatos usando modelos aprovados.</span></span><span class="lp-pill-light">+ Novo disparo</span></div>
+    `<div class="lps-row" style="justify-content:space-between"><span>${title('Disparos')}<br><span class="lps-mut">Envie mensagens em massa para seus contatos usando modelos aprovados.</span></span><span class="lps-pill-light">+ Novo disparo</span></div>
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">${stat('Disparos', '12')}${stat('Destinatários', '3.412')}${stat('Taxa de leitura', '81%')}</div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
       ${blast(0, 'Promo de outubro', 'promo_outubro_v2', '06/10/2026', '1.240', 98, 84)}

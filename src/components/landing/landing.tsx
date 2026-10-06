@@ -11,6 +11,7 @@ import { useState, type FormEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { SCREEN_SIZE, screenHtml, type ScreenId } from './screens';
+import { DemoFlow } from './demo';
 import { LEAD_INTERESTS, type LeadInterest } from '@/lib/landing/lead';
 import './landing.css';
 
@@ -245,57 +246,6 @@ const SEGMENTS = [
     title: 'Disparos em massa',
     body: 'Campanhas para quem já é cliente, com entrega, leitura e respostas medidas.',
     who: 'Promoções, retornos, avisos',
-  },
-];
-
-const FLOW: {
-  time: string;
-  who: string;
-  tone: [string, string];
-  title: string;
-  body: string;
-}[] = [
-  {
-    time: '10:46',
-    who: 'IA',
-    tone: ['#ece4fc', '#4a3794'],
-    title: 'Responde na hora',
-    body: 'Com os preços, serviços e horários da casa, no tom que você definiu.',
-  },
-  {
-    time: '10:48',
-    who: 'IA',
-    tone: ['#ece4fc', '#4a3794'],
-    title: 'Marca quarta às 14:00 na agenda do Rafa',
-    body: 'Consulta a agenda do profissional e cria o negócio no funil.',
-  },
-  {
-    time: '13:00',
-    who: 'Automação',
-    tone: ['#dde8fb', '#23508e'],
-    title: 'Lembrete 1 hora antes',
-    body: 'Se o cliente pedir para remarcar, a IA resolve na mesma conversa.',
-  },
-  {
-    time: '14:02',
-    who: 'Equipe',
-    tone: ['#fde6cf', '#8a4a12'],
-    title: 'O Rafa atende já sabendo de tudo',
-    body: 'Histórico, resumo da IA e preferências do cliente ao lado da conversa.',
-  },
-  {
-    time: '14:45',
-    who: 'Funil',
-    tone: ['#dcf1e6', '#1d6a46'],
-    title: 'Negócio ganho: R$ 70',
-    body: 'O valor entra no painel e no relatório do mês.',
-  },
-  {
-    time: '+28 dias',
-    who: 'Follow-up',
-    tone: ['#fbe0e7', '#8e2b49'],
-    title: '“Bora marcar o próximo?”',
-    body: 'A mensagem sai sozinha quando chega a hora do retorno.',
   },
 ];
 
@@ -1104,40 +1054,8 @@ export function Landing() {
         </div>
       </section>
 
-      {/* ============ UMA CONVERSA, DO COMEÇO AO FIM ============ */}
-      <section className="lp-sec lp-day">
-        <div className="lp-wrap">
-          <div className="lp-day-head lp-rise">
-            <span className="lp-eyebrow">Um dia na barbearia</span>
-            <h2 className="lp-h2">
-              Uma conversa, do primeiro contato ao retorno.
-            </h2>
-            <p>
-              Cada passo fica registrado com quem fez: a IA, uma automação ou
-              alguém da equipe.
-            </p>
-          </div>
-          <ol className="lp-steps">
-            <span className="lp-steps-line" aria-hidden="true">
-              <span className="lp-steps-fill" />
-            </span>
-            {FLOW.map((f) => (
-              <li key={f.time} className="lp-step">
-                <span className="lp-step-dot" aria-hidden="true" />
-                <span className="lp-step-time lp-serif">{f.time}</span>
-                <span
-                  className="lp-step-who"
-                  style={{ background: f.tone[0], color: f.tone[1] }}
-                >
-                  {f.who}
-                </span>
-                <b>{f.title}</b>
-                <span className="lp-step-body">{f.body}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
+      {/* ============ VEJA EM AÇÃO ============ */}
+      <DemoFlow />
 
       {/* ============ NORDIA STUDIO ============ */}
       <section id="studio" className="lp-sec" style={{ padding: '110px 20px' }}>
