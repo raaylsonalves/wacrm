@@ -1404,7 +1404,7 @@ export function Landing() {
               return (
                 <div
                   key={p.id}
-                  className={`lp-plan${p.hot ? ' lp-plan-hot' : ''}`}
+                  className={`lp-plan${p.hot ? 'lp-plan-hot' : ''}`}
                 >
                   <span
                     style={{

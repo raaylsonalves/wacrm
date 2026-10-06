@@ -67,12 +67,10 @@ export async function POST(request: Request) {
       .filter((t): t is string => !!t)
       .map((tag_id) => ({ contact_id: id, tag_id }));
     if (rows.length) {
-      const { error } = await db
-        .from('contact_tags')
-        .upsert(rows, {
-          onConflict: 'contact_id,tag_id',
-          ignoreDuplicates: true,
-        });
+      const { error } = await db.from('contact_tags').upsert(rows, {
+        onConflict: 'contact_id,tag_id',
+        ignoreDuplicates: true,
+      });
       if (error) console.warn('[landing/lead] tagging failed:', error);
     }
     return NextResponse.json({ ok: true });
