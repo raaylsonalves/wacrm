@@ -1,6 +1,6 @@
 # Spec: Recurring billing / subscriptions for the platform
 
-**Status (2026-09-30): exploratory, **not built**. A services catalogue for contracts exists as a document; no billing code.**
+**Status (2026-10-06): exploratory, **not built**. The Brazil-specific version (Mercado Pago, payment inside signup) is `specs/mercadopago-checkout.md`; this file stays the generic exploration.**
 
 > Exploratory — this captures the shape of the problem and the
 > tradeoffs, not a ready-to-implement plan. The "Risks / open
