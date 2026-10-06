@@ -33,7 +33,11 @@ export async function POST(request: Request) {
       xRequestId: request.headers.get('x-request-id'),
       dataId: queryId,
     },
-    webhookSecrets()
+    webhookSecrets(),
+    // Reasons only (never secrets or signatures), so a 401 can be told
+    // apart in the logs: malformed, stale, mismatch or no secret set.
+    (source, reason) =>
+      console.warn(`[billing/webhook] rejected (${source}): ${reason}`)
   );
   if (!verified) {
     return NextResponse.json({ error: 'invalid_signature' }, { status: 401 });

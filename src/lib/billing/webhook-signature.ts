@@ -59,7 +59,11 @@ export function verifyMercadoPagoSignature(
   if (!ts || !v1 || !/^\d+$/.test(ts) || !/^[0-9a-f]+$/i.test(v1)) {
     return { ok: false, reason: 'malformed' };
   }
-  const tsMs = Number(ts);
+  // The docs say milliseconds, but some notifications (the optional-topic
+  // examples, the panel's simulator) carry seconds. A 10-digit value is a
+  // 2001-2286 date in seconds and a 1970 date in ms, so treat < 1e12 as
+  // seconds. The manifest still signs the raw string as received.
+  const tsMs = Number(ts) < 1e12 ? Number(ts) * 1000 : Number(ts);
   const now = input.now ?? Date.now();
   if (Math.abs(now - tsMs) > SIGNATURE_TOLERANCE_MS) {
     return { ok: false, reason: 'stale' };
@@ -84,13 +88,18 @@ export type BillingSource = 'subs' | 'pix';
  */
 export function identifyBillingSource(
   input: SignatureInput,
-  secrets: Partial<Record<BillingSource, string | undefined>>
+  secrets: Partial<Record<BillingSource, string | undefined>>,
+  onReject?: (source: BillingSource | 'none', reason: string) => void
 ): { source: BillingSource; ts: number } | null {
+  let tried = 0;
   for (const source of ['subs', 'pix'] as const) {
     const secret = secrets[source];
     if (!secret) continue;
+    tried++;
     const r = verifyMercadoPagoSignature(input, secret);
     if (r.ok) return { source, ts: r.ts };
+    onReject?.(source, r.reason);
   }
+  if (tried === 0) onReject?.('none', 'no secret configured');
   return null;
 }

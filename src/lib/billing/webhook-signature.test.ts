@@ -104,6 +104,20 @@ describe('verifyMercadoPagoSignature', () => {
     ).toBe(false);
   });
 
+  it('accepts a timestamp given in seconds, as the simulator sends it', () => {
+    const tsSec = Math.floor(NOW / 1000);
+    const r = verifyMercadoPagoSignature(
+      {
+        xSignature: sign('ORD01', 'req-1', tsSec),
+        xRequestId: 'req-1',
+        dataId: 'ORD01',
+        now: NOW,
+      },
+      SECRET
+    );
+    expect(r).toEqual({ ok: true, ts: tsSec * 1000 });
+  });
+
   it('rejects missing or malformed headers', () => {
     for (const xSignature of [null, '', 'garbage', 'ts=abc,v1=zz', 'ts=1']) {
       expect(
