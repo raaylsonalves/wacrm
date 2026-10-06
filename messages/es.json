@@ -3974,7 +3974,11 @@
         "hours": "Horario de atención"
       },
       "aboutPlaceholder": "Ej.: corte, barba y cejas. Corte $10. Solo con cita.",
-      "hoursPlaceholder": "Ej.: lun a sáb, 9 a 19 h",
+      "hoursInvalid": "La hora de fin debe ser posterior a la de inicio",
+      "hoursHint": "Días y horario de atención. La agenda y la IA lo usan para ofrecer horarios.",
+      "hoursFrom": "Desde",
+      "hoursTo": "Hasta",
+      "hoursAllDay": "Abierto 24 horas, todos los días",
       "segment": {
         "beauty": "Belleza y estética",
         "health": "Salud y clínicas",
@@ -4038,7 +4042,8 @@
         "goals": "La atención debe ayudar con: {value}",
         "tone": "Tono de voz: {value}",
         "about": "Sobre el negocio: {value}",
-        "hours": "Horario de atención: {value}"
+        "hours": "Horario de atención: {value}",
+        "allDay": "24 horas, todos los días"
       }
     }
   }

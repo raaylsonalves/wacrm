@@ -50,7 +50,9 @@ describe('sanitizeProfile', () => {
         goals: ['sales', 'hack'],
         team: '2-3',
         about: 'Corte e barba   ',
-        hours: 42,
+        workDays: [1, 9, 3],
+        dayStart: '09:00',
+        dayEnd: '25:00',
       })
     ).toEqual({
       segment: undefined,
@@ -60,7 +62,9 @@ describe('sanitizeProfile', () => {
       channel: undefined,
       tone: undefined,
       about: 'Corte e barba',
-      hours: undefined,
+      workDays: [1, 3],
+      dayStart: '09:00',
+      dayEnd: undefined,
     });
   });
 

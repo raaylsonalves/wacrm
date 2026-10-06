@@ -144,10 +144,14 @@ export function WhatsAppConfig() {
   const [registrationProbe, setRegistrationProbe] =
     useState<RegistrationProbe | null>(null);
 
-  const webhookUrl =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/api/whatsapp/webhook`
-      : '';
+  // Meta must reach the deployed app, never a dev machine, so a fixed
+  // public base (NEXT_PUBLIC_WEBHOOK_BASE_URL) wins over the origin the
+  // page happens to be served from (e.g. localhost while developing).
+  const webhookBase = (
+    process.env.NEXT_PUBLIC_WEBHOOK_BASE_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : '')
+  ).replace(/\/+$/, '');
+  const webhookUrl = webhookBase ? `${webhookBase}/api/whatsapp/webhook` : '';
 
   const fetchConfig = useCallback(
     async (acctId: string) => {

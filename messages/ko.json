@@ -3986,7 +3986,11 @@
         "hours": "영업시간"
       },
       "aboutPlaceholder": "예: 커트, 수염 정리, 눈썹. 커트 1만 원. 예약제로만 운영합니다.",
-      "hoursPlaceholder": "예: 월~토 오전 9시~오후 7시",
+      "hoursInvalid": "종료 시간은 시작 시간보다 늦어야 합니다",
+      "hoursHint": "응대하는 요일과 시간입니다. 일정과 AI가 예약 가능 시간을 제안할 때 사용합니다.",
+      "hoursFrom": "시작",
+      "hoursTo": "종료",
+      "hoursAllDay": "24시간, 매일 영업",
       "segment": {
         "beauty": "뷰티·미용",
         "health": "의료·클리닉",
@@ -4050,7 +4054,8 @@
         "goals": "응대가 도와야 할 일: {value}",
         "tone": "말투: {value}",
         "about": "비즈니스 소개: {value}",
-        "hours": "영업시간: {value}"
+        "hours": "영업시간: {value}",
+        "allDay": "24시간, 매일"
       }
     }
   }

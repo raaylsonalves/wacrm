@@ -3986,7 +3986,11 @@
         "hours": "Opening hours"
       },
       "aboutPlaceholder": "e.g. haircuts and beard trims. Haircut $9. By appointment only.",
-      "hoursPlaceholder": "e.g. Mon to Sat, 9am to 7pm",
+      "hoursInvalid": "The end time must be after the start time",
+      "hoursHint": "Days and hours you take customers. The agenda and the AI use this to offer slots.",
+      "hoursFrom": "From",
+      "hoursTo": "To",
+      "hoursAllDay": "Open 24 hours, every day",
       "segment": {
         "beauty": "Beauty and wellness",
         "health": "Health and clinics",
@@ -4050,7 +4054,8 @@
         "goals": "Support should help with: {value}",
         "tone": "Tone of voice: {value}",
         "about": "About the business: {value}",
-        "hours": "Opening hours: {value}"
+        "hours": "Opening hours: {value}",
+        "allDay": "24 hours, every day"
       }
     }
   }

@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,9 @@ import { StepFooter } from '../step-footer';
  * answers seed the AI assistant's context (next steps) and drive the plan
  * suggestion below. Chips use the CRM's pastel tone tokens.
  */
+
+/** Monday first, as the agenda shows it (0 = Sunday). */
+const WEEK = [1, 2, 3, 4, 5, 6, 0];
 
 function Chip({
   selected,
@@ -78,8 +82,9 @@ function Question({
 
 export default function OnboardingProfilePage() {
   const t = useTranslations('Onboarding.profile');
+  const locale = useLocale();
   const router = useRouter();
-  const { state, markDone, markSkipped } = useOnboarding();
+  const { accountId, state, markDone, markSkipped } = useOnboarding();
   const [profile, setProfile] = useState<BusinessProfile>(() =>
     sanitizeProfile(state.profile?.profile)
   );
@@ -113,12 +118,64 @@ export default function OnboardingProfilePage() {
       return { ...p, goals: next.length ? next : undefined };
     });
 
+  const dayLabel = (d: number) =>
+    new Date(2024, 0, 7 + d).toLocaleDateString(locale, { weekday: 'short' });
+  const toggleDay = (d: number) =>
+    setProfile((p) => {
+      const cur = p.workDays ?? [];
+      const next = cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d];
+      return {
+        ...p,
+        workDays: next.length ? next : undefined,
+        dayStart: p.dayStart ?? '09:00',
+        dayEnd: p.dayEnd ?? '18:00',
+      };
+    });
+  const allDay =
+    profile.workDays?.length === 7 &&
+    profile.dayStart === '00:00' &&
+    profile.dayEnd === '24:00';
+  const toggleAllDay = () =>
+    setProfile((p) =>
+      allDay
+        ? {
+            ...p,
+            workDays: [1, 2, 3, 4, 5],
+            dayStart: '09:00',
+            dayEnd: '18:00',
+          }
+        : {
+            ...p,
+            workDays: [0, 1, 2, 3, 4, 5, 6],
+            dayStart: '00:00',
+            dayEnd: '24:00',
+          }
+    );
+
   const suggestion = suggestPlan(profile);
 
   async function handleContinue() {
     setSaving(true);
     try {
-      await markDone('profile', { profile: sanitizeProfile(profile) });
+      const clean = sanitizeProfile(profile);
+      // The same hours the agenda reads, so the AI offers real slots.
+      if (clean.workDays && clean.dayStart && clean.dayEnd && accountId) {
+        if (clean.dayStart >= clean.dayEnd) {
+          toast.error(t('hoursInvalid'));
+          return;
+        }
+        const { error } = await createClient()
+          .from('appointment_settings')
+          .upsert({
+            account_id: accountId,
+            work_days: clean.workDays,
+            day_start: clean.dayStart,
+            day_end: clean.dayEnd,
+            updated_at: new Date().toISOString(),
+          });
+        if (error) throw error;
+      }
+      await markDone('profile', { profile: clean });
       router.push('/onboarding');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('saveFailed'));
@@ -229,18 +286,55 @@ export default function OnboardingProfilePage() {
           />
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="profile-hours">{t('q.hours')}</Label>
-          <Textarea
-            id="profile-hours"
-            rows={2}
-            maxLength={300}
-            value={profile.hours ?? ''}
-            onChange={(e) =>
-              setProfile((p) => ({ ...p, hours: e.target.value }))
-            }
-            placeholder={t('hoursPlaceholder')}
-          />
+        <div className="space-y-2">
+          <div>
+            <Label>{t('q.hours')}</Label>
+            <p className="text-muted-foreground text-xs">{t('hoursHint')}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {WEEK.map((d) => (
+              <Chip
+                key={d}
+                selected={profile.workDays?.includes(d) ?? false}
+                onClick={() => toggleDay(d)}
+              >
+                {dayLabel(d)}
+              </Chip>
+            ))}
+          </div>
+          {allDay ? null : (
+            <div className="flex items-center gap-2">
+              <Label htmlFor="hours-from" className="text-muted-foreground">
+                {t('hoursFrom')}
+              </Label>
+              <Input
+                id="hours-from"
+                type="time"
+                className="w-28"
+                value={profile.dayStart ?? '09:00'}
+                onChange={(e) =>
+                  setProfile((p) => ({ ...p, dayStart: e.target.value }))
+                }
+              />
+              <Label htmlFor="hours-to" className="text-muted-foreground">
+                {t('hoursTo')}
+              </Label>
+              <Input
+                id="hours-to"
+                type="time"
+                className="w-28"
+                value={profile.dayEnd ?? '18:00'}
+                onChange={(e) =>
+                  setProfile((p) => ({ ...p, dayEnd: e.target.value }))
+                }
+              />
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Chip selected={allDay} onClick={toggleAllDay}>
+              {t('hoursAllDay')}
+            </Chip>
+          </div>
         </div>
 
         {(suggestion || chosenPlan) && (

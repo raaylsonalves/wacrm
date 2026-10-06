@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Bot } from 'lucide-react';
 import { AiConfig } from '@/components/settings/ai-config';
 import { buildPromptContext, sanitizeProfile } from '@/lib/onboarding/profile';
@@ -14,6 +14,7 @@ export default function OnboardingAiAgentPage() {
   const t = useTranslations('Onboarding.aiAgent');
   const router = useRouter();
   const tp = useTranslations('Onboarding.profile');
+  const locale = useLocale();
   const { state, displayName, markDone, markSkipped } = useOnboarding();
 
   // Starts the assistant's business context from the company profile
@@ -28,6 +29,11 @@ export default function OnboardingAiAgentPage() {
       tone: (value) => tp('prompt.tone', { value }),
       about: (value) => tp('prompt.about', { value }),
       hours: (value) => tp('prompt.hours', { value }),
+      allDay: () => tp('prompt.allDay'),
+      dayLabel: (d) =>
+        new Date(2024, 0, 7 + d).toLocaleDateString(locale, {
+          weekday: 'short',
+        }),
       segmentLabel: (v) => tp(`segment.${v}`),
       goalLabel: (v) => tp(`goal.${v}`),
       toneLabel: (v) => tp(`tone.${v}`),

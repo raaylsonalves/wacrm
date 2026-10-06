@@ -3974,7 +3974,11 @@
         "hours": "Horário de funcionamento"
       },
       "aboutPlaceholder": "Ex.: corte, barba e sobrancelha. Corte R$ 45. Atendemos só com hora marcada.",
-      "hoursPlaceholder": "Ex.: seg a sáb, 9h às 19h",
+      "hoursInvalid": "Informe um horário de término depois do início",
+      "hoursHint": "Dias e horário em que você atende. A agenda e a IA usam isso para oferecer horários.",
+      "hoursFrom": "De",
+      "hoursTo": "Até",
+      "hoursAllDay": "Abre 24 horas, todos os dias",
       "segment": {
         "beauty": "Beleza e estética",
         "health": "Saúde e clínicas",
@@ -4038,7 +4042,8 @@
         "goals": "O atendimento deve ajudar com: {value}",
         "tone": "Tom de voz: {value}",
         "about": "Sobre o negócio: {value}",
-        "hours": "Horário de funcionamento: {value}"
+        "hours": "Horário de funcionamento: {value}",
+        "allDay": "24 horas, todos os dias"
       }
     }
   }

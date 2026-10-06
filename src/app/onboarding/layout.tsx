@@ -20,6 +20,8 @@ export default function OnboardingLayout({
   );
 }
 
+const WIDE_STEPS = ['channel', 'ai-agent'];
+
 function OnboardingShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations('Onboarding');
   const { state, loading, skipOnboarding } = useOnboarding();
@@ -56,7 +58,7 @@ function OnboardingShell({ children }: { children: React.ReactNode }) {
                         : undefined
                     }
                     className={cn(
-                      'flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors hover:bg-muted',
+                      'hover:bg-muted flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors',
                       pathname === `/onboarding/${step.segment}` &&
                         'ring-primary/40 ring-1',
                       done
@@ -83,7 +85,18 @@ function OnboardingShell({ children }: { children: React.ReactNode }) {
           {t('skipOnboarding')}
         </button>
       </header>
-      <main className="mx-auto max-w-xl px-4 py-10">{children}</main>
+      <main
+        className={cn(
+          'mx-auto px-4 py-10',
+          // Steps that embed full settings screens need room; the short
+          // questionnaire steps read better narrow.
+          WIDE_STEPS.some((seg) => pathname === `/onboarding/${seg}`)
+            ? 'max-w-5xl'
+            : 'max-w-xl'
+        )}
+      >
+        {children}
+      </main>
     </div>
   );
 }

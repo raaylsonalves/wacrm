@@ -43,8 +43,10 @@ export interface BusinessProfile {
   tone?: Tone;
   /** Free text: what they sell, prices, differentiators. */
   about?: string;
-  /** Free text: opening hours and anything the AI must know to schedule. */
-  hours?: string;
+  /** Opening hours, same shape the agenda stores (0 = Sunday). */
+  workDays?: number[];
+  dayStart?: string;
+  dayEnd?: string;
 }
 
 export type PlanReason = 'team' | 'volume' | 'prospecting' | 'broadcasts';
@@ -110,6 +112,15 @@ export function sanitizeProfile(raw: unknown): BusinessProfile {
   const goals = Array.isArray(r.goals)
     ? GOALS.filter((g) => (r.goals as unknown[]).includes(g))
     : undefined;
+  const days = Array.isArray(r.workDays)
+    ? [0, 1, 2, 3, 4, 5, 6].filter((d) => (r.workDays as unknown[]).includes(d))
+    : undefined;
+  const clock = (v: unknown, allowEnd: boolean) =>
+    typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v)
+      ? v
+      : allowEnd && v === '24:00'
+        ? v
+        : undefined;
   return {
     segment: pick(SEGMENTS, r.segment),
     goals: goals?.length ? [...goals] : undefined,
@@ -118,7 +129,9 @@ export function sanitizeProfile(raw: unknown): BusinessProfile {
     channel: pick(CHANNELS, r.channel),
     tone: pick(TONES, r.tone),
     about: text(r.about, 600),
-    hours: text(r.hours, 300),
+    workDays: days?.length ? days : undefined,
+    dayStart: days?.length ? clock(r.dayStart, false) : undefined,
+    dayEnd: days?.length ? clock(r.dayEnd, true) : undefined,
   };
 }
 
@@ -129,6 +142,8 @@ export interface PromptTexts {
   tone: (label: string) => string;
   about: (text: string) => string;
   hours: (text: string) => string;
+  allDay: () => string;
+  dayLabel: (d: number) => string;
   segmentLabel: (s: Segment) => string;
   goalLabel: (g: Goal) => string;
   toneLabel: (t: Tone) => string;
@@ -151,6 +166,17 @@ export function buildPromptContext(
     lines.push(x.goals(p.goals.map((g) => x.goalLabel(g)).join(', ')));
   if (p.tone) lines.push(x.tone(x.toneLabel(p.tone)));
   if (p.about) lines.push(x.about(p.about));
-  if (p.hours) lines.push(x.hours(p.hours));
+  if (p.workDays?.length && p.dayStart && p.dayEnd) {
+    const all =
+      p.workDays.length === 7 && p.dayStart === '00:00' && p.dayEnd === '24:00';
+    const mon1 = [1, 2, 3, 4, 5, 6, 0].filter((d) => p.workDays?.includes(d));
+    lines.push(
+      x.hours(
+        all
+          ? x.allDay()
+          : `${mon1.map((d) => x.dayLabel(d)).join(', ')} ${p.dayStart}-${p.dayEnd}`
+      )
+    );
+  }
   return lines.join('\n');
 }
