@@ -11,8 +11,8 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const ctx = await getCurrentAccount();
-    const [{ data: account }, { data: sub }, { data: pix }] =
-      await Promise.all([
+    const [{ data: account }, { data: sub }, { data: pix }] = await Promise.all(
+      [
         ctx.supabase
           .from('accounts')
           .select('subscription_status')
@@ -33,7 +33,8 @@ export async function GET() {
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(),
-      ]);
+      ]
+    );
     return NextResponse.json({
       subscriptionStatus: account?.subscription_status ?? null,
       subscription: sub ?? null,
