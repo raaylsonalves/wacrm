@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
@@ -22,7 +23,7 @@ import { QueryProvider } from '@/lib/query/provider';
 // client components can't export Next's metadata object.
 
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, accountId } = useAuth();
   const router = useRouter();
 
   // Sidebar drawer state — only used on mobile. On lg+ the sidebar is
@@ -35,6 +36,29 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
       router.push('/login');
     }
   }, [user, loading, router]);
+
+  // A brand-new account has not been through the setup wizard yet. The
+  // confirmation e-mail may land the user anywhere (the redirect URL
+  // depends on Supabase's allow-list), so the app itself sends them to
+  // /onboarding. Existing accounts were backfilled with onboarded_at, so
+  // this never fires for them.
+  useEffect(() => {
+    if (!accountId) return;
+    let cancelled = false;
+    createClient()
+      .from('accounts')
+      .select('onboarded_at')
+      .eq('id', accountId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data && !data.onboarded_at) {
+          router.replace('/onboarding');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, router]);
 
   // The opening mural covers the screen while the session resolves and
   // fades out on top of the app once it can render. It keeps the same
