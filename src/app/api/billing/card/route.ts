@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
 import { canManageBilling } from '@/lib/auth/roles';
 import { supabaseAdmin } from '@/lib/ai/admin-client';
+import { audit } from '@/lib/audit';
 import {
   MercadoPagoError,
   updatePreapprovalCard,
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
     const db = supabaseAdmin();
     const { data: sub } = await db
       .from('billing_subscriptions')
-      .select('method, status, mp_preapproval_id')
+      .select('id, method, status, mp_preapproval_id')
       .eq('account_id', ctx.accountId)
       .maybeSingle();
     if (
@@ -74,6 +75,16 @@ export async function POST(request: Request) {
       }
       throw err;
     }
+    // Nothing changes in our own rows (the card lives at Mercado Pago), so
+    // the audit entry is the only trace that the swap happened.
+    void audit({
+      accountId: ctx.accountId,
+      actorUserId: ctx.userId,
+      action: 'billing.card_changed',
+      resourceType: 'billing_subscription',
+      resourceId: sub.id as string,
+      metadata: { status: sub.status },
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return toErrorResponse(err);

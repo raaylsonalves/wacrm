@@ -264,30 +264,37 @@ export function SubscribersPanel() {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      {sub && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busy === r.id}
-                            onClick={() =>
-                              act(r.id, { action: 'extend', days: 7 })
-                            }
-                          >
-                            {t('extend', { days: 7 })}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busy === r.id}
-                            onClick={() =>
-                              act(r.id, { action: 'extend', days: 30 })
-                            }
-                          >
-                            {t('extend', { days: 30 })}
-                          </Button>
-                        </>
-                      )}
+                      {/* A live card subscription is charged by Mercado
+                          Pago on its own schedule; extending our date would
+                          not move that charge, so it is not offered. */}
+                      {sub &&
+                        !(
+                          sub.method === 'card' &&
+                          (sub.status === 'active' || sub.status === 'past_due')
+                        ) && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busy === r.id}
+                              onClick={() =>
+                                act(r.id, { action: 'extend', days: 7 })
+                              }
+                            >
+                              {t('extend', { days: 7 })}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busy === r.id}
+                              onClick={() =>
+                                act(r.id, { action: 'extend', days: 30 })
+                              }
+                            >
+                              {t('extend', { days: 30 })}
+                            </Button>
+                          </>
+                        )}
                       {r.accountStatus === 'exempt' ? (
                         <Button
                           size="sm"

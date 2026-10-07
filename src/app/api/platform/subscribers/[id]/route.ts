@@ -75,11 +75,20 @@ export async function POST(
       }
       const { data: sub } = await db
         .from('billing_subscriptions')
-        .select('id, current_period_end')
+        .select('id, method, status, mp_preapproval_id, current_period_end')
         .eq('account_id', id)
         .maybeSingle();
       if (!sub) {
         return NextResponse.json({ error: 'no_subscription' }, { status: 409 });
+      }
+      // Mercado Pago charges a live card subscription on its own schedule:
+      // moving our date would not move that charge, only make them disagree.
+      if (
+        sub.method === 'card' &&
+        sub.mp_preapproval_id &&
+        (sub.status === 'active' || sub.status === 'past_due')
+      ) {
+        return NextResponse.json({ error: 'card_managed' }, { status: 409 });
       }
       const from = Math.max(
         Date.now(),
