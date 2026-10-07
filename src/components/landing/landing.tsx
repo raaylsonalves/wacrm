@@ -7,7 +7,7 @@
 // here instead of messages/*.json.
 // ============================================================
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { SCREEN_SIZE, screenHtml, type ScreenId } from './screens';
@@ -361,6 +361,28 @@ export function Landing() {
   const [pix, setPix] = useState(true);
   const [open, setOpen] = useState(0);
   const [need, setNeed] = useState<LeadInterest>(LEAD_INTERESTS[0]);
+  const heroRef = useRef<HTMLElement>(null);
+
+  // On phones the hero is taller than the screen, so it can't stick at
+  // top: 0. Stick it once its bottom reaches the screen's bottom instead,
+  // so the arch still slides over it like on desktop.
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+    const sync = () =>
+      el.style.setProperty(
+        '--hero-stick',
+        `${Math.min(0, window.innerHeight - el.offsetHeight)}px`
+      );
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    window.addEventListener('resize', sync);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', sync);
+    };
+  }, []);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [website, setWebsite] = useState('');
@@ -401,7 +423,7 @@ export function Landing() {
     <div className="lp">
       {/* ============ HERO + ARCO ============ */}
       <div className="lp-heroBox">
-        <section id="topo" className="lp-hero">
+        <section id="topo" className="lp-hero" ref={heroRef}>
           <header className="lp-nav">
             <Link href="/" aria-label="Nordia CRM" style={{ display: 'flex' }}>
               <Image

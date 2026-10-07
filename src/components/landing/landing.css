@@ -1104,9 +1104,9 @@
   }
   /* A sticky 100vh hero only works with a tall viewport; on a phone it
      squeezed the phone and hid the strip. Let the hero flow at its natural
-     height and keep just the arch's rise. */
+     height; it sticks by its bottom edge (--hero-stick, set in landing.tsx). */
   .lp-hero {
-    position: relative;
+    top: var(--hero-stick, 0px);
     height: auto;
     min-height: 0;
   }
