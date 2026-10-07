@@ -3367,6 +3367,11 @@
       "cancelled": "Assinatura cancelada",
       "exempt": "Esta conta foi liberada pela Nordia e não tem cobrança.",
       "ownerOnly": "Só o dono da conta pode alterar a cobrança.",
+      "locked": {
+        "title": "Assinatura encerrada",
+        "description": "Sua assinatura terminou. Os dados continuam guardados; reative para voltar a usar o CRM.",
+        "action": "Ver cobrança"
+      },
       "banner": {
         "late": "Há um pagamento em atraso na sua conta.",
         "renewal": "O Pix da próxima cobrança está disponível.",

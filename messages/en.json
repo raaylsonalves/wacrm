@@ -3379,6 +3379,11 @@
       "cancelled": "Subscription cancelled",
       "exempt": "This account was released by Nordia and is not billed.",
       "ownerOnly": "Only the account owner can change billing.",
+      "locked": {
+        "title": "Subscription ended",
+        "description": "Your subscription has ended. Your data is kept; reactivate to use the CRM again.",
+        "action": "View billing"
+      },
       "banner": {
         "late": "A payment on your account is overdue.",
         "renewal": "The Pix for your next charge is available.",

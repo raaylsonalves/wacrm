@@ -11,6 +11,7 @@ import { OperatorBanner } from '@/components/operator/operator-banner';
 import { ModuleGuard } from '@/components/layout/module-guard';
 import { AccountAccessAlert } from '@/components/layout/account-access-alert';
 import { BillingBanner } from '@/components/billing/billing-banner';
+import { BillingLock } from '@/components/billing/billing-lock';
 import { BrandColorEffect } from '@/components/layout/brand-color-effect';
 import { AccountTabBranding } from '@/components/layout/account-tab-branding';
 import { PresenceHeartbeat } from '@/components/presence/presence-heartbeat';
@@ -35,6 +36,9 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   // until it matches, so a fresh account never sees the dashboard flash
   // before being sent to /onboarding.
   const [clearedFor, setClearedFor] = useState<string | null>(null);
+  // Cancelled after onboarding: the app opens, but only Settings > Billing
+  // is usable (BillingLock).
+  const [locked, setLocked] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -66,12 +70,12 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         // Nothing paid yet: the owner goes to the payment step. Teammates
         // cannot pay, so they are left alone.
         else if (
-          (data.subscription_status === 'pending' ||
-            data.subscription_status === 'canceled') &&
+          data.subscription_status === 'pending' &&
           data.owner_user_id === user?.id
         ) {
           router.replace('/onboarding/payment');
         } else {
+          setLocked(data.subscription_status === 'canceled');
           setClearedFor(accountId);
         }
       });
@@ -120,7 +124,12 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
               {/* Owner-only: a late payment or a Pix waiting to be paid. */}
               <BillingBanner />
               {/* Pages a client account did not buy never mount (migration 091). */}
-              <ModuleGuard>{children}</ModuleGuard>
+              {/* useSearchParams in BillingLock needs a Suspense boundary. */}
+              <Suspense fallback={null}>
+                <BillingLock locked={locked}>
+                  <ModuleGuard>{children}</ModuleGuard>
+                </BillingLock>
+              </Suspense>
             </main>
             {/* Phone tab bar — below lg only; "More" opens the sidebar drawer. */}
             <BottomNav onMore={() => setSidebarOpen(true)} />

@@ -3367,6 +3367,11 @@
       "cancelled": "Suscripción cancelada",
       "exempt": "Esta cuenta fue liberada por Nordia y no tiene cobro.",
       "ownerOnly": "Solo el dueño de la cuenta puede cambiar la facturación.",
+      "locked": {
+        "title": "Suscripción finalizada",
+        "description": "Tu suscripción terminó. Tus datos siguen guardados; reactívala para volver a usar el CRM.",
+        "action": "Ver facturación"
+      },
       "banner": {
         "late": "Hay un pago atrasado en tu cuenta.",
         "renewal": "El Pix del próximo cobro está disponible.",
