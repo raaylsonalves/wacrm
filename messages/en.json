@@ -726,6 +726,14 @@
       "google": "Google Calendar"
     },
     "subscribers": {
+      "testPix": {
+        "title": "Test Pix (R$ 1.00)",
+        "hint": "Checks the live credentials and the webhook. Credits no account.",
+        "create": "Create test Pix",
+        "qrAlt": "Test Pix QR code",
+        "status": "Status at Mercado Pago: {status}",
+        "failed": "Could not create the test Pix."
+      },
       "title": "Subscribers",
       "subtitle": "Every customer account and its billing. Billing data only, never conversations or contacts.",
       "mrr": "Monthly revenue (active)",

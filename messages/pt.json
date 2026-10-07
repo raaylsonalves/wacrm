@@ -726,6 +726,14 @@
       "google": "Google Agenda"
     },
     "subscribers": {
+      "testPix": {
+        "title": "Pix de teste (R$ 1,00)",
+        "hint": "Confere as credenciais de produção e o webhook. Não credita nenhuma conta.",
+        "create": "Gerar Pix de teste",
+        "qrAlt": "QR code do Pix de teste",
+        "status": "Status no Mercado Pago: {status}",
+        "failed": "Não foi possível gerar o Pix de teste."
+      },
       "title": "Assinantes",
       "subtitle": "Todas as contas clientes e a cobrança de cada uma. Só dados de cobrança, nunca conversas ou contatos.",
       "mrr": "Receita mensal (ativas)",

@@ -136,6 +136,8 @@ export function SubscribersPanel() {
         <p className="text-muted-foreground mt-1 text-sm">{t('subtitle')}</p>
       </div>
 
+      <TestPix />
+
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Stat label={t('mrr')} value={`R$ ${money(mrrCents)}`} />
         <Stat label={tStatus('active')} value={counts.active ?? 0} />
@@ -342,6 +344,89 @@ function Field({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-muted-foreground text-xs uppercase">{label}</dt>
       <dd className="text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * A R$ 1,00 Pix to check the live Mercado Pago setup (POST
+ * /api/platform/test-pix). It belongs to no subscription: paying it only
+ * proves the charge and the webhook work.
+ */
+function TestPix() {
+  const t = useTranslations('Operator.subscribers.testPix');
+  const [busy, setBusy] = useState(false);
+  const [order, setOrder] = useState<{
+    id: string;
+    status: string;
+    qrCode: string | null;
+    qrCodeBase64: string | null;
+  } | null>(null);
+
+  // Follow the order until it settles.
+  useEffect(() => {
+    if (!order || order.status !== 'action_required') return;
+    const timer = window.setInterval(async () => {
+      const res = await fetch(`/api/platform/test-pix?id=${order.id}`, {
+        cache: 'no-store',
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as { status: string };
+      setOrder((o) => (o ? { ...o, status: data.status } : o));
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [order]);
+
+  async function create() {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/platform/test-pix', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.detail ?? t('failed'));
+        return;
+      }
+      setOrder(data);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="border-border space-y-3 rounded-2xl border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-foreground text-sm font-medium">{t('title')}</p>
+          <p className="text-muted-foreground text-xs">{t('hint')}</p>
+        </div>
+        <Button size="sm" variant="outline" disabled={busy} onClick={create}>
+          {busy && <Loader2 className="size-4 animate-spin" />}
+          {t('create')}
+        </Button>
+      </div>
+      {order && (
+        <div className="space-y-2">
+          {order.qrCodeBase64 && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt={t('qrAlt')}
+              src={`data:image/png;base64,${order.qrCodeBase64}`}
+              className="size-40 rounded-lg bg-white p-2"
+            />
+          )}
+          {order.qrCode && (
+            <input
+              readOnly
+              value={order.qrCode}
+              onFocus={(e) => e.currentTarget.select()}
+              className="border-border bg-card w-full rounded-lg border px-3 py-2 font-mono text-xs"
+            />
+          )}
+          <p className="text-muted-foreground text-xs">
+            {t('status', { status: order.status })}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -726,6 +726,14 @@
       "google": "Google 캘린더"
     },
     "subscribers": {
+      "testPix": {
+        "title": "테스트 Pix (R$ 1.00)",
+        "hint": "운영 자격 증명과 웹훅을 확인합니다. 어떤 계정에도 적립되지 않습니다.",
+        "create": "테스트 Pix 생성",
+        "qrAlt": "테스트 Pix QR 코드",
+        "status": "Mercado Pago 상태: {status}",
+        "failed": "테스트 Pix를 생성할 수 없습니다."
+      },
       "title": "구독자",
       "subtitle": "모든 고객 계정과 결제 현황입니다. 결제 정보만 표시되며 대화나 연락처는 표시되지 않습니다.",
       "mrr": "월 매출 (활성)",

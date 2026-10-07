@@ -726,6 +726,14 @@
       "google": "Google Calendar"
     },
     "subscribers": {
+      "testPix": {
+        "title": "Pix de prueba (R$ 1,00)",
+        "hint": "Verifica las credenciales de producción y el webhook. No acredita ninguna cuenta.",
+        "create": "Generar Pix de prueba",
+        "qrAlt": "Código QR del Pix de prueba",
+        "status": "Estado en Mercado Pago: {status}",
+        "failed": "No se pudo generar el Pix de prueba."
+      },
       "title": "Suscriptores",
       "subtitle": "Todas las cuentas clientes y su facturación. Solo datos de facturación, nunca conversaciones ni contactos.",
       "mrr": "Ingreso mensual (activas)",
