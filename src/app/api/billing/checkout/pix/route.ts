@@ -123,32 +123,16 @@ export async function POST(request: Request) {
       ? (existing.amount_cents as number)
       : quoteSubscription(plan, cycle).amountCents;
     const quote = { ...quoteSubscription(plan, cycle), amountCents };
-    const { error: subErr } = overdue
-      ? { error: null }
-      : await db.from('billing_subscriptions').upsert(
-          {
-            account_id: ctx.accountId,
-            plan,
-            cycle,
-            method: 'pix',
-            amount_cents: quote.amountCents,
-            charges_total: quote.chargesTotal,
-            charges_paid: 0,
-            status: 'pending',
-            mp_preapproval_id: null,
-            current_period_end: null,
-            canceled_at: null,
-            grace_until: null,
-          },
-          { onConflict: 'account_id' }
-        );
-    if (subErr) throw subErr;
 
-    // The overdue month is keyed like the sweep keys its renewal (the month
-    // the period ended in), so this reuses or replaces that same charge.
-    const period = monthStart(
-      overdue ? new Date(existing.current_period_end as string) : new Date()
-    );
+    // Which charge this is. An overdue month is keyed like the sweep keys
+    // its renewal (the month the period ended in), so it reuses or replaces
+    // that same charge. A new purchase is keyed by today: keying it by the
+    // month made a lapsed account that had paid earlier in the same month
+    // unable to buy again (the paid row looked like "already paid").
+    const now = new Date();
+    const period = overdue
+      ? monthStart(new Date(existing.current_period_end as string))
+      : now.toISOString().slice(0, 10);
     const { data: open } = await db
       .from('billing_pix_orders')
       .select(
@@ -157,17 +141,39 @@ export async function POST(request: Request) {
       .eq('account_id', ctx.accountId)
       .eq('period_start', period)
       .maybeSingle();
+    // This charge was already paid: never replace the record or ask twice.
+    // Checked BEFORE the subscription row is rewritten below.
+    if (open?.status === 'paid') {
+      return NextResponse.json({ error: 'already_paid' }, { status: 409 });
+    }
+
+    if (!overdue) {
+      const { error: subErr } = await db.from('billing_subscriptions').upsert(
+        {
+          account_id: ctx.accountId,
+          plan,
+          cycle,
+          method: 'pix',
+          amount_cents: quote.amountCents,
+          charges_total: quote.chargesTotal,
+          charges_paid: 0,
+          status: 'pending',
+          mp_preapproval_id: null,
+          current_period_end: null,
+          canceled_at: null,
+          grace_until: null,
+        },
+        { onConflict: 'account_id' }
+      );
+      if (subErr) throw subErr;
+    }
+
     const stillOpen =
       open &&
       open.status === 'pending' &&
       open.amount_cents === quote.amountCents &&
       open.expires_at &&
-      new Date(open.expires_at as string) > new Date();
-    // This month's charge was already paid: never replace the record or
-    // ask for the same month twice.
-    if (open?.status === 'paid') {
-      return NextResponse.json({ error: 'already_paid' }, { status: 409 });
-    }
+      new Date(open.expires_at as string) > now;
     if (stillOpen) {
       return NextResponse.json({ ok: true, pix: toClient(open) });
     }
