@@ -331,6 +331,7 @@ export async function POST(request: Request) {
     if (claimed) {
       return NextResponse.json(
         {
+          code: 'phone_in_use',
           error:
             'This WhatsApp phone number is already linked to another account on this instance. Each phone number can only be connected to one wacrm user.',
         },

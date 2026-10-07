@@ -2909,6 +2909,7 @@
       "ownerHint": "계정과 결제에 대한 전체 권한"
     },
     "whatsapp": {
+      "phoneInUse": "이 WhatsApp 번호는 이미 이 CRM의 다른 계정에 연결되어 있습니다. 번호 하나는 한 계정에만 연결할 수 있으니, 다른 계정(설정 > WhatsApp)에서 연결을 해제한 후 여기에 연결하세요.",
       "title": "WhatsApp 연결",
       "description": "Meta WhatsApp 비즈니스 API를 연결하세요. 자격 증명, 웹훅, 설정 단계가 모두 여기 있습니다.",
       "tokenCorrupted": "저장된 토큰을 복호화할 수 없습니다",

@@ -2909,6 +2909,7 @@
       "ownerHint": "Full control over account and billing"
     },
     "whatsapp": {
+      "phoneInUse": "This WhatsApp number is already connected to another account on this CRM. Each number can belong to one account only: disconnect it from the other account (Settings > WhatsApp) before connecting it here.",
       "title": "WhatsApp connection",
       "description": "Connect your Meta WhatsApp Business API. Credentials, webhook, and setup steps all live here.",
       "tokenCorrupted": "Stored token can't be decrypted",

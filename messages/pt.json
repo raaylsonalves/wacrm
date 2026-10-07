@@ -2899,6 +2899,7 @@
       "ownerHint": "Controle total da conta e do faturamento"
     },
     "whatsapp": {
+      "phoneInUse": "Este número de WhatsApp já está conectado a outra conta deste CRM. Cada número só pode ficar em uma conta: desconecte-o da outra conta (Configurações > WhatsApp) antes de conectá-lo aqui.",
       "title": "Conexão com o WhatsApp",
       "description": "Conecte sua API do WhatsApp Business da Meta. Credenciais, webhook e etapas de configuração ficam todos aqui.",
       "tokenCorrupted": "Não foi possível descriptografar o token armazenado",

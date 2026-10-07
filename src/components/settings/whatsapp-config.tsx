@@ -366,6 +366,8 @@ export function WhatsAppConfig() {
       const data = await res.json();
 
       if (!res.ok) {
+        // Known refusals carry a code: show them in the user's language.
+        if (data.code === 'phone_in_use') data.error = t('phoneInUse');
         // The route names the failing step and which field to check
         // (issue #505). Keep the details on screen — a toast is too
         // short-lived to copy a trace id out of.
