@@ -61,10 +61,10 @@ export async function GET() {
     const ctx = await getCurrentAccount({ allowUnpaid: true });
     // Also for a cancelled account subscribing again from Settings > Billing:
     // its new charge is pending while the account itself is still `canceled`.
-    if (
-      ctx.subscriptionStatus === 'pending' ||
-      ctx.subscriptionStatus === 'canceled'
-    ) {
+    // And for an active account resuming a cancelled card subscription in
+    // its paid period (new preapproval pending). reconcilePending only acts
+    // on rows that are actually pending, so this is cheap otherwise.
+    if (ctx.subscriptionStatus !== 'exempt') {
       await reconcilePending(ctx.accountId);
     }
     const [

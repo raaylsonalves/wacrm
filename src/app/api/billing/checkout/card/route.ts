@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     }
     const { data: existing } = await db
       .from('billing_subscriptions')
-      .select('id, status, mp_preapproval_id')
+      .select('id, status, mp_preapproval_id, current_period_end, charges_paid')
       .eq('account_id', ctx.accountId)
       .maybeSingle();
     if (existing?.status === 'active') {
@@ -94,6 +94,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Cancelled but still inside a paid period: keep that period, and let
+    // the new card subscription charge for the first time when it ends.
+    const paidUntil =
+      existing?.status === 'canceled' &&
+      existing.current_period_end &&
+      new Date(existing.current_period_end as string) > new Date()
+        ? new Date(existing.current_period_end as string)
+        : null;
+
     const quote = quoteSubscription(plan, cycle);
     const row = {
       account_id: ctx.accountId,
@@ -105,7 +114,7 @@ export async function POST(request: Request) {
       charges_paid: 0,
       status: 'pending',
       mp_preapproval_id: null,
-      current_period_end: null,
+      current_period_end: paidUntil ? paidUntil.toISOString() : null,
       canceled_at: null,
       grace_until: null,
     };
@@ -129,6 +138,7 @@ export async function POST(request: Request) {
           endDate:
             quote.chargesTotal !== null ? addYears(new Date(), 1) : undefined,
           backUrl: `${origin}/onboarding/payment`,
+          startDate: paidUntil ?? undefined,
         },
         // Deterministic per (subscription row, card token): a double submit
         // of the same form returns the same subscription instead of a second.

@@ -143,6 +143,9 @@ export interface CreatePreapprovalInput {
   amount: number;
   /** Set for plans that end (annual = 12 months); omitted otherwise. */
   endDate?: Date;
+  /** First charge date; omitted = now. Used to resume after a period
+   *  that is already paid, so that month is not charged twice. */
+  startDate?: Date;
   backUrl: string;
 }
 
@@ -167,6 +170,9 @@ export const createPreapproval = (
         frequency_type: 'months',
         transaction_amount: input.amount,
         currency_id: 'BRL',
+        ...(input.startDate
+          ? { start_date: input.startDate.toISOString() }
+          : {}),
         ...(input.endDate ? { end_date: input.endDate.toISOString() } : {}),
       },
     },

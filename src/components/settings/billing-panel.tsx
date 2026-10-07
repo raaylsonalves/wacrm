@@ -50,6 +50,8 @@ export function BillingPanel() {
   // Inline panels: subscribing (again) and swapping the card.
   const [checkout, setCheckout] = useState(false);
   const [changingCard, setChangingCard] = useState(false);
+  const [reactivatingCard, setReactivatingCard] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,6 +129,45 @@ export function BillingPanel() {
   // Paid: reload the whole app so the dashboard's billing lock lifts.
   const onActive = () => window.location.reload();
 
+  // Cancelled, still inside the paid period: resume without charging.
+  async function reactivatePix() {
+    setReactivating(true);
+    try {
+      const res = await fetch('/api/billing/reactivate', { method: 'POST' });
+      if (!res.ok) {
+        toast.error(t('reactivateFailed'));
+        return;
+      }
+      toast.success(t('reactivated'));
+      window.location.reload();
+    } finally {
+      setReactivating(false);
+    }
+  }
+
+  // Card: a new subscription whose first charge waits for the period end.
+  async function reactivateWithCard(card: {
+    token: string;
+    payerEmail: string | null;
+  }) {
+    const res = await fetch('/api/billing/checkout/card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        plan: data?.subscription?.plan,
+        cycle: data?.subscription?.cycle,
+        cardToken: card.token,
+        payerEmail: card.payerEmail,
+      }),
+    });
+    if (!res.ok) {
+      toast.error(t('reactivateFailed'));
+      throw new Error('reactivate failed');
+    }
+    toast.success(t('reactivatedCard'));
+    window.location.reload();
+  }
+
   async function copy(code: string) {
     try {
       await navigator.clipboard.writeText(code);
@@ -167,8 +208,15 @@ export function BillingPanel() {
   const canceled = sub?.status === 'canceled';
   // Subscribing again (or paying a first charge) happens right here; a
   // Pix already waiting is shown above instead.
+  // Cancelled but the paid period is still running: resume, don't re-buy.
+  const stillPaid =
+    canceled &&
+    !!sub?.current_period_end &&
+    new Date(sub.current_period_end).getTime() > Date.now();
   const canSubscribe =
-    (!sub || canceled || status === 'pending' || status === 'canceled') && !pix;
+    (!sub || canceled || status === 'pending' || status === 'canceled') &&
+    !pix &&
+    !stillPaid;
   // The card of a live subscription is swapped in place at Mercado Pago.
   const canChangeCard =
     sub?.method === 'card' &&
@@ -289,6 +337,19 @@ export function BillingPanel() {
       {isOwner ? (
         <>
           <div className="flex flex-wrap gap-2">
+            {stillPaid && !reactivatingCard && (
+              <Button
+                disabled={reactivating}
+                onClick={() =>
+                  sub?.method === 'pix'
+                    ? void reactivatePix()
+                    : setReactivatingCard(true)
+                }
+              >
+                {reactivating && <Loader2 className="size-4 animate-spin" />}
+                {t('reactivate')}
+              </Button>
+            )}
             {canSubscribe && !checkout && (
               <Button onClick={() => setCheckout(true)}>
                 {canceled || !sub ? t('subscribe') : t('payNow')}
@@ -333,6 +394,36 @@ export function BillingPanel() {
                 }
                 onActive={onActive}
               />
+            </div>
+          )}
+
+          {reactivatingCard && sub && (
+            <div className="border-border space-y-4 rounded-2xl border p-5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-foreground text-sm font-medium">
+                  {t('reactivate')}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setReactivatingCard(false)}
+                >
+                  {t('close')}
+                </Button>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                {t('reactivateCardHint', {
+                  date: date(sub.current_period_end),
+                })}
+              </p>
+              {SUBS_KEY ? (
+                <CardBrick
+                  publicKey={SUBS_KEY}
+                  amount={sub.amount_cents / 100}
+                  onSubmit={reactivateWithCard}
+                  onFailed={() => toast.error(t('reactivateFailed'))}
+                />
+              ) : null}
             </div>
           )}
 

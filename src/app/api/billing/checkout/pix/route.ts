@@ -83,11 +83,22 @@ export async function POST(request: Request) {
     }
     const { data: existing } = await db
       .from('billing_subscriptions')
-      .select('status, mp_preapproval_id')
+      .select('status, mp_preapproval_id, current_period_end')
       .eq('account_id', ctx.accountId)
       .maybeSingle();
     if (existing?.status === 'active') {
       return NextResponse.json({ error: 'already_active' }, { status: 409 });
+    }
+    // Cancelled but still inside the period already paid: nothing is owed
+    // yet. Reactivating (POST /api/billing/reactivate) resumes it; a new
+    // charge here would bill the same month twice. Checked BEFORE the row
+    // is rewritten below, which would otherwise erase the paid period.
+    if (
+      existing?.status === 'canceled' &&
+      existing.current_period_end &&
+      new Date(existing.current_period_end as string) > new Date()
+    ) {
+      return NextResponse.json({ error: 'still_paid' }, { status: 409 });
     }
     // A card subscription still alive at Mercado Pago (e.g. past_due, being
     // retried): replacing its row with Pix would leave the card charging
