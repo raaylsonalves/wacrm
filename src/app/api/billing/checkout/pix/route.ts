@@ -83,9 +83,18 @@ export async function POST(request: Request) {
     }
     const { data: existing } = await db
       .from('billing_subscriptions')
-      .select('status, mp_preapproval_id, current_period_end')
+      .select(
+        'status, method, amount_cents, mp_preapproval_id, current_period_end'
+      )
       .eq('account_id', ctx.accountId)
       .maybeSingle();
+    // A Pix month that went unpaid (past_due, in grace): charge that same
+    // month again without rewriting the row, so the paid count and the
+    // period carry over and the payment extends the period it is late for.
+    const overdue =
+      existing?.status === 'past_due' &&
+      existing.method === 'pix' &&
+      !!existing.current_period_end;
     if (existing?.status === 'active') {
       return NextResponse.json({ error: 'already_active' }, { status: 409 });
     }
@@ -110,27 +119,36 @@ export async function POST(request: Request) {
       );
     }
 
-    const quote = quoteSubscription(plan, cycle);
-    const { error: subErr } = await db.from('billing_subscriptions').upsert(
-      {
-        account_id: ctx.accountId,
-        plan,
-        cycle,
-        method: 'pix',
-        amount_cents: quote.amountCents,
-        charges_total: quote.chargesTotal,
-        charges_paid: 0,
-        status: 'pending',
-        mp_preapproval_id: null,
-        current_period_end: null,
-        canceled_at: null,
-        grace_until: null,
-      },
-      { onConflict: 'account_id' }
-    );
+    const amountCents = overdue
+      ? (existing.amount_cents as number)
+      : quoteSubscription(plan, cycle).amountCents;
+    const quote = { ...quoteSubscription(plan, cycle), amountCents };
+    const { error: subErr } = overdue
+      ? { error: null }
+      : await db.from('billing_subscriptions').upsert(
+          {
+            account_id: ctx.accountId,
+            plan,
+            cycle,
+            method: 'pix',
+            amount_cents: quote.amountCents,
+            charges_total: quote.chargesTotal,
+            charges_paid: 0,
+            status: 'pending',
+            mp_preapproval_id: null,
+            current_period_end: null,
+            canceled_at: null,
+            grace_until: null,
+          },
+          { onConflict: 'account_id' }
+        );
     if (subErr) throw subErr;
 
-    const period = monthStart(new Date());
+    // The overdue month is keyed like the sweep keys its renewal (the month
+    // the period ended in), so this reuses or replaces that same charge.
+    const period = monthStart(
+      overdue ? new Date(existing.current_period_end as string) : new Date()
+    );
     const { data: open } = await db
       .from('billing_pix_orders')
       .select(

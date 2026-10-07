@@ -214,7 +214,12 @@ export function BillingPanel() {
     !!sub?.current_period_end &&
     new Date(sub.current_period_end).getTime() > Date.now();
   const canSubscribe =
-    (!sub || canceled || status === 'pending' || status === 'canceled') &&
+    (!sub ||
+      canceled ||
+      status === 'pending' ||
+      status === 'canceled' ||
+      // An overdue Pix month whose charge expired or was never created.
+      (status === 'past_due' && sub.method === 'pix')) &&
     !pix &&
     !stillPaid;
   // The card of a live subscription is swapped in place at Mercado Pago.
@@ -233,7 +238,9 @@ export function BillingPanel() {
           </span>
           {status && (
             <span className="bg-muted text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
-              {t(`status.${status}`)}
+              {/* Cancelled but still paid: the account is active, the
+                  subscription is not — say the latter. */}
+              {t(`status.${canceled ? 'canceled' : status}`)}
             </span>
           )}
         </div>
@@ -392,6 +399,7 @@ export function BillingPanel() {
                 initialCycle={
                   sub && isBillingCycle(sub.cycle) ? sub.cycle : undefined
                 }
+                initialMethod={sub?.method === 'pix' ? 'pix' : undefined}
                 onActive={onActive}
               />
             </div>
