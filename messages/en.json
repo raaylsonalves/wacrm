@@ -3392,6 +3392,7 @@
       },
       "pastDue": "A payment is overdue. Settle it to keep your access.",
       "canceledNote": "The subscription was cancelled. You keep access until the end of the period already paid.",
+      "canceledEndedNote": "The subscription has ended and access to the CRM is blocked. Subscribe again to keep using it — your data is still saved.",
       "pixOpenTitle": "Open Pix",
       "pixQrAlt": "Pix QR code",
       "pixExpires": "Pay by {date}.",

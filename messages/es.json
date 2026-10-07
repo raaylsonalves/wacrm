@@ -3380,6 +3380,7 @@
       },
       "pastDue": "Hay un pago atrasado. Regularízalo para no perder el acceso.",
       "canceledNote": "La suscripción fue cancelada. Mantienes el acceso hasta el fin del período ya pagado.",
+      "canceledEndedNote": "La suscripción terminó y el acceso al CRM está bloqueado. Suscríbete de nuevo para volver a usarlo; tus datos siguen guardados.",
       "pixOpenTitle": "Pix abierto",
       "pixQrAlt": "Código QR de Pix",
       "pixExpires": "Paga hasta el {date}.",

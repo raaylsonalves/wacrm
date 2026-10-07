@@ -279,7 +279,9 @@ export function BillingPanel() {
           </p>
         )}
         {canceled && (
-          <p className="text-muted-foreground text-sm">{t('canceledNote')}</p>
+          <p className="text-muted-foreground text-sm">
+            {stillPaid ? t('canceledNote') : t('canceledEndedNote')}
+          </p>
         )}
       </div>
 
