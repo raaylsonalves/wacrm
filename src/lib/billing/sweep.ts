@@ -5,7 +5,8 @@
 //
 //   Pix is a charge per month, so nothing renews it by itself:
 //     - 3 days before the paid period ends, the next month's Pix is created;
-//     - if the period ends unpaid -> past_due with a 7-day grace;
+//     - if the period ends unpaid -> past_due with a 3-day grace (the
+//       renewal Pix exists from 3 days before, so ~6 days to pay in all);
 //     - grace over and still unpaid -> canceled (access blocked).
 //   A subscription the customer cancelled keeps access to the end of the
 //   period it paid for; only then is the account closed.
@@ -22,7 +23,7 @@ import {
 import { isFullyPaid } from './transitions';
 
 export const RENEW_BEFORE_MS = 3 * 86_400_000;
-export const GRACE_MS = 7 * 86_400_000;
+export const GRACE_MS = 3 * 86_400_000;
 
 export interface SweepSubscription {
   id: string;
