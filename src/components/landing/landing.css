@@ -226,16 +226,13 @@
   position: relative;
   z-index: 3;
   margin-top: -14vh;
-  padding: 0 12px;
 }
 .lp-arch {
   position: relative;
-  max-width: 1240px;
-  margin: 0 auto;
   height: 1160px;
   background: #141318;
   color: #f2f0ec;
-  border-radius: 620px 620px 0 0 / 420px 420px 0 0;
+  border-radius: 50% 50% 0 0 / 420px 420px 0 0;
   /* `hidden` turns the arch into a scroll container, which the pile's
      view() timelines then bind to (it never scrolls, so they never ran).
      `clip` crops the same way without becoming one. */
@@ -247,7 +244,7 @@
   inset: 16px 16px 0;
   border: 1px solid #3a3644;
   border-bottom: 0;
-  border-radius: 604px 604px 0 0 / 406px 406px 0 0;
+  border-radius: 50% 50% 0 0 / 406px 406px 0 0;
   pointer-events: none;
 }
 .lp-arch-head {
@@ -654,7 +651,7 @@
 }
 @keyframes lpArchRise {
   from {
-    transform: translateY(200px) scaleX(0.86);
+    transform: translateY(200px);
   }
   to {
     transform: none;
@@ -1204,10 +1201,10 @@
 /* Tablets: the phone pile has room to be bigger than the phone sizing. */
 @media (min-width: 600px) and (max-width: 900px) {
   .lp-arch {
-    height: 1040px;
+    height: 940px;
   }
   .lp-pile {
-    top: 440px;
+    top: 320px;
     zoom: 0.95;
   }
 }
