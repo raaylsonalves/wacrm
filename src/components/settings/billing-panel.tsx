@@ -64,6 +64,21 @@ export function BillingPanel() {
     };
   }, [reload]);
 
+  // A first (or renewed) Pix is waiting: watch for the payment and reload
+  // the whole app once the account is active, which lifts the billing lock.
+  const waitingPix =
+    !!data?.openPixOrder && data.subscriptionStatus !== 'active';
+  useEffect(() => {
+    if (!waitingPix) return;
+    const id = window.setInterval(async () => {
+      const res = await fetch('/api/billing/status', { cache: 'no-store' });
+      if (!res.ok) return;
+      const d = (await res.json()) as { subscriptionStatus?: string };
+      if (d.subscriptionStatus === 'active') window.location.reload();
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, [waitingPix]);
+
   const money = (cents: number) =>
     (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
   const date = (iso: string | null) =>
@@ -129,7 +144,13 @@ export function BillingPanel() {
     );
   }
 
-  const status = data?.subscriptionStatus ?? null;
+  const accountStatus = data?.subscriptionStatus ?? null;
+  // A cancelled account paying again has a pending charge while the account
+  // itself still reads `canceled`: show what is happening now.
+  const status =
+    data?.subscription?.status === 'pending' && accountStatus !== 'exempt'
+      ? 'pending'
+      : accountStatus;
   const sub = data?.subscription ?? null;
   const pix = data?.openPixOrder ?? null;
 
@@ -254,11 +275,14 @@ export function BillingPanel() {
                 {t('changeCard')}
               </Button>
             )}
-            {sub && !canceled && status !== 'pending' && (
-              <Button variant="outline" onClick={cancel}>
-                {t('cancelAction')}
-              </Button>
-            )}
+            {sub &&
+              !canceled &&
+              status !== 'pending' &&
+              sub.status !== 'pending' && (
+                <Button variant="outline" onClick={cancel}>
+                  {t('cancelAction')}
+                </Button>
+              )}
           </div>
 
           {checkout && (
