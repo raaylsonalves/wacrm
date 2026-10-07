@@ -495,7 +495,7 @@ export function Landing() {
             </div>
 
             <div
-              className="lp-float lp-hide-sm"
+              className="lp-float lp-f1"
               style={
                 {
                   '--d': 1.1,
@@ -583,7 +583,7 @@ export function Landing() {
               </span>
             </div>
             <div
-              className="lp-float lp-hide-sm"
+              className="lp-float lp-f3"
               style={
                 {
                   '--d': 0.8,
@@ -670,7 +670,7 @@ export function Landing() {
               </div>
             </div>
             <div
-              className="lp-float lp-hide-sm"
+              className="lp-float lp-f4"
               style={
                 {
                   '--d': 1.2,
@@ -730,7 +730,7 @@ export function Landing() {
               </div>
             </div>
             <div
-              className="lp-float lp-hide-sm"
+              className="lp-float lp-f5"
               style={
                 {
                   '--d': 0.9,

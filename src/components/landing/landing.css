@@ -1101,14 +1101,66 @@
   .lp-stage {
     zoom: 0.82;
   }
+  /* The sticky 100vh hero is a desktop staging; on a phone it let the arch
+     cover the strip and the floating cards were dropped. Let it flow. */
+  .lp-hero {
+    position: relative;
+    height: auto;
+    min-height: 0;
+  }
+  .lp-hero-copy,
+  .lp-hero-phone,
+  .lp-float {
+    animation: none;
+  }
+  .lp-stage {
+    min-height: 600px;
+  }
+  .lp-float {
+    transform: scale(0.72);
+  }
+  .lp-f1 {
+    left: 4px !important;
+    top: 24px !important;
+    transform-origin: top left;
+  }
+  .lp-f3 {
+    left: 4px !important;
+    top: 330px !important;
+    transform-origin: top left;
+  }
+  .lp-f4 {
+    left: auto !important;
+    right: 4px !important;
+    top: 70px !important;
+    transform-origin: top right;
+  }
+  .lp-f5 {
+    left: auto !important;
+    right: 4px !important;
+    top: 400px !important;
+    transform-origin: top right;
+  }
+  .lp-hero-strip {
+    padding-bottom: 46px;
+  }
+  .lp-archSec {
+    margin-top: -28px;
+    padding: 0;
+  }
   .lp-arch {
-    height: 880px;
+    height: 780px;
+    border-radius: 44px 44px 0 0;
+  }
+  .lp-arch-line {
+    inset: 10px 10px 0;
+    border-radius: 34px 34px 0 0;
   }
   .lp-arch-head {
     padding-top: 80px;
   }
   .lp-pile {
-    top: 300px;
+    top: 500px;
     zoom: 0.6;
   }
   .lp-shot {
