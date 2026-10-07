@@ -3367,6 +3367,7 @@
       "cancelled": "Assinatura cancelada",
       "exempt": "Esta conta foi liberada pela Nordia e não tem cobrança.",
       "ownerOnly": "Só o dono da conta pode alterar a cobrança.",
+      "afterPayment": "Definida após o pagamento",
       "pastDueCard": "A cobrança no cartão foi recusada. O Mercado Pago tenta de novo automaticamente em até 10 dias; para não perder o acesso, troque o cartão.",
       "changeCard": "Trocar cartão",
       "changeCardTitle": "Novo cartão",

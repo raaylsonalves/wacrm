@@ -3367,6 +3367,7 @@
       "cancelled": "Suscripción cancelada",
       "exempt": "Esta cuenta fue liberada por Nordia y no tiene cobro.",
       "ownerOnly": "Solo el dueño de la cuenta puede cambiar la facturación.",
+      "afterPayment": "Se define tras el pago",
       "pastDueCard": "El cobro con tarjeta fue rechazado. Mercado Pago lo reintenta automáticamente en hasta 10 días; para no perder el acceso, cambia la tarjeta.",
       "changeCard": "Cambiar tarjeta",
       "changeCardTitle": "Nueva tarjeta",

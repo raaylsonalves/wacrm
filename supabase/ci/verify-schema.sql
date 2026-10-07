@@ -854,6 +854,11 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'billing tables must be read-only for clients (migration 107)';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc WHERE proname = 'create_client_account' AND prosrc LIKE '%onboarded_at%'
+  ) THEN
+    RAISE EXCEPTION 'client accounts are not created ready — migration 108 did not apply';
+  END IF;
 
   RAISE NOTICE 'schema verification passed';
 END

@@ -7,6 +7,8 @@ import { useTranslations } from 'next-intl';
 import { Check, Loader2, MessageSquare, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { OnboardingProvider, useOnboarding } from './onboarding-context';
+import { AuthProvider, useAuth } from '@/hooks/use-auth';
+import { switchAccount, useOperator } from '@/hooks/use-operator';
 import {
   STEPS,
   isStepDone,
@@ -20,9 +22,11 @@ export default function OnboardingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <OnboardingProvider>
-      <OnboardingShell>{children}</OnboardingShell>
-    </OnboardingProvider>
+    <AuthProvider>
+      <OnboardingProvider>
+        <OnboardingShell>{children}</OnboardingShell>
+      </OnboardingProvider>
+    </AuthProvider>
   );
 }
 
@@ -30,7 +34,14 @@ const WIDE_STEPS = ['channel', 'ai-agent'];
 
 function OnboardingShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations('Onboarding');
+  const tOp = useTranslations('Operator.banner');
   const { state, loading, skipOnboarding } = useOnboarding();
+  // An operator inside a client's account must always be able to leave
+  // the client's wizard (and payment step) for their own account.
+  const { accountId } = useAuth();
+  const { isOperator, homeAccountId } = useOperator();
+  const visiting =
+    isOperator && !!homeAccountId && !!accountId && accountId !== homeAccountId;
   const pathname = usePathname();
   const router = useRouter();
   const reachable = reachableSegments(state);
@@ -103,13 +114,24 @@ function OnboardingShell({ children }: { children: React.ReactNode }) {
             })}
           </ol>
         </div>
-        <button
-          type="button"
-          onClick={() => void skipOnboarding()}
-          className="text-muted-foreground hover:text-foreground self-start text-xs underline sm:self-auto"
-        >
-          {t('skipOnboarding')}
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          {visiting && homeAccountId && (
+            <button
+              type="button"
+              onClick={() => void switchAccount(homeAccountId)}
+              className="text-foreground text-xs font-medium underline"
+            >
+              {tOp('backHome')}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void skipOnboarding()}
+            className="text-muted-foreground hover:text-foreground text-xs underline"
+          >
+            {t('skipOnboarding')}
+          </button>
+        </div>
       </header>
       <main
         className={cn(

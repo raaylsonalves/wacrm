@@ -209,7 +209,9 @@ export function BillingPanel() {
                 {canceled ? t('accessUntil') : t('nextCharge')}
               </dt>
               <dd className="text-foreground">
-                {date(sub.current_period_end)}
+                {sub.status === 'pending' && !sub.current_period_end
+                  ? t('afterPayment')
+                  : date(sub.current_period_end)}
               </dd>
             </div>
           </dl>
