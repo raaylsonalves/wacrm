@@ -100,8 +100,21 @@ export default function TermosPage() {
               recebe nem armazena número de cartão.
             </li>
             <li>
-              Cobrança não paga pode levar à suspensão do acesso após aviso. Os
-              dados ficam preservados por 30 dias para você regularizar.
+              <b>Pix:</b> o Pix de cada mês fica disponível na tela de Cobrança
+              3 dias antes do vencimento. Se o vencimento passar sem pagamento,
+              a conta fica em atraso por mais 3 dias, com acesso normal, para
+              você pagar.
+            </li>
+            <li>
+              <b>Cartão:</b> se a cobrança for recusada, o Mercado Pago tenta de
+              novo automaticamente nos dias seguintes. A conta fica em atraso,
+              com acesso normal, por até 7 dias, e você pode trocar o cartão na
+              tela de Cobrança nesse período.
+            </li>
+            <li>
+              Terminado esse prazo sem pagamento, o acesso ao CRM é suspenso. Os
+              dados ficam preservados por 30 dias para você regularizar; ao
+              pagar, o acesso volta na hora.
             </li>
           </ul>
         </section>
@@ -127,7 +140,18 @@ export default function TermosPage() {
               devolução do valor pago (art. 49 do Código de Defesa do
               Consumidor).
             </li>
-            <li>Fora isso, não há reembolso de períodos já utilizados.</li>
+            <li>
+              Para pedir o reembolso, fale com a Nordia Tech pelo WhatsApp ou
+              pelo e-mail de contato dentro desses 7 dias. A devolução é feita
+              pelo Mercado Pago, no mesmo meio de pagamento: no Pix, para a
+              conta que pagou; no cartão, como estorno na fatura, conforme o
+              prazo do emissor do cartão.
+            </li>
+            <li>
+              Fora isso, não há reembolso de períodos já utilizados nem
+              devolução proporcional ao cancelar. Cobranças em duplicidade ou
+              feitas por erro nosso são sempre devolvidas.
+            </li>
           </ul>
         </section>
         <section>
