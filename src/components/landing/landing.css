@@ -1101,44 +1101,38 @@
   .lp-stage {
     zoom: 0.82;
   }
-  /* The sticky 100vh hero is a desktop staging; on a phone it let the arch
-     cover the strip and the floating cards were dropped. Let it flow. */
+  /* Keep the sticky hero the arch slides over, but size it to the screen so
+     the segment strip stays above the fold. */
   .lp-hero {
-    position: relative;
-    height: auto;
+    height: 100svh;
     min-height: 0;
   }
-  .lp-hero-copy,
-  .lp-hero-phone,
-  .lp-float {
-    animation: none;
-  }
   .lp-stage {
-    min-height: 600px;
+    min-height: 120px;
   }
   .lp-float {
     transform: scale(0.72);
   }
   .lp-f1 {
     left: 4px !important;
-    top: 24px !important;
+    top: 10px !important;
     transform-origin: top left;
   }
   .lp-f3 {
     left: 4px !important;
-    top: 330px !important;
+    top: 120px !important;
     transform-origin: top left;
   }
   .lp-f4 {
     left: auto !important;
     right: 4px !important;
-    top: 70px !important;
+    top: 40px !important;
     transform-origin: top right;
   }
   .lp-f5 {
     left: auto !important;
     right: 4px !important;
-    top: 400px !important;
+    top: 170px !important;
     transform-origin: top right;
   }
   .lp-hero-strip {
@@ -1150,11 +1144,11 @@
   }
   .lp-arch {
     height: 780px;
-    border-radius: 44px 44px 0 0;
+    border-radius: 50% 50% 0 0 / 80px 80px 0 0;
   }
   .lp-arch-line {
     inset: 10px 10px 0;
-    border-radius: 34px 34px 0 0;
+    border-radius: 50% 50% 0 0 / 70px 70px 0 0;
   }
   .lp-arch-head {
     padding-top: 80px;
