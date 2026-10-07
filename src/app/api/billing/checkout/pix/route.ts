@@ -16,9 +16,13 @@ import { canManageBilling } from '@/lib/auth/roles';
 import { supabaseAdmin } from '@/lib/ai/admin-client';
 import {
   MercadoPagoError,
+  cancelOrder,
   createPixOrder,
   extractPixPayment,
+  getOrder,
 } from '@/lib/billing/mercadopago';
+import { applyNotification } from '@/lib/billing/apply';
+import { pixOrderStatus } from '@/lib/billing/transitions';
 import {
   isBillingCycle,
   isPlanId,
@@ -119,7 +123,7 @@ export async function POST(request: Request) {
     const { data: open } = await db
       .from('billing_pix_orders')
       .select(
-        'status, amount_cents, qr_code, qr_code_base64, ticket_url, expires_at'
+        'status, mp_order_id, amount_cents, qr_code, qr_code_base64, ticket_url, expires_at'
       )
       .eq('account_id', ctx.accountId)
       .eq('period_start', period)
@@ -137,6 +141,23 @@ export async function POST(request: Request) {
     }
     if (stillOpen) {
       return NextResponse.json({ ok: true, pix: toClient(open) });
+    }
+
+    // The open Pix is about to be replaced (another plan/cycle, or expired
+    // on our side). Its row is overwritten below, so a later payment of the
+    // OLD QR code would no longer match anything and never activate the
+    // account. Close it at Mercado Pago first; if it was in fact paid in
+    // the meantime, credit it instead of creating a second charge.
+    if (open?.status === 'pending' && open.mp_order_id) {
+      const oldId = open.mp_order_id as string;
+      const current = await getOrder(oldId).catch(() => null);
+      if (current && pixOrderStatus(current.status) === 'paid') {
+        await applyNotification(db, 'pix', 'order', oldId);
+        return NextResponse.json({ error: 'already_paid' }, { status: 409 });
+      }
+      await cancelOrder(oldId, randomUUID()).catch((err) => {
+        console.error('[billing/checkout/pix] could not cancel old order', err);
+      });
     }
 
     const externalReference = randomUUID();
