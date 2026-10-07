@@ -27,7 +27,7 @@ export async function GET() {
         db
           .from('accounts')
           .select(
-            'id, name, created_at, subscription_status, managed_by, owner_user_id'
+            'id, name, display_name, created_at, subscription_status, managed_by, owner_user_id'
           )
           .order('created_at', { ascending: false })
           .limit(1000),
@@ -75,7 +75,9 @@ export async function GET() {
         const sub = subByAccount.get(a.id as string) ?? null;
         return {
           id: a.id as string,
-          name: a.name as string,
+          // The name the customer set for the workspace (shown everywhere
+          // else), falling back to the one given at signup.
+          name: ((a.display_name as string | null) || a.name) as string,
           createdAt: a.created_at as string,
           ownerEmail: a.owner_user_id
             ? (emails.get(a.owner_user_id as string) ?? null)
