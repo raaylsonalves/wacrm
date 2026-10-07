@@ -236,7 +236,11 @@
   background: #141318;
   color: #f2f0ec;
   border-radius: 620px 620px 0 0 / 420px 420px 0 0;
+  /* `hidden` turns the arch into a scroll container, which the pile's
+     view() timelines then bind to (it never scrolls, so they never ran).
+     `clip` crops the same way without becoming one. */
   overflow: hidden;
+  overflow: clip;
 }
 .lp-arch-line {
   position: absolute;
