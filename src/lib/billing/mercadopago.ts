@@ -276,3 +276,12 @@ export const cancelPreapproval = (id: string) =>
   mpPut<MpPreapproval>('subs', `/preapproval/${encodeURIComponent(id)}`, {
     status: 'cancelled',
   });
+
+/**
+ * Swaps the card a subscription charges. A declined charge that is still
+ * being retried (up to 4 times in 10 days) is retried on the new card.
+ */
+export const updatePreapprovalCard = (id: string, cardTokenId: string) =>
+  mpPut<MpPreapproval>('subs', `/preapproval/${encodeURIComponent(id)}`, {
+    card_token_id: cardTokenId,
+  });

@@ -1,16 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CardBrick } from '@/components/billing/card-brick';
+import { CheckoutForm } from '@/components/billing/checkout-form';
 import { confirmDialog } from '@/components/confirm-dialog';
 import { SettingsPanelHead } from '@/components/settings/settings-panel-head';
 import { useAuth } from '@/hooks/use-auth';
 import { canManageBilling } from '@/lib/auth/roles';
-import { isPlanId } from '@/lib/billing/plans';
+import { isBillingCycle, isPlanId } from '@/lib/billing/plans';
+
+const SUBS_KEY = process.env.NEXT_PUBLIC_MERCADOPAGO_SUBS_PUBLIC_KEY ?? '';
 
 interface BillingStatus {
   subscriptionStatus: string | null;
@@ -43,6 +46,9 @@ export function BillingPanel() {
   const [copied, setCopied] = useState(false);
 
   const [reload, setReload] = useState(0);
+  // Inline panels: subscribing (again) and swapping the card.
+  const [checkout, setCheckout] = useState(false);
+  const [changingCard, setChangingCard] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +93,24 @@ export function BillingPanel() {
     }
   }
 
+  async function submitNewCard(card: { token: string }) {
+    const res = await fetch('/api/billing/card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cardToken: card.token }),
+    });
+    if (!res.ok) {
+      toast.error(t('cardUpdateFailed'));
+      throw new Error('card update failed');
+    }
+    toast.success(t('cardUpdated'));
+    setChangingCard(false);
+    setReload((n) => n + 1);
+  }
+
+  // Paid: reload the whole app so the dashboard's billing lock lifts.
+  const onActive = () => window.location.reload();
+
   async function copy(code: string) {
     try {
       await navigator.clipboard.writeText(code);
@@ -119,6 +143,15 @@ export function BillingPanel() {
   }
 
   const canceled = sub?.status === 'canceled';
+  // Subscribing again (or paying a first charge) happens right here; a
+  // Pix already waiting is shown above instead.
+  const canSubscribe =
+    (!sub || canceled || status === 'pending' || status === 'canceled') && !pix;
+  // The card of a live subscription is swapped in place at Mercado Pago.
+  const canChangeCard =
+    sub?.method === 'card' &&
+    !canceled &&
+    (status === 'active' || status === 'past_due');
   return (
     <section className="animate-in fade-in-50 space-y-6 duration-200">
       <SettingsPanelHead title={t('title')} description={t('description')} />
@@ -163,7 +196,7 @@ export function BillingPanel() {
 
         {status === 'past_due' && (
           <p className="rounded-xl bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
-            {t('pastDue')}
+            {sub?.method === 'card' ? t('pastDueCard') : t('pastDue')}
           </p>
         )}
         {canceled && (
@@ -206,21 +239,80 @@ export function BillingPanel() {
       )}
 
       {isOwner ? (
-        <div className="flex flex-wrap gap-2">
-          {(!sub ||
-            canceled ||
-            status === 'past_due' ||
-            status === 'pending') && (
-            <Link href="/onboarding/payment">
-              <Button>{canceled || !sub ? t('subscribe') : t('payNow')}</Button>
-            </Link>
+        <>
+          <div className="flex flex-wrap gap-2">
+            {canSubscribe && !checkout && (
+              <Button onClick={() => setCheckout(true)}>
+                {canceled || !sub ? t('subscribe') : t('payNow')}
+              </Button>
+            )}
+            {canChangeCard && !changingCard && (
+              <Button
+                variant={status === 'past_due' ? 'default' : 'outline'}
+                onClick={() => setChangingCard(true)}
+              >
+                {t('changeCard')}
+              </Button>
+            )}
+            {sub && !canceled && status !== 'pending' && (
+              <Button variant="outline" onClick={cancel}>
+                {t('cancelAction')}
+              </Button>
+            )}
+          </div>
+
+          {checkout && (
+            <div className="border-border space-y-4 rounded-2xl border p-5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-foreground text-sm font-medium">
+                  {t('checkoutTitle')}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCheckout(false)}
+                >
+                  {t('close')}
+                </Button>
+              </div>
+              <CheckoutForm
+                initialPlan={sub && isPlanId(sub.plan) ? sub.plan : undefined}
+                initialCycle={
+                  sub && isBillingCycle(sub.cycle) ? sub.cycle : undefined
+                }
+                onActive={onActive}
+              />
+            </div>
           )}
-          {sub && !canceled && status !== 'pending' && (
-            <Button variant="outline" onClick={cancel}>
-              {t('cancelAction')}
-            </Button>
+
+          {changingCard && sub && (
+            <div className="border-border space-y-4 rounded-2xl border p-5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-foreground text-sm font-medium">
+                  {t('changeCardTitle')}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setChangingCard(false)}
+                >
+                  {t('close')}
+                </Button>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                {t('changeCardHint')}
+              </p>
+              {SUBS_KEY ? (
+                <CardBrick
+                  publicKey={SUBS_KEY}
+                  amount={sub.amount_cents / 100}
+                  onSubmit={submitNewCard}
+                  onFailed={() => toast.error(t('cardUpdateFailed'))}
+                />
+              ) : null}
+            </div>
           )}
-        </div>
+        </>
       ) : (
         <p className="text-muted-foreground text-sm">{t('ownerOnly')}</p>
       )}

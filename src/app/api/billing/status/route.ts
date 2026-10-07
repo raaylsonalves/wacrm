@@ -59,7 +59,12 @@ async function reconcilePending(accountId: string): Promise<void> {
 export async function GET() {
   try {
     const ctx = await getCurrentAccount({ allowUnpaid: true });
-    if (ctx.subscriptionStatus === 'pending') {
+    // Also for a cancelled account subscribing again from Settings > Billing:
+    // its new charge is pending while the account itself is still `canceled`.
+    if (
+      ctx.subscriptionStatus === 'pending' ||
+      ctx.subscriptionStatus === 'canceled'
+    ) {
       await reconcilePending(ctx.accountId);
     }
     const [{ data: account }, { data: sub }, { data: pix }] = await Promise.all(

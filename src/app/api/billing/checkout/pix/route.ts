@@ -79,11 +79,20 @@ export async function POST(request: Request) {
     }
     const { data: existing } = await db
       .from('billing_subscriptions')
-      .select('status')
+      .select('status, mp_preapproval_id')
       .eq('account_id', ctx.accountId)
       .maybeSingle();
     if (existing?.status === 'active') {
       return NextResponse.json({ error: 'already_active' }, { status: 409 });
+    }
+    // A card subscription still alive at Mercado Pago (e.g. past_due, being
+    // retried): replacing its row with Pix would leave the card charging
+    // too. Change the card or cancel first.
+    if (existing?.mp_preapproval_id && existing.status !== 'canceled') {
+      return NextResponse.json(
+        { error: 'subscription_exists' },
+        { status: 409 }
+      );
     }
 
     const quote = quoteSubscription(plan, cycle);
