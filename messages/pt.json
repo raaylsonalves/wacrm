@@ -719,6 +719,12 @@
     "agendaToday": "Ainda hoje"
   },
   "Operator": {
+    "tabs": {
+      "clients": "Clientes",
+      "subscribers": "Assinantes",
+      "team": "Equipe",
+      "google": "Google Agenda"
+    },
     "subscribers": {
       "title": "Assinantes",
       "subtitle": "Todas as contas clientes e a cobrança de cada uma. Só dados de cobrança, nunca conversas ou contatos.",

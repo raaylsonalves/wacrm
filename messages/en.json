@@ -719,6 +719,12 @@
     "agendaToday": "Later today"
   },
   "Operator": {
+    "tabs": {
+      "clients": "Clients",
+      "subscribers": "Subscribers",
+      "team": "Team",
+      "google": "Google Calendar"
+    },
     "subscribers": {
       "title": "Subscribers",
       "subtitle": "Every customer account and its billing. Billing data only, never conversations or contacts.",

@@ -1,6 +1,5 @@
 'use client';
 
-import { SubscribersPanel } from '@/components/operator/subscribers-panel';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatDistanceToNow } from 'date-fns';
@@ -13,6 +12,8 @@ import { attentionScore, type PortfolioRow } from '@/lib/operator/portfolio';
 import { MODULES, MODULE_PRESETS } from '@/lib/account/modules';
 import { AgencyTeam } from '@/components/operator/agency-team';
 import { GoogleOAuthSettings } from '@/components/operator/google-oauth-settings';
+import { SubscribersPanel } from '@/components/operator/subscribers-panel';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,20 @@ export default function OperatorPage() {
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const [modules, setModules] = useState<Record<string, string[] | null>>({});
+  // Platform admins (Nordia) also get the Subscribers tab.
+  const [platformAdmin, setPlatformAdmin] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/platform/me', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { platformAdmin?: boolean } | null) => {
+        if (alive) setPlatformAdmin(!!d?.platformAdmin);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -99,128 +114,160 @@ export default function OperatorPage() {
         <p className="text-muted-foreground mt-1 text-sm">{t('subtitle')}</p>
       </div>
 
-      <form
-        className="flex max-w-md gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void create();
-        }}
-      >
-        <Input
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder={t('newPlaceholder')}
-          maxLength={120}
-        />
-        <Button type="submit" disabled={creating || !newName.trim()}>
-          {creating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Plus className="h-4 w-4" />
+      <Tabs defaultValue="clients">
+        <TabsList>
+          <TabsTrigger value="clients">{t('tabs.clients')}</TabsTrigger>
+          {platformAdmin && (
+            <TabsTrigger value="subscribers">
+              {t('tabs.subscribers')}
+            </TabsTrigger>
           )}
-          {t('newClient')}
-        </Button>
-      </form>
+          <TabsTrigger value="team">{t('tabs.team')}</TabsTrigger>
+          <TabsTrigger value="google">{t('tabs.google')}</TabsTrigger>
+        </TabsList>
 
-      <SubscribersPanel />
+        <TabsContent value="clients" className="mt-4 space-y-5">
+          <form
+            className="flex max-w-md gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void create();
+            }}
+          >
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={t('newPlaceholder')}
+              maxLength={120}
+            />
+            <Button type="submit" disabled={creating || !newName.trim()}>
+              {creating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              {t('newClient')}
+            </Button>
+          </form>
 
-      <GoogleOAuthSettings />
-
-      <AgencyTeam
-        clients={(rows ?? [])
-          .filter((r) => !r.is_home)
-          .map((r) => ({ id: r.account_id, name: r.name }))}
-      />
-
-      {rows === null ? (
-        <SkeletonCards count={4} className="md:grid-cols-2 lg:grid-cols-2" />
-      ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {rows.map((r) => {
-            const alerts = alertsOf(r, t);
-            return (
-              <div
-                key={r.account_id}
-                className={cn(
-                  'bg-card space-y-3 rounded-xl border p-4',
-                  alerts.length > 0 && 'border-amber-500/50'
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-foreground truncate font-semibold">
-                      {r.name}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {r.is_home ? t('home') : t('client')}
-                      {r.last_inbound_at &&
-                        ` · ${t('lastInbound', {
-                          when: formatDistanceToNow(
-                            new Date(r.last_inbound_at),
-                            {
-                              addSuffix: true,
-                              locale: dateFnsLocale,
-                            }
-                          ),
-                        })}`}
-                    </p>
-                  </div>
-                  {r.is_active ? (
-                    <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 text-xs font-medium">
-                      {t('active')}
-                    </span>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={!!busyId}
-                      onClick={() => void enter(r.account_id)}
-                    >
-                      {busyId === r.account_id && (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {rows === null ? (
+            <SkeletonCards
+              count={4}
+              className="md:grid-cols-2 lg:grid-cols-2"
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {rows.map((r) => {
+                const alerts = alertsOf(r, t);
+                return (
+                  <div
+                    key={r.account_id}
+                    className={cn(
+                      'bg-card space-y-3 rounded-xl border p-4',
+                      alerts.length > 0 && 'border-amber-500/50'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-foreground truncate font-semibold">
+                          {r.name}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {r.is_home ? t('home') : t('client')}
+                          {r.last_inbound_at &&
+                            ` · ${t('lastInbound', {
+                              when: formatDistanceToNow(
+                                new Date(r.last_inbound_at),
+                                {
+                                  addSuffix: true,
+                                  locale: dateFnsLocale,
+                                }
+                              ),
+                            })}`}
+                        </p>
+                      </div>
+                      {r.is_active ? (
+                        <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 text-xs font-medium">
+                          {t('active')}
+                        </span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!!busyId}
+                          onClick={() => void enter(r.account_id)}
+                        >
+                          {busyId === r.account_id && (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          )}
+                          {t('enter')}
+                        </Button>
                       )}
-                      {t('enter')}
-                    </Button>
-                  )}
-                </div>
+                    </div>
 
-                {alerts.length > 0 && (
-                  <ul className="space-y-1 text-xs text-amber-700 dark:text-amber-400">
-                    {alerts.map((a) => (
-                      <li key={a}>• {a}</li>
-                    ))}
-                  </ul>
-                )}
+                    {alerts.length > 0 && (
+                      <ul className="space-y-1 text-xs text-amber-700 dark:text-amber-400">
+                        {alerts.map((a) => (
+                          <li key={a}>• {a}</li>
+                        ))}
+                      </ul>
+                    )}
 
-                {!r.is_home && r.account_id in modules && (
-                  <ModulesEditor
-                    accountId={r.account_id}
-                    value={modules[r.account_id]}
-                    onChange={(v) =>
-                      setModules((m) => ({ ...m, [r.account_id]: v }))
-                    }
-                  />
-                )}
+                    {!r.is_home && r.account_id in modules && (
+                      <ModulesEditor
+                        accountId={r.account_id}
+                        value={modules[r.account_id]}
+                        onChange={(v) =>
+                          setModules((m) => ({ ...m, [r.account_id]: v }))
+                        }
+                      />
+                    )}
 
-                <dl className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <Metric label={t('m.awaiting')} value={r.awaiting_reply} />
-                  <Metric label={t('m.handoff')} value={r.handoff_waiting} />
-                  <Metric label={t('m.cases')} value={r.open_cases} />
-                  <Metric
-                    label={t('m.appointments')}
-                    value={r.appointments_today}
-                  />
-                  <Metric label={t('m.numbers')} value={numbersLabel(r)} />
-                  <Metric
-                    label={t('m.tokens')}
-                    value={Number(r.tokens_7d).toLocaleString()}
-                  />
-                </dl>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                    <dl className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <Metric
+                        label={t('m.awaiting')}
+                        value={r.awaiting_reply}
+                      />
+                      <Metric
+                        label={t('m.handoff')}
+                        value={r.handoff_waiting}
+                      />
+                      <Metric label={t('m.cases')} value={r.open_cases} />
+                      <Metric
+                        label={t('m.appointments')}
+                        value={r.appointments_today}
+                      />
+                      <Metric label={t('m.numbers')} value={numbersLabel(r)} />
+                      <Metric
+                        label={t('m.tokens')}
+                        value={Number(r.tokens_7d).toLocaleString()}
+                      />
+                    </dl>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        {platformAdmin && (
+          <TabsContent value="subscribers" className="mt-4">
+            <SubscribersPanel />
+          </TabsContent>
+        )}
+
+        <TabsContent value="team" className="mt-4">
+          <AgencyTeam
+            clients={(rows ?? [])
+              .filter((r) => !r.is_home)
+              .map((r) => ({ id: r.account_id, name: r.name }))}
+          />
+        </TabsContent>
+
+        <TabsContent value="google" className="mt-4">
+          <GoogleOAuthSettings />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

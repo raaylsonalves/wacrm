@@ -719,6 +719,12 @@
     "agendaToday": "오늘 남은 일정"
   },
   "Operator": {
+    "tabs": {
+      "clients": "고객",
+      "subscribers": "구독자",
+      "team": "팀",
+      "google": "Google 캘린더"
+    },
     "subscribers": {
       "title": "구독자",
       "subtitle": "모든 고객 계정과 결제 현황입니다. 결제 정보만 표시되며 대화나 연락처는 표시되지 않습니다.",

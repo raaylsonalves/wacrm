@@ -719,6 +719,12 @@
     "agendaToday": "Más tarde hoy"
   },
   "Operator": {
+    "tabs": {
+      "clients": "Clientes",
+      "subscribers": "Suscriptores",
+      "team": "Equipo",
+      "google": "Google Calendar"
+    },
     "subscribers": {
       "title": "Suscriptores",
       "subtitle": "Todas las cuentas clientes y su facturación. Solo datos de facturación, nunca conversaciones ni contactos.",
