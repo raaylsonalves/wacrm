@@ -18,6 +18,8 @@ import { STEPS, isStepDone } from '@/lib/onboarding/steps';
  */
 export default function OnboardingDonePage() {
   const t = useTranslations('Onboarding.done');
+  // Step labels live one level up, shared with the wizard's progress bar.
+  const tStep = useTranslations('Onboarding');
   const { state, skipOnboarding } = useOnboarding();
 
   const skippedSteps = STEPS.filter((s) => !isStepDone(state, s.segment));
@@ -48,7 +50,7 @@ export default function OnboardingDonePage() {
               ) : (
                 <X className="size-4 shrink-0" />
               )}
-              {t(step.labelKey)}
+              {tStep(step.labelKey)}
             </li>
           );
         })}
@@ -57,7 +59,7 @@ export default function OnboardingDonePage() {
       {skippedSteps.length > 0 && (
         <p className="text-muted-foreground mt-4 text-sm">
           {t('skippedNote', {
-            steps: skippedSteps.map((s) => t(s.labelKey)).join(', '),
+            steps: skippedSteps.map((s) => tStep(s.labelKey)).join(', '),
           })}
         </p>
       )}

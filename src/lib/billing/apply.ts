@@ -191,6 +191,19 @@ async function applyPreapproval(
   }
   const patch: Record<string, unknown> = { status };
   if (status === 'canceled') patch.canceled_at = new Date().toISOString();
+  // The first card charge can land before (or without) its payment
+  // notification, which is what normally sets the period end. Seed it from
+  // the preapproval so "next charge" is never blank on an active plan.
+  if (status === 'active' && pre.next_payment_date) {
+    const { data: cur } = await db
+      .from('billing_subscriptions')
+      .select('current_period_end')
+      .eq('id', sub.id)
+      .maybeSingle();
+    if (!cur?.current_period_end) {
+      patch.current_period_end = new Date(pre.next_payment_date).toISOString();
+    }
+  }
   const { error: upErr } = await db
     .from('billing_subscriptions')
     .update(patch)
