@@ -719,6 +719,25 @@
     "agendaToday": "Ainda hoje"
   },
   "Operator": {
+    "subscribers": {
+      "title": "Assinantes",
+      "subtitle": "Todas as contas clientes e a cobrança de cada uma. Só dados de cobrança, nunca conversas ou contatos.",
+      "mrr": "Receita mensal (ativas)",
+      "filterAll": "Todas",
+      "empty": "Nenhuma conta neste filtro.",
+      "managed": "gerenciada",
+      "card": "Cartão",
+      "nextCharge": "Próxima cobrança",
+      "since": "Cliente desde",
+      "totalPaid": "Total pago",
+      "payments": "Pagamentos",
+      "noPayments": "Nenhum pagamento registrado.",
+      "extend": "+{days} dias",
+      "exempt": "Liberar sem cobrança",
+      "requirePayment": "Exigir pagamento",
+      "actionDone": "Feito",
+      "actionFailed": "Não foi possível concluir."
+    },
     "title": "Carteira de clientes",
     "subtitle": "As contas que você opera. Só aparecem saúde e contagens, nunca mensagens ou dados de contatos.",
     "newPlaceholder": "Nome do novo cliente",
@@ -3367,6 +3386,7 @@
       "cancelled": "Assinatura cancelada",
       "exempt": "Esta conta foi liberada pela Nordia e não tem cobrança.",
       "ownerOnly": "Só o dono da conta pode alterar a cobrança.",
+      "historyTitle": "Pagamentos",
       "afterPayment": "Definida após o pagamento",
       "pastDueCard": "A cobrança no cartão foi recusada. O Mercado Pago tenta de novo automaticamente em até 10 dias; para não perder o acesso, troque o cartão.",
       "changeCard": "Trocar cartão",

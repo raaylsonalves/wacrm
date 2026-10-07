@@ -859,6 +859,14 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'client accounts are not created ready — migration 108 did not apply';
   END IF;
+  IF to_regclass('public.billing_payments') IS NULL THEN
+    RAISE EXCEPTION 'billing_payments missing — migration 109 did not apply';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'billing_payments' AND cmd <> 'SELECT'
+  ) THEN
+    RAISE EXCEPTION 'billing_payments must be read-only for clients (migration 109)';
+  END IF;
 
   RAISE NOTICE 'schema verification passed';
 END

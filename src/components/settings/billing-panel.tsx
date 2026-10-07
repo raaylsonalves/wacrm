@@ -32,6 +32,7 @@ interface BillingStatus {
     ticket_url: string | null;
     expires_at: string | null;
   } | null;
+  payments?: { method: string; amount_cents: number; paid_at: string }[];
 }
 
 export function BillingPanel() {
@@ -258,6 +259,30 @@ export function BillingPanel() {
               {t('pixExpires', { date: date(pix.expires_at) })}
             </p>
           )}
+        </div>
+      )}
+
+      {data?.payments && data.payments.length > 0 && (
+        <div className="border-border space-y-3 rounded-2xl border p-5">
+          <p className="text-foreground text-sm font-medium">
+            {t('historyTitle')}
+          </p>
+          <ul className="divide-border divide-y text-sm">
+            {data.payments.map((p) => (
+              <li
+                key={`${p.paid_at}-${p.amount_cents}`}
+                className="flex items-center justify-between gap-3 py-2"
+              >
+                <span className="text-muted-foreground">
+                  {date(p.paid_at)} ·{' '}
+                  {p.method === 'pix' ? t('methodPix') : t('methodCard')}
+                </span>
+                <span className="text-foreground font-medium">
+                  R$ {money(p.amount_cents)}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

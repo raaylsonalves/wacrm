@@ -719,6 +719,25 @@
     "agendaToday": "Más tarde hoy"
   },
   "Operator": {
+    "subscribers": {
+      "title": "Suscriptores",
+      "subtitle": "Todas las cuentas clientes y su facturación. Solo datos de facturación, nunca conversaciones ni contactos.",
+      "mrr": "Ingreso mensual (activas)",
+      "filterAll": "Todas",
+      "empty": "Ninguna cuenta en este filtro.",
+      "managed": "gestionada",
+      "card": "Tarjeta",
+      "nextCharge": "Próximo cobro",
+      "since": "Cliente desde",
+      "totalPaid": "Total pagado",
+      "payments": "Pagos",
+      "noPayments": "Ningún pago registrado.",
+      "extend": "+{days} días",
+      "exempt": "Liberar sin cobro",
+      "requirePayment": "Exigir pago",
+      "actionDone": "Hecho",
+      "actionFailed": "No se pudo completar."
+    },
     "title": "Cartera de clientes",
     "subtitle": "The accounts you operate. Only health and counts — never messages or contact data.",
     "newPlaceholder": "New client's name",
@@ -3367,6 +3386,7 @@
       "cancelled": "Suscripción cancelada",
       "exempt": "Esta cuenta fue liberada por Nordia y no tiene cobro.",
       "ownerOnly": "Solo el dueño de la cuenta puede cambiar la facturación.",
+      "historyTitle": "Pagos",
       "afterPayment": "Se define tras el pago",
       "pastDueCard": "El cobro con tarjeta fue rechazado. Mercado Pago lo reintenta automáticamente en hasta 10 días; para no perder el acceso, cambia la tarjeta.",
       "changeCard": "Cambiar tarjeta",

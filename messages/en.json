@@ -719,6 +719,25 @@
     "agendaToday": "Later today"
   },
   "Operator": {
+    "subscribers": {
+      "title": "Subscribers",
+      "subtitle": "Every customer account and its billing. Billing data only, never conversations or contacts.",
+      "mrr": "Monthly revenue (active)",
+      "filterAll": "All",
+      "empty": "No account in this filter.",
+      "managed": "managed",
+      "card": "Card",
+      "nextCharge": "Next charge",
+      "since": "Customer since",
+      "totalPaid": "Total paid",
+      "payments": "Payments",
+      "noPayments": "No payments recorded.",
+      "extend": "+{days} days",
+      "exempt": "Release without billing",
+      "requirePayment": "Require payment",
+      "actionDone": "Done",
+      "actionFailed": "Could not complete."
+    },
     "title": "Client portfolio",
     "subtitle": "The accounts you operate. Only health and counts — never messages or contact data.",
     "newPlaceholder": "New client's name",
@@ -3379,6 +3398,7 @@
       "cancelled": "Subscription cancelled",
       "exempt": "This account was released by Nordia and is not billed.",
       "ownerOnly": "Only the account owner can change billing.",
+      "historyTitle": "Payments",
       "afterPayment": "Set once the payment clears",
       "pastDueCard": "The card charge was declined. Mercado Pago retries automatically within 10 days; to keep your access, change the card.",
       "changeCard": "Change card",

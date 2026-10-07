@@ -67,34 +67,45 @@ export async function GET() {
     ) {
       await reconcilePending(ctx.accountId);
     }
-    const [{ data: account }, { data: sub }, { data: pix }] = await Promise.all(
-      [
-        ctx.supabase
-          .from('accounts')
-          .select('subscription_status')
-          .eq('id', ctx.accountId)
-          .maybeSingle(),
-        ctx.supabase
-          .from('billing_subscriptions')
-          .select(
-            'plan, cycle, method, amount_cents, status, current_period_end, canceled_at'
-          )
-          .eq('account_id', ctx.accountId)
-          .maybeSingle(),
-        ctx.supabase
-          .from('billing_pix_orders')
-          .select('status, qr_code, qr_code_base64, ticket_url, expires_at')
-          .eq('account_id', ctx.accountId)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]
-    );
+    const [
+      { data: account },
+      { data: sub },
+      { data: pix },
+      { data: payments },
+    ] = await Promise.all([
+      ctx.supabase
+        .from('accounts')
+        .select('subscription_status')
+        .eq('id', ctx.accountId)
+        .maybeSingle(),
+      ctx.supabase
+        .from('billing_subscriptions')
+        .select(
+          'plan, cycle, method, amount_cents, status, current_period_end, canceled_at'
+        )
+        .eq('account_id', ctx.accountId)
+        .maybeSingle(),
+      ctx.supabase
+        .from('billing_pix_orders')
+        .select('status, qr_code, qr_code_base64, ticket_url, expires_at')
+        .eq('account_id', ctx.accountId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      // RLS: admins only; other members simply get an empty history.
+      ctx.supabase
+        .from('billing_payments')
+        .select('method, amount_cents, paid_at')
+        .eq('account_id', ctx.accountId)
+        .order('paid_at', { ascending: false })
+        .limit(24),
+    ]);
     return NextResponse.json({
       subscriptionStatus: account?.subscription_status ?? null,
       subscription: sub ?? null,
       openPixOrder: pix ?? null,
+      payments: payments ?? [],
     });
   } catch (err) {
     return toErrorResponse(err);

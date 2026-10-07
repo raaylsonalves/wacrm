@@ -1,5 +1,6 @@
 'use client';
 
+import { SubscribersPanel } from '@/components/operator/subscribers-panel';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatDistanceToNow } from 'date-fns';
@@ -36,9 +37,9 @@ export default function OperatorPage() {
     const { data: mods } = await supabase.rpc('operator_account_modules');
     setModules(
       Object.fromEntries(
-        ((mods ?? []) as { account_id: string; modules: string[] | null }[]).map(
-          (m) => [m.account_id, m.modules]
-        )
+        (
+          (mods ?? []) as { account_id: string; modules: string[] | null }[]
+        ).map((m) => [m.account_id, m.modules])
       )
     );
     const { data } = await supabase.rpc('operator_portfolio');
@@ -120,6 +121,8 @@ export default function OperatorPage() {
           {t('newClient')}
         </Button>
       </form>
+
+      <SubscribersPanel />
 
       <GoogleOAuthSettings />
 

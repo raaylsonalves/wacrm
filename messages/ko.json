@@ -719,6 +719,25 @@
     "agendaToday": "오늘 남은 일정"
   },
   "Operator": {
+    "subscribers": {
+      "title": "구독자",
+      "subtitle": "모든 고객 계정과 결제 현황입니다. 결제 정보만 표시되며 대화나 연락처는 표시되지 않습니다.",
+      "mrr": "월 매출 (활성)",
+      "filterAll": "전체",
+      "empty": "이 필터에 해당하는 계정이 없습니다.",
+      "managed": "관리 계정",
+      "card": "카드",
+      "nextCharge": "다음 결제일",
+      "since": "가입일",
+      "totalPaid": "총 결제액",
+      "payments": "결제 내역",
+      "noPayments": "기록된 결제가 없습니다.",
+      "extend": "+{days}일",
+      "exempt": "결제 없이 허용",
+      "requirePayment": "결제 요구",
+      "actionDone": "완료",
+      "actionFailed": "완료하지 못했습니다."
+    },
     "title": "고객 포트폴리오",
     "subtitle": "The accounts you operate. Only health and counts — never messages or contact data.",
     "newPlaceholder": "New client's name",
@@ -3379,6 +3398,7 @@
       "cancelled": "구독이 해지되었습니다",
       "exempt": "이 계정은 Nordia에서 면제 처리되어 청구되지 않습니다.",
       "ownerOnly": "결제는 계정 소유자만 변경할 수 있습니다.",
+      "historyTitle": "결제 내역",
       "afterPayment": "결제 후 확정됩니다",
       "pastDueCard": "카드 결제가 거절되었습니다. Mercado Pago가 10일 안에 자동으로 다시 시도합니다. 이용을 유지하려면 카드를 변경해 주세요.",
       "changeCard": "카드 변경",

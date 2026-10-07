@@ -61,11 +61,32 @@ async function claimCharge(
   throw error;
 }
 
+interface PaymentFact {
+  method: 'pix' | 'card';
+  amountCents: number;
+  /** Mercado Pago order id (Pix) or authorized payment id (card). */
+  providerRef: string;
+}
+
 async function registerPaidCharge(
   db: SupabaseClient,
   accountId: string,
-  paidAt: Date
+  paidAt: Date,
+  payment: PaymentFact
 ) {
+  // The payment history (Settings > Billing, subscribers panel). Unique
+  // per provider reference, so a redelivery cannot record it twice.
+  const { error: payErr } = await db.from('billing_payments').upsert(
+    {
+      account_id: accountId,
+      method: payment.method,
+      amount_cents: payment.amountCents,
+      provider_ref: payment.providerRef,
+      paid_at: paidAt.toISOString(),
+    },
+    { onConflict: 'method,provider_ref', ignoreDuplicates: true }
+  );
+  if (payErr) throw payErr;
   const { data: sub, error } = await db
     .from('billing_subscriptions')
     .select('id, charges_paid, charges_total, current_period_end')
@@ -170,7 +191,11 @@ async function applyOrder(
     .select('id');
   if (upErr) throw upErr;
   if (status === 'paid' && changed && changed.length > 0) {
-    await registerPaidCharge(db, row.account_id as string, new Date());
+    await registerPaidCharge(db, row.account_id as string, new Date(), {
+      method: 'pix',
+      amountCents: row.amount_cents as number,
+      providerRef: String(order.id),
+    });
   }
   return 'applied';
 }
@@ -252,7 +277,11 @@ async function applyAuthorizedPayment(
     if (!(await claimCharge(db, 'subs', String(ap.id)))) {
       return 'already_applied';
     }
-    await registerPaidCharge(db, sub.account_id as string, new Date());
+    await registerPaidCharge(db, sub.account_id as string, new Date(), {
+      method: 'card',
+      amountCents: sub.amount_cents,
+      providerRef: String(ap.id),
+    });
     return 'applied';
   }
   if (outcome === 'retrying' || outcome === 'failed') {
