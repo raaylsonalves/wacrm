@@ -18,6 +18,7 @@ import {
   cancelPreapproval,
 } from '@/lib/billing/mercadopago';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { audit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -87,6 +88,14 @@ export async function POST() {
       .update({ status: 'canceled', canceled_at: new Date().toISOString() })
       .eq('id', sub.id);
     if (error) throw error;
+    void audit({
+      accountId: ctx.accountId,
+      actorUserId: ctx.userId,
+      action: 'billing.canceled',
+      resourceType: 'billing_subscription',
+      resourceId: sub.id as string,
+      metadata: { method: sub.method },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

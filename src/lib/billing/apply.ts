@@ -126,8 +126,10 @@ interface SubRow {
  * The subscription a preapproval belongs to. The preapproval id is stored
  * right AFTER Mercado Pago creates it, so a notification can arrive in the
  * gap: fall back to the external_reference we sent (our own row id) and
- * adopt the id then. Only a row that has no preapproval yet is adopted, so
- * a notification can never re-point someone else's subscription.
+ * adopt the id then. Only a card row still waiting for its preapproval is
+ * adopted: a row switched to Pix also has no preapproval id, and a late
+ * notification about its OLD (cancelled) card subscription, which carries
+ * the same external_reference, must not take it over.
  */
 async function findSubscription(
   db: SupabaseClient,
@@ -146,6 +148,8 @@ async function findSubscription(
     .from('billing_subscriptions')
     .update({ mp_preapproval_id: preapprovalId })
     .eq('id', externalReference)
+    .eq('method', 'card')
+    .eq('status', 'pending')
     .is('mp_preapproval_id', null)
     .select('id, account_id, amount_cents')
     .maybeSingle();
