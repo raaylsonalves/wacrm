@@ -31,6 +31,8 @@ export async function recordBroadcastMessage(
     accountId: string;
     contactId: string;
     channelId: string | null;
+    /** Official number used (migration 117); omitted = the primary. */
+    configId?: string | null;
     text: string | null;
     templateName: string;
     waMessageId: string | null;
@@ -49,7 +51,10 @@ export async function recordBroadcastMessage(
     // contact's conversation on the number that sent the blast (migration
     // 114) — otherwise the blast and the answer could land in different
     // threads.
-    const number = await defaultNumber(db, args.accountId, args.channelId);
+    const number =
+      !args.channelId && args.configId
+        ? { channelId: null, configId: args.configId }
+        : await defaultNumber(db, args.accountId, args.channelId);
     const existing = await findConversationOnNumber<{ id: string }>(
       db,
       args.accountId,

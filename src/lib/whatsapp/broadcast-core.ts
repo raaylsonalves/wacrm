@@ -88,6 +88,8 @@ export interface BroadcastPlan {
   /** Cloud API fields — empty strings in WAHA mode (unused there). */
   phoneNumberId: string;
   accessToken: string;
+  /** whatsapp_config row sent through (Cloud API); null in WAHA mode. */
+  configId?: string | null;
   templateRow: MessageTemplate | null;
   /** Set when this broadcast sends via WAHA. `null` = Cloud API,
    *  unchanged from before this feature. */
@@ -142,6 +144,7 @@ export async function createBroadcast(
   // channels connected couldn't broadcast before this).
   let phoneNumberId = '';
   let accessToken = '';
+  let configId: string | null = null;
   if (!isWahaBroadcast) {
     const { data: config, error: configError } = await db
       .from('whatsapp_config')
@@ -158,6 +161,7 @@ export async function createBroadcast(
     }
     accessToken = decrypt(config.access_token);
     phoneNumberId = config.phone_number_id;
+    configId = config.id as string;
   } else {
     // Every channel in the primary+pool set must actually belong to
     // this account — otherwise an account could broadcast through a
@@ -344,6 +348,7 @@ export async function createBroadcast(
     templateLanguage: resolvedTemplate.language,
     phoneNumberId,
     accessToken,
+    configId,
     templateRow,
     primaryChannelId: primaryChannelId ?? null,
     channelPoolIds,
@@ -416,6 +421,7 @@ export async function deliverBroadcast(
           accountId: plan.accountId,
           contactId: recipient.contactId,
           channelId: null,
+          configId: plan.configId ?? null,
           text: templateContentText(plan.templateRow, recipient.params),
           templateName: plan.templateName,
           waMessageId: sentMessageId,

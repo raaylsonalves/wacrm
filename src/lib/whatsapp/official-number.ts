@@ -22,9 +22,21 @@ export async function loadOfficialNumber(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: SupabaseClient<any, any, any>,
   accountId: string,
-  conversationId?: string | null
+  conversationId?: string | null,
+  // A number named directly (e.g. the one a broadcast was created for);
+  // checked against the account like the conversation's.
+  opts: { configId?: string | null } = {}
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<Record<string, any> | null> {
+  if (opts.configId) {
+    const { data: named } = await db
+      .from('whatsapp_config')
+      .select('*')
+      .eq('id', opts.configId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+    if (named) return named;
+  }
   if (conversationId) {
     const { data: conv } = await db
       .from('conversations')

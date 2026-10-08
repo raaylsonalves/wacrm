@@ -20,6 +20,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { BroadcastError, type BroadcastPlan } from '@/lib/whatsapp/broadcast-core';
 import { decrypt } from '@/lib/whatsapp/encryption';
+import { loadOfficialNumber } from '@/lib/whatsapp/official-number';
 import { resolveTemplateRow } from '@/lib/whatsapp/template-body';
 import { sanitizePhoneForMeta, isValidE164 } from '@/lib/whatsapp/phone-utils';
 
@@ -211,15 +212,16 @@ export async function planBroadcastResume(
   // createBroadcast makes (specs/broadcast-channel-rotation.md).
   let phoneNumberId = '';
   let accessToken = '';
+  let configId: string | null = null;
   let channelPoolIds: string[] = [];
   if (!isWahaBroadcast) {
-    const { data: config, error: configError } = await db
-      .from('whatsapp_config')
-      .select('*')
-      .eq('account_id', accountId)
-      .eq('is_primary', true)
-      .single();
-    if (configError || !config) {
+    // The official number chosen when the broadcast was created
+    // (migration 117), else the primary.
+    const config = await loadOfficialNumber(db, accountId, null, {
+      configId: (broadcast as { whatsapp_config_id?: string | null })
+        .whatsapp_config_id,
+    });
+    if (!config) {
       throw new BroadcastError(
         'whatsapp_not_configured',
         'WhatsApp not configured. Please set up your WhatsApp integration first.',
@@ -228,6 +230,7 @@ export async function planBroadcastResume(
     }
     phoneNumberId = config.phone_number_id;
     accessToken = decrypt(config.access_token);
+    configId = config.id as string;
   } else {
     const { data: pool } = await db
       .from('broadcast_channel_pool')
@@ -257,6 +260,7 @@ export async function planBroadcastResume(
     templateLanguage: resolvedTemplate.language,
     phoneNumberId,
     accessToken,
+    configId,
     templateRow: resolvedTemplate.row,
     primaryChannelId: broadcast.primary_channel_id ?? null,
     channelPoolIds,

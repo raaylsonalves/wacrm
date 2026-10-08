@@ -1223,6 +1223,12 @@
       "quickHint": "E-mail, empresa e tags você completa na ficha."
     },
     "detailView": {
+      "conversations": {
+        "title": "Conversas",
+        "officialApi": "API oficial",
+        "closed": "fechada",
+        "open": "aberta"
+      },
       "tabs": {
         "details": "Detalhes",
         "activity": "Atividade",
@@ -1806,6 +1812,9 @@
         }
       },
       "scheduleSend": {
+        "sendFrom": "Enviar pelo número",
+        "primaryNumber": "principal",
+        "sendFromHint": "As respostas chegam na conversa desse número. O modelo precisa estar aprovado na conta da Meta desse número.",
         "whenLabel": "Quando enviar",
         "optionNow": "Agora",
         "optionLater": "Agendar",

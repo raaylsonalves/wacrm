@@ -22,6 +22,33 @@ function policyKey(wahaChannelId: string | null): string {
   return wahaChannelId ?? CLOUD_API_POLICY_KEY;
 }
 
+/** Map key of an official number's own policy (migration 118). */
+export function officialPolicyKey(configId: string): string {
+  return `cfg:${configId}`;
+}
+
+/**
+ * The policy row governing a number — the database's own resolver
+ * (routing_policy_for, migration 118), so the app and the assignment
+ * trigger can never disagree: the WAHA channel's policy, else the
+ * official number's (its own, NULL = the primary), else a legacy
+ * account-wide Cloud API row. Null = unrestricted.
+ */
+export async function routingPolicyIdFor(
+  db: SupabaseClient,
+  accountId: string,
+  whatsappChannelId: string | null,
+  whatsappConfigId: string | null = null
+): Promise<string | null> {
+  const { data, error } = await db.rpc('routing_policy_for', {
+    p_account: accountId,
+    p_channel: whatsappChannelId,
+    p_config: whatsappConfigId,
+  });
+  if (error) return null;
+  return (data as string | null) ?? null;
+}
+
 /**
  * Resolve the eligible-assignee set for one conversation's channel.
  *
@@ -33,19 +60,17 @@ function policyKey(wahaChannelId: string | null): string {
 export async function eligibleAssigneesForConversation(
   db: SupabaseClient,
   accountId: string,
-  whatsappChannelId: string | null
+  whatsappChannelId: string | null,
+  whatsappConfigId: string | null = null
 ): Promise<string[] | null> {
-  let query = db
-    .from('channel_routing_policies')
-    .select('id')
-    .eq('account_id', accountId);
-  query =
-    whatsappChannelId === null
-      ? query.is('waha_channel_id', null)
-      : query.eq('waha_channel_id', whatsappChannelId);
-
-  const { data: policy, error: policyError } = await query.maybeSingle();
-  if (policyError || !policy) return null;
+  const policyId = await routingPolicyIdFor(
+    db,
+    accountId,
+    whatsappChannelId,
+    whatsappConfigId
+  );
+  if (!policyId) return null;
+  const policy = { id: policyId };
 
   const { data: responsibles, error: responsiblesError } = await db
     .from('channel_routing_responsibles')
@@ -57,7 +82,8 @@ export async function eligibleAssigneesForConversation(
 }
 
 export interface ChannelPolicyEntry {
-  /** `null` = the account's Cloud API slot. */
+  /** A WAHA channel id, `cfg:<id>` for an official number (migration
+   *  118), or `null` for a legacy account-wide Cloud API policy. */
   channelId: string | null;
   responsibleUserIds: string[];
 }
@@ -74,7 +100,7 @@ export async function loadChannelRoutingPolicies(
 ): Promise<ChannelPolicyEntry[]> {
   const { data: policies, error: policiesError } = await db
     .from('channel_routing_policies')
-    .select('id, waha_channel_id')
+    .select('id, waha_channel_id, whatsapp_config_id')
     .eq('account_id', accountId);
   if (policiesError || !policies || policies.length === 0) return [];
 
@@ -96,7 +122,11 @@ export async function loadChannelRoutingPolicies(
   }
 
   return policies.map((p) => ({
-    channelId: p.waha_channel_id ?? null,
+    channelId:
+      p.waha_channel_id ??
+      (p.whatsapp_config_id
+        ? officialPolicyKey(p.whatsapp_config_id as string)
+        : null),
     responsibleUserIds: byPolicy.get(p.id) ?? [],
   }));
 }
@@ -118,8 +148,19 @@ export function policiesToMap(
  */
 export function eligibleAssigneesFromMap(
   map: Map<string, string[]>,
-  whatsappChannelId: string | null
+  whatsappChannelId: string | null,
+  // Official side: the conversation's number, else the primary; then a
+  // legacy account-wide row (same order as routing_policy_for).
+  whatsappConfigId: string | null = null,
+  primaryConfigId: string | null = null
 ): string[] | null {
+  if (!whatsappChannelId) {
+    const numberId = whatsappConfigId ?? primaryConfigId;
+    if (numberId) {
+      const own = officialPolicyKey(numberId);
+      if (map.has(own)) return map.get(own)!;
+    }
+  }
   const key = policyKey(whatsappChannelId);
   return map.has(key) ? map.get(key)! : null;
 }

@@ -166,7 +166,10 @@ export function ChannelRoutingPanel() {
           </div>
         ) : (
           channels.map((channel) => {
-            const isCloudApi = channel.channelId === null;
+            // The single official number (or the legacy slot) carries the
+            // 'cloud_api' label; several official numbers carry their names.
+            const isCloudApi =
+              channel.channelId === null || channel.label === 'cloud_api';
             const label = isCloudApi ? t('cloudApiLabel') : channel.label;
             return (
               <div
@@ -210,7 +213,8 @@ export function ChannelRoutingPanel() {
             <DialogTitle>
               {t('dialogTitle', {
                 label:
-                  editing?.channelId === null
+                  editing?.channelId === null ||
+                  editing?.label === 'cloud_api'
                     ? t('cloudApiLabel')
                     : (editing?.label ?? ''),
               })}

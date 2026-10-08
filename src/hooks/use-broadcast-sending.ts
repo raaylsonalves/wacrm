@@ -58,6 +58,9 @@ interface BroadcastPayload {
    * and the cron sends it; nothing is sent from this tab.
    */
   scheduledAt?: string;
+  /** Official number to send through (several on a custom plan,
+   *  migration 117); omitted = the primary. */
+  whatsappConfigId?: string | null;
 }
 
 interface UseBroadcastSendingReturn {
@@ -400,6 +403,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           },
           status: payload.scheduledAt ? 'scheduled' : 'sending',
           scheduled_at: payload.scheduledAt ?? null,
+          whatsapp_config_id: payload.whatsappConfigId ?? null,
           total_recipients: contacts.length,
           sent_count: 0,
           delivered_count: 0,
@@ -538,6 +542,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
                 recipients: apiRecipients,
                 template_name: payload.template.name,
                 template_language: payload.template.language ?? 'en_US',
+                whatsapp_config_id: payload.whatsappConfigId ?? null,
               }),
             });
 

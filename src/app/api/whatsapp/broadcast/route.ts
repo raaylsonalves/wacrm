@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { loadOfficialNumber } from '@/lib/whatsapp/official-number'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import { sendTemplateMessage } from '@/lib/whatsapp/meta-api'
 import { decrypt } from '@/lib/whatsapp/encryption'
@@ -124,14 +125,16 @@ export async function POST(request: Request) {
       )
     }
 
-    const { data: config, error: configError } = await supabase
-      .from('whatsapp_config')
-      .select('*')
-      .eq('account_id', accountId)
-      .eq('is_primary', true)
-      .single()
+    // The official number picked in the wizard (several numbers on a
+    // custom plan, migration 117); none / unknown = the primary.
+    const config = await loadOfficialNumber(supabase, accountId, null, {
+      configId:
+        typeof body.whatsapp_config_id === 'string'
+          ? body.whatsapp_config_id
+          : null,
+    })
 
-    if (configError || !config) {
+    if (!config) {
       return NextResponse.json(
         {
           error:
@@ -228,6 +231,7 @@ export async function POST(request: Request) {
             accountId,
             contactId: recipient.contactId,
             channelId: null,
+            configId: config.id as string,
             text: templateContentText(templateRow, recipient.params ?? []),
             templateName: template_name,
             waMessageId: sentMessageId,

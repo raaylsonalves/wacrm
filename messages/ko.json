@@ -1223,6 +1223,12 @@
       "quickHint": "이메일, 회사, 태그는 연락처 화면에서 채울 수 있어요."
     },
     "detailView": {
+      "conversations": {
+        "title": "대화",
+        "officialApi": "공식 API",
+        "closed": "종료됨",
+        "open": "열림"
+      },
       "tabs": {
         "details": "상세 정보",
         "activity": "활동",
@@ -1806,6 +1812,9 @@
         }
       },
       "scheduleSend": {
+        "sendFrom": "발신 번호",
+        "primaryNumber": "기본",
+        "sendFromHint": "답장은 해당 번호의 대화로 들어옵니다. 템플릿은 해당 번호의 Meta 계정에서 승인되어야 합니다.",
         "whenLabel": "발송 시점",
         "optionNow": "지금",
         "optionLater": "예약",

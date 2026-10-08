@@ -1223,6 +1223,12 @@
       "quickHint": "Correo, empresa y etiquetas los completas en la ficha."
     },
     "detailView": {
+      "conversations": {
+        "title": "Conversaciones",
+        "officialApi": "API oficial",
+        "closed": "cerrada",
+        "open": "abierta"
+      },
       "tabs": {
         "details": "Detalles",
         "activity": "Actividad",
@@ -1806,6 +1812,9 @@
         }
       },
       "scheduleSend": {
+        "sendFrom": "Enviar desde el número",
+        "primaryNumber": "principal",
+        "sendFromHint": "Las respuestas llegan a la conversación de ese número. La plantilla debe estar aprobada en la cuenta de Meta de ese número.",
         "whenLabel": "Cuándo enviar",
         "optionNow": "Ahora",
         "optionLater": "Programar",

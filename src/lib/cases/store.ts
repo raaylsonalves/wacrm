@@ -5,6 +5,7 @@
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { routingPolicyIdFor } from '@/lib/channels/routing'
 import { notifyUsers } from '@/lib/notifications/notify'
 import {
   MAX_OPEN_PER_CONVERSATION,
@@ -54,16 +55,19 @@ async function excerptOf(db: SupabaseClient, conversationId: string): Promise<st
 async function recipientsFor(db: SupabaseClient, accountId: string, conversationId: string): Promise<string[]> {
   const { data: conv } = await db
     .from('conversations')
-    .select('whatsapp_channel_id, assigned_agent_id')
+    .select('whatsapp_channel_id, whatsapp_config_id, assigned_agent_id')
     .eq('id', conversationId)
     .maybeSingle()
   if (conv?.assigned_agent_id) return [conv.assigned_agent_id as string]
 
-  let policy = db.from('channel_routing_policies').select('id').eq('account_id', accountId)
-  policy = conv?.whatsapp_channel_id
-    ? policy.eq('waha_channel_id', conv.whatsapp_channel_id)
-    : policy.is('waha_channel_id', null)
-  const { data: pol } = await policy.maybeSingle()
+  // Same resolver as the assignment trigger (migration 118).
+  const policyId = await routingPolicyIdFor(
+    db,
+    accountId,
+    (conv?.whatsapp_channel_id as string | null) ?? null,
+    (conv?.whatsapp_config_id as string | null) ?? null
+  )
+  const pol = policyId ? { id: policyId } : null
   if (pol?.id) {
     const { data: resp } = await db.from('channel_routing_responsibles').select('user_id').eq('policy_id', pol.id)
     const ids = (resp ?? []).map((r) => r.user_id as string)

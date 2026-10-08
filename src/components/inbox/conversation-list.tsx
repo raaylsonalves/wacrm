@@ -1216,6 +1216,7 @@ export function ConversationList({
                 allTags={tags}
                 profiles={profiles}
                 routingPolicyMap={routingPolicyMap}
+                primaryOfficialId={primaryOfficialId}
                 onStatusChange={handleRowStatusChange}
                 onAssignChange={handleRowAssignChange}
                 onToggleTag={handleRowToggleTag}
@@ -1388,6 +1389,8 @@ interface ConversationItemProps {
   allTags: Tag[];
   profiles: Profile[];
   routingPolicyMap: Map<string, string[]>;
+  /** The account's primary official number (routing fallback). */
+  primaryOfficialId: string | null;
   onStatusChange: (
     conversationId: string,
     status: ConversationStatus
@@ -1446,6 +1449,7 @@ function ConversationItem({
   allTags,
   profiles,
   routingPolicyMap,
+  primaryOfficialId,
   onStatusChange,
   onAssignChange,
   onToggleTag,
@@ -1464,7 +1468,9 @@ function ConversationItem({
   const contact = conversation.contact;
   const eligibleAssigneeIds = eligibleAssigneesFromMap(
     routingPolicyMap,
-    conversation.whatsapp_channel_id ?? null
+    conversation.whatsapp_channel_id ?? null,
+    conversation.whatsapp_config_id ?? null,
+    primaryOfficialId
   );
   const assignableProfiles = eligibleAssigneeIds
     ? profiles.filter((p) => eligibleAssigneeIds.includes(p.user_id))

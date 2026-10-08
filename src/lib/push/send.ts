@@ -218,7 +218,7 @@ export async function pushInboundMessage(
 
     const { data: conv } = await db
       .from('conversations')
-      .select('assigned_agent_id, whatsapp_channel_id, contact_id, contact:contacts(name, wa_username, phone)')
+      .select('assigned_agent_id, whatsapp_channel_id, whatsapp_config_id, contact_id, contact:contacts(name, wa_username, phone)')
       .eq('id', message.conversation_id)
       .eq('account_id', accountId)
       .maybeSingle();
@@ -267,7 +267,12 @@ export async function pushInboundMessage(
     // Nobody owns it: push only (the inbox list already shows it), to the
     // channel's team members who keep this push on.
     if (!getVapidConfig()) return;
-    const team = await teamForChannel(db, accountId, c.whatsapp_channel_id ?? null);
+    const team = await teamForChannel(
+      db,
+      accountId,
+      c.whatsapp_channel_id ?? null,
+      (c as { whatsapp_config_id?: string | null }).whatsapp_config_id ?? null
+    );
     const pushTo = await pushEnabledUsers(db, team, 'customer_replied');
     const icon = await accountNotificationIcon(accountId);
     for (const user of pushTo) {

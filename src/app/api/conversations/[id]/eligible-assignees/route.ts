@@ -22,7 +22,7 @@ export async function GET(
 
     const { data: conversation, error } = await ctx.supabase
       .from('conversations')
-      .select('id, whatsapp_channel_id')
+      .select('id, whatsapp_channel_id, whatsapp_config_id')
       .eq('id', id)
       .eq('account_id', ctx.accountId)
       .maybeSingle();
@@ -43,7 +43,8 @@ export async function GET(
     const eligible = await eligibleAssigneesForConversation(
       ctx.supabase,
       ctx.accountId,
-      conversation.whatsapp_channel_id ?? null
+      conversation.whatsapp_channel_id ?? null,
+      conversation.whatsapp_config_id ?? null
     );
 
     return NextResponse.json({

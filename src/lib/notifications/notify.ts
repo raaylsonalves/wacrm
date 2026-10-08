@@ -13,6 +13,7 @@
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { routingPolicyIdFor } from '@/lib/channels/routing';
 import { createTranslator } from 'next-intl';
 import { sendPushToAccount } from '@/lib/push/send';
 import {
@@ -186,7 +187,7 @@ export async function teamForConversation(
 ): Promise<string[]> {
   const { data: conv } = await db
     .from('conversations')
-    .select('assigned_agent_id, whatsapp_channel_id')
+    .select('assigned_agent_id, whatsapp_channel_id, whatsapp_config_id')
     .eq('id', conversationId)
     .eq('account_id', accountId)
     .maybeSingle();
@@ -194,23 +195,20 @@ export async function teamForConversation(
   return teamForChannel(
     db,
     accountId,
-    (conv?.whatsapp_channel_id as string | null) ?? null
+    (conv?.whatsapp_channel_id as string | null) ?? null,
+    (conv?.whatsapp_config_id as string | null) ?? null
   );
 }
 
 export async function teamForChannel(
   db: SupabaseClient,
   accountId: string,
-  channelId: string | null
+  channelId: string | null,
+  // Official number (migration 118); null = the primary.
+  configId: string | null = null
 ): Promise<string[]> {
-  let policy = db
-    .from('channel_routing_policies')
-    .select('id')
-    .eq('account_id', accountId);
-  policy = channelId
-    ? policy.eq('waha_channel_id', channelId)
-    : policy.is('waha_channel_id', null);
-  const { data: pol } = await policy.maybeSingle();
+  const policyId = await routingPolicyIdFor(db, accountId, channelId, configId);
+  const pol = policyId ? { id: policyId } : null;
   if (pol?.id) {
     const { data: resp } = await db
       .from('channel_routing_responsibles')

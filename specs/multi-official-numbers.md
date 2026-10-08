@@ -1,6 +1,6 @@
 # Spec: Vários números oficiais (Meta Cloud API) por conta
 
-**Status (2026-10-08): etapas 1, 2 e 2b implementadas (migrations 112–114). Etapa 3 pendente.**
+**Status (2026-10-08): etapas 1, 2, 2b e 3 implementadas (migrations 112–118).**
 
 ## Problem
 
@@ -144,7 +144,27 @@ Decidido com o dono do produto em 2026-10-08, após o teste com dois números.
 - Pendente: a ficha do contato listar as conversas por número (hoje os
   atalhos "abrir conversa" levam à mais recente).
 
-### Etapa 3 — configurações, disparos, plano
+### Etapa 3 — implementada (2026-10-08)
+
+- Limite por plano: ver Open questions (migration 116).
+- Disparos (migration **117**, `broadcasts.whatsapp_config_id`): com 2+
+  números oficiais, o assistente (passo 4) mostra "Enviar pelo número";
+  `/api/whatsapp/broadcast`, agendados e retomadas (`broadcast-resume`) usam
+  esse número, e o registro na conversa vai para a conversa dele.
+- Responsáveis por número oficial (migration **118**):
+  `channel_routing_policies.whatsapp_config_id`; a regra antiga "API
+  oficial" migrou para o principal; `routing_policy_for()` resolve a regra
+  de uma conversa (canal WAHA → número oficial/principal → regra legada) e é
+  usado pelo trigger de atribuição, pela notificação de conversa sem dono
+  (`notification_team_for_number`) e no app (`routingPolicyIdFor`,
+  `eligibleAssigneesFromMap` com o número). A tela de responsáveis lista um
+  item por número oficial (`cfg:<id>`).
+- Ficha do contato: `ContactConversations` lista uma conversa por número,
+  com link para a caixa de entrada.
+- Pendente: roteadores de IA por número oficial (hoje valem para "API
+  oficial" como um todo).
+
+### Etapa 3 — plano original
 
 - Roteamento de responsáveis por número oficial.
 - Disparos: escolher o número (ou rodízio, reaproveitando

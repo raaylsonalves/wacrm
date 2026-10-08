@@ -46,6 +46,8 @@ export default function NewBroadcastPage() {
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
   const [carouselMedia, setCarouselMedia] = useState<string[]>([]);
   const [name, setName] = useState('');
+  // Official number to send through; null = the primary (migration 117).
+  const [numberId, setNumberId] = useState<string | null>(null);
 
   async function handleSend(scheduledAt?: string) {
     if (!template) return;
@@ -75,6 +77,7 @@ export default function NewBroadcastPage() {
         headerMediaUrl,
         carouselMedia: carouselMedia.length ? carouselMedia : undefined,
         scheduledAt,
+        whatsappConfigId: numberId,
       });
       router.push(`/broadcasts/${broadcastId}`);
     } catch (err) {
@@ -234,6 +237,8 @@ export default function NewBroadcastPage() {
             <Step4ScheduleSend
               name={name}
               onNameChange={setName}
+              numberId={numberId}
+              onNumberChange={setNumberId}
               template={template}
               audience={audience}
               onSend={handleSend}

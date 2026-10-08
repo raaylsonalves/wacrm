@@ -1,5 +1,6 @@
 'use client';
 
+import { ContactConversations } from './contact-conversations';
 import { TONE_SOLID, toneFor } from '@/lib/tones';
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -524,6 +525,7 @@ export function ContactDetailView({
                 </Button>
               </div>
             </div>
+            {contactId && <ContactConversations contactId={contactId} />}
 
             {/* Tabs */}
             <Tabs

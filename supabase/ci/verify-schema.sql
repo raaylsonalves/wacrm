@@ -926,6 +926,19 @@ BEGIN
     RAISE EXCEPTION 'number limit missing — migration 116 did not apply';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'broadcasts'
+         AND column_name = 'whatsapp_config_id') THEN
+    RAISE EXCEPTION 'broadcast number missing — migration 117 did not apply';
+  END IF;
+  IF to_regprocedure('public.routing_policy_for(uuid,uuid,uuid)') IS NULL
+     OR to_regprocedure('public.notification_team_for_number(uuid,uuid,uuid)') IS NULL
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'channel_routing_policies'
+         AND column_name = 'whatsapp_config_id') THEN
+    RAISE EXCEPTION 'routing per official number missing — migration 118 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

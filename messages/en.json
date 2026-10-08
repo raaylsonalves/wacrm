@@ -1223,6 +1223,12 @@
       "quickHint": "Email, company and tags can be filled in on the contact."
     },
     "detailView": {
+      "conversations": {
+        "title": "Conversations",
+        "officialApi": "Official API",
+        "closed": "closed",
+        "open": "open"
+      },
       "tabs": {
         "details": "Details",
         "activity": "Activity",
@@ -1806,6 +1812,9 @@
         }
       },
       "scheduleSend": {
+        "sendFrom": "Send from number",
+        "primaryNumber": "primary",
+        "sendFromHint": "Replies arrive in that number's conversation. The template must be approved in that number's Meta account.",
         "whenLabel": "When to send",
         "optionNow": "Now",
         "optionLater": "Schedule",

@@ -1,5 +1,6 @@
 'use client';
 
+import { tagMemberIds } from '@/lib/broadcast-audience';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { MessageTemplate } from '@/types';
@@ -29,6 +30,9 @@ interface AudienceConfig {
 interface Step4Props {
   name: string;
   onNameChange: (name: string) => void;
+  /** Official number picked to send through; null = the primary. */
+  numberId?: string | null;
+  onNumberChange?: (id: string | null) => void;
   template: MessageTemplate;
   audience: AudienceConfig;
   /** No argument = send now; an ISO instant = schedule. */
@@ -42,6 +46,8 @@ interface Step4Props {
 export function Step4ScheduleSend({
   name,
   onNameChange,
+  numberId = null,
+  onNumberChange,
   template,
   audience,
   onSend,
@@ -58,6 +64,24 @@ export function Step4ScheduleSend({
   const scheduledIso = when ? new Date(when).toISOString() : '';
   const scheduleOk = mode === 'now' || validScheduleTime(scheduledIso, Date.now());
   const [estimatedReach, setEstimatedReach] = useState<number>(0);
+  // The account's official numbers: the picker shows only with 2+
+  // (a custom plan, specs/multi-official-numbers.md).
+  const [numbers, setNumbers] = useState<
+    { id: string; label: string | null; display_phone_number: string | null;
+      phone_number_id: string; is_primary: boolean }[]
+  >([]);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/whatsapp/numbers', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (alive && d?.numbers) setNumbers(d.numbers);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [loadingReach, setLoadingReach] = useState(true);
 
   useEffect(() => {
@@ -72,12 +96,8 @@ export function Step4ScheduleSend({
             .select('*', { count: 'exact', head: true });
           setEstimatedReach(count ?? 0);
         } else if (audience.type === 'tags' && audience.tagIds && audience.tagIds.length > 0) {
-          const { data: contactTags } = await supabase
-            .from('contact_tags')
-            .select('contact_id')
-            .in('tag_id', audience.tagIds);
-
-          const uniqueIds = new Set((contactTags ?? []).map((ct) => ct.contact_id));
+          // Every member, past the 1000-row page cap (lib/broadcast-audience).
+          const uniqueIds = await tagMemberIds(supabase, audience.tagIds);
           setEstimatedReach(uniqueIds.size);
         } else if (audience.type === 'csv' && audience.csvContacts) {
           setEstimatedReach(audience.csvContacts.length);
@@ -109,6 +129,29 @@ export function Step4ScheduleSend({
           {t('scheduleSend.subtitle')}
         </p>
       </div>
+
+      {numbers.length > 1 && onNumberChange && (
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-foreground">
+            {t('scheduleSend.sendFrom')}
+          </label>
+          <select
+            value={numberId ?? ''}
+            onChange={(e) => onNumberChange(e.target.value || null)}
+            className="h-10 w-full rounded-xl border-[1.5px] border-border bg-card px-3 text-sm text-foreground focus:border-foreground focus:outline-none"
+          >
+            {numbers.map((n) => (
+              <option key={n.id} value={n.is_primary ? '' : n.id}>
+                {(n.label || n.display_phone_number || n.phone_number_id) +
+                  (n.is_primary ? ` · ${t('scheduleSend.primaryNumber')}` : '')}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t('scheduleSend.sendFromHint')}
+          </p>
+        </div>
+      )}
 
       {/* Broadcast Name */}
       <div>

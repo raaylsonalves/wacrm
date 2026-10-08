@@ -141,10 +141,14 @@ function planDb(fx: PlanFixture, writes: PlanWrites = {}): SupabaseClient {
           writes.failedUpdate = row;
           return b;
         },
-        maybeSingle: async () => ({
-          data: fx.broadcast === undefined ? null : fx.broadcast,
-          error: null,
-        }),
+        // loadOfficialNumber reads the number with maybeSingle (migration 117).
+        maybeSingle: async () =>
+          table === 'whatsapp_config'
+            ? { data: fx.config === undefined ? null : fx.config, error: null }
+            : {
+                data: fx.broadcast === undefined ? null : fx.broadcast,
+                error: null,
+              },
         single: async () => ({
           data: fx.config === undefined ? null : fx.config,
           error: null,
