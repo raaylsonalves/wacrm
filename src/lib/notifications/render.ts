@@ -178,6 +178,12 @@ export function renderNotification(
         body: t('channel.body'),
       };
 
+    case 'followup_no_reply':
+      return {
+        title: t('followupNoReply.title', { contact }),
+        body: t('followupNoReply.body', { automation: str(d.automation) }),
+      };
+
     case 'calendar_disconnected':
       return {
         title: t('calendar.title', { email: str(d.email) }),

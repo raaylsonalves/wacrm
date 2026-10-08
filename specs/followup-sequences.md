@@ -308,3 +308,24 @@ assumes one text step), the conversation-thread chip ("follow-up 2/3
 scheduled · cancel"), the enrolled → replied/exhausted funnel on the
 automation detail, a variants editor in the builder (the field is
 accepted by the API/MCP), and the "≥1 send step" activation check.
+
+## Addendum (2026-10-08): ao terminar sem resposta — migration 115
+
+A sequence that ran out of steps (`outcome = 'exhausted'`) used to end in
+silence: the thread stayed with the AI and nobody on the team knew the lead
+went cold. `trigger_config.on_exhaust` now says what happens:
+
+- `notify` (default **on**): `followup_no_reply` notification (in-app +
+  push) to the conversation's team (`teamForConversation`).
+- `handoff`: `ai_autoreply_disabled = true` — lands in "waiting for a person".
+- `tag_id`: tags the contact (scoped to the account).
+- `close`: closes the conversation (reopens on the next customer message);
+  overrides `handoff`.
+
+Timing: the sweep (`handleExhausted` in `followup-sweep.ts`) waits **one more
+silence interval** after the last step (`decideExhaust`), so the last
+follow-up gets the same time to be answered as the conversation got before
+the first. If the customer wrote meanwhile, nothing runs. The claim is
+`followup_enrollments.exhaust_handled_at`, so overlapping sweeps act once.
+A human taking over still just ends the sequence (`handoff` outcome) — the
+handoff itself already notified the assignee.

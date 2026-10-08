@@ -2099,6 +2099,13 @@
         }
       },
       "silence": {
+        "onExhaust": "Al terminar sin respuesta",
+        "onExhaustHint": "Después del último mensaje, el cliente tiene el mismo tiempo de silencio para responder. Si no responde:",
+        "onExhaustNotify": "Notificar al equipo",
+        "onExhaustHandoff": "Pasar a un agente (la IA sale de la conversación)",
+        "onExhaustClose": "Cerrar la conversación (se reabre si el cliente escribe)",
+        "onExhaustTag": "Agregar etiqueta al contacto",
+        "onExhaustNoTag": "Ninguna",
         "after": "Esperar un silencio de",
         "minutes": "minutos",
         "hours": "horas",
@@ -3515,6 +3522,10 @@
     "haveAccount": "Ya tengo una cuenta"
   },
   "Notifications": {
+    "followupNoReply": {
+      "title": "{contact} no respondió al seguimiento",
+      "body": "La secuencia \"{automation}\" terminó sin respuesta."
+    },
     "title": "Notificaciones",
     "description": "Lo que necesita tu atención: conversaciones, ventas y avisos del sistema.",
     "markAllRead": "Marcar todas como leídas",
@@ -3546,6 +3557,7 @@
       "earlier": "Anteriores"
     },
     "types": {
+      "followup_no_reply": "Seguimiento sin respuesta",
       "conversation_assigned": "Conversation handed to me",
       "customer_replied": "Customer replied",
       "handoff_waiting": "AI stopped and nobody took it",

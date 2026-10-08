@@ -913,6 +913,13 @@ BEGIN
     RAISE EXCEPTION 'conversations still one-per-contact — migration 114 did not replace the unique index';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'followup_enrollments'
+         AND column_name = 'exhaust_handled_at')
+     OR NOT EXISTS (SELECT 1 FROM notification_types WHERE type = 'followup_no_reply') THEN
+    RAISE EXCEPTION 'follow-up on_exhaust missing — migration 115 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

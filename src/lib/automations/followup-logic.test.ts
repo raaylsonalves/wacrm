@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
   FOLLOWUP_WEEKLY_CAP,
+  decideExhaust,
   decideFollowupStep,
   isInSendWindow,
   nextSendTime,
+  parseOnExhaust,
   parseSilenceConfig,
   sweepBounds,
   zonedParts,
@@ -43,6 +45,7 @@ describe('parseSilenceConfig', () => {
       max_age_days: 14,
       send_window: undefined,
       handoff_policy: 'cancel',
+      on_exhaust: { notify: true, handoff: false, tag_id: null, close: false },
     })
   })
 
@@ -267,5 +270,62 @@ describe('decideFollowupStep — the truth table', () => {
         ),
       ).toEqual({ kind: 'stop', outcome: 'opted_out' })
     })
+  })
+})
+
+describe('on_exhaust (migration 115)', () => {
+  const cfg = parseSilenceConfig({
+    silence_after: { amount: 2, unit: 'hours' },
+  })!
+
+  it('defaults to notifying the team only', () => {
+    expect(cfg.on_exhaust).toEqual({
+      notify: true,
+      handoff: false,
+      tag_id: null,
+      close: false,
+    })
+    expect(parseOnExhaust({ notify: false, close: true, tag_id: 't1' })).toEqual({
+      notify: false,
+      handoff: false,
+      tag_id: 't1',
+      close: true,
+    })
+  })
+
+  const episodeAt = new Date('2026-10-08T10:00:00Z')
+  const endedAt = new Date('2026-10-08T14:00:00Z')
+
+  it('waits one silence interval after the last step', () => {
+    expect(
+      decideExhaust({
+        episodeAt,
+        lastCustomerMessageAt: episodeAt,
+        endedAt,
+        now: new Date('2026-10-08T15:59:00Z'),
+        cfg,
+      })
+    ).toBe('wait')
+    expect(
+      decideExhaust({
+        episodeAt,
+        lastCustomerMessageAt: episodeAt,
+        endedAt,
+        now: new Date('2026-10-08T16:00:00Z'),
+        cfg,
+      })
+    ).toBe('act')
+  })
+
+  it('does nothing when the customer answered meanwhile', () => {
+    expect(
+      decideExhaust({
+        episodeAt,
+        lastCustomerMessageAt: new Date('2026-10-08T15:00:00Z'),
+        endedAt,
+        now: new Date('2026-10-08T20:00:00Z'),
+        cfg,
+      })
+    ).toBe('replied')
   })
 })

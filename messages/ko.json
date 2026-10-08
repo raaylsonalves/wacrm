@@ -2099,6 +2099,13 @@
         }
       },
       "silence": {
+        "onExhaust": "응답 없이 종료될 때",
+        "onExhaustHint": "마지막 메시지 후 고객에게 같은 대기 시간이 주어집니다. 응답이 없으면:",
+        "onExhaustNotify": "팀에 알림",
+        "onExhaustHandoff": "상담원에게 넘기기 (AI가 대화에서 빠짐)",
+        "onExhaustClose": "대화 종료 (고객이 메시지를 보내면 다시 열림)",
+        "onExhaustTag": "연락처에 태그 추가",
+        "onExhaustNoTag": "없음",
         "after": "다음 시간 동안 응답이 없으면",
         "minutes": "분",
         "hours": "시간",
@@ -3527,6 +3534,10 @@
     "haveAccount": "이미 계정이 있습니다"
   },
   "Notifications": {
+    "followupNoReply": {
+      "title": "{contact}님이 후속 메시지에 응답하지 않았습니다",
+      "body": "\"{automation}\" 시퀀스가 응답 없이 종료되었습니다."
+    },
     "title": "알림",
     "description": "주의가 필요한 항목: 대화, 영업, 시스템 알림.",
     "markAllRead": "모두 읽음으로 표시",
@@ -3558,6 +3569,7 @@
       "earlier": "이전"
     },
     "types": {
+      "followup_no_reply": "응답 없는 후속 메시지",
       "conversation_assigned": "Conversation handed to me",
       "customer_replied": "Customer replied",
       "handoff_waiting": "AI stopped and nobody took it",

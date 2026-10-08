@@ -14,6 +14,7 @@ import {
   CheckCheck,
   ClipboardList,
   Hand,
+  Hourglass,
   Inbox,
   LayoutTemplate,
   Loader2,
@@ -99,6 +100,10 @@ const TYPE_STYLE: Record<
   channel_disconnected: {
     icon: WifiOff,
     tint: 'bg-red-500/15 text-red-600 dark:text-red-400',
+  },
+  followup_no_reply: {
+    icon: Hourglass,
+    tint: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
   },
   calendar_disconnected: {
     icon: CalendarX,

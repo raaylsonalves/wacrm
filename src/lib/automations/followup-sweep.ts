@@ -13,7 +13,13 @@
 import type { Automation } from '@/types'
 import { supabaseAdmin } from './admin-client'
 import { startFollowupRun } from './engine'
-import { parseSilenceConfig, sweepBounds } from './followup-logic'
+import {
+  decideExhaust,
+  parseSilenceConfig,
+  sweepBounds,
+  type SilenceConfig,
+} from './followup-logic'
+import { notifyUsers, teamForConversation } from '@/lib/notifications/notify'
 
 /** Bounded per automation per run, oldest first: a backlog drains over a
  *  few cron ticks instead of one run texting hundreds of people at once. */
@@ -22,10 +28,12 @@ const BATCH_LIMIT = 200
 export interface SweepResult {
   automations: number
   enrolled: number
+  /** Exhausted sequences whose "no reply" actions ran this tick. */
+  exhausted: number
 }
 
 export async function runFollowupSweep(now: Date = new Date()): Promise<SweepResult> {
-  const result: SweepResult = { automations: 0, enrolled: 0 }
+  const result: SweepResult = { automations: 0, enrolled: 0, exhausted: 0 }
   try {
     const db = supabaseAdmin()
     const { data: automations, error } = await db
@@ -42,6 +50,11 @@ export async function runFollowupSweep(now: Date = new Date()): Promise<SweepRes
       try {
         result.enrolled += await sweepOne(automation, now)
         result.automations++
+      } catch (err) {
+        console.error('[followup] sweep failed for automation', automation.id, err)
+      }
+      try {
+        result.exhausted += await handleExhausted(automation, now)
       } catch (err) {
         console.error('[followup] sweep failed for automation', automation.id, err)
       }
@@ -137,4 +150,137 @@ async function sweepOne(automation: Automation, now: Date): Promise<number> {
     }
   }
   return enrolled
+}
+
+/**
+ * Sequences that ran out of steps (outcome `exhausted`): once the last one
+ * has had a full silence interval to be answered, run the automation's
+ * `on_exhaust` actions — notify the team, hand over, tag, close
+ * (migration 115). Claimed through `exhaust_handled_at`, so each
+ * enrollment is handled once even with overlapping sweeps.
+ */
+async function handleExhausted(automation: Automation, now: Date): Promise<number> {
+  const cfg = parseSilenceConfig(automation.trigger_config)
+  if (!cfg) return 0
+  const db = supabaseAdmin()
+
+  const { data: pending, error } = await db
+    .from('followup_enrollments')
+    .select('id, conversation_id, contact_id, episode_at, ended_at, steps_sent')
+    .eq('automation_id', automation.id)
+    .eq('outcome', 'exhausted')
+    .is('exhaust_handled_at', null)
+    .order('ended_at', { ascending: true })
+    .limit(BATCH_LIMIT)
+  if (error) throw new Error(`exhausted scan failed: ${error.message}`)
+
+  let handled = 0
+  for (const e of pending ?? []) {
+    if (!e.ended_at) continue
+    const { data: conv } = await db
+      .from('conversations')
+      .select('id, last_customer_message_at, status')
+      .eq('id', e.conversation_id)
+      .eq('account_id', automation.account_id)
+      .maybeSingle()
+    const verdict = conv
+      ? decideExhaust({
+          episodeAt: new Date(e.episode_at as string),
+          lastCustomerMessageAt: conv.last_customer_message_at
+            ? new Date(conv.last_customer_message_at as string)
+            : null,
+          endedAt: new Date(e.ended_at as string),
+          now,
+          cfg,
+        })
+      : 'replied' // conversation gone: nothing left to act on
+    if (verdict === 'wait') continue
+
+    // The claim: only the run that flips it acts.
+    const { data: claimed } = await db
+      .from('followup_enrollments')
+      .update({ exhaust_handled_at: now.toISOString() })
+      .eq('id', e.id)
+      .is('exhaust_handled_at', null)
+      .select('id')
+    if (!claimed || claimed.length === 0 || verdict === 'replied') continue
+
+    try {
+      await runExhaustActions(automation, cfg, {
+        conversationId: e.conversation_id as string,
+        contactId: e.contact_id as string,
+        stepsSent: (e.steps_sent as number | null) ?? 0,
+      })
+      handled++
+    } catch (err) {
+      console.error('[followup] exhaust actions failed:', automation.id, e.id, err)
+    }
+  }
+  return handled
+}
+
+async function runExhaustActions(
+  automation: Automation,
+  cfg: SilenceConfig,
+  t: { conversationId: string; contactId: string; stepsSent: number }
+): Promise<void> {
+  const db = supabaseAdmin()
+  const actions = cfg.on_exhaust
+  const accountId = automation.account_id
+
+  // Who to tell is decided BEFORE a handoff/close changes the thread.
+  const team = actions.notify
+    ? await teamForConversation(db, accountId, t.conversationId)
+    : []
+
+  if (actions.tag_id) {
+    // Only a tag of this account (the config is user-edited JSON).
+    const { data: tag } = await db
+      .from('tags')
+      .select('id')
+      .eq('id', actions.tag_id)
+      .eq('account_id', accountId)
+      .maybeSingle()
+    if (tag) {
+      await db
+        .from('contact_tags')
+        .upsert(
+          { contact_id: t.contactId, tag_id: tag.id },
+          { onConflict: 'contact_id,tag_id', ignoreDuplicates: true }
+        )
+    }
+  }
+
+  if (actions.close) {
+    await db
+      .from('conversations')
+      .update({ status: 'closed', updated_at: new Date().toISOString() })
+      .eq('id', t.conversationId)
+      .eq('account_id', accountId)
+  } else if (actions.handoff) {
+    // The AI steps out; nobody assigned = the "waiting for a person" queue.
+    await db
+      .from('conversations')
+      .update({ ai_autoreply_disabled: true })
+      .eq('id', t.conversationId)
+      .eq('account_id', accountId)
+  }
+
+  if (team.length > 0) {
+    const { data: contact } = await db
+      .from('contacts')
+      .select('name, phone')
+      .eq('id', t.contactId)
+      .maybeSingle()
+    await notifyUsers(db, {
+      accountId,
+      userIds: team,
+      type: 'followup_no_reply',
+      conversationId: t.conversationId,
+      contactId: t.contactId,
+      contactName: (contact?.name as string | null) || (contact?.phone as string | null) || null,
+      data: { automation: automation.name, steps: t.stepsSent },
+      link: `/inbox?c=${t.conversationId}`,
+    })
+  }
 }

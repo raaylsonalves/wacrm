@@ -1,5 +1,6 @@
 'use client';
 
+import { useTagDefinitions } from '@/hooks/queries/use-inbox-lookups';
 import {
   createContext,
   useContext,
@@ -1058,6 +1059,20 @@ function SilenceConfig({
     onChange({ ...config, ...patch });
   const field =
     'h-10 w-full rounded-xl border-[1.5px] border-border bg-card px-3 text-sm text-foreground transition-colors duration-150 ease-out focus:border-foreground focus:outline-none';
+  // "When it ends unanswered" (migration 115). Same defaults as
+  // parseOnExhaust: notify on, the rest off.
+  const exhaust = (config.on_exhaust as
+    | { notify?: boolean; handoff?: boolean; tag_id?: string | null; close?: boolean }
+    | undefined) ?? {};
+  const exhaustNow = {
+    notify: exhaust.notify !== false,
+    handoff: exhaust.handoff === true,
+    tag_id: exhaust.tag_id ?? null,
+    close: exhaust.close === true,
+  };
+  const setExhaust = (patch: Partial<typeof exhaustNow>) =>
+    set({ on_exhaust: { ...exhaustNow, ...patch } });
+  const { data: tagOptions = [] } = useTagDefinitions();
 
   return (
     <div className="space-y-3">
@@ -1181,6 +1196,62 @@ function SilenceConfig({
         <p className="text-muted-foreground mt-1 text-[11px]">
           {t('silence.windowHint')}
         </p>
+      </div>
+
+      <div className="border-border space-y-2 rounded-xl border p-3">
+        <p className="text-foreground text-xs font-semibold">
+          {t('silence.onExhaust')}
+        </p>
+        <p className="text-muted-foreground text-[11px]">
+          {t('silence.onExhaustHint')}
+        </p>
+        <label className="text-foreground flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={exhaustNow.notify}
+            onChange={(e) => setExhaust({ notify: e.target.checked })}
+          />
+          {t('silence.onExhaustNotify')}
+        </label>
+        <label className="text-foreground flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={exhaustNow.handoff}
+            disabled={exhaustNow.close}
+            onChange={(e) => setExhaust({ handoff: e.target.checked })}
+          />
+          {t('silence.onExhaustHandoff')}
+        </label>
+        <label className="text-foreground flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={exhaustNow.close}
+            onChange={(e) =>
+              setExhaust({
+                close: e.target.checked,
+                ...(e.target.checked ? { handoff: false } : {}),
+              })
+            }
+          />
+          {t('silence.onExhaustClose')}
+        </label>
+        <div>
+          <label className="text-muted-foreground mb-1 block text-xs font-medium">
+            {t('silence.onExhaustTag')}
+          </label>
+          <select
+            value={exhaustNow.tag_id ?? ''}
+            onChange={(e) => setExhaust({ tag_id: e.target.value || null })}
+            className={field}
+          >
+            <option value="">{t('silence.onExhaustNoTag')}</option>
+            {tagOptions.map((tag) => (
+              <option key={tag.id} value={tag.id}>
+                {tag.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-800 dark:text-amber-200">

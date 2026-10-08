@@ -28,6 +28,72 @@ export interface SilenceConfig {
   send_window?: SendWindow
   /** `cancel` (default): a human owning the thread ends the sequence. */
   handoff_policy: 'cancel' | 'allow'
+  /** What happens when the sequence ran out unanswered (migration 115). */
+  on_exhaust: OnExhaust
+}
+
+/**
+ * Actions once the last step went out and the customer stayed quiet for
+ * one more silence interval. Any combination; `notify` is on by default
+ * so a cold lead is never silent to the team.
+ */
+export interface OnExhaust {
+  /** Notify the conversation's team (assignee, else responsibles/agents). */
+  notify: boolean
+  /** Take the AI off the thread so it lands in "waiting for a person". */
+  handoff: boolean
+  /** Tag the contact (e.g. "Sem resposta"). */
+  tag_id: string | null
+  /** Close the conversation (it reopens if the customer writes back). */
+  close: boolean
+}
+
+export const DEFAULT_ON_EXHAUST: OnExhaust = {
+  notify: true,
+  handoff: false,
+  tag_id: null,
+  close: false,
+}
+
+export function parseOnExhaust(raw: unknown): OnExhaust {
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_ON_EXHAUST }
+  const o = raw as Record<string, unknown>
+  return {
+    notify: o.notify !== false,
+    handoff: o.handoff === true,
+    tag_id: typeof o.tag_id === 'string' && o.tag_id ? o.tag_id : null,
+    close: o.close === true,
+  }
+}
+
+export type ExhaustVerdict =
+  /** Still inside the grace interval after the last step. */
+  | 'wait'
+  /** The customer answered after all: nothing to do. */
+  | 'replied'
+  /** Quiet through the grace interval: run the actions. */
+  | 'act'
+
+/**
+ * Whether an exhausted enrollment's actions are due. The grace interval
+ * is the automation's own silence: the last follow-up gets the same time
+ * to be answered as the conversation got before the first one.
+ */
+export function decideExhaust(s: {
+  episodeAt: Date
+  lastCustomerMessageAt: Date | null
+  endedAt: Date
+  now: Date
+  cfg: SilenceConfig
+}): ExhaustVerdict {
+  if (
+    s.lastCustomerMessageAt &&
+    s.lastCustomerMessageAt.getTime() !== s.episodeAt.getTime()
+  ) {
+    return 'replied'
+  }
+  const grace = s.cfg.silence_after.amount * UNIT_MS[s.cfg.silence_after.unit]
+  return s.now.getTime() - s.endedAt.getTime() >= grace ? 'act' : 'wait'
 }
 
 export type FollowupOutcome =
@@ -79,6 +145,7 @@ export function parseSilenceConfig(raw: unknown): SilenceConfig | null {
     max_age_days: maxAge,
     send_window: parseSendWindow(c.send_window),
     handoff_policy: c.handoff_policy === 'allow' ? 'allow' : 'cancel',
+    on_exhaust: parseOnExhaust(c.on_exhaust),
   }
 }
 
