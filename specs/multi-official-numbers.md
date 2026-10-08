@@ -197,8 +197,15 @@ Etapa 2 e 3: a detalhar ao começar cada uma.
   e é checado ao ADICIONAR um número em `/api/whatsapp/config` e
   `/api/whatsapp/waha/channels` (código `number_limit`). Landing atualizada
   (1 número em todos os planos; "vários números" no sob medida).
-- **Modelos entre WABAs diferentes:** dois números em WABAs diferentes têm
-  modelos separados; a tela de modelos hoje assume uma WABA por conta.
+- ~~Modelos entre WABAs diferentes~~ — migration **119**: `message_templates.waba_id`
+  (NOT NULL DEFAULT ''), unicidade (account_id, waba_id, name, language) no
+  lugar do antigo (user_id, name, language). A sincronização lê TODAS as
+  WABAs dos números da conta (token de cada uma); linhas antigas sem WABA são
+  adotadas pela WABA do principal. A submissão grava a WABA do principal. O
+  assistente de disparo só oferece números da WABA do modelo. Ainda não: criar
+  modelo escolhendo a WABA (hoje cria na do principal).
+- Alerta de conexão (banner da caixa de entrada): lista cada número oficial
+  desconectado pelo nome quando há mais de um.
 - **Teste real:** validar etapa 2 exige um segundo número registrado na Meta.
 - **Conversa que muda de número:** se o cliente escreve para o número B numa
   conversa que estava no A, a conversa passa para o B (último número que o

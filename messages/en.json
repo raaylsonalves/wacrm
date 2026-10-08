@@ -411,6 +411,7 @@
       "confirm": "Hand over"
     },
     "channelBanner": {
+      "metaNumberDown": "The official number \"{number}\" is disconnected from Meta — its messages are not arriving.",
       "wahaDown": "WhatsApp disconnected: {channel} — messages to this number aren't arriving.",
       "metaDown": "The official number (Meta API) has a connection problem.",
       "none": "No WhatsApp number connected.",

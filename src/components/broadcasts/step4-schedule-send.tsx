@@ -68,8 +68,23 @@ export function Step4ScheduleSend({
   // (a custom plan, specs/multi-official-numbers.md).
   const [numbers, setNumbers] = useState<
     { id: string; label: string | null; display_phone_number: string | null;
-      phone_number_id: string; is_primary: boolean }[]
+      phone_number_id: string; is_primary: boolean; waba_id: string | null }[]
   >([]);
+  // A template exists only in its WABA (migration 119): offer the numbers
+  // that can send it. A template with no WABA recorded fits any number.
+  const templateWaba = (template as { waba_id?: string | null }).waba_id || '';
+  const usable = numbers.filter(
+    (n) => !templateWaba || n.waba_id === templateWaba
+  );
+  // The value the select stands on: '' = the primary.
+  const valueOf = (n: { id: string; is_primary: boolean }) =>
+    n.is_primary ? '' : n.id;
+  useEffect(() => {
+    if (!onNumberChange || usable.length === 0) return;
+    if (!usable.some((n) => valueOf(n) === (numberId ?? '')))
+      onNumberChange(valueOf(usable[0]) || null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run when the options change
+  }, [usable.map((n) => n.id).join(','), numberId]);
   useEffect(() => {
     let alive = true;
     fetch('/api/whatsapp/numbers', { cache: 'no-store' })
@@ -130,7 +145,7 @@ export function Step4ScheduleSend({
         </p>
       </div>
 
-      {numbers.length > 1 && onNumberChange && (
+      {numbers.length > 1 && usable.length > 0 && onNumberChange && (
         <div>
           <label className="mb-1.5 block text-sm font-medium text-foreground">
             {t('scheduleSend.sendFrom')}
@@ -140,8 +155,8 @@ export function Step4ScheduleSend({
             onChange={(e) => onNumberChange(e.target.value || null)}
             className="h-10 w-full rounded-xl border-[1.5px] border-border bg-card px-3 text-sm text-foreground focus:border-foreground focus:outline-none"
           >
-            {numbers.map((n) => (
-              <option key={n.id} value={n.is_primary ? '' : n.id}>
+            {usable.map((n) => (
+              <option key={n.id} value={valueOf(n)}>
                 {(n.label || n.display_phone_number || n.phone_number_id) +
                   (n.is_primary ? ` · ${t('scheduleSend.primaryNumber')}` : '')}
               </option>

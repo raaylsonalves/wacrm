@@ -939,6 +939,11 @@ BEGIN
     RAISE EXCEPTION 'routing per official number missing — migration 118 did not apply';
   END IF;
 
+  IF to_regclass('public.message_templates_account_waba_name_language_key') IS NULL
+     OR to_regclass('public.message_templates_user_name_language_key') IS NOT NULL THEN
+    RAISE EXCEPTION 'templates per WABA missing — migration 119 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

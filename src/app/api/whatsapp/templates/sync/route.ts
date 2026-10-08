@@ -136,14 +136,16 @@ export async function POST() {
     // Resolving account_id off the profile only proved membership.
     const { supabase, accountId, userId } = await requireRole('admin')
 
-    const { data: config, error: configError } = await supabase
+    // Every WABA the account's official numbers belong to (migration
+    // 119): each has its own templates, and a number can only send the
+    // ones of its WABA. One fetch per WABA, with that number's token.
+    const { data: configs, error: configError } = await supabase
       .from('whatsapp_config')
       .select('*')
       .eq('account_id', accountId)
-      .eq('is_primary', true)
-      .single()
+      .order('is_primary', { ascending: false })
 
-    if (configError || !config) {
+    if (configError || !configs || configs.length === 0) {
       return NextResponse.json(
         {
           error:
@@ -153,7 +155,12 @@ export async function POST() {
       )
     }
 
-    if (!config.waba_id) {
+    const byWaba = new Map<string, (typeof configs)[number]>()
+    for (const c of configs) {
+      if (c.waba_id && !byWaba.has(c.waba_id as string))
+        byWaba.set(c.waba_id as string, c)
+    }
+    if (byWaba.size === 0) {
       return NextResponse.json(
         {
           error:
@@ -162,39 +169,43 @@ export async function POST() {
         { status: 400 },
       )
     }
+    const primaryWaba = (configs[0].waba_id as string | null) ?? ''
 
-    const accessToken = decrypt(config.access_token)
-
-    const metaTemplates: MetaTemplate[] = []
-    let nextUrl:
-      | string
-      | null = `${META_API_BASE}/${config.waba_id}/message_templates?limit=100&fields=id,name,language,status,category,components,quality_score`
+    const metaTemplates: (MetaTemplate & { wabaId: string })[] = []
     const PAGE_CAP = 20
     let pageCount = 0
+    let nextUrl: string | null = null
 
-    while (nextUrl && pageCount < PAGE_CAP) {
-      pageCount++
-      const metaRes: Response = await fetch(nextUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
+    for (const [wabaId, config] of byWaba) {
+      const accessToken = decrypt(config.access_token)
+      nextUrl = `${META_API_BASE}/${wabaId}/message_templates?limit=100&fields=id,name,language,status,category,components,quality_score`
+      let wabaPages = 0
+      while (nextUrl && wabaPages < PAGE_CAP) {
+        wabaPages++
+        pageCount = Math.max(pageCount, wabaPages)
+        const metaRes: Response = await fetch(nextUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
 
-      if (!metaRes.ok) {
-        let metaErr = `Meta API error: ${metaRes.status}`
-        try {
-          const body = await metaRes.json()
-          if (body?.error?.message) metaErr = body.error.message
-        } catch {
-          // response wasn't JSON — keep the fallback
+        if (!metaRes.ok) {
+          let metaErr = `Meta API error: ${metaRes.status}`
+          try {
+            const body = await metaRes.json()
+            if (body?.error?.message) metaErr = body.error.message
+          } catch {
+            // response wasn't JSON — keep the fallback
+          }
+          return NextResponse.json({ error: metaErr }, { status: 502 })
         }
-        return NextResponse.json({ error: metaErr }, { status: 502 })
-      }
 
-      const metaBody: {
-        data?: MetaTemplate[]
-        paging?: { next?: string }
-      } = await metaRes.json()
-      if (metaBody.data) metaTemplates.push(...metaBody.data)
-      nextUrl = metaBody.paging?.next ?? null
+        const metaBody: {
+          data?: MetaTemplate[]
+          paging?: { next?: string }
+        } = await metaRes.json()
+        if (metaBody.data)
+          metaTemplates.push(...metaBody.data.map((t) => ({ ...t, wabaId })))
+        nextUrl = metaBody.paging?.next ?? null
+      }
     }
 
     let inserted = 0
@@ -225,6 +236,7 @@ export async function POST() {
         // post-017, so an INSERT without it errors.
         account_id: accountId,
         user_id: userId,
+        waba_id: t.wabaId,
         name: t.name,
         category: normalizeCategory(t.category),
         language: t.language,
@@ -247,13 +259,19 @@ export async function POST() {
         updated_at: new Date().toISOString(),
       }
 
-      const { data: existing, error: lookupErr } = await supabase
+      // This WABA's row; a row from before migration 119 with no WABA
+      // recorded is adopted by the primary number's WABA.
+      const { data: rows, error: lookupErr } = await supabase
         .from('message_templates')
-        .select('id')
+        .select('id, waba_id')
         .eq('account_id', accountId)
         .eq('name', t.name)
         .eq('language', t.language)
-        .maybeSingle()
+        .in('waba_id', t.wabaId === primaryWaba ? [t.wabaId, ''] : [t.wabaId])
+      const existing =
+        (rows ?? []).find((r) => r.waba_id === t.wabaId) ??
+        (rows ?? [])[0] ??
+        null
 
       if (lookupErr) {
         errors.push({

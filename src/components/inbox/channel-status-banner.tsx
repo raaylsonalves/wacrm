@@ -26,7 +26,11 @@ interface WahaChannel {
 export function ChannelStatusBanner() {
   const t = useTranslations('Inbox.channelBanner');
   const { accountId } = useAuth();
-  const [meta, setMeta] = useState<'none' | 'connected' | 'down' | null>(null);
+  // Every official (Meta) number — an account can have several
+  // (specs/multi-official-numbers.md); null = not loaded yet.
+  const [official, setOfficial] = useState<
+    { label: string | null; display_phone_number: string | null; status: string }[] | null
+  >(null);
   const [waha, setWaha] = useState<WahaChannel[]>([]);
 
   const load = useCallback(async () => {
@@ -35,16 +39,20 @@ export function ChannelStatusBanner() {
     const [{ data: cfg }, { data: channels }] = await Promise.all([
       db
         .from('whatsapp_config')
-        .select('status')
-        .eq('account_id', accountId)
-        .eq('is_primary', true)
-        .maybeSingle(),
+        .select('label, display_phone_number, status')
+        .eq('account_id', accountId),
       db
         .from('whatsapp_waha_channels')
         .select('id, label, status')
         .eq('account_id', accountId),
     ]);
-    setMeta(!cfg ? 'none' : cfg.status === 'connected' ? 'connected' : 'down');
+    setOfficial(
+      (cfg ?? []) as {
+        label: string | null;
+        display_phone_number: string | null;
+        status: string;
+      }[]
+    );
     setWaha((channels ?? []) as WahaChannel[]);
   }, [accountId]);
 
@@ -69,13 +77,22 @@ export function ChannelStatusBanner() {
     };
   }, [load]);
 
-  if (meta === null) return null;
+  if (official === null) return null;
 
   const downWaha = waha.filter((c) => c.status !== 'connected');
+  const downOfficial = official.filter((n) => n.status !== 'connected');
   const messages: string[] = [
     ...downWaha.map((c) => t('wahaDown', { channel: c.label })),
-    ...(meta === 'down' ? [t('metaDown')] : []),
-    ...(meta === 'none' && waha.length === 0 ? [t('none')] : []),
+    // One official number: the original wording. Several: name each one
+    // that is down, so it is clear which number stopped.
+    ...(official.length === 1 && downOfficial.length === 1
+      ? [t('metaDown')]
+      : downOfficial.map((n) =>
+          t('metaNumberDown', {
+            number: n.label || n.display_phone_number || '—',
+          })
+        )),
+    ...(official.length === 0 && waha.length === 0 ? [t('none')] : []),
   ];
   if (messages.length === 0) return null;
 

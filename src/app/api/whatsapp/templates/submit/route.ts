@@ -29,6 +29,8 @@ function buildUpsertRow(
     status: 'DRAFT' | string
     metaTemplateId: string | null
     submissionError: string | null
+    /** WABA the template was submitted to (migration 119); '' unknown. */
+    wabaId: string
   },
 ) {
   return {
@@ -40,6 +42,7 @@ function buildUpsertRow(
     // still on (user_id, name, language) — see the upsert helper
     // for the cross-teammate dedup follow-up.
     user_id: userId,
+    waba_id: extras.wabaId,
     name: payload.name,
     category: payload.category,
     language: payload.language,
@@ -65,14 +68,11 @@ async function upsertTemplateRow(
   supabase: SupabaseClient,
   row: ReturnType<typeof buildUpsertRow>,
 ) {
-  // TODO(account-sharing): conflict target is still scoped to
-  // user_id. Once a follow-up migration drops the legacy unique
-  // index on (user_id, name, language) and adds (account_id,
-  // name, language), switch `onConflict` here so two teammates
-  // can't shadow each other's same-named template.
+  // Account-wide per WABA (migration 119): teammates share one row, and
+  // the same name may exist in each of the account's WABAs.
   return supabase
     .from('message_templates')
-    .upsert(row, { onConflict: 'user_id,name,language' })
+    .upsert(row, { onConflict: 'account_id,waba_id,name,language' })
     .select()
     .single()
 }
@@ -133,6 +133,8 @@ export async function POST(request: Request) {
 
     let metaTemplateId: string
     let metaStatus: string
+    // The primary number's WABA — where new templates are created.
+    let wabaId = ''
 
     if (dryRun) {
       metaTemplateId = `dry-run-${crypto.randomUUID()}`
@@ -164,6 +166,7 @@ export async function POST(request: Request) {
       }
 
       const accessToken = decrypt(config.access_token)
+      wabaId = config.waba_id as string
 
       // Media headers (image/video/document) need a Resumable-Upload
       // handle (Meta rejects a plain URL at creation). Derive it from
@@ -198,6 +201,7 @@ export async function POST(request: Request) {
             status: 'DRAFT',
             metaTemplateId: null,
             submissionError: message,
+            wabaId,
           }),
         )
         const isRateLimit = /\b429\b/.test(message)
@@ -218,6 +222,7 @@ export async function POST(request: Request) {
         status: normalizeStatus(metaStatus),
         metaTemplateId,
         submissionError: null,
+        wabaId,
       }),
     )
 

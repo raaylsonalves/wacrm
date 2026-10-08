@@ -411,6 +411,7 @@
       "confirm": "Pasar conversación"
     },
     "channelBanner": {
+      "metaNumberDown": "El número oficial \"{number}\" está desconectado de Meta — sus mensajes no están llegando.",
       "wahaDown": "WhatsApp desconectado: {channel} — los mensajes de este número no están llegando.",
       "metaDown": "El número oficial (API de Meta) tiene un problema de conexión.",
       "none": "Ningún número de WhatsApp conectado.",
