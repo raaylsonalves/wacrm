@@ -2814,6 +2814,7 @@
       }
     },
     "templates": {
+      "toastSyncNumberFailed": "번호 \"{number}\"의 템플릿을 읽을 수 없습니다: {error}",
       "removeButtonAria": "버튼 제거",
       "title": "메시지 템플릿",
       "description": "템플릿을 만들어 Meta에 승인을 요청하세요. 다른 곳에서 승인된 템플릿을 가져오려면 \"Meta에서 동기화\"를 사용하세요.",

@@ -2814,6 +2814,7 @@
       }
     },
     "templates": {
+      "toastSyncNumberFailed": "Não foi possível ler os modelos do número \"{number}\": {error}",
       "removeButtonAria": "Remover botão",
       "title": "Modelos de mensagem",
       "description": "Crie modelos e envie-os à Meta para aprovação. Use \"Sincronizar da Meta\" para importar modelos aprovados em outro lugar.",

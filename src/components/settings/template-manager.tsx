@@ -337,6 +337,14 @@ export function TemplateManager() {
           data.errors.length > 3 ? `, +${data.errors.length - 3} more` : '';
         toast.error(t('toastSyncFailed', { preview: preview.join(', ') + suffix }));
       }
+      // A number whose WABA could not be read (e.g. an expired token).
+      if (Array.isArray(data.waba_errors)) {
+        for (const w of data.waba_errors as { number: string; message: string }[]) {
+          toast.error(t('toastSyncNumberFailed', { number: w.number, error: w.message }), {
+            duration: 12000,
+          });
+        }
+      }
       if (data.truncated) {
         // Use error (not warning) so the message survives long
         // enough to read — sonner's `warning` auto-dismisses on

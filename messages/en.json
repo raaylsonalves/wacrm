@@ -2814,6 +2814,7 @@
       }
     },
     "templates": {
+      "toastSyncNumberFailed": "Could not read the templates of number \"{number}\": {error}",
       "removeButtonAria": "Remove button",
       "title": "Message templates",
       "description": "Create templates and submit them to Meta for approval. Use \"Sync from Meta\" to pull templates approved elsewhere.",

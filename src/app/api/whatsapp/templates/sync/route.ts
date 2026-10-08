@@ -175,8 +175,11 @@ export async function POST() {
     const PAGE_CAP = 20
     let pageCount = 0
     let nextUrl: string | null = null
+    // A WABA that fails (expired token, revoked access) must not hide the
+    // others' templates: it is reported and the sync goes on.
+    const wabaErrors: { wabaId: string; number: string; message: string }[] = []
 
-    for (const [wabaId, config] of byWaba) {
+    wabaLoop: for (const [wabaId, config] of byWaba) {
       const accessToken = decrypt(config.access_token)
       nextUrl = `${META_API_BASE}/${wabaId}/message_templates?limit=100&fields=id,name,language,status,category,components,quality_score`
       let wabaPages = 0
@@ -195,7 +198,15 @@ export async function POST() {
           } catch {
             // response wasn't JSON — keep the fallback
           }
-          return NextResponse.json({ error: metaErr }, { status: 502 })
+          wabaErrors.push({
+            wabaId,
+            number:
+              (config.label as string | null) ||
+              (config.display_phone_number as string | null) ||
+              (config.phone_number_id as string),
+            message: metaErr,
+          })
+          continue wabaLoop
         }
 
         const metaBody: {
@@ -206,6 +217,14 @@ export async function POST() {
           metaTemplates.push(...metaBody.data.map((t) => ({ ...t, wabaId })))
         nextUrl = metaBody.paging?.next ?? null
       }
+    }
+
+    // Every WABA failed: nothing was read, say why.
+    if (wabaErrors.length === byWaba.size) {
+      return NextResponse.json(
+        { error: wabaErrors[0].message, waba_errors: wabaErrors },
+        { status: 502 },
+      )
     }
 
     let inserted = 0
@@ -313,7 +332,8 @@ export async function POST() {
     }
 
     return NextResponse.json({
-      success: errors.length === 0,
+      success: errors.length === 0 && wabaErrors.length === 0,
+      waba_errors: wabaErrors,
       total: metaTemplates.length,
       inserted,
       updated,

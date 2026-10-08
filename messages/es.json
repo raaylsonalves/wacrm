@@ -2814,6 +2814,7 @@
       }
     },
     "templates": {
+      "toastSyncNumberFailed": "No se pudieron leer las plantillas del número \"{number}\": {error}",
       "removeButtonAria": "Quitar botón",
       "title": "Plantillas de mensaje",
       "description": "Crea plantillas y envíalas a Meta para su aprobación. Usa \"Sincronizar desde Meta\" para traer plantillas aprobadas en otro lugar.",
