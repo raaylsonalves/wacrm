@@ -37,6 +37,7 @@ export function ChannelStatusBanner() {
         .from('whatsapp_config')
         .select('status')
         .eq('account_id', accountId)
+        .eq('is_primary', true)
         .maybeSingle(),
       db
         .from('whatsapp_waha_channels')

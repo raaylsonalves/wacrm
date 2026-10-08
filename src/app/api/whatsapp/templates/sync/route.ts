@@ -140,6 +140,7 @@ export async function POST() {
       .from('whatsapp_config')
       .select('*')
       .eq('account_id', accountId)
+      .eq('is_primary', true)
       .single()
 
     if (configError || !config) {

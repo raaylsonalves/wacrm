@@ -19,6 +19,7 @@ export async function GET() {
       .from('whatsapp_config')
       .select('phone_number_id, access_token')
       .eq('account_id', accountId)
+      .eq('is_primary', true)
       .maybeSingle()
     if (!config?.phone_number_id || !config.access_token) {
       return NextResponse.json({ configured: false })

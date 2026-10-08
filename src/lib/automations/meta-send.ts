@@ -147,6 +147,7 @@ async function sendViaMeta(
     .from('whatsapp_config')
     .select('*')
     .eq('account_id', input.accountId)
+    .eq('is_primary', true)
     .single();
   if (configErr || !config) {
     throw new Error('WhatsApp not configured for this account');

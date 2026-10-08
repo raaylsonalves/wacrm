@@ -389,7 +389,10 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
           // Default ON: the column is NOT NULL DEFAULT TRUE, but a row
           // read before migration 039 lands would have it undefined,
           // and losing attachments is the failure mode worth avoiding.
-          config.mirror_inbound_media !== false
+          config.mirror_inbound_media !== false,
+          // Which official number received it (migration 112): the
+          // conversation records it so replies can go out the same way.
+          config.id as string
         );
       }
     }
@@ -741,7 +744,9 @@ async function processMessage(
   accessToken: string,
   // Per-account opt-out for the inbound-media mirror (migration 039).
   // See parseMessageContent for what it turns off.
-  mirrorMedia: boolean
+  mirrorMedia: boolean,
+  // The whatsapp_config row (official number) that received the message.
+  whatsappConfigId: string
 ) {
   // Phone number OR business-scoped user ID — Meta sends only the
   // latter for a sender who has adopted a WhatsApp username (#519).
@@ -770,7 +775,8 @@ async function processMessage(
   const convResult = await findOrCreateConversation(
     accountId,
     configOwnerUserId,
-    contactRecord.id
+    contactRecord.id,
+    whatsappConfigId
   );
   if (!convResult) return;
   const conversation = convResult.conversation;
@@ -1533,7 +1539,9 @@ async function findOrCreateContact(
 async function findOrCreateConversation(
   accountId: string,
   configOwnerUserId: string,
-  contactId: string
+  contactId: string,
+  // Official number that received this message (migration 112).
+  whatsappConfigId: string
 ) {
   // Look for an existing conversation in this account, oldest-first.
   //
@@ -1562,7 +1570,26 @@ async function findOrCreateConversation(
   }
 
   if (existingRows && existingRows.length > 0) {
-    return { conversation: existingRows[0], created: false };
+    const existing = existingRows[0];
+    // The conversation talks through the official number the customer
+    // last wrote to (specs/multi-official-numbers.md) — same rule WAHA
+    // channels follow. Only the official-API side: a conversation on a
+    // WAHA channel keeps whatsapp_channel_id as its sender.
+    if (
+      !existing.whatsapp_channel_id &&
+      existing.whatsapp_config_id !== whatsappConfigId
+    ) {
+      const { error: numErr } = await supabaseAdmin()
+        .from('conversations')
+        .update({ whatsapp_config_id: whatsappConfigId })
+        .eq('id', existing.id);
+      if (numErr) {
+        console.error('Error recording the conversation number:', numErr);
+      } else {
+        existing.whatsapp_config_id = whatsappConfigId;
+      }
+    }
+    return { conversation: existing, created: false };
   }
 
   // Create new conversation. Same tenancy + audit split as
@@ -1573,6 +1600,7 @@ async function findOrCreateConversation(
       account_id: accountId,
       user_id: configOwnerUserId,
       contact_id: contactId,
+      whatsapp_config_id: whatsappConfigId,
     })
     .select()
     .single();

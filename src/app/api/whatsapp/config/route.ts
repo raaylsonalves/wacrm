@@ -130,6 +130,7 @@ export async function GET() {
       .from('whatsapp_config')
       .select('phone_number_id, waba_id, access_token, status')
       .eq('account_id', accountId)
+      .eq('is_primary', true)
       .maybeSingle()
 
     if (configError) {
@@ -408,6 +409,7 @@ export async function POST(request: Request) {
       .from('whatsapp_config')
       .select('id, registered_at, phone_number_id')
       .eq('account_id', accountId)
+      .eq('is_primary', true)
       .maybeSingle()
 
     const sameNumber =
@@ -508,6 +510,7 @@ export async function POST(request: Request) {
         .from('whatsapp_config')
         .update(baseRow)
         .eq('account_id', accountId)
+        .eq('is_primary', true)
 
       if (updateError) {
         console.error('Error updating whatsapp_config:', updateError)
@@ -591,6 +594,7 @@ export async function DELETE() {
       .from('whatsapp_config')
       .delete()
       .eq('account_id', accountId)
+      .eq('is_primary', true)
 
     if (deleteError) {
       console.error('Error deleting whatsapp_config:', deleteError)

@@ -46,6 +46,7 @@ export async function loadAccountMetaCredentials(
     .from('whatsapp_config')
     .select('phone_number_id, access_token')
     .eq('account_id', accountId)
+    .eq('is_primary', true)
     .single();
   if (configErr || !config) {
     throw new Error('WhatsApp not configured for this account');

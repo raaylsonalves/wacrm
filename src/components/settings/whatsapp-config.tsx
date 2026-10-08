@@ -167,6 +167,7 @@ export function WhatsAppConfig() {
           .from('whatsapp_config')
           .select('*')
           .eq('account_id', acctId)
+          .eq('is_primary', true)
           .maybeSingle();
 
         if (error) {
@@ -298,6 +299,7 @@ export function WhatsAppConfig() {
       const { error } = await supabase
         .from('whatsapp_config')
         .update({ mirror_inbound_media: next })
+        // An account-wide setting: every official number of the account.
         .eq('account_id', accountId);
       if (error) throw new Error(error.message);
       setConfig({ ...config, mirror_inbound_media: next });

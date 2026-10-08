@@ -128,6 +128,7 @@ export async function PATCH(
         .from('whatsapp_config')
         .select('*')
         .eq('account_id', accountId)
+        .eq('is_primary', true)
         .single()
       if (configError || !config) {
         return NextResponse.json(
@@ -252,6 +253,7 @@ export async function DELETE(
         .from('whatsapp_config')
         .select('*')
         .eq('account_id', accountId)
+        .eq('is_primary', true)
         .single()
       if (configError || !config || !config.waba_id) {
         return NextResponse.json(

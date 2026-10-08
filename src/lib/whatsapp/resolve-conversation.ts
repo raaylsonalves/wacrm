@@ -59,6 +59,7 @@ export async function resolveConversationByPhone(
     .from('whatsapp_config')
     .select('id')
     .eq('account_id', accountId)
+    .eq('is_primary', true)
     .maybeSingle();
   if (!config) {
     throw new SendMessageError(

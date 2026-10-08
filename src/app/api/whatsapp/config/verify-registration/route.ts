@@ -59,6 +59,7 @@ export async function GET() {
     .from('whatsapp_config')
     .select('*')
     .eq('account_id', accountId)
+    .eq('is_primary', true)
     .maybeSingle()
 
   if (!config) {
@@ -161,6 +162,7 @@ export async function GET() {
       .from('whatsapp_config')
       .update({ registered_at: registeredAt, last_registration_error: null })
       .eq('account_id', accountId)
+      .eq('is_primary', true)
 
     if (!updateError) {
       checks.locally_marked_registered = true

@@ -84,11 +84,14 @@ function makeDb(rpcResult: { data: unknown; error: unknown }) {
         return {
           select: () => ({
             eq: () => ({
-              single: () =>
-                Promise.resolve({
-                  data: { phone_number_id: 'pn-1', access_token: 'enc' },
-                  error: null,
-                }),
+              // account_id, then is_primary (migration 112)
+              eq: () => ({
+                single: () =>
+                  Promise.resolve({
+                    data: { phone_number_id: 'pn-1', access_token: 'enc' },
+                    error: null,
+                  }),
+              }),
             }),
           }),
         };

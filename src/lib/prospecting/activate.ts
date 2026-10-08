@@ -63,6 +63,7 @@ export async function checkCampaignReady(
       .from('whatsapp_config')
       .select('id')
       .eq('account_id', accountId)
+      .eq('is_primary', true)
       .maybeSingle()
     if (!wa) return 'whatsapp_not_configured'
     let q = db

@@ -881,6 +881,17 @@ BEGIN
     RAISE EXCEPTION 'search_fold does not strip accents (migration 111)';
   END IF;
 
+  IF to_regclass('public.whatsapp_config_one_primary_per_account') IS NULL
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'whatsapp_config' AND column_name = 'is_primary')
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'conversations' AND column_name = 'whatsapp_config_id') THEN
+    RAISE EXCEPTION 'multi official numbers missing — migration 112 did not apply';
+  END IF;
+  IF to_regclass('public.whatsapp_config_account_id_key') IS NOT NULL THEN
+    RAISE EXCEPTION 'whatsapp_config still one-per-account — migration 112 did not drop the unique';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

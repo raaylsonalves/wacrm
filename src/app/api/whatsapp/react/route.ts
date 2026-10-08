@@ -96,6 +96,7 @@ export async function POST(request: Request) {
       .from('whatsapp_config')
       .select('phone_number_id, access_token')
       .eq('account_id', accountId)
+      .eq('is_primary', true)
       .single();
 
     if (configError || !config) {
