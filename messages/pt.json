@@ -2911,6 +2911,20 @@
       "ownerHint": "Controle total da conta e do faturamento"
     },
     "whatsapp": {
+      "numbers": {
+        "title": "Números oficiais (API da Meta)",
+        "hint": "Cada conversa responde pelo número em que o cliente escreveu. O principal é usado quando ainda não há um número definido.",
+        "add": "Adicionar número",
+        "unnamed": "Sem nome",
+        "primary": "Principal",
+        "makePrimary": "Tornar principal",
+        "primaryFailed": "Não foi possível trocar o número principal.",
+        "primaryDone": "Número principal atualizado.",
+        "alreadyAdded": "Este número já está conectado a esta conta.",
+        "primaryHasOthers": "Defina outro número como principal antes de remover este.",
+        "labelField": "Nome do número",
+        "labelPlaceholder": "Ex.: Vendas, Suporte, Unidade Centro"
+      },
       "phoneInUse": "Este número de WhatsApp já está conectado a outra conta deste CRM. Cada número só pode ficar em uma conta: desconecte-o da outra conta (Configurações > WhatsApp) antes de conectá-lo aqui.",
       "title": "Conexão com o WhatsApp",
       "description": "Conecte sua API do WhatsApp Business da Meta. Credenciais, webhook e etapas de configuração ficam todos aqui.",

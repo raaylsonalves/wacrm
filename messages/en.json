@@ -2921,6 +2921,20 @@
       "ownerHint": "Full control over account and billing"
     },
     "whatsapp": {
+      "numbers": {
+        "title": "Official numbers (Meta API)",
+        "hint": "Each conversation replies from the number the customer wrote to. The primary is used when no number is set yet.",
+        "add": "Add number",
+        "unnamed": "Unnamed",
+        "primary": "Primary",
+        "makePrimary": "Make primary",
+        "primaryFailed": "Could not change the primary number.",
+        "primaryDone": "Primary number updated.",
+        "alreadyAdded": "This number is already connected to this account.",
+        "primaryHasOthers": "Make another number the primary before removing this one.",
+        "labelField": "Number name",
+        "labelPlaceholder": "E.g. Sales, Support, Downtown store"
+      },
       "phoneInUse": "This WhatsApp number is already connected to another account on this CRM. Each number can belong to one account only: disconnect it from the other account (Settings > WhatsApp) before connecting it here.",
       "title": "WhatsApp connection",
       "description": "Connect your Meta WhatsApp Business API. Credentials, webhook, and setup steps all live here.",

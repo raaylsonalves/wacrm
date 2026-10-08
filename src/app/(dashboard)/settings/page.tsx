@@ -11,7 +11,7 @@ import { SettingsOverview } from '@/components/settings/settings-overview';
 import { ProfileForm } from '@/components/settings/profile-form';
 import { SecurityPanel } from '@/components/settings/security-panel';
 import { AppearancePanel } from '@/components/settings/appearance-panel';
-import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
+import { OfficialNumbers } from '@/components/settings/official-numbers';
 import { WahaChannels } from '@/components/settings/waha-channels';
 import { ChannelRoutingPanel } from '@/components/settings/channel-routing-panel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -98,7 +98,7 @@ function SettingsPageInner() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="cloud-api">
-            <WhatsAppConfig />
+            <OfficialNumbers />
           </TabsContent>
           <TabsContent value="qr">
             <WahaChannels />

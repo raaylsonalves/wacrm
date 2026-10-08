@@ -43,6 +43,8 @@ export function OfficialNumbers() {
     const data = (await res.json()) as { numbers: OfficialNumber[] };
     setNumbers(data.numbers);
     setSelected((current) => {
+      // null = "just added one": select it (the newest is listed last).
+      if (select === null) return data.numbers.at(-1)?.id ?? null;
       if (select !== undefined) return select;
       if (
         current &&
