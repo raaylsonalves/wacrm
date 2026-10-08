@@ -11,6 +11,7 @@ import {
   normalizeConversations,
 } from '@/lib/inbox/conversations';
 import { cn } from '@/lib/utils';
+import { serverSearchTerm } from '@/lib/inbox/server-search';
 import { TONE_SOLID, toneFor } from '@/lib/tones';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
@@ -342,6 +343,51 @@ export function ConversationList({
       setLoadingMore(false);
     }
   }, [fetchPage]);
+
+  // Server search: the list only holds the pages scrolled so far, so a
+  // search also asks the database (contact name/phone, last message) and
+  // merges the matches in. The on-screen filter below then shows them.
+  const [searching, setSearching] = useState(false);
+  useEffect(() => {
+    const term = serverSearchTerm(search);
+    if (!term) return;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const supabase = createClient();
+        const pattern = `%${term}%`;
+        const { data: contacts } = await supabase
+          .from('contacts')
+          .select('id')
+          .or(`name.ilike.${pattern},phone.ilike.${pattern}`)
+          .limit(100);
+        const ids = (contacts ?? []).map((c) => c.id as string);
+        const filters = [`last_message_text.ilike.${pattern}`];
+        if (ids.length > 0) filters.push(`contact_id.in.(${ids.join(',')})`);
+        const { data, error } = await supabase
+          .from('conversations')
+          .select(CONVERSATION_SELECT)
+          .or(filters.join(','))
+          .order('last_message_at', { ascending: false, nullsFirst: false })
+          .limit(100);
+        if (cancelled || error || !data) return;
+        const current = conversationsRef.current;
+        const seen = new Set(current.map((c) => c.id));
+        const fresh = normalizeConversations(data).filter(
+          (c) => !seen.has(c.id)
+        );
+        if (fresh.length > 0)
+          onConversationsLoadedRef.current([...current, ...fresh]);
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [search]);
 
   // The sentinel at the end of the list: when it scrolls into view, fetch
   // the next page. With a filter or search that hides most rows it stays
@@ -770,7 +816,11 @@ export function ConversationList({
           ))}
         </div>
         <div className="relative">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          {searching ? (
+            <Loader2 className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 animate-spin" />
+          ) : (
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          )}
           <Input
             value={search}
             onChange={handleSearchChange}
