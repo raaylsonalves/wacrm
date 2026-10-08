@@ -11,7 +11,11 @@ import {
   normalizeConversations,
 } from '@/lib/inbox/conversations';
 import { cn } from '@/lib/utils';
-import { serverSearchTerm, snippetAround } from '@/lib/inbox/server-search';
+import {
+  foldForSearch,
+  serverSearchTerm,
+  snippetAround,
+} from '@/lib/inbox/server-search';
 import { TONE_SOLID, toneFor } from '@/lib/tones';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
@@ -378,26 +382,26 @@ export function ConversationList({
       setSearching(true);
       try {
         const supabase = createClient();
-        const pattern = `%${searchTerm}%`;
+        // Accent- and case-insensitive on the server (migration 111):
+        // "orcamento" finds "Orçamento", "joao" finds "João".
         const [{ data: contacts }, { data: hits }] = await Promise.all([
-          supabase
-            .from('contacts')
-            .select('id')
-            .or(`name.ilike.${pattern},phone.ilike.${pattern}`)
-            .limit(100),
-          supabase
-            .from('messages')
-            .select('id, conversation_id, content_text, created_at')
-            .ilike('content_text', pattern)
-            .order('created_at', { ascending: false })
-            .limit(50),
+          supabase.rpc('inbox_search_contacts', {
+            p_term: searchTerm,
+            p_limit: 100,
+          }),
+          supabase.rpc('inbox_search_messages', {
+            p_term: searchTerm,
+            p_limit: 50,
+          }),
         ]);
         if (cancelled) return;
         const messageRows = (hits ?? []) as MessageHit[];
 
         // Conversations to have in the list: the contacts' ones and the
         // ones the message hits belong to.
-        const contactIds = (contacts ?? []).map((c) => c.id as string);
+        const contactIds = ((contacts ?? []) as { id: string }[]).map(
+          (c) => c.id
+        );
         const current = conversationsRef.current;
         const seen = new Set(current.map((c) => c.id));
         const missingConvIds = [
@@ -725,10 +729,10 @@ export function ConversationList({
     // The "Conversations" group matches the contact; message text is
     // the "Messages" group's job (see the server search above).
     if (search.trim()) {
-      const q = search.toLowerCase().trim();
+      const q = foldForSearch(search.trim());
       result = result.filter((c) => {
-        const name = c.contact?.name?.toLowerCase() ?? '';
-        const phone = c.contact?.phone?.toLowerCase() ?? '';
+        const name = foldForSearch(c.contact?.name ?? '');
+        const phone = (c.contact?.phone ?? '').toLowerCase();
         return name.includes(q) || phone.includes(q);
       });
     }

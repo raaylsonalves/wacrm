@@ -868,10 +868,17 @@ BEGIN
     RAISE EXCEPTION 'billing_payments must be read-only for clients (migration 109)';
   END IF;
 
-  IF to_regclass('public.idx_messages_content_trgm') IS NULL
-     OR to_regclass('public.idx_contacts_name_trgm') IS NULL
-     OR to_regclass('public.idx_contacts_phone_trgm') IS NULL THEN
-    RAISE EXCEPTION 'inbox search trigram indexes missing — migration 110 did not apply';
+  IF to_regclass('public.idx_contacts_phone_trgm') IS NULL THEN
+    RAISE EXCEPTION 'contact phone trigram index missing — migration 110 did not apply';
+  END IF;
+  IF to_regclass('public.idx_messages_content_fold_trgm') IS NULL
+     OR to_regclass('public.idx_contacts_name_fold_trgm') IS NULL
+     OR to_regprocedure('public.inbox_search_messages(text,integer)') IS NULL
+     OR to_regprocedure('public.inbox_search_contacts(text,integer)') IS NULL THEN
+    RAISE EXCEPTION 'accent-insensitive inbox search missing — migration 111 did not apply';
+  END IF;
+  IF public.search_fold('Orçamento JOÃO') <> 'orcamento joao' THEN
+    RAISE EXCEPTION 'search_fold does not strip accents (migration 111)';
   END IF;
 
   RAISE NOTICE 'schema verification passed';

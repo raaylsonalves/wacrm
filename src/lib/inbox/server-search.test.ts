@@ -42,7 +42,15 @@ describe('snippetAround', () => {
     expect(snippetAround('a\n\nb pix', 'pix').before).toBe('a b ');
   });
 
-  it('falls back to the start of the text when the term is not literal', () => {
+  it('matches across accents and keeps the original text', () => {
+    expect(snippetAround('Seu orçamento chegou', 'orcamento', 4)).toEqual({
+      before: 'Seu ',
+      match: 'orçamento',
+      after: ' che…',
+    });
+  });
+
+  it('falls back to the start of the text when the term is not found', () => {
     expect(snippetAround('abcdefghij', 'zz', 2)).toEqual({
       before: 'abcd…',
       match: '',

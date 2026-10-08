@@ -21,6 +21,23 @@ export function serverSearchTerm(raw: string): string | null {
   return term.length >= MIN_SERVER_SEARCH ? term : null;
 }
 
+/**
+ * Lower-case and strip accents ("Orçamento" -> "orcamento") one character
+ * at a time, so every index in the result is the same index in the
+ * original text — the snippet below cuts the ORIGINAL at a match found in
+ * the folded copy. Mirrors the database's search_fold (migration 111).
+ */
+export function foldForSearch(s: string): string {
+  let out = '';
+  for (const ch of s) {
+    const base = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    // Keep one output char per input char (an odd multi-char fold keeps
+    // the original) so positions line up.
+    out += (base.length === ch.length ? base : ch).toLowerCase();
+  }
+  return out;
+}
+
 export interface Snippet {
   before: string;
   match: string;
@@ -30,8 +47,8 @@ export interface Snippet {
 /**
  * The part of a message around the first match, for a result row: up to
  * `radius` characters each side, with an ellipsis where it was cut. The
- * match is case-insensitive; when the term is not found literally (the
- * database matched it another way) the start of the text is shown.
+ * match ignores case and accents ("orcamento" highlights "Orçamento");
+ * when it is still not found, the start of the text is shown.
  */
 export function snippetAround(
   text: string,
@@ -39,7 +56,7 @@ export function snippetAround(
   radius = 40
 ): Snippet {
   const flat = text.replace(/\s+/g, ' ').trim();
-  const at = flat.toLowerCase().indexOf(term.toLowerCase());
+  const at = foldForSearch(flat).indexOf(foldForSearch(term));
   if (at < 0 || !term) {
     const cut = flat.length > radius * 2;
     return {
