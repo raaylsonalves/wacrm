@@ -253,6 +253,46 @@ export function ConversationList({
   const { data: wahaChannels = [] } = useWahaChannelOptions();
   const [selectedChannel, setSelectedChannel] = useState<string>('all');
 
+  // The account's official (Meta) numbers (specs/multi-official-numbers.md).
+  // With more than one, each gets its own badge and filter entry
+  // ('official:<id>') instead of a single "Official API".
+  const [officialNumbers, setOfficialNumbers] = useState<
+    {
+      id: string;
+      label: string | null;
+      display_phone_number: string | null;
+      phone_number_id: string;
+      is_primary: boolean;
+    }[]
+  >([]);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/whatsapp/numbers', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (alive && d?.numbers) setOfficialNumbers(d.numbers);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const multiOfficial = officialNumbers.length > 1;
+  const primaryOfficialId =
+    officialNumbers.find((n) => n.is_primary)?.id ?? null;
+  const officialLabel = useCallback(
+    (configId: string | null | undefined) => {
+      const n = officialNumbers.find(
+        (o) => o.id === (configId ?? primaryOfficialId)
+      );
+      return n
+        ? n.label || n.display_phone_number || n.phone_number_id
+        : t('officialApi');
+    },
+    [officialNumbers, primaryOfficialId, t]
+  );
+  const showChannelFilter = wahaChannels.length > 0 || multiOfficial;
+
   // Keep the latest callback in a ref so the fetch effect below can
   // have a stable, empty-dep identity. Previously the fetch useCallback
   // depended on `onConversationsLoaded`, which depends on the parent's
@@ -720,9 +760,13 @@ export function ConversationList({
 
     if (selectedChannel !== 'all') {
       result = result.filter((c) =>
-        selectedChannel === 'cloud_api'
-          ? !c.whatsapp_channel_id
-          : c.whatsapp_channel_id === selectedChannel
+        selectedChannel.startsWith('official:')
+          ? !c.whatsapp_channel_id &&
+            (c.whatsapp_config_id ?? primaryOfficialId) ===
+              selectedChannel.slice('official:'.length)
+          : selectedChannel === 'cloud_api'
+            ? !c.whatsapp_channel_id
+            : c.whatsapp_channel_id === selectedChannel
       );
     }
 
@@ -748,6 +792,7 @@ export function ConversationList({
     selectedTagIds,
     selectedCompany,
     selectedChannel,
+    primaryOfficialId,
   ]);
 
   // Keyboard shortcuts act on the list exactly as filtered on screen.
@@ -1009,7 +1054,7 @@ export function ConversationList({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          {wahaChannels.length > 0 && (
+          {showChannelFilter && (
             <DropdownMenu>
               <DropdownMenuTrigger
                 className={cn(
@@ -1024,8 +1069,12 @@ export function ConversationList({
                     ? t('channel')
                     : selectedChannel === 'cloud_api'
                       ? t('officialApi')
-                      : (wahaChannelsById.get(selectedChannel)?.label ??
-                        t('channel'))}
+                      : selectedChannel.startsWith('official:')
+                        ? officialLabel(
+                            selectedChannel.slice('official:'.length)
+                          )
+                        : (wahaChannelsById.get(selectedChannel)?.label ??
+                          t('channel'))}
                 </span>
                 <ChevronDown className="h-3 w-3 shrink-0" />
               </DropdownMenuTrigger>
@@ -1044,17 +1093,34 @@ export function ConversationList({
                 >
                   {t('allChannels')}
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setSelectedChannel('cloud_api')}
-                  className={cn(
-                    'text-sm',
-                    selectedChannel === 'cloud_api'
-                      ? 'text-primary'
-                      : 'text-popover-foreground'
-                  )}
-                >
-                  {t('officialApi')}
-                </DropdownMenuItem>
+                {multiOfficial ? (
+                  officialNumbers.map((n) => (
+                    <DropdownMenuItem
+                      key={n.id}
+                      onClick={() => setSelectedChannel(`official:${n.id}`)}
+                      className={cn(
+                        'text-sm',
+                        selectedChannel === `official:${n.id}`
+                          ? 'text-primary'
+                          : 'text-popover-foreground'
+                      )}
+                    >
+                      <span className="truncate">{officialLabel(n.id)}</span>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => setSelectedChannel('cloud_api')}
+                    className={cn(
+                      'text-sm',
+                      selectedChannel === 'cloud_api'
+                        ? 'text-primary'
+                        : 'text-popover-foreground'
+                    )}
+                  >
+                    {t('officialApi')}
+                  </DropdownMenuItem>
+                )}
                 {wahaChannels.map((c) => (
                   <DropdownMenuItem
                     key={c.id}
@@ -1166,12 +1232,14 @@ export function ConversationList({
                 }
                 responseTimeTargetMinutes={responseTimeTargetMinutes}
                 channelLabel={
-                  wahaChannels.length === 0
+                  wahaChannels.length === 0 && !multiOfficial
                     ? null
                     : conv.whatsapp_channel_id
                       ? (wahaChannelsById.get(conv.whatsapp_channel_id)
                           ?.label ?? null)
-                      : t('officialApi')
+                      : multiOfficial
+                        ? officialLabel(conv.whatsapp_config_id)
+                        : t('officialApi')
                 }
               />
             ))}

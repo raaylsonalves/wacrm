@@ -770,7 +770,7 @@ export async function dispatchInboundToAiReply(
     // nothing to undo on the handoff / no-text path. Strictly
     // best-effort: a failed indicator must never cost us the reply.
     if (inboundMessageId) {
-      await showTypingIndicator(db, accountId, inboundMessageId)
+      await showTypingIndicator(db, accountId, inboundMessageId, conversationId)
     }
 
     // Ground the reply in the account's knowledge base (best-effort).
@@ -1134,7 +1134,7 @@ export async function dispatchInboundToAiReply(
       if (i > 0) {
         await new Promise((resolve) => setTimeout(resolve, SEGMENT_DELAY_MS))
         if (inboundMessageId) {
-          await showTypingIndicator(db, accountId, inboundMessageId)
+          await showTypingIndicator(db, accountId, inboundMessageId, conversationId)
         }
       }
       const sendBubble = () =>
@@ -1193,11 +1193,14 @@ async function showTypingIndicator(
   db: ReturnType<typeof supabaseAdmin>,
   accountId: string,
   inboundMessageId: string,
+  conversationId: string,
 ): Promise<void> {
   try {
+    // The number the customer wrote to — Meta only knows the message there.
     const { phoneNumberId, accessToken } = await loadAccountMetaCredentials(
       db,
       accountId,
+      conversationId,
     )
     await sendTypingIndicator({
       phoneNumberId,

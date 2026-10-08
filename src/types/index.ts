@@ -246,6 +246,9 @@ export interface Conversation {
    * channel filter/badge both key off this.
    */
   whatsapp_channel_id?: string | null;
+  /** Official (Meta) number the conversation talks through, when
+   *  whatsapp_channel_id is null; null = the primary (migration 112). */
+  whatsapp_config_id?: string | null;
 }
 
 // ============================================================

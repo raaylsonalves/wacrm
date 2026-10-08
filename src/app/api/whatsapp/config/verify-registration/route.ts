@@ -28,8 +28,10 @@ import {
  * rather than a generic error toast. The combined `live` flag is
  * what the UI badges on.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient()
+  // `?id=` names one of several official numbers; default the primary.
+  const numberId = new URL(request.url).searchParams.get('id')
   const {
     data: { user },
     error: authError,
@@ -55,12 +57,14 @@ export async function GET() {
     })
   }
 
-  const { data: config } = await supabase
+  let configQuery = supabase
     .from('whatsapp_config')
     .select('*')
     .eq('account_id', accountId)
-    .eq('is_primary', true)
-    .maybeSingle()
+  configQuery = numberId
+    ? configQuery.eq('id', numberId)
+    : configQuery.eq('is_primary', true)
+  const { data: config } = await configQuery.maybeSingle()
 
   if (!config) {
     return NextResponse.json({
@@ -162,7 +166,7 @@ export async function GET() {
       .from('whatsapp_config')
       .update({ registered_at: registeredAt, last_registration_error: null })
       .eq('account_id', accountId)
-      .eq('is_primary', true)
+      .eq('id', config.id)
 
     if (!updateError) {
       checks.locally_marked_registered = true

@@ -892,6 +892,13 @@ BEGIN
     RAISE EXCEPTION 'whatsapp_config still one-per-account — migration 112 did not drop the unique';
   END IF;
 
+  IF to_regprocedure('public.set_primary_whatsapp_number(uuid)') IS NULL
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'whatsapp_config'
+         AND column_name = 'display_phone_number') THEN
+    RAISE EXCEPTION 'official numbers management missing — migration 113 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

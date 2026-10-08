@@ -1,6 +1,6 @@
 # Spec: Vários números oficiais (Meta Cloud API) por conta
 
-**Status (2026-10-08): etapa 1 em implementação. Etapas 2 e 3 pendentes.**
+**Status (2026-10-08): etapas 1 e 2 implementadas (migrations 112–113). Etapa 3 pendente.**
 
 ## Problem
 
@@ -84,19 +84,37 @@ Código:
 - `template-webhook.ts`: vários números na mesma WABA são a mesma conta —
   aceitar N linhas se todas forem da mesma conta.
 
-### Etapa 2 — envio e caixa de entrada
+### Etapa 2 — envio, caixa de entrada e configuração
 
-- Resolver o número de saída pela conversa: `whatsapp_config_id` → senão o
-  principal. Envio manual, IA, automações, fluxos, reações, mídia.
-- Etiqueta e filtro de canal na caixa de entrada para números oficiais (hoje
-  só "API oficial" + WAHA).
-- Roteamento de responsáveis por número oficial
-  (`specs/channel-routing-responsibles.md`).
+(A tela de configuração subiu da etapa 3 para cá: sem ela não há como
+cadastrar o segundo número para testar.)
+
+- `lib/whatsapp/official-number.ts` → `loadOfficialNumber(db, accountId,
+  conversationId?)`: o número da conversa (`whatsapp_config_id`, conferido
+  contra a conta) ou o principal. Usado no envio manual / API pública
+  (`send-message.ts`), automações (`automations/meta-send.ts`), fluxos e IA
+  (`flows/meta-send.ts` → `loadAccountMetaCredentials(…, conversationId)`,
+  inclusive o "digitando…"), e reações.
+- Caixa de entrada: com 2+ números oficiais, cada um tem etiqueta e entrada
+  no filtro de canal (`official:<id>`); com 1, segue "API oficial".
+- Migration **113**: `whatsapp_config.display_phone_number` (gravado ao salvar
+  e no teste de conexão) e `set_primary_whatsapp_number(uuid)` (troca o
+  principal numa transação, SECURITY INVOKER).
+- API: `/api/whatsapp/config` aceita `?id=` (GET/DELETE) e `config_id` /
+  `add: true` / `label` (POST); recusa o mesmo número duas vezes na conta
+  (`number_already_added`) e remover o principal enquanto houver outros
+  (`primary_has_others`). `/api/whatsapp/numbers`: GET lista, PATCH
+  principal / nome. `verify-registration` aceita `?id=`.
+- Configurações → WhatsApp (`components/settings/official-numbers.tsx`):
+  lista de números (nome, telefone, principal, status), "Adicionar número",
+  "Tornar principal"; o formulário existente edita o número escolhido e
+  ganhou o campo "Nome do número". Sem número algum, a tela é a de antes.
+- Ainda não: roteamento de responsáveis por número oficial
+  (`specs/channel-routing-responsibles.md`) — fica para a etapa 3.
 
 ### Etapa 3 — configurações, disparos, plano
 
-- Configurações → WhatsApp: lista de números oficiais (adicionar, nome,
-  definir principal, remover).
+- Roteamento de responsáveis por número oficial.
 - Disparos: escolher o número (ou rodízio, reaproveitando
   `specs/broadcast-channel-rotation.md`).
 - Modelos: sincronizar por WABA (números da mesma WABA compartilham modelos).

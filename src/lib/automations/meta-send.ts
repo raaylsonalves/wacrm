@@ -5,6 +5,7 @@ import {
   engineSendInteractiveList,
 } from '@/lib/flows/meta-send';
 import { decrypt } from '@/lib/whatsapp/encryption';
+import { loadOfficialNumber } from '@/lib/whatsapp/official-number';
 import {
   phoneVariants,
   isRecipientNotAllowedError,
@@ -143,13 +144,13 @@ async function sendViaMeta(
   }
   const sanitized = sendTarget.target;
 
-  const { data: config, error: configErr } = await db
-    .from('whatsapp_config')
-    .select('*')
-    .eq('account_id', input.accountId)
-    .eq('is_primary', true)
-    .single();
-  if (configErr || !config) {
+  // The conversation's official number, else the primary.
+  const config = await loadOfficialNumber(
+    db,
+    input.accountId,
+    input.conversationId
+  );
+  if (!config) {
     throw new Error('WhatsApp not configured for this account');
   }
 

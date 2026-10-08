@@ -232,7 +232,12 @@ function sendPathDb(
           if (table === 'conversations') captured.conversation = row;
           return builder;
         },
-        maybeSingle: async () => ({ data: null, error: null }),
+        // loadOfficialNumber reads the number with maybeSingle (the
+        // conversation lookup finds no pinned number -> the primary).
+        maybeSingle: async () =>
+          table === 'whatsapp_config'
+            ? { data: config, error: null }
+            : { data: null, error: null },
         single: async () => {
           if (table === 'conversations') {
             return { data: conversation, error: null };

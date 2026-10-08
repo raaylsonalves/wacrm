@@ -68,8 +68,30 @@ type WabaSubscription = {
   error?: string;
 };
 
-export function WhatsAppConfig() {
+interface WhatsAppConfigProps {
+  /**
+   * Which official number this form edits (whatsapp_config.id) — an
+   * account can have several (specs/multi-official-numbers.md). Omitted:
+   * the primary, i.e. the single-number behaviour.
+   */
+  configId?: string | null;
+  /** An empty form that adds another number to the account. */
+  addNew?: boolean;
+  /** After a save or a removal, so a numbers list can refresh. */
+  onChanged?: () => void;
+  /** Rendered above the form (e.g. the numbers list). */
+  header?: React.ReactNode;
+}
+
+export function WhatsAppConfig({
+  configId = null,
+  addNew = false,
+  onChanged,
+  header,
+}: WhatsAppConfigProps = {}) {
   const t = useTranslations('Settings.whatsapp');
+  // Every API call names the number being edited; none = the primary.
+  const numberQs = configId ? `?id=${configId}` : '';
   const supabase = createClient();
   // After multi-user, whatsapp_config is one-row-per-account, not
   // one-row-per-user. We pull `accountId` straight off the auth
@@ -109,6 +131,7 @@ export function WhatsAppConfig() {
   const loadedAccountIdRef = useRef<string | null>(null);
 
   const [phoneNumberId, setPhoneNumberId] = useState('');
+  const [label, setLabel] = useState('');
   const [wabaId, setWabaId] = useState('');
   const [accessToken, setAccessToken] = useState('');
   const [verifyToken, setVerifyToken] = useState('');
@@ -163,12 +186,18 @@ export function WhatsAppConfig() {
         // account sees the same saved configuration. UNIQUE(account_id)
         // on the table guarantees the .maybeSingle() return type
         // remains accurate.
-        const { data, error } = await supabase
+        // Adding a number starts from an empty form; otherwise the number
+        // named by configId, or the primary.
+        let query = supabase
           .from('whatsapp_config')
           .select('*')
-          .eq('account_id', acctId)
-          .eq('is_primary', true)
-          .maybeSingle();
+          .eq('account_id', acctId);
+        query = configId
+          ? query.eq('id', configId)
+          : query.eq('is_primary', true);
+        const { data, error } = addNew
+          ? { data: null, error: null }
+          : await query.maybeSingle();
 
         if (error) {
           console.error('Failed to load config row:', error);
@@ -177,6 +206,7 @@ export function WhatsAppConfig() {
         if (data) {
           setConfig(data);
           setPhoneNumberId(data.phone_number_id || '');
+          setLabel((data as { label?: string | null }).label || '');
           setWabaId(data.waba_id || '');
           setAccessToken(MASKED_TOKEN);
           setVerifyToken('');
@@ -188,6 +218,7 @@ export function WhatsAppConfig() {
         } else {
           setConfig(null);
           setPhoneNumberId('');
+          setLabel('');
           setWabaId('');
           setAccessToken('');
           setVerifyToken('');
@@ -201,7 +232,9 @@ export function WhatsAppConfig() {
         // Then verify health via the API (decrypts token + pings Meta)
         if (data) {
           try {
-            const res = await fetch('/api/whatsapp/config', { method: 'GET' });
+            const res = await fetch(`/api/whatsapp/config${numberQs}`, {
+              method: 'GET',
+            });
             const payload = await res.json();
 
             if (payload.connected) {
@@ -221,7 +254,7 @@ export function WhatsAppConfig() {
               // a banner that's already wrong, run the same probe
               // silently on load whenever we're about to show it.
               if (!data.registered_at) {
-                fetch('/api/whatsapp/config/verify-registration')
+                fetch(`/api/whatsapp/config/verify-registration${numberQs}`)
                   .then((r) => r.json())
                   .then((probe: { registered_at?: string | null }) => {
                     if (probe.registered_at) {
@@ -267,7 +300,7 @@ export function WhatsAppConfig() {
         setLoading(false);
       }
     },
-    [supabase, t]
+    [supabase, t, configId, addNew, numberQs]
   );
 
   useEffect(() => {
@@ -282,11 +315,13 @@ export function WhatsAppConfig() {
       setLoading(false);
       return;
     }
-    if (loadedAccountIdRef.current === accountId) return;
-    loadedAccountIdRef.current = accountId;
+    // Keyed by the number too: switching numbers in the list reloads.
+    const loadKey = `${accountId}:${addNew ? 'new' : (configId ?? 'primary')}`;
+    if (loadedAccountIdRef.current === loadKey) return;
+    loadedAccountIdRef.current = loadKey;
     fetchConfig(accountId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on user?.id; the user object changes identity on every token refresh
-  }, [authLoading, profileLoading, user?.id, accountId, fetchConfig]);
+  }, [authLoading, profileLoading, user?.id, accountId, fetchConfig, configId, addNew]);
 
   async function handleToggleMirrorMedia(next: boolean) {
     if (!config || !accountId || savingMirror) return;
@@ -345,6 +380,10 @@ export function WhatsAppConfig() {
         // requires it on first save or when changing numbers; for a
         // simple token rotation, leaving it blank skips re-register.
         pin: pin.trim() || null,
+        label: label.trim(),
+        // Which number: an existing one by id, or a new one.
+        ...(config?.id ? { config_id: config.id } : {}),
+        ...(addNew && !config ? { add: true } : {}),
       };
 
       if (tokenEdited && accessToken !== MASKED_TOKEN && accessToken.trim()) {
@@ -370,6 +409,8 @@ export function WhatsAppConfig() {
       if (!res.ok) {
         // Known refusals carry a code: show them in the user's language.
         if (data.code === 'phone_in_use') data.error = t('phoneInUse');
+        if (data.code === 'number_already_added')
+          data.error = t('numbers.alreadyAdded');
         // The route names the failing step and which field to check
         // (issue #505). Keep the details on screen — a toast is too
         // short-lived to copy a trace id out of.
@@ -417,7 +458,13 @@ export function WhatsAppConfig() {
         setPin('');
       }
 
-      if (accountId) await fetchConfig(accountId);
+      if (addNew) {
+        // The parent list switches to the new number.
+        onChanged?.();
+      } else {
+        if (accountId) await fetchConfig(accountId);
+        onChanged?.();
+      }
     } catch (err) {
       console.error('Save error:', err);
       toast.error(t('saveFailed'));
@@ -429,7 +476,9 @@ export function WhatsAppConfig() {
   async function handleTestConnection() {
     try {
       setTesting(true);
-      const res = await fetch('/api/whatsapp/config', { method: 'GET' });
+      const res = await fetch(`/api/whatsapp/config${numberQs}`, {
+        method: 'GET',
+      });
       const payload = await res.json();
 
       if (payload.connected) {
@@ -472,9 +521,10 @@ export function WhatsAppConfig() {
     setVerifyingRegistration(true);
     setRegistrationProbe(null);
     try {
-      const res = await fetch('/api/whatsapp/config/verify-registration', {
-        method: 'GET',
-      });
+      const res = await fetch(
+        `/api/whatsapp/config/verify-registration${numberQs}`,
+        { method: 'GET' }
+      );
       const data = (await res.json()) as RegistrationProbe;
       setRegistrationProbe(data);
       if (data.live) {
@@ -496,13 +546,20 @@ export function WhatsAppConfig() {
       action: async () => {
         try {
           setResetting(true);
-          const res = await fetch('/api/whatsapp/config', { method: 'DELETE' });
+          const res = await fetch(`/api/whatsapp/config${numberQs}`, {
+            method: 'DELETE',
+          });
           const data = await res.json();
 
           if (!res.ok) {
-            toast.error(data.error || t('resetFailed'));
+            toast.error(
+              data.code === 'primary_has_others'
+                ? t('numbers.primaryHasOthers')
+                : data.error || t('resetFailed')
+            );
             return;
           }
+          onChanged?.();
 
           toast.success(t('resetDone'));
           setConfig(null);
@@ -583,6 +640,7 @@ export function WhatsAppConfig() {
   return (
     <section className="animate-in fade-in-50 duration-200">
       <SettingsPanelHead title={t('title')} description={t('description')} />
+      {header}
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         {/* Main config form */}
         <div className="space-y-6">
@@ -802,6 +860,21 @@ export function WhatsAppConfig() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">
+                  {t('numbers.labelField')}
+                  <span className="text-muted-foreground ml-1">
+                    {t('optional')}
+                  </span>
+                </Label>
+                <Input
+                  placeholder={t('numbers.labelPlaceholder')}
+                  value={label}
+                  maxLength={60}
+                  onChange={(e) => setLabel(e.target.value)}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-muted-foreground">
                   {t('phoneNumberId')}

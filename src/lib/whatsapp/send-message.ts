@@ -35,6 +35,7 @@ import {
   type InteractiveMessagePayload,
 } from '@/lib/whatsapp/interactive';
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption';
+import { loadOfficialNumber } from '@/lib/whatsapp/official-number';
 import {
   sendWahaText,
   toWahaChatId,
@@ -374,15 +375,11 @@ export async function sendMessageToConversation(
   }
 
   async function sendViaCloudApi(): Promise<void> {
-    // WhatsApp config, account-scoped.
-    const { data: config, error: configError } = await db
-      .from('whatsapp_config')
-      .select('*')
-      .eq('account_id', accountId)
-      .eq('is_primary', true)
-      .single();
+    // The official number this conversation talks through (the one the
+    // customer wrote to), else the account's primary.
+    const config = await loadOfficialNumber(db, accountId, conversationId);
 
-    if (configError || !config) {
+    if (!config) {
       throw new SendMessageError(
         'whatsapp_not_configured',
         'WhatsApp not configured. Please set up your WhatsApp integration first.',

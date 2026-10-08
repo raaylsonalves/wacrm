@@ -67,6 +67,18 @@ function supabaseAdmin() {
   return _adminClient
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Which official number a request is about (specs/multi-official-numbers.md):
+ * `?id=<whatsapp_config.id>` names one; without it, the account's primary —
+ * the single-number behaviour every caller had before.
+ */
+function numberIdFrom(request: Request): string | null {
+  const id = new URL(request.url).searchParams.get('id')
+  return id && UUID_RE.test(id) ? id : null
+}
+
 /**
  * Shape every failed Meta call into `{ error, meta }` — the actionable
  * text plus the code / subcode / fbtrace_id / step a user can quote to
@@ -101,9 +113,10 @@ function metaFailure(err: unknown, step: MetaConnectStep, ctx: MetaErrorContext)
  *   { connected: false, reason: 'meta_api_error',   message: '...',
  *     meta: { code, subcode, fbtrace_id, step, field, message } }
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createClient()
+    const numberId = numberIdFrom(request)
 
     const {
       data: { user },
@@ -126,12 +139,14 @@ export async function GET() {
       )
     }
 
-    const { data: config, error: configError } = await supabase
+    let configQuery = supabase
       .from('whatsapp_config')
-      .select('phone_number_id, waba_id, access_token, status')
+      .select('id, phone_number_id, waba_id, access_token, status, display_phone_number')
       .eq('account_id', accountId)
-      .eq('is_primary', true)
-      .maybeSingle()
+    configQuery = numberId
+      ? configQuery.eq('id', numberId)
+      : configQuery.eq('is_primary', true)
+    const { data: config, error: configError } = await configQuery.maybeSingle()
 
     if (configError) {
       console.error('Error fetching whatsapp_config:', configError)
@@ -193,6 +208,18 @@ export async function GET() {
         },
         { status: 200 }
       )
+    }
+
+    // Keep the number's display phone current for the numbers list —
+    // rows saved before migration 113 get it on their first check.
+    if (
+      phoneInfo?.display_phone_number &&
+      phoneInfo.display_phone_number !== config.display_phone_number
+    ) {
+      await supabase
+        .from('whatsapp_config')
+        .update({ display_phone_number: phoneInfo.display_phone_number })
+        .eq('id', config.id)
     }
 
     // Credentials work. Also report whether the WABA is subscribed to
@@ -264,6 +291,18 @@ export async function POST(request: Request) {
 
     const body = await request.json()
     const { phone_number_id, waba_id, access_token, verify_token, pin } = body
+    // Several official numbers per account (specs/multi-official-numbers.md):
+    // `config_id` edits that number, `add: true` saves a NEW one, neither
+    // edits the primary (the single-number behaviour).
+    const configId =
+      typeof body.config_id === 'string' && UUID_RE.test(body.config_id)
+        ? (body.config_id as string)
+        : null
+    const addNumber = body.add === true && !configId
+    const label =
+      typeof body.label === 'string' && body.label.trim()
+        ? body.label.trim().slice(0, 60)
+        : null
 
     if (!access_token || !phone_number_id) {
       return NextResponse.json(
@@ -402,15 +441,43 @@ export async function POST(request: Request) {
       )
     }
 
-    // Look up any pre-existing row for this account so we know whether
-    // this number is already registered with Meta — if so we can skip
-    // /register when the user didn't provide a PIN this time around.
-    const { data: existing } = await supabase
+    // Look up the row being edited so we know whether this number is
+    // already registered with Meta — if so we can skip /register when the
+    // user didn't provide a PIN this time around. Adding a number has no
+    // row yet.
+    let existing: { id: string; registered_at: string | null; phone_number_id: string } | null = null
+    if (!addNumber) {
+      let existingQuery = supabase
+        .from('whatsapp_config')
+        .select('id, registered_at, phone_number_id')
+        .eq('account_id', accountId)
+      existingQuery = configId
+        ? existingQuery.eq('id', configId)
+        : existingQuery.eq('is_primary', true)
+      const { data } = await existingQuery.maybeSingle()
+      existing = data
+      if (configId && !existing) {
+        return NextResponse.json({ error: 'Number not found' }, { status: 404 })
+      }
+    }
+
+    // The same number twice in one account (it is already in the list):
+    // edit that row instead of adding a duplicate.
+    const { data: sameAccountRow } = await supabase
       .from('whatsapp_config')
-      .select('id, registered_at, phone_number_id')
+      .select('id')
       .eq('account_id', accountId)
-      .eq('is_primary', true)
+      .eq('phone_number_id', phone_number_id)
       .maybeSingle()
+    if (sameAccountRow && sameAccountRow.id !== existing?.id) {
+      return NextResponse.json(
+        {
+          code: 'number_already_added',
+          error: 'This number is already connected to this account.',
+        },
+        { status: 409 }
+      )
+    }
 
     const sameNumber =
       existing?.phone_number_id === phone_number_id &&
@@ -502,6 +569,8 @@ export async function POST(request: Request) {
       registered_at: registrationError ? null : registeredAt,
       subscribed_apps_at: subscribedAppsAt ?? null,
       last_registration_error: registrationError,
+      display_phone_number: phoneInfo?.display_phone_number ?? null,
+      ...(label !== null || body.label === '' ? { label } : {}),
       updated_at: new Date().toISOString(),
     }
 
@@ -510,7 +579,7 @@ export async function POST(request: Request) {
         .from('whatsapp_config')
         .update(baseRow)
         .eq('account_id', accountId)
-        .eq('is_primary', true)
+        .eq('id', existing.id)
 
       if (updateError) {
         console.error('Error updating whatsapp_config:', updateError)
@@ -524,11 +593,19 @@ export async function POST(request: Request) {
       // (NOT NULL post-017, UNIQUE so duplicates trip the constraint
       // up-front), `user_id` is the audit column identifying which
       // member of the account saved the config.
+      // The account's first official number becomes its primary; an
+      // added one joins as secondary (one primary per account, 112).
+      const { count: primaryCount } = await supabase
+        .from('whatsapp_config')
+        .select('id', { count: 'exact', head: true })
+        .eq('account_id', accountId)
+        .eq('is_primary', true)
       const { error: insertError } = await supabase
         .from('whatsapp_config')
         .insert({
           account_id: accountId,
           user_id: user.id,
+          is_primary: !primaryCount,
           ...baseRow,
         })
 
@@ -583,18 +660,48 @@ export async function POST(request: Request) {
  * Used by the "Reset Configuration" button to recover from a corrupted
  * encrypted token (mismatched ENCRYPTION_KEY across environments).
  */
-export async function DELETE() {
+export async function DELETE(request: Request) {
   try {
     // Same 'admin' floor as POST — resetting config is the kind of
     // action RLS already restricts to admins; enforce it explicitly so
     // the intent doesn't silently depend on RLS alone.
     const { supabase, accountId } = await requireRole('admin')
+    const numberId = numberIdFrom(request)
+
+    let targetQuery = supabase
+      .from('whatsapp_config')
+      .select('id, is_primary')
+      .eq('account_id', accountId)
+    targetQuery = numberId
+      ? targetQuery.eq('id', numberId)
+      : targetQuery.eq('is_primary', true)
+    const { data: target } = await targetQuery.maybeSingle()
+    if (!target) return NextResponse.json({ success: true })
+
+    // The primary can only go when it is the last number: every "the
+    // account's number" read needs one. Make another number primary first.
+    if (target.is_primary) {
+      const { count: others } = await supabase
+        .from('whatsapp_config')
+        .select('id', { count: 'exact', head: true })
+        .eq('account_id', accountId)
+        .neq('id', target.id)
+      if (others) {
+        return NextResponse.json(
+          {
+            code: 'primary_has_others',
+            error: 'Make another number the primary before removing this one.',
+          },
+          { status: 409 }
+        )
+      }
+    }
 
     const { error: deleteError } = await supabase
       .from('whatsapp_config')
       .delete()
       .eq('account_id', accountId)
-      .eq('is_primary', true)
+      .eq('id', target.id)
 
     if (deleteError) {
       console.error('Error deleting whatsapp_config:', deleteError)
