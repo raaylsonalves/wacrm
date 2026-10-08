@@ -96,7 +96,7 @@ export default function BroadcastsPage() {
 
   useEffect(() => {
     fetchBroadcasts();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   const stats = useMemo(() => {
@@ -112,7 +112,7 @@ export default function BroadcastsPage() {
 
   const anySending = useMemo(
     () => broadcasts.some((b) => b.status === 'sending'),
-    [broadcasts],
+    [broadcasts]
   );
 
   useEffect(() => {
@@ -149,13 +149,11 @@ export default function BroadcastsPage() {
       stopPolling();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchBroadcasts is redefined each render; listing it would re-arm the poller every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchBroadcasts is redefined each render; listing it would re-arm the poller every render
   }, [anySending]);
 
   if (loading) {
-    return (
-<SkeletonPage variant="table" />
-    );
+    return <SkeletonPage variant="table" />;
   }
 
   if (error) {
@@ -177,7 +175,7 @@ export default function BroadcastsPage() {
         <div
           role="progressbar"
           aria-label={t('broadcastInProgress')}
-          className="broadcast-indeterminate fixed inset-x-0 top-0 z-40 h-0.5 overflow-hidden bg-muted"
+          className="broadcast-indeterminate bg-muted fixed inset-x-0 top-0 z-40 h-0.5 overflow-hidden"
         >
           <div className="broadcast-indeterminate-bar bg-foreground h-0.5" />
           <style jsx>{`
@@ -201,10 +199,10 @@ export default function BroadcastsPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-foreground text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">{t('title')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('subtitle')}
-          </p>
+          <h1 className="text-foreground text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">
+            {t('title')}
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">{t('subtitle')}</p>
         </div>
         <GatedButton
           canAct={canCreate}
@@ -218,17 +216,19 @@ export default function BroadcastsPage() {
       </div>
 
       {broadcasts.length === 0 ? (
-        <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-border bg-card">
-          <Radio className="mb-3 h-10 w-10 text-muted-foreground" />
-          <p className="text-sm font-medium text-foreground">{t('noBroadcastsYet')}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+        <div className="border-border bg-card flex h-64 flex-col items-center justify-center rounded-xl border">
+          <Radio className="text-muted-foreground mb-3 h-10 w-10" />
+          <p className="text-foreground text-sm font-medium">
+            {t('noBroadcastsYet')}
+          </p>
+          <p className="text-muted-foreground mt-1 text-xs">
             {t('createFirst')}
           </p>
           <GatedButton
             canAct={canCreate}
             gateReason="createBroadcasts"
             onClick={() => router.push('/broadcasts/new')}
-            className="mt-4 bg-foreground text-background hover:bg-foreground/90"
+            className="bg-foreground text-background hover:bg-foreground/90 mt-4"
           >
             <Plus className="h-4 w-4" />
             {t('newBroadcast')}
@@ -244,11 +244,13 @@ export default function BroadcastsPage() {
             />
             <Stat label={t('stats.readRate')} value={stats.readRate} />
           </div>
-          <ul className="stagger grid gap-2.5 xl:grid-cols-2">
+          {/* grid-cols-1 + min-w-0: a long template name must truncate,
+              not widen the track past the phone screen. */}
+          <ul className="stagger grid grid-cols-1 gap-2.5 xl:grid-cols-2">
             {broadcasts.map((broadcast) => {
               const status = getBroadcastStatus(broadcast.status);
               return (
-                <li key={broadcast.id}>
+                <li key={broadcast.id} className="min-w-0">
                   <button
                     type="button"
                     onClick={() => router.push(`/broadcasts/${broadcast.id}`)}
@@ -297,7 +299,9 @@ export default function BroadcastsPage() {
                           {t('table.recipients')}
                         </div>
                         <div className="text-sm font-extrabold tabular-nums">
-                          {broadcast.total_recipients.toLocaleString(APP_LOCALE)}
+                          {broadcast.total_recipients.toLocaleString(
+                            APP_LOCALE
+                          )}
                         </div>
                       </div>
                       <RateBar
