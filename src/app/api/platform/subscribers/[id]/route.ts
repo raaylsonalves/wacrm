@@ -68,6 +68,33 @@ export async function POST(
       return NextResponse.json({ ok: true });
     }
 
+    // Custom plan: how many WhatsApp numbers the account may connect
+    // (migration 116). null restores the default (1; unlimited if exempt).
+    if (action === 'set_number_limit') {
+      const raw = (body as { limit?: unknown } | null)?.limit;
+      const limit =
+        raw === null || raw === undefined || raw === ''
+          ? null
+          : Number(raw);
+      if (limit !== null && (!Number.isInteger(limit) || limit < 1 || limit > 50)) {
+        return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+      }
+      const { error } = await db
+        .from('accounts')
+        .update({ max_whatsapp_numbers: limit })
+        .eq('id', id);
+      if (error) throw error;
+      void audit({
+        accountId: id,
+        actorUserId: ctx.userId,
+        action: 'billing.number_limit',
+        resourceType: 'account',
+        resourceId: id,
+        metadata: { limit },
+      });
+      return NextResponse.json({ ok: true });
+    }
+
     if (action === 'extend') {
       const days = Number(body?.days);
       if (!Number.isInteger(days) || days < 7 || days > 90) {

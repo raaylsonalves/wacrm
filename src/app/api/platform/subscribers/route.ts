@@ -27,7 +27,7 @@ export async function GET() {
         db
           .from('accounts')
           .select(
-            'id, name, display_name, created_at, subscription_status, managed_by, owner_user_id'
+            'id, name, display_name, created_at, subscription_status, managed_by, owner_user_id, max_whatsapp_numbers'
           )
           .order('created_at', { ascending: false })
           .limit(1000),
@@ -84,6 +84,7 @@ export async function GET() {
             : null,
           managed: !!a.managed_by,
           accountStatus: a.subscription_status as string,
+          maxNumbers: (a.max_whatsapp_numbers as number | null) ?? null,
           subscription: sub && {
             plan: sub.plan as string,
             cycle: sub.cycle as string,

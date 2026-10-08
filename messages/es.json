@@ -730,6 +730,8 @@
       "google": "Google Calendar"
     },
     "subscribers": {
+      "save": "Guardar",
+      "numbers": "Números",
       "testPix": {
         "title": "Pix de prueba (R$ 1,00)",
         "hint": "Verifica las credenciales de producción y el webhook. No acredita ninguna cuenta.",
@@ -2637,6 +2639,7 @@
       "toastClearFailed": "Error al quitar la restricción"
     },
     "waha": {
+      "limitReached": "Tu plan incluye 1 número de WhatsApp. Más números forman parte de un plan a medida — habla con Nordia.",
       "title": "Canales WAHA",
       "description": "Conecta números adicionales de WhatsApp mediante tu propia instancia WAHA — escanea un código QR, sin necesitar verificación de negocio en Meta.",
       "addChannelBtn": "Agregar canal",
@@ -2919,6 +2922,7 @@
     },
     "whatsapp": {
       "numbers": {
+        "limitReached": "Tu plan incluye 1 número de WhatsApp. Más números forman parte de un plan a medida — habla con Nordia.",
         "title": "Números oficiales (API de Meta)",
         "hint": "Cada conversación responde desde el número al que escribió el cliente. El principal se usa cuando aún no hay un número definido.",
         "add": "Agregar número",

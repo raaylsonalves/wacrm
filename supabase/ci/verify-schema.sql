@@ -920,6 +920,12 @@ BEGIN
     RAISE EXCEPTION 'follow-up on_exhaust missing — migration 115 did not apply';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'accounts'
+         AND column_name = 'max_whatsapp_numbers') THEN
+    RAISE EXCEPTION 'number limit missing — migration 116 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

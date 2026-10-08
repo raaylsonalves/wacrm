@@ -190,7 +190,12 @@ export function WahaChannels() {
         }),
       });
       const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.error || 'failed');
+      if (!res.ok)
+        throw new Error(
+          payload?.code === 'number_limit'
+            ? t('limitReached')
+            : payload?.error || 'failed'
+        );
 
       setChannels((prev) => [...prev, payload.channel]);
       setAddOpen(false);

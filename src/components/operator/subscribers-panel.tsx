@@ -21,6 +21,8 @@ interface Subscriber {
   ownerEmail: string | null;
   managed: boolean;
   accountStatus: string;
+  /** Custom WhatsApp number limit; null = plan default (migration 116). */
+  maxNumbers: number | null;
   subscription: {
     plan: string;
     cycle: string;
@@ -297,6 +299,14 @@ export function SubscribersPanel() {
                             </Button>
                           </>
                         )}
+                      <NumberLimit
+                        value={r.maxNumbers}
+                        exempt={r.accountStatus === 'exempt'}
+                        disabled={busy === r.id}
+                        onSave={(limit) =>
+                          act(r.id, { action: 'set_number_limit', limit })
+                        }
+                      />
                       {r.accountStatus === 'exempt' ? (
                         <Button
                           size="sm"
@@ -428,5 +438,50 @@ function TestPix() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * WhatsApp numbers the account may connect: empty = the plan default
+ * (1, or unlimited when exempt); a number = a custom plan's limit.
+ */
+function NumberLimit({
+  value,
+  exempt,
+  disabled,
+  onSave,
+}: {
+  value: number | null;
+  exempt: boolean;
+  disabled: boolean;
+  onSave: (limit: number | null) => void;
+}) {
+  const t = useTranslations('Operator.subscribers');
+  const [draft, setDraft] = useState(value == null ? '' : String(value));
+  const dirty = draft !== (value == null ? '' : String(value));
+  return (
+    <span className="border-border inline-flex items-center gap-1.5 rounded-lg border px-2 py-1">
+      <span className="text-muted-foreground text-xs">{t('numbers')}</span>
+      <input
+        type="number"
+        min={1}
+        max={50}
+        value={draft}
+        placeholder={exempt ? '∞' : '1'}
+        onChange={(e) => setDraft(e.target.value)}
+        className="bg-transparent w-12 text-sm outline-none"
+        aria-label={t('numbers')}
+      />
+      {dirty && (
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={disabled}
+          onClick={() => onSave(draft === '' ? null : Number(draft))}
+        >
+          {t('save')}
+        </Button>
+      )}
+    </span>
   );
 }

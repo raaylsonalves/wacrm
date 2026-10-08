@@ -730,6 +730,8 @@
       "google": "Google 캘린더"
     },
     "subscribers": {
+      "save": "저장",
+      "numbers": "번호",
       "testPix": {
         "title": "테스트 Pix (R$ 1.00)",
         "hint": "운영 자격 증명과 웹훅을 확인합니다. 어떤 계정에도 적립되지 않습니다.",
@@ -2637,6 +2639,7 @@
       "toastClearFailed": "제한 해제에 실패했습니다"
     },
     "waha": {
+      "limitReached": "요금제에는 WhatsApp 번호 1개가 포함됩니다. 추가 번호는 맞춤 요금제로 제공됩니다 — Nordia에 문의하세요.",
       "title": "WAHA 채널",
       "description": "자체 WAHA 인스턴스를 통해 추가 WhatsApp 번호를 연결하세요 — QR 코드를 스캔하면 되고, Meta 비즈니스 인증이 필요 없습니다.",
       "addChannelBtn": "채널 추가",
@@ -2929,6 +2932,7 @@
     },
     "whatsapp": {
       "numbers": {
+        "limitReached": "요금제에는 WhatsApp 번호 1개가 포함됩니다. 추가 번호는 맞춤 요금제로 제공됩니다 — Nordia에 문의하세요.",
         "title": "공식 번호 (Meta API)",
         "hint": "각 대화는 고객이 메시지를 보낸 번호로 답장합니다. 번호가 아직 정해지지 않았으면 기본 번호를 사용합니다.",
         "add": "번호 추가",

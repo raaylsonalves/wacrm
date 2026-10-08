@@ -268,7 +268,7 @@ const PLANS: {
     price: PLAN_MONTHLY_BRL.essencial,
     pitch: 'Para começar a atender com IA.',
     items: [
-      '1 número de WhatsApp',
+      '1 número de WhatsApp (oficial ou próprio)',
       '3 usuários',
       '1 agente de IA',
       'Caixa de entrada e funil',
@@ -282,7 +282,7 @@ const PLANS: {
     hot: true,
     pitch: 'Para equipes que vendem e agendam todo dia.',
     items: [
-      '2 números (oficial e/ou próprio)',
+      '1 número de WhatsApp (oficial ou próprio)',
       '8 usuários',
       '5 agentes de IA e roteador',
       'Prospecção por planilha',
@@ -296,7 +296,7 @@ const PLANS: {
     price: PLAN_MONTHLY_BRL.escala,
     pitch: 'Para operações com vários setores.',
     items: [
-      '5 números',
+      '1 número de WhatsApp (oficial ou próprio)',
       '20 usuários',
       'Agentes de IA ilimitados',
       'API, webhooks e MCP',
@@ -308,7 +308,7 @@ const PLANS: {
 const FAQ = [
   [
     'Preciso de um número novo?',
-    'Não. Use a API oficial da Meta (ideal para escala e disparos) ou conecte o número que você já usa, lendo um QR code. Dá para ter os dois.',
+    'Não. Use a API oficial da Meta (ideal para escala e disparos) ou conecte o número que você já usa, lendo um QR code. Os planos incluem 1 número; para operar com vários números (setores, filiais), fale com a Nordia sobre um plano sob medida.',
   ],
   [
     'A IA responde sozinha o tempo todo?',
@@ -1482,6 +1482,7 @@ export function Landing() {
               <ul style={{ color: '#3d3a35' }}>
                 {[
                   'Tudo do plano Escala',
+                  'Vários números de WhatsApp oficiais',
                   'Módulos e telas novas',
                   'Landing page e agendamento próprios',
                   'Instalação no seu servidor',

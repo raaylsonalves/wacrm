@@ -168,8 +168,15 @@ Etapa 2 e 3: a detalhar ao começar cada uma.
 
 ## Risks / open questions
 
-- **Preço/pacotes:** quantos números oficiais por plano e se número extra é
-  vendido à parte — decisão comercial, necessária só na etapa 3.
+- ~~Preço/pacotes~~ — decidido em 2026-10-08: os planos padrão (Essencial,
+  Profissional, Escala) incluem **1 número** de WhatsApp, oficial OU por QR;
+  mais números só no plano **sob medida**. Migration **116**:
+  `accounts.max_whatsapp_numbers` (NULL = padrão: 1; ilimitado se a conta é
+  `exempt`), definido pela plataforma no painel de Assinantes
+  (`set_number_limit`). `lib/billing/number-limit.ts` conta oficiais + WAHA
+  e é checado ao ADICIONAR um número em `/api/whatsapp/config` e
+  `/api/whatsapp/waha/channels` (código `number_limit`). Landing atualizada
+  (1 número em todos os planos; "vários números" no sob medida).
 - **Modelos entre WABAs diferentes:** dois números em WABAs diferentes têm
   modelos separados; a tela de modelos hoje assume uma WABA por conta.
 - **Teste real:** validar etapa 2 exige um segundo número registrado na Meta.

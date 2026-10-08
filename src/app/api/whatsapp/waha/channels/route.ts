@@ -13,6 +13,8 @@
 
 import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
+import { canAddWhatsappNumber } from '@/lib/billing/number-limit';
+import { supabaseAdmin as numberLimitDb } from '@/lib/ai/admin-client';
 
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
 import { audit } from '@/lib/audit';
@@ -121,6 +123,20 @@ export async function POST(request: Request) {
 
     if (!label) {
       return NextResponse.json({ error: 'label is required' }, { status: 400 });
+    }
+
+    // Standard plans include one WhatsApp number (official or own); more
+    // is a custom deal (migration 116).
+    const room = await canAddWhatsappNumber(numberLimitDb(), ctx.accountId);
+    if (!room.allowed) {
+      return NextResponse.json(
+        {
+          code: 'number_limit',
+          error:
+            'Your plan includes one WhatsApp number. More numbers are part of a custom plan — talk to us.',
+        },
+        { status: 409 }
+      );
     }
 
     // Both omitted → resolve an instance without asking again, same

@@ -411,6 +411,7 @@ export function WhatsAppConfig({
         if (data.code === 'phone_in_use') data.error = t('phoneInUse');
         if (data.code === 'number_already_added')
           data.error = t('numbers.alreadyAdded');
+        if (data.code === 'number_limit') data.error = t('numbers.limitReached');
         // The route names the failing step and which field to check
         // (issue #505). Keep the details on screen — a toast is too
         // short-lived to copy a trace id out of.

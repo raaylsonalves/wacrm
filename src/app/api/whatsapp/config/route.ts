@@ -27,6 +27,7 @@ import {
   phoneNumberBelongsToWaba,
 } from '@/lib/whatsapp/waba-pairing'
 import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
+import { canAddWhatsappNumber } from '@/lib/billing/number-limit'
 
 /**
  * Resolve the caller's account_id from their profile. Inlined here
@@ -469,6 +470,22 @@ export async function POST(request: Request) {
       .eq('account_id', accountId)
       .eq('phone_number_id', phone_number_id)
       .maybeSingle()
+    // A NEW number (not an edit) must fit the plan: standard plans include
+    // one WhatsApp number, more is a custom deal (migration 116).
+    if (!existing) {
+      const room = await canAddWhatsappNumber(supabaseAdmin(), accountId)
+      if (!room.allowed) {
+        return NextResponse.json(
+          {
+            code: 'number_limit',
+            error:
+              'Your plan includes one WhatsApp number. More numbers are part of a custom plan — talk to us.',
+          },
+          { status: 409 }
+        )
+      }
+    }
+
     if (sameAccountRow && sameAccountRow.id !== existing?.id) {
       return NextResponse.json(
         {
