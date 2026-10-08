@@ -132,6 +132,14 @@ type InboxFilter =
 
 const SNOOZE_PRESETS: SnoozePreset[] = ['1h', '3h', 'tomorrow'];
 
+/**
+ * Conversations per page. The list starts with the most recent page and
+ * fetches the next one as the agent scrolls to the end (infinite scroll),
+ * so an account with thousands of threads neither loads them all nor
+ * silently stops at PostgREST's 1000-row cap.
+ */
+const PAGE_SIZE = 100;
+
 export function ConversationList({
   activeConversationId,
   onSelect,
@@ -239,37 +247,70 @@ export function ConversationList({
     onConversationsLoadedRef.current = onConversationsLoaded;
   });
 
+  // Latest list, read by loadMore without re-creating it on every update.
+  const conversationsRef = useRef(conversations);
   useEffect(() => {
-    const supabase = createClient();
+    conversationsRef.current = conversations;
+  });
+
+  // How many rows the server has handed us, i.e. the offset of the next
+  // page. Offset (not keyset) is safe here: a thread only moves UP the
+  // order when it gets a new message, and realtime already puts it at the
+  // top; anything else shifting down just repeats a row, which the id
+  // de-duplication below drops.
+  const loadedRef = useRef(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+
+  const fetchPage = useCallback(async (from: number) => {
+    const { data, error } = await createClient()
+      .from('conversations')
+      .select(CONVERSATION_SELECT)
+      .order('last_message_at', { ascending: false, nullsFirst: false })
+      .order('id', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) {
+      // Supabase errors have non-enumerable properties — log fields explicitly
+      console.error('Failed to fetch conversations:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      return null;
+    }
+    return data ?? [];
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     (async () => {
-      // Ordered most-recent-first, so PostgREST's own row cap (1000 by
-      // default) drops the oldest/least-active conversations rather
-      // than the ones an agent actually needs to see — the safe
-      // direction to truncate in. Explicit for clarity; there's no
-      // "load more" UI yet for an account past this size.
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(CONVERSATION_SELECT)
-        .order('last_message_at', { ascending: false })
-        .limit(1000);
-
+      const rows = await fetchPage(0);
       if (cancelled) return;
-
-      if (error) {
-        // Supabase errors have non-enumerable properties — log fields explicitly
-        console.error('Failed to fetch conversations:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-        });
+      if (!rows) {
         setLoading(false);
         return;
       }
+      let list = normalizeConversations(rows);
 
-      onConversationsLoadedRef.current(normalizeConversations(data ?? []));
+      // A deep link (?c=<id>) to an older thread outside the first page:
+      // fetch it on its own so the parent can still open it.
+      const deepId = new URLSearchParams(window.location.search).get('c');
+      if (deepId && !list.some((c) => c.id === deepId)) {
+        const { data } = await createClient()
+          .from('conversations')
+          .select(CONVERSATION_SELECT)
+          .eq('id', deepId)
+          .maybeSingle();
+        if (cancelled) return;
+        if (data) list = [...list, ...normalizeConversations([data])];
+      }
+
+      loadedRef.current = rows.length;
+      setHasMore(rows.length === PAGE_SIZE);
+      onConversationsLoadedRef.current(list);
       setLoading(false);
     })();
 
@@ -279,7 +320,45 @@ export function ConversationList({
     // `resyncToken` is included so the parent can force a refetch when
     // the realtime channel reconnects or the tab regains focus — catches
     // up on any events sent while the WS was disconnected or throttled.
-  }, [resyncToken]);
+    // It restarts from the first page.
+  }, [resyncToken, fetchPage]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const rows = await fetchPage(loadedRef.current);
+      if (!rows) return;
+      loadedRef.current += rows.length;
+      setHasMore(rows.length === PAGE_SIZE);
+      const current = conversationsRef.current;
+      const seen = new Set(current.map((c) => c.id));
+      const fresh = normalizeConversations(rows).filter((c) => !seen.has(c.id));
+      if (fresh.length > 0)
+        onConversationsLoadedRef.current([...current, ...fresh]);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [fetchPage]);
+
+  // The sentinel at the end of the list: when it scrolls into view, fetch
+  // the next page. With a filter or search that hides most rows it stays
+  // in view, so pages keep coming until the screen fills or none are left.
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore || loading) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) void loadMore();
+      },
+      { rootMargin: '400px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, loadMore]);
 
   // Teammates for the context menu's "assign" submenu — same query
   // MessageThread runs for its own assign dropdown (see that file for
@@ -937,6 +1016,7 @@ export function ConversationList({
             <p className="text-muted-foreground text-sm">
               {t('noConversations')}
             </p>
+            {hasMore && <div ref={sentinelRef} className="h-px" />}
           </div>
         ) : (
           <div className="stagger flex flex-col gap-2 px-3 pb-3 lg:gap-0.5 lg:p-1.5">
@@ -976,6 +1056,17 @@ export function ConversationList({
                 }
               />
             ))}
+            {hasMore && (
+              <div
+                ref={sentinelRef}
+                className="flex justify-center py-3"
+                aria-hidden
+              >
+                {loadingMore && (
+                  <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                )}
+              </div>
+            )}
           </div>
         )}
       </ScrollArea>
