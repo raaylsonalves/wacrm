@@ -90,3 +90,56 @@ describe('buildConversationContext', () => {
     expect(out).toEqual([{ role: 'assistant', content: 'Encontrei esses horários livres:' }])
   })
 })
+
+describe('buildConversationContext — author labels', () => {
+  /** messages → rows; ai_configs .in() → the agents' names. */
+  function labelledDb(rows: unknown[], agents: { id: string; name: string }[]) {
+    return {
+      from: (table: string) => {
+        const chain = {
+          select: () => chain,
+          eq: () => chain,
+          order: () => chain,
+          in: () =>
+            table === 'ai_configs'
+              ? Promise.resolve({ data: agents, error: null })
+              : chain,
+          limit: () => Promise.resolve({ data: rows, error: null }),
+        }
+        return chain
+      },
+    } as unknown as SupabaseClient
+  }
+
+  // Newest first, as the DB returns them.
+  const rows = [
+    { sender_type: 'bot', content_text: 'mine', ai_generated: true, ai_agent_id: 'me' },
+    { sender_type: 'bot', content_text: 'sales said', ai_generated: true, ai_agent_id: 'sales' },
+    { sender_type: 'agent', content_text: 'human said' },
+    { sender_type: 'bot', content_text: 'auto said', ai_generated: false },
+    { sender_type: 'bot', content_text: 'old ai', ai_generated: true, ai_agent_id: null },
+    { sender_type: 'customer', content_text: 'hi' },
+  ]
+
+  it('labels turns this agent did not write, by author', async () => {
+    const out = await buildConversationContext(
+      labelledDb(rows, [{ id: 'sales', name: 'Vendas' }]),
+      'conv-1',
+      undefined,
+      { selfAgentId: 'me' }
+    )
+    expect(out.map((m) => m.content)).toEqual([
+      'hi',
+      'old ai',
+      '[enviada por uma automação] auto said',
+      '[enviada por um atendente humano] human said',
+      '[enviada pelo agente "Vendas"] sales said',
+      'mine',
+    ])
+  })
+
+  it('leaves the transcript plain for callers that do not ask', async () => {
+    const out = await buildConversationContext(labelledDb(rows, []), 'conv-1')
+    expect(out.every((m) => !m.content.startsWith('[enviada'))).toBe(true)
+  })
+})

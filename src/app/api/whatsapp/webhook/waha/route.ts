@@ -17,6 +17,7 @@
 // ============================================================
 
 import { NextResponse, after } from 'next/server';
+import { findConversationOnNumber } from '@/lib/whatsapp/conversation-number';
 
 import { decrypt } from '@/lib/whatsapp/encryption';
 import { fromWahaChatId } from '@/lib/whatsapp/waha-api';
@@ -132,19 +133,19 @@ async function handleMessage(
   }
   if (!contact) return;
 
-  const { data: existingConvRows, error: convFindErr } = await db
-    .from('conversations')
-    .select('*')
-    .eq('account_id', accountId)
-    .eq('contact_id', contact.id)
-    .order('created_at', { ascending: true })
-    .limit(1);
-  if (convFindErr) {
+  // One conversation per (contact, number) — migration 114: this
+  // channel's thread with the contact, not whichever thread is oldest.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- a conversations row, as before
+  let conversation: ({ id: string } & Record<string, any>) | null = null;
+  try {
+    conversation = await findConversationOnNumber(db, accountId, contact.id, {
+      channelId: channel.id,
+      configId: null,
+    });
+  } catch (convFindErr) {
     console.error('[webhook/waha] conversation lookup failed:', convFindErr);
     return;
   }
-
-  let conversation = existingConvRows?.[0] ?? null;
   let conversationCreated = false;
   if (!conversation) {
     const { data: newConv, error: convInsertErr } = await db
@@ -166,16 +167,8 @@ async function handleMessage(
     }
     conversation = newConv;
     conversationCreated = true;
-  } else if (!conversation.whatsapp_channel_id) {
-    // First message on a pre-existing (e.g. manually created)
-    // conversation that had no channel yet — bind it now so outbound
-    // replies know to go back out over WAHA.
-    await db
-      .from('conversations')
-      .update({ whatsapp_channel_id: channel.id })
-      .eq('id', conversation.id);
-    conversation.whatsapp_channel_id = channel.id;
   }
+  if (!conversation) return;
 
   if (conversationCreated) {
     await dispatchWebhookEvent(db, accountId, 'conversation.created', {

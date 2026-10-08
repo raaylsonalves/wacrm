@@ -755,11 +755,19 @@ async function runStep(
         if (!member) return { key: 'agentNotMember', params: { agentId } };
       }
       if (!agentId) return { key: 'noAgentResolved' };
-      await db
-        .from('conversations')
-        .update({ assigned_agent_id: agentId })
-        .eq('account_id', args.automation.account_id)
-        .eq('contact_id', args.contactId);
+      // The conversation that triggered the run when there is one (a
+      // contact can have a thread per number, migration 114); otherwise
+      // every thread of the contact, as before.
+      {
+        let assign = db
+          .from('conversations')
+          .update({ assigned_agent_id: agentId })
+          .eq('account_id', args.automation.account_id);
+        assign = args.context.conversation_id
+          ? assign.eq('id', args.context.conversation_id)
+          : assign.eq('contact_id', args.contactId);
+        await assign;
+      }
       return { key: 'assignedTo', params: { agentId } };
     }
 
@@ -898,11 +906,17 @@ async function runStep(
     case 'close_conversation': {
       if (!args.contactId)
         throw new Error('close_conversation needs a contact');
-      await db
-        .from('conversations')
-        .update({ status: 'closed', updated_at: new Date().toISOString() })
-        .eq('account_id', args.automation.account_id)
-        .eq('contact_id', args.contactId);
+      // Same scoping as assign: the triggering thread, else all of them.
+      {
+        let close = db
+          .from('conversations')
+          .update({ status: 'closed', updated_at: new Date().toISOString() })
+          .eq('account_id', args.automation.account_id);
+        close = args.context.conversation_id
+          ? close.eq('id', args.context.conversation_id)
+          : close.eq('contact_id', args.contactId);
+        await close;
+      }
       return { key: 'conversationClosed' };
     }
 
@@ -947,11 +961,17 @@ async function resolveConversationId(args: ExecuteArgs): Promise<string> {
   }
   if (!args.contactId)
     throw new Error('cannot resolve conversation: no contact');
+  // A contact can have one conversation per number (migration 114); a
+  // send with no conversation in context (tag added, schedule) continues
+  // the most recent one. `.maybeSingle()` here used to throw outright
+  // once a contact had two threads.
   const { data, error } = await supabaseAdmin()
     .from('conversations')
     .select('id')
     .eq('account_id', args.automation.account_id)
     .eq('contact_id', args.contactId)
+    .order('last_message_at', { ascending: false, nullsFirst: false })
+    .limit(1)
     .maybeSingle();
   if (error) throw new Error(`conversation lookup failed: ${error.message}`);
   if (!data?.id) {

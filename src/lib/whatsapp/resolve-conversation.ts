@@ -19,6 +19,11 @@
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  findConversationOnNumber,
+  defaultNumber,
+  numberColumns,
+} from '@/lib/whatsapp/conversation-number';
 
 import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe';
 import { sanitizePhoneForMeta, isValidE164 } from '@/lib/whatsapp/phone-utils';
@@ -165,21 +170,25 @@ async function findOrCreateConversationRow(
   contactId: string,
   ownerUserId: string
 ): Promise<string> {
-  const { data: existing, error: findErr } = await db
-    .from('conversations')
-    .select('id')
-    .eq('account_id', accountId)
-    .eq('contact_id', contactId)
-    .order('created_at', { ascending: true })
-    .limit(1);
-
-  if (findErr) {
+  // Sending by phone goes out the account's primary official number:
+  // the contact's conversation on that number (migration 114).
+  const number = await defaultNumber(db, accountId);
+  let existing: { id: string } | null;
+  try {
+    existing = await findConversationOnNumber<{ id: string }>(
+      db,
+      accountId,
+      contactId,
+      number,
+      'id'
+    );
+  } catch (findErr) {
     console.error('[resolve-conversation] conversation lookup error:', findErr);
     throw new SendMessageError('db_error', 'Failed to resolve conversation', 500);
   }
 
-  if (existing && existing.length > 0) {
-    return existing[0].id;
+  if (existing) {
+    return existing.id;
   }
 
   const { data: newConv, error: convErr } = await db
@@ -188,21 +197,22 @@ async function findOrCreateConversationRow(
       account_id: accountId,
       user_id: ownerUserId,
       contact_id: contactId,
+      ...numberColumns(number),
     })
     .select('id')
     .single();
 
   if (convErr || !newConv) {
     if (isUniqueViolation(convErr)) {
-      const { data: raced } = await db
-        .from('conversations')
-        .select('id')
-        .eq('account_id', accountId)
-        .eq('contact_id', contactId)
-        .order('created_at', { ascending: true })
-        .limit(1);
-      if (raced && raced.length > 0) {
-        return raced[0].id;
+      const raced = await findConversationOnNumber<{ id: string }>(
+        db,
+        accountId,
+        contactId,
+        number,
+        'id'
+      ).catch(() => null);
+      if (raced) {
+        return raced.id;
       }
     }
     console.error('[resolve-conversation] conversation create error:', convErr);

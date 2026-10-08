@@ -1,13 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadAiConfig } from './config'
 import type { AiConfig } from './types'
+import { primaryConfigId } from '@/lib/whatsapp/conversation-number'
 
 /**
  * The agent bound to a number, or null when the number has none
  * (specs/ai-agents-management.md; migration 074).
  *
- * `channelId` follows the repo-wide convention: NULL is the account's
- * Cloud API number, a uuid is a WAHA channel.
+ * `channelId` follows the repo-wide convention: NULL is the official
+ * (Cloud API) side, a uuid is a WAHA channel. On the official side,
+ * `configId` names WHICH official number (migration 114): its own binding
+ * wins, then the legacy account-wide "Cloud API" row. NULL configId is
+ * the primary number.
  *
  * Never throws: a lookup failure reads as "no binding", so the caller
  * falls straight through to the router / default agent — a hiccup here
@@ -17,16 +21,38 @@ export async function loadChannelAgentId(
   db: SupabaseClient,
   accountId: string,
   channelId: string | null,
+  configId: string | null = null,
 ): Promise<string | null> {
   try {
-    let query = db
+    if (channelId) {
+      const { data, error } = await db
+        .from('ai_channel_agents')
+        .select('agent_id')
+        .eq('account_id', accountId)
+        .eq('channel_id', channelId)
+        .maybeSingle()
+      if (error || !data) return null
+      return (data as { agent_id: string }).agent_id
+    }
+    const numberId = configId ?? (await primaryConfigId(db, accountId))
+    if (numberId) {
+      const { data } = await db
+        .from('ai_channel_agents')
+        .select('agent_id')
+        .eq('account_id', accountId)
+        .is('channel_id', null)
+        .eq('whatsapp_config_id', numberId)
+        .maybeSingle()
+      if (data) return (data as { agent_id: string }).agent_id
+    }
+    const { data: legacy } = await db
       .from('ai_channel_agents')
       .select('agent_id')
       .eq('account_id', accountId)
-    query = channelId ? query.eq('channel_id', channelId) : query.is('channel_id', null)
-    const { data, error } = await query.maybeSingle()
-    if (error || !data) return null
-    return (data as { agent_id: string }).agent_id
+      .is('channel_id', null)
+      .is('whatsapp_config_id', null)
+      .maybeSingle()
+    return (legacy as { agent_id: string } | null)?.agent_id ?? null
   } catch {
     return null
   }
@@ -44,14 +70,19 @@ export async function loadConversationAgentId(
   try {
     const { data: conv } = await db
       .from('conversations')
-      .select('whatsapp_channel_id, pinned_ai_agent_id')
+      .select('whatsapp_channel_id, whatsapp_config_id, pinned_ai_agent_id')
       .eq('id', conversationId)
       .eq('account_id', accountId)
       .maybeSingle()
     if (!conv) return null
     return (
       (conv.pinned_ai_agent_id as string | null) ??
-      (await loadChannelAgentId(db, accountId, (conv.whatsapp_channel_id as string | null) ?? null))
+      (await loadChannelAgentId(
+        db,
+        accountId,
+        (conv.whatsapp_channel_id as string | null) ?? null,
+        (conv.whatsapp_config_id as string | null) ?? null,
+      ))
     )
   } catch {
     return null

@@ -95,23 +95,17 @@ vi.mock('@supabase/supabase-js', () => ({
             }),
           }
         }
-        case 'conversations':
-          // findOrCreateConversation: select().eq().eq().order().limit()
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  order: () => ({
-                    limit: () =>
-                      Promise.resolve({
-                        data: [h.state.conversation],
-                        error: null,
-                      }),
-                  }),
-                }),
-              }),
-            }),
-          }
+        case 'conversations': {
+          // findConversationOnNumber (lib/whatsapp/conversation-number):
+          // select().eq()…is()…eq().order().limit() — any filter order.
+          const chain: Record<string, unknown> = {}
+          chain.eq = () => chain
+          chain.is = () => chain
+          chain.order = () => chain
+          chain.limit = () =>
+            Promise.resolve({ data: [h.state.conversation], error: null })
+          return { select: () => chain }
+        }
         case 'broadcast_recipients':
           // Two chains land here:
           //   flagBroadcastReplyIfAny: select().eq().eq().in().order().limit()

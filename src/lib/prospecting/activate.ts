@@ -6,6 +6,11 @@
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import {
+  findConversationOnNumber,
+  defaultNumber,
+  numberColumns,
+} from '@/lib/whatsapp/conversation-number'
 import { resolveAuditUserId } from '@/lib/api/v1/contacts'
 import { normalizeImportPhone } from '@/lib/contacts/br-phone'
 import type { CampaignConfig } from './logic'
@@ -186,13 +191,16 @@ export async function prepareCandidate(
   if (!c || c.opted_out_at) return { ok: false, reason: 'opted_out' }
   const ownerUserId = await resolveAuditUserId(db, accountId)
 
-  const { data: conv } = await db
-    .from('conversations')
-    .select('id')
-    .eq('account_id', accountId)
-    .eq('contact_id', c.id)
-    .maybeSingle()
-  let conversationId = conv?.id as string | undefined
+  // The contact's conversation on the campaign's number (migration 114).
+  const number = await defaultNumber(db, accountId, config.channel_id ?? null)
+  const conv = await findConversationOnNumber<{ id: string }>(
+    db,
+    accountId,
+    c.id,
+    number,
+    'id'
+  )
+  let conversationId = conv?.id
   if (conversationId) {
     const { count } = await db
       .from('messages')
@@ -210,7 +218,7 @@ export async function prepareCandidate(
         account_id: accountId,
         user_id: ownerUserId,
         contact_id: c.id,
-        whatsapp_channel_id: config.channel_id,
+        ...numberColumns(number),
         pinned_ai_agent_id: config.agent_id,
       })
       .select('id')

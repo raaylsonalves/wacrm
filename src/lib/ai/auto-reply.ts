@@ -2,7 +2,12 @@ import { supabaseAdmin } from './admin-client'
 import { adminsFor, notifyUsers, teamForConversation } from '@/lib/notifications/notify'
 import { loadAiConfig } from './config'
 import { loadActiveRouterForChannel, resolveAgentViaRouter } from './router'
-import { buildConversationContext, AUDIO_MARK } from './context'
+import {
+  buildConversationContext,
+  AUDIO_MARK,
+  AUTHOR_MARK_PREFIX,
+  AUTHOR_MARKS_PROMPT,
+} from './context'
 import { loadChannelAgentId } from './channel-agent'
 import { matchHandoffKeyword } from './handoff-keywords'
 import { splitLongText } from './split-long'
@@ -192,12 +197,17 @@ async function loadOwningAgent(
   try {
     const { data: conv } = await db
       .from('conversations')
-      .select('whatsapp_channel_id, pinned_ai_agent_id')
+      .select('whatsapp_channel_id, whatsapp_config_id, pinned_ai_agent_id')
       .eq('id', conversationId)
       .maybeSingle()
     const agentId =
       (conv?.pinned_ai_agent_id as string | null) ??
-      (await loadChannelAgentId(db, accountId, (conv?.whatsapp_channel_id as string | null) ?? null))
+      (await loadChannelAgentId(
+        db,
+        accountId,
+        (conv?.whatsapp_channel_id as string | null) ?? null,
+        (conv?.whatsapp_config_id as string | null) ?? null,
+      ))
     return agentId ? await loadAiConfig(db, accountId, { agentId }) : null
   } catch (err) {
     console.warn(`${tag} owning agent could not be loaded:`, err)
@@ -428,7 +438,7 @@ export async function dispatchInboundToAiReply(
     const { data: conv, error: convErr } = await db
       .from('conversations')
       .select(
-        'assigned_agent_id, ai_autoreply_disabled, ai_reply_count, whatsapp_channel_id, active_ai_agent_id, pinned_ai_agent_id',
+        'assigned_agent_id, ai_autoreply_disabled, ai_reply_count, whatsapp_channel_id, whatsapp_config_id, active_ai_agent_id, pinned_ai_agent_id',
       )
       .eq('id', conversationId)
       .maybeSingle()
@@ -521,10 +531,13 @@ export async function dispatchInboundToAiReply(
     // client's persona is worse than not answering (a human still sees the
     // message).
     if (!routed) {
+      // The agent bound to this conversation's number — each official
+      // number can have its own (migration 114).
       const boundId = await loadChannelAgentId(
         db,
         accountId,
         conv.whatsapp_channel_id ?? null,
+        conv.whatsapp_config_id ?? null,
       )
       if (boundId && boundId !== config.id) {
         let bound: AiConfig | null = null
@@ -611,6 +624,7 @@ export async function dispatchInboundToAiReply(
               contactId,
               text: retryText,
               aiGenerated: true,
+              aiAgentId: config.id ?? null,
             })
             asked = true
           } catch (sendErr) {
@@ -657,7 +671,11 @@ export async function dispatchInboundToAiReply(
       Object.assign(conv, fresh)
     }
 
-    const messages = await buildConversationContext(db, conversationId)
+    // Labelled per author (human, another agent) so this agent keeps its
+    // own role when the conversation changed hands.
+    const messages = await buildConversationContext(db, conversationId, undefined, {
+      selfAgentId: config.id ?? null,
+    })
     if (messages.length === 0) {
       console.info(`${tag} skipped: no text/interactive messages to build context from`)
       return
@@ -720,6 +738,7 @@ export async function dispatchInboundToAiReply(
                   contactId,
                   text: reply,
                   aiGenerated: true,
+                  aiAgentId: config.id ?? null,
                 })
               } catch (sendErr) {
                 console.error(`${tag} could not send the thanks reply:`, sendErr)
@@ -800,6 +819,9 @@ export async function dispatchInboundToAiReply(
         ? agendaClockText(new Date(), await loadAppointmentSettings(db, accountId))
         : null,
     })
+    if (messages.some((m) => m.role === 'assistant' && m.content.startsWith(AUTHOR_MARK_PREFIX))) {
+      systemPrompt = `${systemPrompt}\n\n${AUTHOR_MARKS_PROMPT}`
+    }
 
     // Agenda tools (specs/ai-agenda-tool-calling.md) are opt-in per
     // account and auto-reply-only — draft/playground never build these,
@@ -1145,6 +1167,7 @@ export async function dispatchInboundToAiReply(
           contactId,
           text: segments[i],
           aiGenerated: true,
+          aiAgentId: config.id ?? null,
         })
       try {
         try {

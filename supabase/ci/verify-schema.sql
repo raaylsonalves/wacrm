@@ -899,6 +899,20 @@ BEGIN
     RAISE EXCEPTION 'official numbers management missing — migration 113 did not apply';
   END IF;
 
+  IF to_regclass('public.idx_conversations_account_contact_number') IS NULL
+     OR to_regclass('public.idx_ai_channel_agents_number') IS NULL
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'ai_agent_id')
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'ai_channel_agents' AND column_name = 'whatsapp_config_id') THEN
+    RAISE EXCEPTION 'conversation per number missing — migration 114 did not apply';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public'
+       AND indexname = 'idx_conversations_account_contact'
+       AND indexdef ILIKE '%UNIQUE%') THEN
+    RAISE EXCEPTION 'conversations still one-per-contact — migration 114 did not replace the unique index';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

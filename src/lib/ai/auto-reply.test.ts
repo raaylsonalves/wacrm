@@ -125,6 +125,15 @@ vi.mock('./admin-client', () => ({
         }
         return chain
       }
+      if (table === 'whatsapp_config') {
+        // primaryConfigId: .select().eq().eq().maybeSingle() → no number
+        const chain = {
+          select: () => chain,
+          eq: () => chain,
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
+        }
+        return chain
+      }
       if (table === 'ai_channel_agents') {
         // .select().eq().is()|eq().maybeSingle() → the bound agent, if any
         const chain = {

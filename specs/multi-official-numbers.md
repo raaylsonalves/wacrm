@@ -1,6 +1,6 @@
 # Spec: Vários números oficiais (Meta Cloud API) por conta
 
-**Status (2026-10-08): etapas 1 e 2 implementadas (migrations 112–113). Etapa 3 pendente.**
+**Status (2026-10-08): etapas 1, 2 e 2b implementadas (migrations 112–114). Etapa 3 pendente.**
 
 ## Problem
 
@@ -17,10 +17,9 @@ pensar em pacotes com mais de um número.
 
 - **Mudar o WAHA.** Os números não oficiais (`whatsapp_waha_channels`,
   `specs/waha-channel-connection.md`) continuam como estão.
-- **Uma conversa por número.** Continua UMA conversa por (conta, contato)
-  (`idx_conversations_account_contact`). A conversa guarda por qual número
-  oficial ela está falando; se o cliente escrever para outro número, a
-  conversa passa a falar por ele (como o WAHA já faz com `whatsapp_channel_id`).
+- ~~Uma conversa por número~~ — revisto na etapa 2b (abaixo): no teste real,
+  o mesmo contato escrevendo para os dois números trocava a conversa de
+  número; o esperado (como no WhatsApp Business) é uma conversa por número.
 - **Embedded Signup / onboarding da Meta.** O cadastro do número continua
   manual (phone_number_id, WABA, token), como hoje.
 - **Preço dos pacotes.** O limite de números por plano entra na etapa 3; os
@@ -111,6 +110,39 @@ cadastrar o segundo número para testar.)
   ganhou o campo "Nome do número". Sem número algum, a tela é a de antes.
 - Ainda não: roteamento de responsáveis por número oficial
   (`specs/channel-routing-responsibles.md`) — fica para a etapa 3.
+
+### Etapa 2b — uma conversa por (contato, número) e IA por número
+
+Decidido com o dono do produto em 2026-10-08, após o teste com dois números.
+
+- Migration **114**: o índice único de conversas passa de (conta, contato)
+  para (conta, contato, número) — número = `coalesce(whatsapp_channel_id,
+  whatsapp_config_id)`. Vale para oficiais e WAHA. Conversas existentes
+  ficam como estão.
+- `lib/whatsapp/conversation-number.ts` (`findConversationOnNumber`,
+  `defaultNumber`, `numberColumns`) é o único find-or-create de conversa:
+  webhook oficial, webhook WAHA, disparos (`broadcast-record`), prospecção,
+  API pública/MCP (`resolve-conversation`, número principal) e envio a um
+  contato pelo CRM (conversa mais recente; sem nenhuma, o principal). Uma
+  conversa oficial anterior à 114 sem número é adotada pelo número que a
+  procurar.
+- A conversa não troca mais de número: o webhook só procura/cria a do
+  número que recebeu.
+- Automações: sem conversa no contexto (gatilho de etiqueta/agenda), usam a
+  conversa mais recente do contato (o `.maybeSingle()` antigo quebraria com
+  duas). "Atribuir" e "fechar conversa" agem na conversa do gatilho; sem
+  ela, em todas as do contato.
+- IA por número oficial: `ai_channel_agents.whatsapp_config_id`; a ligação
+  antiga "API oficial" migrou para o número principal. `loadChannelAgentId`
+  recebe o número; a tela de Agentes lista um slot por número oficial
+  (`cfg:<id>`). Roteadores continuam por "API oficial" como um todo.
+- Autor nas mensagens: `messages.ai_agent_id` (gravado nos envios da IA).
+  No contexto da resposta automática, mensagens da empresa que o agente não
+  escreveu vêm marcadas — "[enviada por um atendente humano]", "[enviada
+  pelo agente "X"]", "[enviada por uma automação]" — com uma linha no
+  prompt explicando as marcas, para o agente manter seu papel.
+- Pendente: a ficha do contato listar as conversas por número (hoje os
+  atalhos "abrir conversa" levam à mais recente).
 
 ### Etapa 3 — configurações, disparos, plano
 

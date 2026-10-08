@@ -72,6 +72,9 @@ interface SendTextEngineArgs {
    *  badges it as an AI reply. Only the auto-reply bot sets this;
    *  deterministic Flow/automation sends leave it false. */
   aiGenerated?: boolean;
+  /** The AI agent that wrote it (migration 114) — lets a later
+   *  agent tell its own turns from another agent's. */
+  aiAgentId?: string | null;
 }
 
 /**
@@ -160,6 +163,7 @@ export async function engineSendText(
     message_id: waMessageId,
     status: 'sent',
     ai_generated: args.aiGenerated ?? false,
+    ai_agent_id: args.aiAgentId ?? null,
   });
   if (msgErr) {
     throw new Error(`sent to Meta but DB insert failed: ${msgErr.message}`);
@@ -191,6 +195,9 @@ interface SendMediaEngineArgs {
   filename?: string;
   /** Marks the row `ai_generated` (the AI's voice replies). */
   aiGenerated?: boolean;
+  /** The AI agent that wrote it (migration 114) — lets a later
+   *  agent tell its own turns from another agent's. */
+  aiAgentId?: string | null;
 }
 
 /**
@@ -287,6 +294,7 @@ export async function engineSendMedia(
     message_id: waMessageId,
     status: 'sent',
     ai_generated: args.aiGenerated ?? false,
+    ai_agent_id: args.aiAgentId ?? null,
   });
   if (msgErr) {
     throw new Error(`sent to Meta but DB insert failed: ${msgErr.message}`);
@@ -318,6 +326,9 @@ interface SendInteractiveButtonsEngineArgs {
    *  AI auto-reply agent's agenda tools so the webhook can tell an AI-
    *  sent prompt apart from a Flow's when a later reply taps it. */
   aiGenerated?: boolean;
+  /** The AI agent that wrote it (migration 114) — lets a later
+   *  agent tell its own turns from another agent's. */
+  aiAgentId?: string | null;
 }
 
 interface SendInteractiveListEngineArgs {
@@ -332,6 +343,9 @@ interface SendInteractiveListEngineArgs {
   footerText?: string;
   /** See `SendInteractiveButtonsEngineArgs.aiGenerated`. */
   aiGenerated?: boolean;
+  /** The AI agent that wrote it (migration 114) — lets a later
+   *  agent tell its own turns from another agent's. */
+  aiAgentId?: string | null;
 }
 
 /**
@@ -491,6 +505,7 @@ async function sendInteractiveViaMeta(
     message_id: waMessageId,
     status: 'sent',
     ai_generated: input.aiGenerated ?? false,
+    ai_agent_id: input.aiAgentId ?? null,
   });
   if (msgErr) {
     throw new Error(`sent to Meta but DB insert failed: ${msgErr.message}`);

@@ -1,3 +1,7 @@
+import {
+  findConversationOnNumber,
+  numberColumns,
+} from '@/lib/whatsapp/conversation-number';
 import { NextResponse, after } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption';
@@ -1543,53 +1547,26 @@ async function findOrCreateConversation(
   // Official number that received this message (migration 112).
   whatsappConfigId: string
 ) {
-  // Look for an existing conversation in this account, oldest-first.
-  //
-  // We deliberately do NOT use `.single()` here. `.single()` errors on
-  // *both* 0 rows and ≥2 rows, and the old code treated any error as
-  // "none found" and inserted a new row. So once two conversations
-  // existed for a contact (from a race — Meta retries a delivery, or a
-  // batch fans out to concurrent runs), every subsequent inbound
-  // message errored on the lookup and created yet another conversation,
-  // snowballing into a wall of duplicate chats (issue #363).
-  //
-  // Ordering oldest-first and taking one row makes the lookup resolve to
-  // the same canonical survivor the dedup migration (036) keeps, so any
-  // pre-existing duplicates converge instead of compounding.
-  const { data: existingRows, error: findError } = await supabaseAdmin()
-    .from('conversations')
-    .select('*')
-    .eq('account_id', accountId)
-    .eq('contact_id', contactId)
-    .order('created_at', { ascending: true })
-    .limit(1);
-
-  if (findError) {
+  // One conversation per (contact, number) — migration 114,
+  // specs/multi-official-numbers.md: the same customer writing to two of
+  // the account's numbers gets two threads. Oldest-first + limit(1) keeps
+  // the lookup convergent if a race ever left duplicates (issue #363).
+  const number = { channelId: null, configId: whatsappConfigId };
+  let existing: Record<string, unknown> | null = null;
+  try {
+    existing = await findConversationOnNumber(
+      supabaseAdmin(),
+      accountId,
+      contactId,
+      number
+    );
+  } catch (findError) {
     console.error('Error finding conversation:', findError);
     return null;
   }
-
-  if (existingRows && existingRows.length > 0) {
-    const existing = existingRows[0];
-    // The conversation talks through the official number the customer
-    // last wrote to (specs/multi-official-numbers.md) — same rule WAHA
-    // channels follow. Only the official-API side: a conversation on a
-    // WAHA channel keeps whatsapp_channel_id as its sender.
-    if (
-      !existing.whatsapp_channel_id &&
-      existing.whatsapp_config_id !== whatsappConfigId
-    ) {
-      const { error: numErr } = await supabaseAdmin()
-        .from('conversations')
-        .update({ whatsapp_config_id: whatsappConfigId })
-        .eq('id', existing.id);
-      if (numErr) {
-        console.error('Error recording the conversation number:', numErr);
-      } else {
-        existing.whatsapp_config_id = whatsappConfigId;
-      }
-    }
-    return { conversation: existing, created: false };
+  if (existing) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- a conversations row, as before
+    return { conversation: existing as Record<string, any>, created: false };
   }
 
   // Create new conversation. Same tenancy + audit split as
@@ -1600,7 +1577,7 @@ async function findOrCreateConversation(
       account_id: accountId,
       user_id: configOwnerUserId,
       contact_id: contactId,
-      whatsapp_config_id: whatsappConfigId,
+      ...numberColumns(number),
     })
     .select()
     .single();
@@ -1608,18 +1585,18 @@ async function findOrCreateConversation(
   if (createError) {
     // Lost a race: a concurrent inbound delivery created the
     // conversation between our lookup and insert, and the unique index
-    // (migration 036) rejected the duplicate. Re-resolve the winning
+    // (migration 114) rejected the duplicate. Re-resolve the winning
     // row instead of dropping the message — mirrors findOrCreateContact.
     if (isUniqueViolation(createError)) {
-      const { data: raced } = await supabaseAdmin()
-        .from('conversations')
-        .select('*')
-        .eq('account_id', accountId)
-        .eq('contact_id', contactId)
-        .order('created_at', { ascending: true })
-        .limit(1);
-      if (raced && raced.length > 0) {
-        return { conversation: raced[0], created: false };
+      const raced = await findConversationOnNumber(
+        supabaseAdmin(),
+        accountId,
+        contactId,
+        number
+      ).catch(() => null);
+      if (raced) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- a conversations row, as before
+        return { conversation: raced as Record<string, any>, created: false };
       }
     }
     console.error('Error creating conversation:', createError);

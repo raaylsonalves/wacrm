@@ -29,6 +29,11 @@ function bad(message: string) {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** A binding's number as one key: WAHA id, `cfg:<id>`, or 'cloud'. */
+function bindingKey(channelId: string | null, configId: string | null) {
+  return channelId ?? (configId ? `cfg:${configId}` : 'cloud');
+}
+
 async function loadAgent(
   supabase: Awaited<ReturnType<typeof requireRole>>['supabase'],
   accountId: string,
@@ -56,7 +61,7 @@ export async function GET(
     if (!agent)
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
 
-    const [{ data: waha }, { data: bindings }, { data: agents }] =
+    const [{ data: waha }, { data: bindings }, { data: agents }, { data: official }] =
       await Promise.all([
         supabase
           .from('whatsapp_waha_channels')
@@ -65,18 +70,29 @@ export async function GET(
           .order('label'),
         supabase
           .from('ai_channel_agents')
-          .select('channel_id, agent_id')
+          .select('channel_id, whatsapp_config_id, agent_id')
           .eq('account_id', accountId),
         supabase
           .from('ai_configs')
           .select('id, name')
           .eq('account_id', accountId),
+        supabase
+          .from('whatsapp_config')
+          .select('id, label, display_phone_number, phone_number_id, is_primary')
+          .eq('account_id', accountId)
+          .order('is_primary', { ascending: false })
+          .order('created_at', { ascending: true }),
       ]);
 
     const names = new Map((agents ?? []).map((a) => [a.id as string, a.name as string]));
+    // Slot keys: a WAHA channel id, `cfg:<id>` for an official number
+    // (migration 114), or 'cloud' for the legacy account-wide row.
     const holder = new Map(
       (bindings ?? []).map((b) => [
-        (b.channel_id as string | null) ?? 'cloud',
+        bindingKey(
+          b.channel_id as string | null,
+          b.whatsapp_config_id as string | null
+        ),
         b.agent_id as string,
       ])
     );
@@ -95,7 +111,20 @@ export async function GET(
     return NextResponse.json({
       isDefault: agent.is_default,
       channels: [
-        slot(null, 'cloud_api'),
+        // One slot per official number; the legacy single slot only when
+        // the account has none.
+        ...((official ?? []).length > 0
+          ? (official ?? []).map((n) =>
+              slot(
+                `cfg:${n.id as string}`,
+                (official ?? []).length === 1
+                  ? 'cloud_api'
+                  : ((n.label as string | null) ||
+                      (n.display_phone_number as string | null) ||
+                      (n.phone_number_id as string))
+              )
+            )
+          : [slot(null, 'cloud_api')]),
         ...(waha ?? []).map((c) => slot(c.id as string, c.label as string)),
       ],
     });
@@ -129,17 +158,25 @@ export async function PUT(
     const body = await request.json().catch(() => null);
     const raw: unknown = body?.channel_ids;
     if (!Array.isArray(raw)) return bad('channel_ids must be a list');
-    const wanted: (string | null)[] = [];
+    // Each entry: a WAHA channel uuid, `cfg:<uuid>` (official number) or
+    // null / 'cloud' (the legacy account-wide official slot).
+    const wanted: string[] = [];
     for (const v of raw) {
-      if (v === null || v === 'cloud') wanted.push(null);
+      if (v === null || v === 'cloud') wanted.push('cloud');
       else if (typeof v === 'string' && UUID.test(v)) wanted.push(v);
+      else if (
+        typeof v === 'string' &&
+        v.startsWith('cfg:') &&
+        UUID.test(v.slice(4))
+      )
+        wanted.push(v);
       else return bad('channel_ids holds an invalid channel id');
     }
-    const wantedKeys = new Set(wanted.map((c) => c ?? 'cloud'));
+    const wantedKeys = new Set(wanted);
 
     const { data: existing, error: readErr } = await supabase
       .from('ai_channel_agents')
-      .select('id, channel_id, agent_id')
+      .select('id, channel_id, whatsapp_config_id, agent_id')
       .eq('account_id', accountId);
     if (readErr) {
       console.error('[ai/agents channels PUT] read error:', readErr);
@@ -147,8 +184,13 @@ export async function PUT(
     }
 
     // Release: bindings this agent holds that are no longer wanted.
+    const keyOfRow = (b: { channel_id: unknown; whatsapp_config_id: unknown }) =>
+      bindingKey(
+        b.channel_id as string | null,
+        b.whatsapp_config_id as string | null
+      );
     const release = (existing ?? []).filter(
-      (b) => b.agent_id === id && !wantedKeys.has((b.channel_id as string | null) ?? 'cloud')
+      (b) => b.agent_id === id && !wantedKeys.has(keyOfRow(b))
     );
     if (release.length > 0) {
       const { error } = await supabase
@@ -163,11 +205,8 @@ export async function PUT(
 
     // Take: numbers held by ANOTHER agent move here (one agent per number,
     // enforced by the unique index); numbers already ours stay untouched.
-    for (const channelId of wanted) {
-      const key = channelId ?? 'cloud';
-      const current = (existing ?? []).find(
-        (b) => ((b.channel_id as string | null) ?? 'cloud') === key
-      );
+    for (const key of wanted) {
+      const current = (existing ?? []).find((b) => keyOfRow(b) === key);
       if (current?.agent_id === id) continue;
       if (current) {
         const { error } = await supabase
@@ -181,7 +220,8 @@ export async function PUT(
       } else {
         const { error } = await supabase.from('ai_channel_agents').insert({
           account_id: accountId,
-          channel_id: channelId,
+          channel_id: key === 'cloud' || key.startsWith('cfg:') ? null : key,
+          whatsapp_config_id: key.startsWith('cfg:') ? key.slice(4) : null,
           agent_id: id,
         });
         if (error) {

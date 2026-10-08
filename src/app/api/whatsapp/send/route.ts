@@ -1,4 +1,9 @@
 import { NextResponse } from 'next/server'
+import {
+  findConversationOnNumber,
+  defaultNumber,
+  numberColumns,
+} from '@/lib/whatsapp/conversation-number'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole, toErrorResponse } from '@/lib/auth/account'
 import {
@@ -210,12 +215,15 @@ async function findOrCreateConversation(
   // index, and this send would fail with a 500 every time. `.order()
   // .limit(1)` picks the oldest deterministically instead, matching the
   // webhook's own find-or-create in lib/whatsapp/resolve-conversation.ts.
+  // A contact can have one conversation per number (migration 114).
+  // Messaging a contact (not a conversation) continues their most recent
+  // thread; with none, a new one on the primary official number.
   const { data: existing, error: findErr } = await supabase
     .from('conversations')
     .select('id')
     .eq('account_id', accountId)
     .eq('contact_id', contactId)
-    .order('created_at', { ascending: true })
+    .order('last_message_at', { ascending: false, nullsFirst: false })
     .limit(1)
 
   if (findErr) {
@@ -223,6 +231,7 @@ async function findOrCreateConversation(
     return null
   }
   if (existing && existing.length > 0) return existing[0].id
+  const number = await defaultNumber(supabase, accountId)
 
   const { data: created, error } = await supabase
     .from('conversations')
@@ -230,6 +239,7 @@ async function findOrCreateConversation(
       account_id: accountId,
       user_id: userId,
       contact_id: contactId,
+      ...numberColumns(number),
     })
     .select('id')
     .single()
@@ -237,14 +247,14 @@ async function findOrCreateConversation(
   if (error || !created) {
     // Lost a race with another concurrent send/inbound creating the
     // same (account_id, contact_id) row — re-read instead of failing.
-    const { data: raced } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('account_id', accountId)
-      .eq('contact_id', contactId)
-      .order('created_at', { ascending: true })
-      .limit(1)
-    if (raced && raced.length > 0) return raced[0].id
+    const raced = await findConversationOnNumber<{ id: string }>(
+      supabase,
+      accountId,
+      contactId,
+      number,
+      'id'
+    ).catch(() => null)
+    if (raced) return raced.id
 
     console.error('Error creating conversation for contact send:', error?.message)
     return null

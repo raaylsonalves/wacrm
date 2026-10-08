@@ -1,4 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  findConversationOnNumber,
+  defaultNumber,
+  numberColumns,
+} from '@/lib/whatsapp/conversation-number';
 
 /**
  * Put a sent broadcast message into the contact's conversation, so the
@@ -40,17 +45,18 @@ export async function recordBroadcastMessage(
       .maybeSingle();
     if (!contact) return; // not this account's contact: nothing to write
 
-    // Same rule both webhooks use to file the customer's reply (the
-    // contact's OLDEST conversation, any channel) — otherwise the blast
-    // and the answer could land in different threads.
-    const { data: existing } = await db
-      .from('conversations')
-      .select('id')
-      .eq('account_id', args.accountId)
-      .eq('contact_id', args.contactId)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    // Same rule both webhooks use to file the customer's reply: the
+    // contact's conversation on the number that sent the blast (migration
+    // 114) — otherwise the blast and the answer could land in different
+    // threads.
+    const number = await defaultNumber(db, args.accountId, args.channelId);
+    const existing = await findConversationOnNumber<{ id: string }>(
+      db,
+      args.accountId,
+      args.contactId,
+      number,
+      'id'
+    );
 
     const preview = args.text?.trim() || `[template:${args.templateName}]`;
     let conversationId = existing?.id as string | undefined;
@@ -64,7 +70,7 @@ export async function recordBroadcastMessage(
           account_id: args.accountId,
           user_id: owner,
           contact_id: args.contactId,
-          whatsapp_channel_id: args.channelId,
+          ...numberColumns(number),
           status: 'closed',
           last_message_text: preview,
           last_message_at: now,
