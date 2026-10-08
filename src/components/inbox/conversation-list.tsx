@@ -11,7 +11,7 @@ import {
   normalizeConversations,
 } from '@/lib/inbox/conversations';
 import { cn } from '@/lib/utils';
-import { serverSearchTerm } from '@/lib/inbox/server-search';
+import { serverSearchTerm, snippetAround } from '@/lib/inbox/server-search';
 import { TONE_SOLID, toneFor } from '@/lib/tones';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
@@ -120,6 +120,23 @@ interface ConversationListProps {
     conversationId: string,
     patch: Partial<Conversation>
   ) => void;
+  /**
+   * A message result of the search was picked: open its conversation
+   * and show that message (the thread opens its own search on it).
+   */
+  onOpenMessage?: (
+    conversation: Conversation,
+    messageId: string,
+    query: string
+  ) => void;
+}
+
+/** A message found by the inbox search ("Messages" section). */
+interface MessageHit {
+  id: string;
+  conversation_id: string;
+  content_text: string | null;
+  created_at: string;
 }
 
 const STATUS_LABEL_KEY: Record<ConversationStatus, string> = {
@@ -151,6 +168,7 @@ export function ConversationList({
   onAssignChange,
   onContactTagsChange,
   onConversationPatch,
+  onOpenMessage,
 }: ConversationListProps) {
   const t = useTranslations('Inbox.conversationList');
   const tThread = useTranslations('Inbox.messageThread');
@@ -344,41 +362,71 @@ export function ConversationList({
     }
   }, [fetchPage]);
 
-  // Server search: the list only holds the pages scrolled so far, so a
-  // search also asks the database (contact name/phone, last message) and
-  // merges the matches in. The on-screen filter below then shows them.
+  // Server search, in two groups like WhatsApp: conversations whose
+  // contact matches (name or phone) and messages whose text matches. The
+  // list only holds the pages scrolled so far, so both ask the database;
+  // matched conversations are merged into the list, where the on-screen
+  // filter shows them. Trigram indexes (migration 110) keep the
+  // `ilike '%term%'` over every message fast.
   const [searching, setSearching] = useState(false);
+  const [messageHits, setMessageHits] = useState<MessageHit[]>([]);
+  const searchTerm = serverSearchTerm(search);
   useEffect(() => {
-    const term = serverSearchTerm(search);
-    if (!term) return;
+    if (!searchTerm) return;
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       setSearching(true);
       try {
         const supabase = createClient();
-        const pattern = `%${term}%`;
-        const { data: contacts } = await supabase
-          .from('contacts')
-          .select('id')
-          .or(`name.ilike.${pattern},phone.ilike.${pattern}`)
-          .limit(100);
-        const ids = (contacts ?? []).map((c) => c.id as string);
-        const filters = [`last_message_text.ilike.${pattern}`];
-        if (ids.length > 0) filters.push(`contact_id.in.(${ids.join(',')})`);
-        const { data, error } = await supabase
-          .from('conversations')
-          .select(CONVERSATION_SELECT)
-          .or(filters.join(','))
-          .order('last_message_at', { ascending: false, nullsFirst: false })
-          .limit(100);
-        if (cancelled || error || !data) return;
+        const pattern = `%${searchTerm}%`;
+        const [{ data: contacts }, { data: hits }] = await Promise.all([
+          supabase
+            .from('contacts')
+            .select('id')
+            .or(`name.ilike.${pattern},phone.ilike.${pattern}`)
+            .limit(100),
+          supabase
+            .from('messages')
+            .select('id, conversation_id, content_text, created_at')
+            .ilike('content_text', pattern)
+            .order('created_at', { ascending: false })
+            .limit(50),
+        ]);
+        if (cancelled) return;
+        const messageRows = (hits ?? []) as MessageHit[];
+
+        // Conversations to have in the list: the contacts' ones and the
+        // ones the message hits belong to.
+        const contactIds = (contacts ?? []).map((c) => c.id as string);
         const current = conversationsRef.current;
         const seen = new Set(current.map((c) => c.id));
-        const fresh = normalizeConversations(data).filter(
-          (c) => !seen.has(c.id)
-        );
+        const missingConvIds = [
+          ...new Set(messageRows.map((m) => m.conversation_id)),
+        ].filter((id) => !seen.has(id));
+        const filters: string[] = [];
+        if (contactIds.length > 0)
+          filters.push(`contact_id.in.(${contactIds.join(',')})`);
+        if (missingConvIds.length > 0)
+          filters.push(`id.in.(${missingConvIds.join(',')})`);
+        let fresh: Conversation[] = [];
+        if (filters.length > 0) {
+          const { data } = await supabase
+            .from('conversations')
+            .select(CONVERSATION_SELECT)
+            .or(filters.join(','))
+            .order('last_message_at', { ascending: false, nullsFirst: false })
+            .limit(150);
+          if (cancelled) return;
+          fresh = normalizeConversations(data ?? []).filter(
+            (c) => !seen.has(c.id)
+          );
+        }
         if (fresh.length > 0)
-          onConversationsLoadedRef.current([...current, ...fresh]);
+          onConversationsLoadedRef.current([
+            ...conversationsRef.current,
+            ...fresh,
+          ]);
+        setMessageHits(messageRows);
       } finally {
         if (!cancelled) setSearching(false);
       }
@@ -387,7 +435,7 @@ export function ConversationList({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [search]);
+  }, [searchTerm]);
 
   // The sentinel at the end of the list: when it scrolls into view, fetch
   // the next page. With a filter or search that hides most rows it stays
@@ -674,13 +722,14 @@ export function ConversationList({
       );
     }
 
+    // The "Conversations" group matches the contact; message text is
+    // the "Messages" group's job (see the server search above).
     if (search.trim()) {
-      const q = search.toLowerCase();
+      const q = search.toLowerCase().trim();
       result = result.filter((c) => {
         const name = c.contact?.name?.toLowerCase() ?? '';
         const phone = c.contact?.phone?.toLowerCase() ?? '';
-        const lastMsg = c.last_message_text?.toLowerCase() ?? '';
-        return name.includes(q) || phone.includes(q) || lastMsg.includes(q);
+        return name.includes(q) || phone.includes(q);
       });
     }
 
@@ -753,6 +802,17 @@ export function ConversationList({
     },
     []
   );
+
+  const conversationsById = useMemo(() => {
+    const m = new Map<string, Conversation>();
+    for (const c of conversations) m.set(c.id, c);
+    return m;
+  }, [conversations]);
+  // Message hits only while a search is typed, and only for conversations
+  // the row can show (the merge above loads them).
+  const visibleHits = searchTerm
+    ? messageHits.filter((h) => conversationsById.has(h.conversation_id))
+    : [];
 
   const handleSelect = useCallback(
     (conv: Conversation) => {
@@ -1061,7 +1121,7 @@ export function ConversationList({
       <ScrollArea className="min-h-0 flex-1">
         {loading ? (
           <SkeletonList rows={7} bare className="px-1.5 max-lg:px-3" />
-        ) : filtered.length === 0 ? (
+        ) : filtered.length === 0 && visibleHits.length === 0 ? (
           <div className="px-4 py-12 text-center">
             <p className="text-muted-foreground text-sm">
               {t('noConversations')}
@@ -1070,6 +1130,11 @@ export function ConversationList({
           </div>
         ) : (
           <div className="stagger flex flex-col gap-2 px-3 pb-3 lg:gap-0.5 lg:p-1.5">
+            {searchTerm && filtered.length > 0 && (
+              <SearchSectionLabel>
+                {t('search.conversations')}
+              </SearchSectionLabel>
+            )}
             {filtered.map((conv) => (
               <ConversationItem
                 key={conv.id}
@@ -1106,6 +1171,51 @@ export function ConversationList({
                 }
               />
             ))}
+            {visibleHits.length > 0 && (
+              <>
+                <SearchSectionLabel>{t('search.messages')}</SearchSectionLabel>
+                {visibleHits.map((hit) => {
+                  const conv = conversationsById.get(hit.conversation_id);
+                  if (!conv) return null;
+                  const snip = snippetAround(
+                    hit.content_text ?? '',
+                    searchTerm ?? ''
+                  );
+                  const name =
+                    conv.contact?.name || conv.contact?.phone || t('unknown');
+                  return (
+                    <button
+                      key={hit.id}
+                      type="button"
+                      onClick={() =>
+                        onOpenMessage
+                          ? onOpenMessage(conv, hit.id, searchTerm ?? '')
+                          : handleSelect(conv)
+                      }
+                      className="hover:bg-muted/60 border-border bg-card flex w-full flex-col gap-0.5 rounded-[20px] border p-3 text-left transition-colors duration-150 ease-out lg:rounded-2xl lg:border-0 lg:bg-transparent lg:px-2.5 lg:py-2"
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="text-foreground truncate text-sm font-medium">
+                          {name}
+                        </span>
+                        <span className="text-muted-foreground shrink-0 text-[10px]">
+                          {format(new Date(hit.created_at), 'dd/MM/yy')}
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground line-clamp-2 text-xs">
+                        {snip.before}
+                        {snip.match && (
+                          <mark className="text-foreground rounded bg-amber-300/40 px-0.5">
+                            {snip.match}
+                          </mark>
+                        )}
+                        {snip.after}
+                      </span>
+                    </button>
+                  );
+                })}
+              </>
+            )}
             {hasMore && (
               <div
                 ref={sentinelRef}
@@ -1175,6 +1285,14 @@ export function ConversationList({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function SearchSectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-muted-foreground px-2.5 pt-2 pb-1 text-[11px] font-semibold tracking-wide uppercase">
+      {children}
+    </p>
   );
 }
 

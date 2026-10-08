@@ -78,6 +78,12 @@ interface ReplyDraft {
 }
 
 interface MessageThreadProps {
+  /**
+   * Open the in-thread search on this query and land on this message —
+   * set when the inbox search's "Messages" result is picked. `nonce`
+   * makes picking the same result again re-apply it.
+   */
+  focusSearch?: { query: string; messageId: string; nonce: number } | null;
   conversation: Conversation | null;
   contact: Contact | null;
   messages: Message[];
@@ -168,6 +174,7 @@ const DOODLE_BG_CLASSES =
   "bg-background bg-[url('/inbox-doodle.svg')] bg-repeat";
 
 export function MessageThread({
+  focusSearch = null,
   conversation,
   contact,
   messages,
@@ -247,6 +254,21 @@ export function MessageThread({
     setSearchQuery("");
     setStarOnly(false);
   }, [conversation?.id]);
+  // A message picked in the inbox search: once the thread's messages are
+  // in, open the search on the query and step to that message. Declared
+  // after the reset above so a conversation switch doesn't undo it.
+  const appliedFocusRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!focusSearch || appliedFocusRef.current === focusSearch.nonce) return;
+    if (messages.length === 0) return;
+    appliedFocusRef.current = focusSearch.nonce;
+    const ids = findMatches(messages, focusSearch.query);
+    const at = ids.indexOf(focusSearch.messageId);
+    setSearchOpen(true);
+    setStarOnly(false);
+    setSearchQuery(focusSearch.query);
+    setSearchIdx(at >= 0 ? at : Math.max(0, ids.length - 1));
+  }, [focusSearch, messages]);
   useEffect(() => {
     const cid = conversation?.id;
     if (!cid || !user?.id) {

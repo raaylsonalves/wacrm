@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { serverSearchTerm } from './server-search';
+import { serverSearchTerm, snippetAround } from './server-search';
 
 describe('serverSearchTerm', () => {
   it('skips queries too short to be worth a round trip', () => {
@@ -20,5 +20,33 @@ describe('serverSearchTerm', () => {
 
   it('is null when only stripped characters remain', () => {
     expect(serverSearchTerm('%%,,')).toBeNull();
+  });
+});
+
+describe('snippetAround', () => {
+  it('centres on the match, case-insensitively, keeping its casing', () => {
+    expect(
+      snippetAround('Olá, quero o Orçamento amanhã', 'orçamento', 5)
+    ).toEqual({ before: '…ro o ', match: 'Orçamento', after: ' aman…' });
+  });
+
+  it('does not add ellipses when nothing was cut', () => {
+    expect(snippetAround('preço?', 'preço', 10)).toEqual({
+      before: '',
+      match: 'preço',
+      after: '?',
+    });
+  });
+
+  it('collapses line breaks', () => {
+    expect(snippetAround('a\n\nb pix', 'pix').before).toBe('a b ');
+  });
+
+  it('falls back to the start of the text when the term is not literal', () => {
+    expect(snippetAround('abcdefghij', 'zz', 2)).toEqual({
+      before: 'abcd…',
+      match: '',
+      after: '',
+    });
   });
 });

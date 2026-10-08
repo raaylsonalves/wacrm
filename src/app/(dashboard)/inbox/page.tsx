@@ -468,6 +468,21 @@ function InboxPageInner() {
     [activeConversation?.id, router]
   );
 
+  // A "Messages" result of the inbox search: open its conversation and
+  // hand the thread the message to land on (it opens its own search).
+  const [focusSearch, setFocusSearch] = useState<{
+    query: string;
+    messageId: string;
+    nonce: number;
+  } | null>(null);
+  const handleOpenMessage = useCallback(
+    (conv: Conversation, messageId: string, query: string) => {
+      handleSelectConversation(conv);
+      setFocusSearch({ query, messageId, nonce: Date.now() });
+    },
+    [handleSelectConversation]
+  );
+
   // Mobile "back" — deselect the conversation so the list pane comes
   // back. Also clears the ?c= param so a refresh lands on the list
   // instead of re-opening the thread the user just backed out of.
@@ -629,6 +644,7 @@ function InboxPageInner() {
             onAssignChange={handleAssignChange}
             onContactTagsChange={handleContactTagsChange}
             onConversationPatch={handleConversationPatch}
+            onOpenMessage={handleOpenMessage}
           />
         </div>
 
@@ -649,6 +665,9 @@ function InboxPageInner() {
           )}
         >
           <MessageThread
+            focusSearch={
+              focusSearch && activeConversation ? focusSearch : null
+            }
             conversation={activeConversation}
             contact={activeContact}
             messages={messages}

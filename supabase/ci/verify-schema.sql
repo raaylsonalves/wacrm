@@ -868,6 +868,12 @@ BEGIN
     RAISE EXCEPTION 'billing_payments must be read-only for clients (migration 109)';
   END IF;
 
+  IF to_regclass('public.idx_messages_content_trgm') IS NULL
+     OR to_regclass('public.idx_contacts_name_trgm') IS NULL
+     OR to_regclass('public.idx_contacts_phone_trgm') IS NULL THEN
+    RAISE EXCEPTION 'inbox search trigram indexes missing — migration 110 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

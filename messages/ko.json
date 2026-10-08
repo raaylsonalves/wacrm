@@ -268,6 +268,10 @@
       "unknownAuthor": "이전 팀원"
     },
     "conversationList": {
+      "search": {
+        "conversations": "대화",
+        "messages": "메시지"
+      },
       "command": {
         "human": "상담원이 응대 중",
         "ai": "AI가 응대 중",

@@ -268,6 +268,10 @@
       "unknownAuthor": "Former teammate"
     },
     "conversationList": {
+      "search": {
+        "conversations": "Chats",
+        "messages": "Messages"
+      },
       "command": {
         "human": "A person is handling it",
         "ai": "The AI is handling it",
