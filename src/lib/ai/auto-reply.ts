@@ -508,7 +508,7 @@ export async function dispatchInboundToAiReply(
           .from('messages')
           .select('content_text')
           .eq('conversation_id', conversationId)
-          .eq('sender_type', 'contact')
+          .eq('sender_type', 'customer')
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle()
