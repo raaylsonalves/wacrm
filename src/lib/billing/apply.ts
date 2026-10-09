@@ -13,8 +13,6 @@ import {
 } from './mercadopago';
 import {
   chargeOutcome,
-  isFullyPaid,
-  nextPeriodEnd,
   pixOrderStatus,
   subscriptionStatusFromPreapproval,
   toCents,
@@ -43,25 +41,6 @@ async function setAccountStatus(
   if (error) throw error;
 }
 
-/** Records one paid charge once. The synthetic event row is the lock: a
- *  second notification about the same charge hits the unique constraint. */
-async function claimCharge(
-  db: SupabaseClient,
-  source: BillingSource,
-  key: string
-): Promise<boolean> {
-  const { error } = await db.from('billing_events').insert({
-    source,
-    event_id: `charge:${key}`,
-    topic: 'charge',
-    raw: {},
-    processed_at: new Date().toISOString(),
-  });
-  if (!error) return true;
-  if (error.code === '23505') return false;
-  throw error;
-}
-
 interface PaymentFact {
   method: 'pix' | 'card';
   amountCents: number;
@@ -69,63 +48,54 @@ interface PaymentFact {
   providerRef: string;
 }
 
+/**
+ * Records one confirmed payment and applies it to the subscription and the
+ * account in one transaction (migration 122). Idempotent on the payment
+ * row: a redelivered notification, or one retried after a failure halfway,
+ * either applies it now or finds it already applied — a confirmed payment
+ * can no longer be lost between two writes. Returns whether THIS call
+ * recorded it (and so owns the notice).
+ */
 async function registerPaidCharge(
   db: SupabaseClient,
   accountId: string,
   paidAt: Date,
   payment: PaymentFact
-) {
-  // The payment history (Settings > Billing, subscribers panel). Unique
-  // per provider reference, so a redelivery cannot record it twice.
-  const { error: payErr } = await db.from('billing_payments').upsert(
-    {
-      account_id: accountId,
-      method: payment.method,
-      amount_cents: payment.amountCents,
-      provider_ref: payment.providerRef,
-      paid_at: paidAt.toISOString(),
-    },
-    { onConflict: 'method,provider_ref', ignoreDuplicates: true }
-  );
-  if (payErr) throw payErr;
-  const { data: sub, error } = await db
-    .from('billing_subscriptions')
-    .select('id, charges_paid, charges_total, current_period_end')
-    .eq('account_id', accountId)
-    .maybeSingle();
+): Promise<boolean> {
+  const { data, error } = await db.rpc('billing_register_payment', {
+    p_account_id: accountId,
+    p_method: payment.method,
+    p_amount_cents: payment.amountCents,
+    p_provider_ref: payment.providerRef,
+    p_paid_at: paidAt.toISOString(),
+  });
   if (error) throw error;
-  if (!sub) return;
-  const charges = (sub.charges_paid as number) + 1;
-  const end = nextPeriodEnd(
-    sub.current_period_end ? new Date(sub.current_period_end as string) : null,
-    paidAt
-  );
-  const done = isFullyPaid(charges, sub.charges_total as number | null);
-  const { error: upErr } = await db
-    .from('billing_subscriptions')
-    .update({
-      charges_paid: charges,
-      current_period_end: end.toISOString(),
-      status: done ? 'canceled' : 'active',
-      grace_until: null,
-    })
-    .eq('id', sub.id);
-  if (upErr) throw upErr;
-  // A finished annual plan simply stops: access runs to the period end.
-  await setAccountStatus(db, accountId, 'active');
-  await notifyBilling(
-    db,
-    accountId,
-    {
-      kind: 'paid',
-      amountCents: payment.amountCents,
-      method: payment.method,
-      periodEnd: end,
-      finished: done,
-    },
-    `paid:${payment.method}:${payment.providerRef}`
-  );
+  const r = (data ?? {}) as {
+    inserted?: boolean;
+    subscription?: boolean;
+    period_end?: string;
+    done?: boolean;
+  };
+  if (!r.inserted) return false;
+  if (r.subscription) {
+    await notifyBilling(
+      db,
+      accountId,
+      {
+        kind: 'paid',
+        amountCents: payment.amountCents,
+        method: payment.method,
+        periodEnd: r.period_end ? new Date(r.period_end) : null,
+        finished: !!r.done,
+      },
+      `paid:${payment.method}:${payment.providerRef}`
+    );
+  }
+  return true;
 }
+
+/** Card grace (Terms: up to 7 days while Mercado Pago retries). */
+const CARD_GRACE_MS = 7 * 86_400_000;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -184,7 +154,6 @@ async function applyOrder(
     .maybeSingle();
   if (error) throw error;
   if (!row) return 'unknown_resource';
-  if (row.status === 'paid') return 'already_applied';
   // The order we created for this reference is the only one that counts.
   if (row.mp_order_id && row.mp_order_id !== order.id) {
     console.error('[billing] order id does not match our reference', { ref });
@@ -197,24 +166,32 @@ async function applyOrder(
     return 'amount_mismatch';
   }
 
-  // Conditional update: only the first notification flips pending -> paid.
-  const patch: Record<string, unknown> = { status, mp_order_id: order.id };
-  if (status === 'paid') patch.paid_at = new Date().toISOString();
-  const { data: changed, error: upErr } = await db
-    .from('billing_pix_orders')
-    .update(patch)
-    .eq('id', row.id)
-    .neq('status', 'paid')
-    .select('id');
-  if (upErr) throw upErr;
-  if (status === 'paid' && changed && changed.length > 0) {
-    await registerPaidCharge(db, row.account_id as string, new Date(), {
+  // A paid order never goes back. A replaced (cancelled) order that is
+  // paid anyway is real money: it is recorded and credited like any other.
+  if (row.status !== 'paid') {
+    const patch: Record<string, unknown> = { status, mp_order_id: order.id };
+    if (status === 'paid') patch.paid_at = new Date().toISOString();
+    const { error: upErr } = await db
+      .from('billing_pix_orders')
+      .update(patch)
+      .eq('id', row.id)
+      .neq('status', 'paid');
+    if (upErr) throw upErr;
+  }
+  if (status !== 'paid') return 'applied';
+  // Idempotent: the payment row decides whether this was already applied,
+  // so a redelivery after a failure halfway still credits it.
+  const recorded = await registerPaidCharge(
+    db,
+    row.account_id as string,
+    new Date(),
+    {
       method: 'pix',
       amountCents: row.amount_cents as number,
       providerRef: String(order.id),
-    });
-  }
-  return 'applied';
+    }
+  );
+  return recorded ? 'applied' : 'already_applied';
 }
 
 async function applyPreapproval(
@@ -226,49 +203,99 @@ async function applyPreapproval(
   if (!sub) return 'unknown_resource';
 
   const status = subscriptionStatusFromPreapproval(pre.status);
+  if (status === null) {
+    // A status we do not model: changing nothing is safer than guessing.
+    console.warn('[billing] unhandled preapproval status', pre.status);
+    return 'ignored_topic';
+  }
   const amount = toCents(pre.auto_recurring?.transaction_amount);
   if (status === 'active' && amount !== sub.amount_cents) {
     console.error('[billing] preapproval amount mismatch', { id: sub.id });
     return 'amount_mismatch';
   }
-  const patch: Record<string, unknown> = { status };
-  if (status === 'canceled') patch.canceled_at = new Date().toISOString();
-  // The first card charge can land before (or without) its payment
-  // notification, which is what normally sets the period end. Seed it from
-  // the preapproval so "next charge" is never blank on an active plan.
-  if (status === 'active' && pre.next_payment_date) {
-    const { data: cur } = await db
-      .from('billing_subscriptions')
-      .select('current_period_end')
-      .eq('id', sub.id)
-      .maybeSingle();
-    if (!cur?.current_period_end) {
-      patch.current_period_end = new Date(pre.next_payment_date).toISOString();
+  const { data: cur, error: curErr } = await db
+    .from('billing_subscriptions')
+    .select('status, current_period_end')
+    .eq('id', sub.id)
+    .maybeSingle();
+  if (curErr) throw curErr;
+  const current = (cur?.status as string | undefined) ?? 'pending';
+  // Not authorised yet at Mercado Pago: nothing to change.
+  if (status === 'pending') return 'applied';
+
+  if (status === 'active') {
+    // Authorised is not paid: only a processed charge (registerPaidCharge)
+    // activates a subscription. This also keeps a card swap during
+    // past_due from re-opening access before the new card is charged.
+    // Seed the next charge date so the screen is not blank meanwhile.
+    if (!cur?.current_period_end && pre.next_payment_date) {
+      const { error: upErr } = await db
+        .from('billing_subscriptions')
+        .update({
+          current_period_end: new Date(pre.next_payment_date).toISOString(),
+        })
+        .eq('id', sub.id);
+      if (upErr) throw upErr;
     }
+    return 'applied';
   }
+
+  if (status === 'past_due') {
+    // Paused by Mercado Pago after failed charges. Grace starts once.
+    if (current === 'active') {
+      await enterCardGrace(db, sub, null);
+    }
+    return 'applied';
+  }
+
+  // Cancelled at Mercado Pago (by the customer, us, or the end of retries).
   const { error: upErr } = await db
     .from('billing_subscriptions')
-    .update(patch)
-    .eq('id', sub.id);
+    .update({ status: 'canceled', canceled_at: new Date().toISOString() })
+    .eq('id', sub.id)
+    .neq('status', 'canceled');
   if (upErr) throw upErr;
-  if (status === 'canceled') {
-    // Cancelled: access runs to the end of the period already paid, then
-    // the sweep closes the account. Close it now only if there is none.
-    const { data: paid } = await db
-      .from('billing_subscriptions')
-      .select('current_period_end')
-      .eq('id', sub.id)
-      .maybeSingle();
-    const end = paid?.current_period_end
-      ? new Date(paid.current_period_end as string)
-      : null;
-    if (!end || end.getTime() <= Date.now()) {
-      await setAccountStatus(db, sub.account_id, 'canceled');
-    }
-  } else if (status !== 'pending') {
-    await setAccountStatus(db, sub.account_id, status);
+  // Access runs to the end of the period already paid, then the sweep
+  // closes the account. Close it now only if there is none.
+  const end = cur?.current_period_end
+    ? new Date(cur.current_period_end as string)
+    : null;
+  if (!end || end.getTime() <= Date.now()) {
+    await setAccountStatus(db, sub.account_id, 'canceled');
   }
   return 'applied';
+}
+
+/**
+ * A card charge failed on an active subscription: past_due with a grace
+ * window that starts ONCE — Mercado Pago's retries notify again, and
+ * re-arming the window each time stretched the 7 days of the Terms to ~17.
+ */
+async function enterCardGrace(
+  db: SupabaseClient,
+  sub: SubRow,
+  chargeRef: string | null
+) {
+  const grace = new Date(Date.now() + CARD_GRACE_MS);
+  const { data: changed, error } = await db
+    .from('billing_subscriptions')
+    .update({ status: 'past_due', grace_until: grace.toISOString() })
+    .eq('id', sub.id)
+    .eq('status', 'active')
+    .select('id');
+  if (error) throw error;
+  if (!changed || changed.length === 0) return;
+  await setAccountStatus(db, sub.account_id, 'past_due');
+  await notifyBilling(
+    db,
+    sub.account_id,
+    {
+      kind: 'card_declined',
+      amountCents: sub.amount_cents,
+      graceUntil: grace,
+    },
+    `declined:${chargeRef ?? grace.toISOString().slice(0, 10)}`
+  );
 }
 
 async function applyAuthorizedPayment(
@@ -291,45 +318,24 @@ async function applyAuthorizedPayment(
       console.error('[billing] charge amount mismatch', { id: sub.id });
       return 'amount_mismatch';
     }
-    if (!(await claimCharge(db, 'subs', String(ap.id)))) {
-      return 'already_applied';
-    }
-    await registerPaidCharge(db, sub.account_id as string, new Date(), {
-      method: 'card',
-      amountCents: sub.amount_cents,
-      providerRef: String(ap.id),
-    });
-    return 'applied';
+    const recorded = await registerPaidCharge(
+      db,
+      sub.account_id as string,
+      new Date(),
+      {
+        method: 'card',
+        amountCents: sub.amount_cents,
+        providerRef: String(ap.id),
+      }
+    );
+    return recorded ? 'applied' : 'already_applied';
   }
   if (outcome === 'retrying' || outcome === 'failed') {
-    // Mercado Pago retries a declined charge up to 4 times in 10 days:
-    // past_due now, with a grace window the app can enforce later.
-    const grace = new Date(Date.now() + 7 * 86_400_000).toISOString();
-    const { data: before } = await db
-      .from('billing_subscriptions')
-      .select('status')
-      .eq('id', sub.id)
-      .maybeSingle();
-    const { error: upErr } = await db
-      .from('billing_subscriptions')
-      .update({ status: 'past_due', grace_until: grace })
-      .eq('id', sub.id)
-      .neq('status', 'canceled');
-    if (upErr) throw upErr;
-    await setAccountStatus(db, sub.account_id as string, 'past_due');
-    // Once per decline episode: Mercado Pago's retries notify again.
-    if (before && before.status !== 'past_due' && before.status !== 'canceled') {
-      await notifyBilling(
-        db,
-        sub.account_id as string,
-        {
-          kind: 'card_declined',
-          amountCents: sub.amount_cents,
-          graceUntil: new Date(grace),
-        },
-        `declined:${ap.id}`
-      );
-    }
+    // Mercado Pago retries a declined charge up to 4 times in 10 days. Only
+    // an ACTIVE subscription enters grace: a first charge declined on a
+    // pending one never had access to keep, and past_due already has its
+    // window running.
+    await enterCardGrace(db, sub, String(ap.id));
     return 'applied';
   }
   return 'ignored_topic';

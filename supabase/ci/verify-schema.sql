@@ -439,6 +439,17 @@ BEGIN
   ) OR to_regclass('public.idx_ai_routers_active_per_scope') IS NULL THEN
     RAISE EXCEPTION 'ai_routers.whatsapp_config_id / idx_ai_routers_active_per_scope missing — migration 121 did not apply';
   END IF;
+  IF to_regprocedure('public.billing_register_payment(uuid,text,integer,text,timestamptz)') IS NULL
+     OR to_regclass('public.billing_notifications') IS NULL
+     OR to_regclass('public.idx_billing_pix_orders_one_pending') IS NULL THEN
+    RAISE EXCEPTION 'billing hardening objects missing — migration 122 did not apply';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'billing_pix_orders_account_id_period_start_key'
+  ) THEN
+    RAISE EXCEPTION 'billing_pix_orders still unique per period — migration 122 did not apply';
+  END IF;
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'conversations'

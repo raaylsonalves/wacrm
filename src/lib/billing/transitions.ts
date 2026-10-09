@@ -43,8 +43,13 @@ export function pixOrderStatus(orderStatus: unknown): PixOrderStatus {
 
 export type SubStatus = 'pending' | 'active' | 'past_due' | 'canceled';
 
-/** Preapproval (card subscription) status -> our subscription status. */
-export function subscriptionStatusFromPreapproval(mp: unknown): SubStatus {
+/**
+ * Preapproval (card subscription) status -> our subscription status.
+ * `pending` is Mercado Pago's own "not authorised yet"; anything else we
+ * do not model returns null and the caller changes nothing (it used to
+ * downgrade an active subscription to pending).
+ */
+export function subscriptionStatusFromPreapproval(mp: unknown): SubStatus | null {
   switch (mp) {
     case 'authorized':
       return 'active';
@@ -53,8 +58,10 @@ export function subscriptionStatusFromPreapproval(mp: unknown): SubStatus {
     case 'cancelled':
     case 'canceled':
       return 'canceled';
-    default:
+    case 'pending':
       return 'pending';
+    default:
+      return null;
   }
 }
 

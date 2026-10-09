@@ -15,6 +15,7 @@ import { getCurrentAccount, toErrorResponse } from '@/lib/auth/account';
 import { supabaseAdmin } from '@/lib/ai/admin-client';
 import { audit } from '@/lib/audit';
 import { isPlatformAdmin, platformAccountId } from '@/lib/platform/admin';
+import { cancelPreapproval } from '@/lib/billing/mercadopago';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -52,6 +53,30 @@ export async function POST(
 
     if (action === 'exempt' || action === 'require_payment') {
       const next = action === 'exempt' ? 'exempt' : 'pending';
+      // Released from billing: a live card subscription must stop charging
+      // too (exempt is never touched again by the webhook or the sweep).
+      if (action === 'exempt') {
+        const { data: sub } = await db
+          .from('billing_subscriptions')
+          .select('id, mp_preapproval_id, status')
+          .eq('account_id', id)
+          .maybeSingle();
+        if (sub?.mp_preapproval_id && sub.status !== 'canceled') {
+          try {
+            await cancelPreapproval(sub.mp_preapproval_id as string);
+          } catch (err) {
+            console.error('[subscribers] cancel preapproval failed', err);
+            return NextResponse.json(
+              { error: 'provider_rejected' },
+              { status: 502 }
+            );
+          }
+          await db
+            .from('billing_subscriptions')
+            .update({ status: 'canceled', canceled_at: new Date().toISOString() })
+            .eq('id', sub.id);
+        }
+      }
       const { error } = await db
         .from('accounts')
         .update({ subscription_status: next })
@@ -124,9 +149,23 @@ export async function POST(
           : 0
       );
       const end = new Date(from + days * 86_400_000).toISOString();
+      // The extension is a paid period like any other: `active` until `end`,
+      // after which the sweep renews (Pix) or closes it. Leaving it
+      // `past_due` without a grace date, or `pending`, meant nothing ever
+      // looked at it again and the access never ended.
+      const nextStatus =
+        sub.status === 'canceled'
+          ? 'canceled'
+          : sub.method === 'pix'
+            ? 'active'
+            : 'canceled';
       const { error: subErr } = await db
         .from('billing_subscriptions')
-        .update({ current_period_end: end, grace_until: null })
+        .update({
+          current_period_end: end,
+          grace_until: null,
+          status: nextStatus,
+        })
         .eq('id', sub.id);
       if (subErr) throw subErr;
       // A late or closed account gets its access back for the extension.

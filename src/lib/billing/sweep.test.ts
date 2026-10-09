@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   GRACE_MS,
   RENEW_BEFORE_MS,
+  STALE_PENDING_MS,
   classifySubscription,
   monthStartOf,
   type SweepSubscription,
@@ -133,5 +134,55 @@ describe('monthStartOf', () => {
   it('returns the first day of the UTC month', () => {
     expect(monthStartOf(new Date('2026-11-20T23:59:00Z'))).toBe('2026-11-01');
     expect(monthStartOf(new Date('2026-12-01T00:00:00Z'))).toBe('2026-12-01');
+  });
+});
+
+describe('classifySubscription — review 2026-10 hardening', () => {
+  it('lapses a past_due row that has no grace date', () => {
+    expect(
+      classifySubscription(sub({ status: 'past_due', grace_until: null }), 'active', NOW)
+    ).toBe('lapse');
+  });
+
+  it('closes a stale pending row that left the account usable', () => {
+    const stale = sub({
+      status: 'pending',
+      method: 'card',
+      mp_preapproval_id: null,
+      current_period_end: null,
+      updated_at: iso(-2 * STALE_PENDING_MS),
+    });
+    expect(classifySubscription(stale, 'active', NOW)).toBe('lapse');
+    expect(classifySubscription(stale, 'past_due', NOW)).toBe('lapse');
+  });
+
+  it('leaves a pending row alone while it may still be a checkout', () => {
+    expect(
+      classifySubscription(
+        sub({ status: 'pending', current_period_end: null, updated_at: iso(-60_000) }),
+        'active',
+        NOW
+      )
+    ).toBeNull();
+  });
+
+  it('leaves a pending row alone when a card subscription exists or the period runs', () => {
+    const base = { status: 'pending' as const, updated_at: iso(-2 * STALE_PENDING_MS) };
+    expect(
+      classifySubscription(sub({ ...base, mp_preapproval_id: 'pre-1' }), 'active', NOW)
+    ).toBeNull();
+    expect(
+      classifySubscription(sub({ ...base, current_period_end: iso(86_400_000) }), 'active', NOW)
+    ).toBeNull();
+  });
+
+  it('does not touch a pending row on a locked account (normal new sign-up)', () => {
+    expect(
+      classifySubscription(
+        sub({ status: 'pending', current_period_end: null, updated_at: iso(-2 * STALE_PENDING_MS) }),
+        'pending',
+        NOW
+      )
+    ).toBeNull();
   });
 });

@@ -17,6 +17,7 @@ import { supabaseAdmin } from '@/lib/ai/admin-client';
 import {
   MercadoPagoError,
   cancelOrder,
+  cancelPreapproval,
   createPreapproval,
 } from '@/lib/billing/mercadopago';
 import {
@@ -78,7 +79,9 @@ export async function POST(request: Request) {
     }
     const { data: existing } = await db
       .from('billing_subscriptions')
-      .select('id, status, mp_preapproval_id, current_period_end, charges_paid')
+      .select(
+        'id, plan, cycle, method, amount_cents, charges_total, charges_paid, status, mp_preapproval_id, current_period_end, canceled_at, grace_until'
+      )
       .eq('account_id', ctx.accountId)
       .maybeSingle();
     if (existing?.status === 'active') {
@@ -102,6 +105,17 @@ export async function POST(request: Request) {
       new Date(existing.current_period_end as string) > new Date()
         ? new Date(existing.current_period_end as string)
         : null;
+
+    // A cancelled row may still point at its old preapproval (e.g. the card
+    // grace ran out). Make sure it is cancelled at Mercado Pago before a new
+    // one replaces the id here — otherwise its next retry or charge would
+    // bill the customer twice and match no row of ours.
+    if (existing?.mp_preapproval_id) {
+      await cancelPreapproval(existing.mp_preapproval_id as string).catch(
+        (err) =>
+          console.error('[billing/checkout/card] old preapproval', err)
+      );
+    }
 
     const quote = quoteSubscription(plan, cycle);
     const row = {
@@ -135,8 +149,12 @@ export async function POST(request: Request) {
           payerEmail,
           cardTokenId: cardToken,
           amount: quote.amountCents / 100,
+          // Twelve charges from the FIRST one, which a resumed plan defers
+          // to the end of the period already paid.
           endDate:
-            quote.chargesTotal !== null ? addYears(new Date(), 1) : undefined,
+            quote.chargesTotal !== null
+              ? addYears(paidUntil ?? new Date(), 1)
+              : undefined,
           backUrl: `${origin}/onboarding/payment`,
           startDate: paidUntil ?? undefined,
         },
@@ -148,6 +166,12 @@ export async function POST(request: Request) {
           .slice(0, 32)
       );
     } catch (err) {
+      // Nothing was created at Mercado Pago: put the row back as it was, so
+      // a declined card cannot leave a `pending` row that nothing charges
+      // (the account would keep its access with no subscription at all).
+      await restoreSubscription(db, ctx.accountId, existing).catch((e) =>
+        console.error('[billing/checkout/card] restore failed', e)
+      );
       if (err instanceof MercadoPagoError) {
         console.error('[billing/checkout/card]', err.message);
         return NextResponse.json(
@@ -190,6 +214,29 @@ export async function POST(request: Request) {
   } catch (err) {
     return toErrorResponse(err);
   }
+}
+
+/** Undo the upsert above after Mercado Pago refused the card. */
+async function restoreSubscription(
+  db: ReturnType<typeof supabaseAdmin>,
+  accountId: string,
+  previous: Record<string, unknown> | null
+) {
+  if (!previous) {
+    await db
+      .from('billing_subscriptions')
+      .delete()
+      .eq('account_id', accountId)
+      .eq('status', 'pending')
+      .is('mp_preapproval_id', null);
+    return;
+  }
+  const { id: _id, ...fields } = previous;
+  void _id;
+  await db
+    .from('billing_subscriptions')
+    .update({ ...fields, mp_preapproval_id: null })
+    .eq('account_id', accountId);
 }
 
 function addYears(d: Date, n: number): Date {

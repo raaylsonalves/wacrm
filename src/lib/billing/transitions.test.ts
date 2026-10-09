@@ -39,7 +39,9 @@ describe('status mapping', () => {
     expect(subscriptionStatusFromPreapproval('paused')).toBe('past_due');
     expect(subscriptionStatusFromPreapproval('cancelled')).toBe('canceled');
     expect(subscriptionStatusFromPreapproval('pending')).toBe('pending');
-    expect(subscriptionStatusFromPreapproval(undefined)).toBe('pending');
+    // unknown statuses change nothing (they used to downgrade to pending)
+    expect(subscriptionStatusFromPreapproval(undefined)).toBeNull();
+    expect(subscriptionStatusFromPreapproval('finished')).toBeNull();
   });
 
   it('maps a monthly card charge', () => {

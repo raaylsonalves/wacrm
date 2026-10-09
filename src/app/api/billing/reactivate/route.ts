@@ -32,7 +32,7 @@ export async function POST() {
     const db = supabaseAdmin();
     const { data: sub } = await db
       .from('billing_subscriptions')
-      .select('id, method, status, current_period_end')
+      .select('id, method, status, current_period_end, charges_paid, charges_total')
       .eq('account_id', ctx.accountId)
       .maybeSingle();
     const stillPaid =
@@ -40,6 +40,15 @@ export async function POST() {
       new Date(sub.current_period_end as string) > new Date();
     if (!sub || sub.status !== 'canceled' || !stillPaid) {
       return NextResponse.json({ error: 'not_reactivatable' }, { status: 409 });
+    }
+    // A finished annual plan has no next charge to resume: reactivating it
+    // would only fall into "overdue" at the period end for a charge that
+    // does not exist. Buying a new plan is the way forward.
+    if (
+      sub.charges_total !== null &&
+      (sub.charges_paid as number) >= (sub.charges_total as number)
+    ) {
+      return NextResponse.json({ error: 'plan_finished' }, { status: 409 });
     }
     if (sub.method !== 'pix') {
       return NextResponse.json({ error: 'card_required' }, { status: 409 });

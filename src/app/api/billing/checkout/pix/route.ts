@@ -5,8 +5,9 @@
 // code and the copia-e-cola text to render on our own screen. Nothing
 // is activated here: the verified webhook (Order topic) does that.
 //
-// Calling it again while the month's order is still open returns the
-// same QR instead of creating a second charge.
+// Calling it again while that charge is still open returns the same QR.
+// Any other open Pix of the account is cancelled first (its row is kept,
+// so a late payment of it is still credited): one payable QR at a time.
 // ============================================================
 
 import { randomUUID } from 'node:crypto';
@@ -124,27 +125,65 @@ export async function POST(request: Request) {
       : quoteSubscription(plan, cycle).amountCents;
     const quote = { ...quoteSubscription(plan, cycle), amountCents };
 
-    // Which charge this is. An overdue month is keyed like the sweep keys
-    // its renewal (the month the period ended in), so it reuses or replaces
-    // that same charge. A new purchase is keyed by today: keying it by the
-    // month made a lapsed account that had paid earlier in the same month
-    // unable to buy again (the paid row looked like "already paid").
     const now = new Date();
     const period = overdue
       ? monthStart(new Date(existing.current_period_end as string))
       : now.toISOString().slice(0, 10);
-    const { data: open } = await db
+
+    // An overdue month that was in fact paid: never ask twice.
+    if (overdue) {
+      const { data: paid } = await db
+        .from('billing_pix_orders')
+        .select('id')
+        .eq('account_id', ctx.accountId)
+        .eq('period_start', period)
+        .eq('status', 'paid')
+        .limit(1);
+      if (paid && paid.length > 0) {
+        return NextResponse.json({ error: 'already_paid' }, { status: 409 });
+      }
+    }
+
+    // Every Pix still payable for this account, of any period. Only one
+    // may stay open: two live QR codes meant two possible payments.
+    const { data: openRows } = await db
       .from('billing_pix_orders')
       .select(
-        'status, mp_order_id, amount_cents, qr_code, qr_code_base64, ticket_url, expires_at'
+        'id, status, mp_order_id, amount_cents, period_start, qr_code, qr_code_base64, ticket_url, expires_at'
       )
       .eq('account_id', ctx.accountId)
-      .eq('period_start', period)
-      .maybeSingle();
-    // This charge was already paid: never replace the record or ask twice.
-    // Checked BEFORE the subscription row is rewritten below.
-    if (open?.status === 'paid') {
-      return NextResponse.json({ error: 'already_paid' }, { status: 409 });
+      .eq('status', 'pending');
+    const reusable = (openRows ?? []).find(
+      (o) =>
+        o.period_start === period &&
+        o.amount_cents === quote.amountCents &&
+        !!o.qr_code &&
+        !!o.expires_at &&
+        new Date(o.expires_at as string) > now
+    );
+
+    // Close the others at Mercado Pago. Their rows are KEPT (cancelled), so
+    // if one is paid anyway the payment still matches a row and is
+    // credited instead of vanishing. If one turns out to be paid already,
+    // credit it and stop: no second charge.
+    for (const o of openRows ?? []) {
+      if (o.id === reusable?.id) continue;
+      if (o.mp_order_id) {
+        const oldId = o.mp_order_id as string;
+        const current = await getOrder(oldId).catch(() => null);
+        if (current && pixOrderStatus(current.status) === 'paid') {
+          await applyNotification(db, 'pix', 'order', oldId);
+          return NextResponse.json({ error: 'already_paid' }, { status: 409 });
+        }
+        await cancelOrder(oldId, randomUUID()).catch((err) => {
+          console.error('[billing/checkout/pix] could not cancel old order', err);
+        });
+      }
+      await db
+        .from('billing_pix_orders')
+        .update({ status: 'canceled' })
+        .eq('id', o.id)
+        .eq('status', 'pending');
     }
 
     if (!overdue) {
@@ -168,31 +207,8 @@ export async function POST(request: Request) {
       if (subErr) throw subErr;
     }
 
-    const stillOpen =
-      open &&
-      open.status === 'pending' &&
-      open.amount_cents === quote.amountCents &&
-      open.expires_at &&
-      new Date(open.expires_at as string) > now;
-    if (stillOpen) {
-      return NextResponse.json({ ok: true, pix: toClient(open) });
-    }
-
-    // The open Pix is about to be replaced (another plan/cycle, or expired
-    // on our side). Its row is overwritten below, so a later payment of the
-    // OLD QR code would no longer match anything and never activate the
-    // account. Close it at Mercado Pago first; if it was in fact paid in
-    // the meantime, credit it instead of creating a second charge.
-    if (open?.status === 'pending' && open.mp_order_id) {
-      const oldId = open.mp_order_id as string;
-      const current = await getOrder(oldId).catch(() => null);
-      if (current && pixOrderStatus(current.status) === 'paid') {
-        await applyNotification(db, 'pix', 'order', oldId);
-        return NextResponse.json({ error: 'already_paid' }, { status: 409 });
-      }
-      await cancelOrder(oldId, randomUUID()).catch((err) => {
-        console.error('[billing/checkout/pix] could not cancel old order', err);
-      });
+    if (reusable) {
+      return NextResponse.json({ ok: true, pix: toClient(reusable) });
     }
 
     const externalReference = randomUUID();
@@ -232,12 +248,16 @@ export async function POST(request: Request) {
       expires_at: new Date(Date.now() + 24 * 3_600_000).toISOString(),
       paid_at: null,
     };
-    // One charge per account per month: an expired/cancelled one from this
-    // month is replaced by the new order.
-    const { error: orderErr } = await db
-      .from('billing_pix_orders')
-      .upsert(row, { onConflict: 'account_id,period_start' });
-    if (orderErr) throw orderErr;
+    // A new row, never an overwrite (migration 122): a concurrent request
+    // that got here first wins the one-pending-per-period index.
+    const { error: orderErr } = await db.from('billing_pix_orders').insert(row);
+    if (orderErr) {
+      if (orderErr.code === '23505') {
+        await cancelOrder(order.id, randomUUID()).catch(() => undefined);
+        return NextResponse.json({ error: 'retry' }, { status: 409 });
+      }
+      throw orderErr;
+    }
 
     return NextResponse.json({ ok: true, pix: toClient(row) }, { status: 201 });
   } catch (err) {
