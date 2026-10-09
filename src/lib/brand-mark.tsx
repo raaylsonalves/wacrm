@@ -1,12 +1,15 @@
 import { ImageResponse } from 'next/og';
+import { NORDIA_MARK_PNG, NORDIA_MARK_RATIO } from './brand-mark-image';
 
-// The brand mark — violet rounded square + white chat-square glyph,
-// matching the sidebar logo — rendered at any size. Shared by the
+// The brand mark — the Nordia "N" on the landing's paper background —
+// rendered at any size. Shared by the
 // favicon (src/app/icon.tsx), the iOS home-screen icon
 // (src/app/apple-icon.tsx) and the PWA manifest icons
 // (src/app/pwa-icon/[size]/route.tsx) so they can't drift apart.
 
 export const BRAND_PURPLE = '#7c3aed';
+/** Light paper background of the Nordia landing, behind the mark. */
+export const BRAND_PAPER = '#f7f4ef';
 
 export function brandMarkResponse(
   size: number,
@@ -14,8 +17,9 @@ export function brandMarkResponse(
 ): ImageResponse {
   // Maskable: the OS crops to its own shape (circle, squircle…), and only
   // the central 80% "safe zone" is guaranteed visible — so fill the whole
-  // canvas with no corner radius and shrink the glyph into that zone.
-  const glyph = Math.round(size * (opts.maskable ? 0.45 : 0.625));
+  // canvas with no corner radius and shrink the mark into that zone.
+  const h = Math.round(size * (opts.maskable ? 0.55 : 0.8));
+  const w = Math.round(h * NORDIA_MARK_RATIO);
   const radius = opts.maskable ? 0 : Math.round(size * 0.1875);
 
   return new ImageResponse(
@@ -26,22 +30,12 @@ export function brandMarkResponse(
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: opts.color ?? BRAND_PURPLE,
+        background: opts.color ?? BRAND_PAPER,
         borderRadius: radius,
       }}
     >
-      <svg
-        width={glyph}
-        height={glyph}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#ffffff"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={NORDIA_MARK_PNG} width={w} height={h} alt="" />
     </div>,
     { width: size, height: size, headers: opts.headers }
   );

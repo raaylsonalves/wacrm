@@ -23,6 +23,10 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  // Absolute URLs for the share image (src/app/opengraph-image.png).
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://crm.nordiatech.com.br'
+  ),
   title: {
     default: 'wacrm',
     template: '%s — wacrm',
