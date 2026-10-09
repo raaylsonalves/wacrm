@@ -40,6 +40,9 @@ function SignupPageInner() {
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  // The owner's WhatsApp for billing notices (lib/billing/whatsapp-notify).
+  // Not asked when joining an existing account.
+  const [whatsapp, setWhatsapp] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +61,12 @@ function SignupPageInner() {
 
     if (password.length < 6) {
       setError(t("passwordTooShort"));
+      return;
+    }
+
+    const phoneDigits = whatsapp.replace(/\D/g, "");
+    if (!inviteToken && (phoneDigits.length < 10 || phoneDigits.length > 15)) {
+      setError(t("whatsappInvalid"));
       return;
     }
 
@@ -80,6 +89,7 @@ function SignupPageInner() {
       options: {
         data: {
           full_name: fullName,
+          ...(inviteToken ? {} : { whatsapp_phone: whatsapp.trim() }),
           // Plan picked on the marketing page, read back by onboarding.
           // Only a known plan id is kept, never a price.
           ...(isPlanId(searchParams.get("plano"))
@@ -208,6 +218,27 @@ function SignupPageInner() {
                 required
               />
             </div>
+
+            {!inviteToken && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="whatsapp" className="text-muted-foreground">
+                  {t("whatsappLabel")}
+                </Label>
+                <Input
+                  id="whatsapp"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="(11) 98765-4321"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("whatsappHint")}
+                </p>
+              </div>
+            )}
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="password" className="text-muted-foreground">

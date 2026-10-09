@@ -3422,6 +3422,12 @@
       "loading": "Loading…"
     },
     "billing": {
+      "phoneLabel": "WhatsApp for billing notices",
+      "phoneHint": "We send payment confirmations, the monthly Pix and declined-card notices here.",
+      "phoneSave": "Save",
+      "phoneSaved": "WhatsApp saved",
+      "phoneSaveFailed": "Could not save the WhatsApp number",
+      "phoneInvalid": "Enter a valid WhatsApp number with area code.",
       "title": "Billing",
       "description": "Your plan, payment method and upcoming charges.",
       "noPlan": "No active plan",
@@ -3485,6 +3491,9 @@
     }
   },
   "SignupPage": {
+    "whatsappLabel": "WhatsApp",
+    "whatsappHint": "For important account notices, such as billing.",
+    "whatsappInvalid": "Enter a valid WhatsApp number with area code.",
     "passwordsMismatch": "Passwords do not match",
     "passwordTooShort": "Password must be at least 6 characters",
     "checkEmailTitle": "Check your email",

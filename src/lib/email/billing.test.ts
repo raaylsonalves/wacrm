@@ -46,7 +46,7 @@ describe('buildBillingEmail', () => {
 
   it('builds every kind with a subject and a plain-text part', () => {
     for (const e of [
-      buildBillingEmail({ kind: 'card_declined', amountCents: 100 }, null),
+      buildBillingEmail({ kind: 'card_declined', amountCents: 100, graceUntil: new Date() }, null),
       buildBillingEmail({ kind: 'past_due', amountCents: 100, graceUntil: new Date() }, null),
       buildBillingEmail({ kind: 'ended' }, null),
     ]) {

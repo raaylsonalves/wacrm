@@ -3410,6 +3410,12 @@
       "loading": "Carregando…"
     },
     "billing": {
+      "phoneLabel": "WhatsApp para avisos de cobrança",
+      "phoneHint": "Enviamos por aqui a confirmação de pagamento, o Pix do mês e avisos de cartão recusado.",
+      "phoneSave": "Salvar",
+      "phoneSaved": "WhatsApp salvo",
+      "phoneSaveFailed": "Não foi possível salvar o WhatsApp",
+      "phoneInvalid": "Informe um WhatsApp válido com DDD.",
       "title": "Cobrança",
       "description": "Plano, forma de pagamento e próximas cobranças da sua conta.",
       "noPlan": "Nenhum plano ativo",
@@ -3473,6 +3479,9 @@
     }
   },
   "SignupPage": {
+    "whatsappLabel": "WhatsApp",
+    "whatsappHint": "Para avisos importantes da sua conta, como cobranças.",
+    "whatsappInvalid": "Informe um WhatsApp válido com DDD.",
     "passwordsMismatch": "As senhas não coincidem",
     "passwordTooShort": "A senha deve ter pelo menos 6 caracteres",
     "checkEmailTitle": "Verifique seu e-mail",

@@ -3422,6 +3422,12 @@
       "loading": "불러오는 중…"
     },
     "billing": {
+      "phoneLabel": "결제 알림용 WhatsApp",
+      "phoneHint": "결제 확인, 월별 Pix, 카드 거절 알림을 이 번호로 보냅니다.",
+      "phoneSave": "저장",
+      "phoneSaved": "WhatsApp 저장됨",
+      "phoneSaveFailed": "WhatsApp 번호를 저장할 수 없습니다",
+      "phoneInvalid": "지역 번호를 포함한 올바른 WhatsApp 번호를 입력하세요.",
       "title": "결제",
       "description": "요금제, 결제 수단 및 예정된 청구 내역입니다.",
       "noPlan": "활성 요금제 없음",
@@ -3485,6 +3491,9 @@
     }
   },
   "SignupPage": {
+    "whatsappLabel": "WhatsApp",
+    "whatsappHint": "결제 등 계정 관련 중요 알림용입니다.",
+    "whatsappInvalid": "지역 번호를 포함한 올바른 WhatsApp 번호를 입력하세요.",
     "passwordsMismatch": "비밀번호가 일치하지 않습니다",
     "passwordTooShort": "비밀번호는 6자 이상이어야 합니다",
     "checkEmailTitle": "이메일을 확인하세요",

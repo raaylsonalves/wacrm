@@ -20,7 +20,7 @@ import {
   toCents,
 } from './transitions';
 import type { BillingSource } from './webhook-signature';
-import { sendBillingEmail } from '@/lib/email/billing';
+import { notifyBilling } from './notify';
 
 export type ApplyResult =
   | 'applied'
@@ -113,7 +113,7 @@ async function registerPaidCharge(
   if (upErr) throw upErr;
   // A finished annual plan simply stops: access runs to the period end.
   await setAccountStatus(db, accountId, 'active');
-  await sendBillingEmail(
+  await notifyBilling(
     db,
     accountId,
     {
@@ -319,10 +319,14 @@ async function applyAuthorizedPayment(
     await setAccountStatus(db, sub.account_id as string, 'past_due');
     // Once per decline episode: Mercado Pago's retries notify again.
     if (before && before.status !== 'past_due' && before.status !== 'canceled') {
-      await sendBillingEmail(
+      await notifyBilling(
         db,
         sub.account_id as string,
-        { kind: 'card_declined', amountCents: sub.amount_cents },
+        {
+          kind: 'card_declined',
+          amountCents: sub.amount_cents,
+          graceUntil: new Date(grace),
+        },
         `declined:${ap.id}`
       );
     }

@@ -21,7 +21,7 @@ import {
   extractPixPayment,
 } from './mercadopago';
 import { isFullyPaid } from './transitions';
-import { sendBillingEmail } from '@/lib/email/billing';
+import { notifyBilling } from './notify';
 
 export const RENEW_BEFORE_MS = 3 * 86_400_000;
 export const GRACE_MS = 3 * 86_400_000;
@@ -155,7 +155,7 @@ async function renewPix(
   // A concurrent sweep may have inserted it first; that is fine.
   if (error && error.code !== '23505') throw error;
   if (!error) {
-    await sendBillingEmail(
+    await notifyBilling(
       db,
       sub.account_id,
       {
@@ -220,7 +220,7 @@ export async function runBillingSweep(
           .eq('id', sub.id);
         await setAccountStatus(db, sub.account_id, 'past_due');
         summary.toPastDue++;
-        await sendBillingEmail(
+        await notifyBilling(
           db,
           sub.account_id,
           {
@@ -237,11 +237,11 @@ export async function runBillingSweep(
           .eq('id', sub.id);
         await setAccountStatus(db, sub.account_id, 'canceled');
         summary.lapsed++;
-        await sendBillingEmail(db, sub.account_id, { kind: 'ended' }, `ended:${sub.id}`);
+        await notifyBilling(db, sub.account_id, { kind: 'ended' }, `ended:${sub.id}`);
       } else if (action === 'close_canceled') {
         await setAccountStatus(db, sub.account_id, 'canceled');
         summary.closed++;
-        await sendBillingEmail(db, sub.account_id, { kind: 'ended' }, `ended:${sub.id}`);
+        await notifyBilling(db, sub.account_id, { kind: 'ended' }, `ended:${sub.id}`);
       } else if (action === 'renew_pix') {
         if (await renewPix(db, sub, now)) summary.renewed++;
       }

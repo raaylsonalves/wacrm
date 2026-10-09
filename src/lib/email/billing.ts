@@ -32,7 +32,7 @@ export type BillingEmail =
       dueAt: Date;
       ticketUrl: string | null;
     }
-  | { kind: 'card_declined'; amountCents: number }
+  | { kind: 'card_declined'; amountCents: number; graceUntil: Date }
   | { kind: 'past_due'; amountCents: number; graceUntil: Date }
   | { kind: 'ended' };
 

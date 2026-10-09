@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { BillingPhone } from '@/components/billing/billing-phone';
 import { CardBrick } from '@/components/billing/card-brick';
 import { CheckoutForm } from '@/components/billing/checkout-form';
 import { confirmDialog } from '@/components/confirm-dialog';
@@ -464,6 +465,8 @@ export function BillingPanel() {
               ) : null}
             </div>
           )}
+
+          <BillingPhone />
         </>
       ) : (
         <p className="text-muted-foreground text-sm">{t('ownerOnly')}</p>
