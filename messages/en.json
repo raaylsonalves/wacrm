@@ -2945,6 +2945,7 @@
     },
     "whatsapp": {
       "numbers": {
+        "healthFailing": "Token refused by Meta — update the credentials",
         "limitReached": "Your plan includes 1 WhatsApp number. More numbers are part of a custom plan — talk to Nordia.",
         "title": "Official numbers (Meta API)",
         "hint": "Each conversation replies from the number the customer wrote to. The primary is used when no number is set yet.",

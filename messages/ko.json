@@ -2945,6 +2945,7 @@
     },
     "whatsapp": {
       "numbers": {
+        "healthFailing": "Meta가 토큰을 거부했습니다 — 자격 증명을 업데이트하세요",
         "limitReached": "요금제에는 WhatsApp 번호 1개가 포함됩니다. 추가 번호는 맞춤 요금제로 제공됩니다 — Nordia에 문의하세요.",
         "title": "공식 번호 (Meta API)",
         "hint": "각 대화는 고객이 메시지를 보낸 번호로 답장합니다. 번호가 아직 정해지지 않았으면 기본 번호를 사용합니다.",

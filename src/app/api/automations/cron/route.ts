@@ -11,6 +11,7 @@ import { dispatchPendingPushes } from '@/lib/notifications/notify'
 import { runScheduledBroadcasts } from '@/lib/whatsapp/broadcast-schedule'
 import { runCalendarSync } from '@/lib/google-calendar/sync'
 import { runBillingSweep } from '@/lib/billing/sweep'
+import { runOfficialNumberHealth } from '@/lib/whatsapp/official-health'
 import { sweepAppointmentReminders, sweepSlaBreaches } from '@/lib/notifications/sweeps'
 
 /**
@@ -153,11 +154,15 @@ export async function GET(request: Request) {
     return null
   })
 
+  // Official (Meta) numbers: is each token still accepted? Every 30
+  // minutes per number (migration 120). Never throws.
+  const officialHealth = await runOfficialNumberHealth(supabaseAdmin())
+
   const notifications = {
     sla: await sweepSlaBreaches(supabaseAdmin()),
     reminders: await sweepAppointmentReminders(supabaseAdmin()),
     push: await dispatchPendingPushes(supabaseAdmin()),
   }
 
-  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays, broadcasts, calendar, notifications, billing })
+  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays, broadcasts, calendar, notifications, billing, officialHealth })
 }

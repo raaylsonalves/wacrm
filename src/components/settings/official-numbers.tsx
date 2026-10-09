@@ -24,6 +24,8 @@ interface OfficialNumber {
   is_primary: boolean;
   status: string;
   registered_at: string | null;
+  /** Meta refused it on the last health check (migration 120). */
+  health_error: string | null;
 }
 
 export function OfficialNumbers() {
@@ -125,7 +127,9 @@ export function OfficialNumbers() {
               <span
                 className={cn(
                   'size-2 shrink-0 rounded-full',
-                  n.status === 'connected' ? 'bg-emerald-500' : 'bg-amber-500'
+                  n.status === 'connected' && !n.health_error
+                    ? 'bg-emerald-500'
+                    : 'bg-amber-500'
                 )}
                 aria-hidden
               />
@@ -138,6 +142,14 @@ export function OfficialNumbers() {
               {n.is_primary && (
                 <span className="bg-foreground/10 text-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold">
                   {t('primary')}
+                </span>
+              )}
+              {n.health_error && (
+                <span
+                  className="truncate text-[11px] text-amber-700 dark:text-amber-300"
+                  title={n.health_error}
+                >
+                  {t('healthFailing')}
                 </span>
               )}
             </button>

@@ -29,7 +29,12 @@ export function ChannelStatusBanner() {
   // Every official (Meta) number — an account can have several
   // (specs/multi-official-numbers.md); null = not loaded yet.
   const [official, setOfficial] = useState<
-    { label: string | null; display_phone_number: string | null; status: string }[] | null
+    {
+      label: string | null;
+      display_phone_number: string | null;
+      status: string;
+      health_error: string | null;
+    }[] | null
   >(null);
   const [waha, setWaha] = useState<WahaChannel[]>([]);
 
@@ -39,7 +44,7 @@ export function ChannelStatusBanner() {
     const [{ data: cfg }, { data: channels }] = await Promise.all([
       db
         .from('whatsapp_config')
-        .select('label, display_phone_number, status')
+        .select('label, display_phone_number, status, health_error')
         .eq('account_id', accountId),
       db
         .from('whatsapp_waha_channels')
@@ -51,6 +56,7 @@ export function ChannelStatusBanner() {
         label: string | null;
         display_phone_number: string | null;
         status: string;
+        health_error: string | null;
       }[]
     );
     setWaha((channels ?? []) as WahaChannel[]);
@@ -80,7 +86,11 @@ export function ChannelStatusBanner() {
   if (official === null) return null;
 
   const downWaha = waha.filter((c) => c.status !== 'connected');
-  const downOfficial = official.filter((n) => n.status !== 'connected');
+  // Down = not connected, or Meta refused it on the last health check
+  // (an expired / revoked token — migration 120).
+  const downOfficial = official.filter(
+    (n) => n.status !== 'connected' || !!n.health_error
+  );
   const messages: string[] = [
     ...downWaha.map((c) => t('wahaDown', { channel: c.label })),
     // One official number: the original wording. Several: name each one

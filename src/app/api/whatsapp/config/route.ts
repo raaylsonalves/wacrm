@@ -213,15 +213,18 @@ export async function GET(request: Request) {
 
     // Keep the number's display phone current for the numbers list —
     // rows saved before migration 113 get it on their first check.
-    if (
-      phoneInfo?.display_phone_number &&
-      phoneInfo.display_phone_number !== config.display_phone_number
-    ) {
-      await supabase
-        .from('whatsapp_config')
-        .update({ display_phone_number: phoneInfo.display_phone_number })
-        .eq('id', config.id)
-    }
+    // Meta just accepted the token: keep the display phone current and end
+    // any failure the periodic health check recorded (migration 120).
+    await supabase
+      .from('whatsapp_config')
+      .update({
+        ...(phoneInfo?.display_phone_number
+          ? { display_phone_number: phoneInfo.display_phone_number }
+          : {}),
+        health_error: null,
+        health_checked_at: new Date().toISOString(),
+      })
+      .eq('id', config.id)
 
     // Credentials work. Also report whether the WABA is subscribed to
     // this app — valid credentials with an unsubscribed WABA is exactly
@@ -587,6 +590,9 @@ export async function POST(request: Request) {
       subscribed_apps_at: subscribedAppsAt ?? null,
       last_registration_error: registrationError,
       display_phone_number: phoneInfo?.display_phone_number ?? null,
+      // Just verified with Meta: any recorded health failure is over.
+      health_error: null,
+      health_checked_at: new Date().toISOString(),
       ...(label !== null || body.label === '' ? { label } : {}),
       updated_at: new Date().toISOString(),
     }

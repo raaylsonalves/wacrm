@@ -944,6 +944,12 @@ BEGIN
     RAISE EXCEPTION 'templates per WABA missing — migration 119 did not apply';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'whatsapp_config'
+         AND column_name = 'health_error') THEN
+    RAISE EXCEPTION 'official number health missing — migration 120 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;
