@@ -1,6 +1,6 @@
 import { AiError, type ChatMessage, type ProviderResult, type ToolDefinition } from '../types'
 import { MAX_OUTPUT_TOKENS } from '../defaults'
-import { normalizeUsage, providerHttpError, toNetworkError, MAX_TOOL_ROUNDS, type ProviderArgs } from './shared'
+import { addUsage, normalizeUsage, providerHttpError, toNetworkError, MAX_TOOL_ROUNDS, type ProviderArgs } from './shared'
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
@@ -154,12 +154,12 @@ export async function generateGemini(args: ProviderArgs): Promise<ProviderResult
       })
     }
 
-    usage = normalizeUsage({
+    usage = addUsage(usage, normalizeUsage({
       prompt: data.usageMetadata?.promptTokenCount,
       completion: data.usageMetadata?.candidatesTokenCount,
       total: data.usageMetadata?.totalTokenCount,
       cached: data.usageMetadata?.cachedContentTokenCount,
-    })
+    }))
 
     const parts = data.candidates?.[0]?.content?.parts ?? []
     const calls = parts.filter((p) => p.functionCall)

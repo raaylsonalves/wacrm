@@ -593,7 +593,9 @@
           "systemError": "Error interno al reservar la respuesta del asistente",
           "customerRequestedHuman": "El cliente pidió hablar con una persona",
           "audioUnintelligible": "El asistente no pudo entender el audio del cliente",
-          "caseEscalated": "Una persona asumió desde un caso"
+          "caseEscalated": "Una persona asumió desde un caso",
+          "flowHandoff": "Un flujo pasó la conversación a una persona",
+          "followupExhausted": "El seguimiento terminó sin respuesta y pasó a una persona"
         },
         "lastMessage": "Último mensaje del cliente",
         "showMore": "Ver más",
@@ -3664,7 +3666,9 @@
       "system_error": "System error",
       "customer_requested_human": "The customer asked for a person",
       "audio_unintelligible": "Audio the AI couldn't understand",
-      "case_escalated": "Taken over from a case"
+      "case_escalated": "Taken over from a case",
+      "flow_handoff": "Transferida por un flujo",
+      "followup_exhausted": "Seguimiento sin respuesta"
     }
   },
   "Agents": {

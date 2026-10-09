@@ -31,6 +31,8 @@ const HANDOFF_REASONS = new Set([
   'customer_requested_human',
   'audio_unintelligible',
   'case_escalated',
+  'flow_handoff',
+  'followup_exhausted',
 ]);
 
 // Migration 027's English sentence, still on rows written before 048.

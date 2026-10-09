@@ -1,5 +1,5 @@
 import { supabaseAdmin } from './admin-client'
-import { loadAiConfig } from './config'
+import { loadAgentForConversation } from './channel-agent'
 import { buildConversationContext } from './context'
 import { buildSystemPrompt } from './defaults'
 import { generateReplyWithFallback } from './generate-with-fallback'
@@ -27,6 +27,13 @@ export interface AiFollowupStepConfig {
  * Throws on failure (the engine ends the enrollment) unless the step has a
  * fallback text.
  */
+/** The follow-up stopped being due while the AI was writing it. */
+export class FollowupNoLongerDue extends Error {
+  constructor() {
+    super('follow-up no longer due')
+  }
+}
+
 export async function sendAiFollowup(args: {
   accountId: string
   userId: string
@@ -34,11 +41,14 @@ export async function sendAiFollowup(args: {
   contactId: string
   enrollmentId: string
   cfg: AiFollowupStepConfig
+  /** Re-checked right before sending; false = drop the follow-up. */
+  stillDue?: () => Promise<boolean>
 }): Promise<{ messageId: string }> {
   const db = supabaseAdmin()
   const { accountId, conversationId, contactId, enrollmentId, cfg } = args
 
   const fallback = cfg.fallback_text?.trim() || null
+  let first = ''
   const send = async (text: string, aiGenerated: boolean) => {
     const { whatsapp_message_id } = await engineSendText({
       accountId,
@@ -52,21 +62,14 @@ export async function sendAiFollowup(args: {
   }
 
   try {
-    const [{ data: conv }, { data: enr }, { data: contact }] = await Promise.all([
-      db
-        .from('conversations')
-        .select('active_ai_agent_id, pinned_ai_agent_id')
-        .eq('id', conversationId)
-        .eq('account_id', accountId)
-        .maybeSingle(),
+    const [{ data: enr }, { data: contact }] = await Promise.all([
       db.from('followup_enrollments').select('steps_sent').eq('id', enrollmentId).maybeSingle(),
       db.from('contacts').select('name').eq('id', contactId).eq('account_id', accountId).maybeSingle(),
     ])
 
-    // Same persona the customer has been talking to.
-    const agentId = conv?.pinned_ai_agent_id ?? conv?.active_ai_agent_id ?? undefined
-    let config: AiConfig | null = await loadAiConfig(db, accountId, { agentId })
-    if (!config && agentId) config = await loadAiConfig(db, accountId)
+    // Same persona the customer has been talking to — pinned, chosen by
+    // the router, or bound to the number — like the auto-reply (A7).
+    const config: AiConfig | null = await loadAgentForConversation(db, accountId, conversationId)
     if (!config) throw new Error('AI is not configured for this account')
 
     const history = await buildConversationContext(db, conversationId)
@@ -100,14 +103,21 @@ export async function sendAiFollowup(args: {
     const text = generation.text?.trim()
     if (generation.handoff || !text) throw new Error('the model produced no follow-up text')
 
-    let first = ''
+    // The model can take a while: re-check that the follow-up is still
+    // due (the customer may have answered meanwhile) right before sending.
+    if (args.stillDue && !(await args.stillDue())) {
+      throw new FollowupNoLongerDue()
+    }
     for (const part of splitLongText(text)) {
       const r = await send(part, true)
       first ||= r.messageId
     }
     return { messageId: first }
   } catch (err) {
-    if (fallback) return send(fallback, false)
+    if (err instanceof FollowupNoLongerDue) throw err
+    // The fallback replaces a follow-up that never went out — never a
+    // second message after part of the AI text was delivered (A13).
+    if (fallback && !first) return send(fallback, false)
     throw err
   }
 }

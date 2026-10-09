@@ -2,7 +2,7 @@ import { AiError, type ChatMessage, type ProviderResult, type ToolDefinition } f
 import { MAX_OUTPUT_TOKENS } from '../defaults'
 import {
   mergeConsecutive,
-  normalizeUsage,
+  addUsage, normalizeUsage,
   providerHttpError,
   toNetworkError,
   MAX_TOOL_ROUNDS,
@@ -109,10 +109,10 @@ export async function generateAnthropic(args: ProviderArgs): Promise<ProviderRes
   let usage: ReturnType<typeof normalizeUsage> = null
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
     const data = await call()
-    usage = normalizeUsage({
+    usage = addUsage(usage, normalizeUsage({
       prompt: data.usage?.input_tokens,
       completion: data.usage?.output_tokens,
-    })
+    }))
 
     const content = data.content ?? []
     const toolUses = content.filter((b) => b.type === 'tool_use')

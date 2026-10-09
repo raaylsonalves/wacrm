@@ -2,7 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { loadAiConfig } from './config';
 import { generateReply } from './generate';
-import type { AiConfig } from './types';
+import type { AiConfig, AiUsage } from './types';
+import { logAiUsage } from './usage';
+import { primaryConfigId } from '@/lib/whatsapp/conversation-number';
 
 interface RouterRow {
   id: string;
@@ -47,9 +49,10 @@ export async function loadActiveRouterForChannel(
   db: SupabaseClient,
   accountId: string,
   channelId: string | null,
-  configId: string | null = null,
+  configIdArg: string | null = null,
   opts: { skipWholeAccount?: boolean } = {}
 ): Promise<ActiveRouter | null> {
+  let configId = configIdArg;
   // Few routers per account: fetch the active ones and pick here.
   const { data: routers, error } = await db
     .from('ai_routers')
@@ -62,6 +65,11 @@ export async function loadActiveRouterForChannel(
   if (error || !routers || routers.length === 0) return null;
 
   const rows = routers as RouterRow[];
+  // A conversation from before multi-number support has no number of its
+  // own: it belongs to the primary, like everywhere else (A6).
+  if (!channelId && !configId && rows.some((r) => r.whatsapp_config_id)) {
+    configId = await primaryConfigId(db, accountId);
+  }
   const own = rows.find(
     (r) =>
       (!!channelId && r.channel_id === channelId) ||
@@ -87,6 +95,8 @@ export async function loadActiveRouterForChannel(
 interface ClassifyResult {
   intentName: string | null;
   confidence: number;
+  /** What the classification call cost, to be logged (A10). */
+  usage?: AiUsage | null;
 }
 
 /**
@@ -132,8 +142,8 @@ async function classifyIntent(
     const confidence =
       typeof parsed.confidence === 'number' ? parsed.confidence : 0;
     if (!intentName || intentName === 'none')
-      return { intentName: null, confidence: 0 };
-    return { intentName, confidence };
+      return { intentName: null, confidence: 0, usage: result.usage };
+    return { intentName, confidence, usage: result.usage };
   } catch (err) {
     console.warn('[ai router] classification failed, falling back:', err);
     return { intentName: null, confidence: 0 };
@@ -181,10 +191,19 @@ export async function resolveAgentViaRouter(
   // classify if the assigned agent no longer resolves (deleted /
   // deactivated since), rather than silently stalling on a config
   // that doesn't exist.
-  if (router.sticky && currentAgentId) {
-    const stuck = await loadAiConfig(db, accountId, {
-      agentId: currentAgentId,
-    });
+  // An agent whose auto-reply is off never answers through the router —
+  // the same rule the pinned and the number-bound agents follow (A4).
+  const usable = async (agentId: string) => {
+    const cfg = await loadAiConfig(db, accountId, { agentId });
+    return cfg && cfg.autoReplyEnabled ? cfg : null;
+  };
+
+  // Only while that agent still belongs to this router (as a member or
+  // its fallback): one removed from it stops answering old threads (A14).
+  const inRouter = (id: string) =>
+    id === router.fallback_agent_id || members.some((m) => m.agent_id === id);
+  if (router.sticky && currentAgentId && inRouter(currentAgentId)) {
+    const stuck = await usable(currentAgentId);
     if (stuck) return stuck;
   }
 
@@ -192,11 +211,21 @@ export async function resolveAgentViaRouter(
     ? { ...defaultConfig, model: router.classifier_model }
     : defaultConfig;
 
-  const { intentName, confidence } = await classifyIntent(
+  const { intentName, confidence, usage } = await classifyIntent(
     classifierConfig,
     members,
     messageText
   );
+  // The classifier is a paid call on the account's key too.
+  void logAiUsage(db, {
+    accountId,
+    conversationId,
+    agentId: null,
+    mode: 'auto_reply',
+    provider: classifierConfig.provider,
+    model: classifierConfig.model,
+    usage: usage ?? null,
+  });
 
   let resolvedAgentId: string | null = null;
   let resolvedConfig: AiConfig = defaultConfig;
@@ -205,9 +234,7 @@ export async function resolveAgentViaRouter(
     ? members.find((m) => m.intent_name === intentName)
     : undefined;
   if (matched && confidence >= router.min_confidence) {
-    const agentConfig = await loadAiConfig(db, accountId, {
-      agentId: matched.agent_id,
-    });
+    const agentConfig = await usable(matched.agent_id);
     if (agentConfig) {
       resolvedAgentId = matched.agent_id;
       resolvedConfig = agentConfig;
@@ -215,9 +242,7 @@ export async function resolveAgentViaRouter(
   }
 
   if (!resolvedAgentId && router.fallback_agent_id) {
-    const fallbackConfig = await loadAiConfig(db, accountId, {
-      agentId: router.fallback_agent_id,
-    });
+    const fallbackConfig = await usable(router.fallback_agent_id);
     if (fallbackConfig) {
       resolvedAgentId = router.fallback_agent_id;
       resolvedConfig = fallbackConfig;
@@ -228,13 +253,14 @@ export async function resolveAgentViaRouter(
   // match, fallback agent, or the default) is what the rest of the
   // conversation gets, if sticky. Best-effort — a failed write just
   // means the next turn re-resolves, not a broken reply.
-  if (router.sticky && !currentAgentId) {
+  if (router.sticky && (!currentAgentId || !inRouter(currentAgentId))) {
     const stickyId = resolvedAgentId ?? defaultConfig.id ?? null;
     if (stickyId) {
       await db
         .from('conversations')
         .update({ active_ai_agent_id: stickyId })
-        .eq('id', conversationId);
+        .eq('id', conversationId)
+        .eq('account_id', accountId);
     }
   }
 

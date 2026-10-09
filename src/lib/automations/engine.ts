@@ -38,7 +38,11 @@ import {
 import { validateInteractivePayload } from '@/lib/whatsapp/interactive';
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf';
 import { pickVariant } from '@/lib/variant';
-import { sendAiFollowup, type AiFollowupStepConfig } from '@/lib/ai/followup';
+import {
+  FollowupNoLongerDue,
+  sendAiFollowup,
+  type AiFollowupStepConfig,
+} from '@/lib/ai/followup';
 import {
   endEnrollment,
   guardFollowupSend,
@@ -593,15 +597,27 @@ async function runStep(
         throw new Error('ai_followup only runs inside a follow-up sequence');
       }
       const conversationId = await resolveConversationId(args);
-      const { messageId } = await sendAiFollowup({
-        accountId: args.automation.account_id,
-        userId: args.automation.user_id,
-        conversationId,
-        contactId: args.contactId,
-        enrollmentId,
-        cfg: step.step_config as AiFollowupStepConfig,
-      });
-      return { key: 'sentViaMeta', params: { messageId } };
+      try {
+        const { messageId } = await sendAiFollowup({
+          accountId: args.automation.account_id,
+          userId: args.automation.user_id,
+          conversationId,
+          contactId: args.contactId,
+          enrollmentId,
+          cfg: step.step_config as AiFollowupStepConfig,
+          // Generating takes seconds: re-run the guard right before the
+          // send, not only before generating (review 2026-10, A13).
+          stillDue: async () =>
+            (await guardFollowupSend({ enrollmentId, stepIsTemplate: false }))
+              .kind !== 'stop',
+        });
+        return { key: 'sentViaMeta', params: { messageId } };
+      } catch (err) {
+        if (err instanceof FollowupNoLongerDue) {
+          return { key: 'followupStopped', params: { outcome: 'ended' } };
+        }
+        throw err;
+      }
     }
 
     case 'send_buttons':
@@ -1096,6 +1112,9 @@ async function evaluateCondition(
     if ((count ?? 0) > 0) facts.tagIds = [cfg.operand];
   } else if (cfg.subject === 'contact_field') {
     if (!args.contactId || !cfg.operand) return false;
+    // A plain column name only: the operand goes into `.select()`, where a
+    // PostgREST embed (`x:other_table(*)`) would read beyond the contact.
+    if (!/^[a-z_][a-z0-9_]{0,62}$/.test(cfg.operand)) return false;
     // Scope to the account so the condition can't be turned into a
     // cross-tenant read oracle via the service-role client.
     const { data } = await db

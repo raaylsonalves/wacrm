@@ -45,7 +45,7 @@ export async function guardFollowupSend(args: {
     db
       .from('conversations')
       .select(
-        'status, snoozed_until, last_customer_message_at, assigned_agent_id, whatsapp_channel_id',
+        'status, snoozed_until, last_customer_message_at, assigned_agent_id, ai_autoreply_disabled, whatsapp_channel_id',
       )
       .eq('id', enr.conversation_id)
       .eq('account_id', enr.account_id)
@@ -86,8 +86,14 @@ export async function guardFollowupSend(args: {
     contactOptedOut: !!contact.opted_out_at,
     conversationStatus: conv.status as string,
     snoozedUntil: conv.snoozed_until ? new Date(conv.snoozed_until as string) : null,
+    // A person owns the thread: assigned to someone, or — for a sequence
+    // that follows up AI conversations — the AI was paused / handed off
+    // with nobody assigned yet (review 2026-10, A11).
     humanOwnsAndPolicyCancels:
-      !!conv.assigned_agent_id && (cfg?.handoff_policy ?? 'cancel') === 'cancel',
+      (!!conv.assigned_agent_id ||
+        ((cfg?.audience ?? 'ai_conversations') === 'ai_conversations' &&
+          !!conv.ai_autoreply_disabled)) &&
+      (cfg?.handoff_policy ?? 'cancel') === 'cancel',
     isCloudApi: conv.whatsapp_channel_id == null,
     stepIsTemplate: args.stepIsTemplate,
     sendsInCapWindow: sends.count ?? 0,

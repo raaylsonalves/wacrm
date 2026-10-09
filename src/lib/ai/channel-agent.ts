@@ -60,7 +60,9 @@ export async function loadChannelAgentId(
 
 /**
  * The agent that owns a conversation: the one pinned to it, else the one
- * bound to its number. Null when neither exists.
+ * a sticky router chose for it, else the one bound to its number. Null
+ * when none exists. Same order as the auto-reply (minus classification,
+ * which needs a fresh customer message).
  */
 export async function loadConversationAgentId(
   db: SupabaseClient,
@@ -70,13 +72,14 @@ export async function loadConversationAgentId(
   try {
     const { data: conv } = await db
       .from('conversations')
-      .select('whatsapp_channel_id, whatsapp_config_id, pinned_ai_agent_id')
+      .select('whatsapp_channel_id, whatsapp_config_id, pinned_ai_agent_id, active_ai_agent_id')
       .eq('id', conversationId)
       .eq('account_id', accountId)
       .maybeSingle()
     if (!conv) return null
     return (
       (conv.pinned_ai_agent_id as string | null) ??
+      (conv.active_ai_agent_id as string | null) ??
       (await loadChannelAgentId(
         db,
         accountId,
@@ -90,18 +93,20 @@ export async function loadConversationAgentId(
 }
 
 /**
- * The account's default agent, or — when it is off or missing — the
- * conversation's own agent (pinned or bound to the number). Switching the
- * default off must not leave a number's agent unusable for auto-reply,
- * drafts or summaries (seen live with a demo agent bound to the number).
+ * The agent that speaks for this conversation outside a live reply —
+ * drafts, summaries, AI follow-ups: its own agent (pinned, router-chosen
+ * or bound to the number), else the account's default. The persona the
+ * customer has been talking to, not the default one (A7).
  */
 export async function loadAgentForConversation(
   db: SupabaseClient,
   accountId: string,
   conversationId: string,
 ): Promise<AiConfig | null> {
-  const fallback = await loadAiConfig(db, accountId)
-  if (fallback) return fallback
   const agentId = await loadConversationAgentId(db, accountId, conversationId)
-  return agentId ? loadAiConfig(db, accountId, { agentId }) : null
+  if (agentId) {
+    const own = await loadAiConfig(db, accountId, { agentId })
+    if (own) return own
+  }
+  return loadAiConfig(db, accountId)
 }

@@ -2,7 +2,7 @@ import { AiError, type ProviderResult, type ToolDefinition } from '../types'
 import { MAX_OUTPUT_TOKENS } from '../defaults'
 import {
   mergeConsecutive,
-  normalizeUsage,
+  addUsage, normalizeUsage,
   providerHttpError,
   toNetworkError,
   MAX_TOOL_ROUNDS,
@@ -102,12 +102,12 @@ export async function generateOpenAi(args: ProviderArgs): Promise<ProviderResult
   let usage: ReturnType<typeof normalizeUsage> = null
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
     const data = await call()
-    usage = normalizeUsage({
+    usage = addUsage(usage, normalizeUsage({
       prompt: data.usage?.prompt_tokens,
       completion: data.usage?.completion_tokens,
       total: data.usage?.total_tokens,
       cached: data.usage?.prompt_tokens_details?.cached_tokens,
-    })
+    }))
 
     const message = data.choices?.[0]?.message
     const toolCalls = message?.tool_calls ?? []

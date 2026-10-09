@@ -25,7 +25,7 @@ const h = vi.hoisted(() => ({
     lastBusiness: null as { content_type: string; content_text: string } | null,
     conv: null as Record<string, unknown> | null,
     autoResponders: [] as { id: string }[],
-    claim: true as boolean,
+    claim: 'claimed' as string,
     /** The first conversations UPDATE — the handoff write itself. */
     updatePayload: null as Record<string, unknown> | null,
     /** Every conversations UPDATE, in order (handoff, notice claim, outcome). */
@@ -171,13 +171,12 @@ vi.mock('./admin-client', () => ({
         return chain
       }
       // conversations
+      const convSelect: Record<string, unknown> = {
+        eq: () => convSelect,
+        maybeSingle: () => Promise.resolve({ data: h.state.conv, error: null }),
+      }
       return {
-        select: () => ({
-          eq: () => ({
-            maybeSingle: () =>
-              Promise.resolve({ data: h.state.conv, error: null }),
-          }),
-        }),
+        select: () => convSelect,
         update: (payload: Record<string, unknown>) => {
           h.state.updates.push(payload)
           if (h.state.updatePayload === null) h.state.updatePayload = payload
@@ -244,7 +243,7 @@ beforeEach(() => {
     ai_reply_count: 0,
   }
   h.state.autoResponders = []
-  h.state.claim = true
+  h.state.claim = 'claimed'
   h.state.updatePayload = null
   h.state.updates = []
   h.state.noticeClaim = true
@@ -289,8 +288,8 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     await dispatchInboundToAiReply(ARGS)
     expect(h.state.rpcCalls).toEqual([
       {
-        name: 'claim_ai_reply_slot',
-        args: { conversation_id: 'conv-1', max_replies: 3 },
+        name: 'claim_ai_reply_turn',
+        args: expect.objectContaining({ p_conversation_id: 'conv-1', p_max_replies: 3 }),
       },
     ])
     expect(h.engineSendText).toHaveBeenCalledWith(
@@ -332,13 +331,28 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     expect(h.sendTypingIndicator).not.toHaveBeenCalled()
   })
 
+  it('drops the reply silently when a person took over during generation (A2)', async () => {
+    h.state.claim = 'human'
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.state.rpcCalls).toHaveLength(1)
+    expect(h.engineSendText).not.toHaveBeenCalled()
+    expect(h.state.updatePayload).toBeFalsy()
+  })
+
+  it('drops the reply silently when a newer customer message arrived (A3)', async () => {
+    h.state.claim = 'newer'
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).not.toHaveBeenCalled()
+    expect(h.state.updatePayload).toBeFalsy()
+  })
+
   it('hands off to a human when the atomic slot claim loses the race', async () => {
-    h.state.claim = false
+    h.state.claim = 'cap'
     await dispatchInboundToAiReply(ARGS)
     // It still attempts the claim, but the send is skipped and the
     // conversation is handed off rather than silently dropped — the
     // reply was already generated (and paid for) at this point.
-    expect(h.state.rpcCalls).toHaveLength(1)
+    expect(h.state.rpcCalls.filter((c) => c.name === 'claim_ai_reply_turn')).toHaveLength(1)
     // The AI's own reply is never sent — only the handoff notice is.
     expect(h.engineSendText).toHaveBeenCalledTimes(1)
     expect(h.engineSendText.mock.calls[0][0].text).not.toBe('Hello!')
@@ -496,7 +510,7 @@ describe('dispatchInboundToAiReply — handoff', () => {
   it('disables auto-reply and records the reason instead of an English sentence', async () => {
     h.generateReplyWithFallback.mockResolvedValue({ text: '', handoff: true })
     await dispatchInboundToAiReply(ARGS)
-    expect(h.state.rpcCalls).toHaveLength(0)
+    expect(h.state.rpcCalls.filter((c) => c.name === 'claim_ai_reply_turn')).toHaveLength(0)
     expect(h.state.updatePayload).toMatchObject({
       ai_autoreply_disabled: true,
       ai_handoff_reason: 'model_requested',
@@ -605,7 +619,7 @@ describe('dispatchInboundToAiReply — customer notice on handoff (specs/handoff
     h.state.claimError = { message: 'permission denied for function' }
     await dispatchInboundToAiReply(ARGS)
     expect(errorSpy).toHaveBeenCalledWith(
-      '[ai auto-reply] claim_ai_reply_slot failed:',
+      '[ai auto-reply] claim_ai_reply_turn failed:',
       expect.anything(),
     )
     expect(h.state.updatePayload).toMatchObject({

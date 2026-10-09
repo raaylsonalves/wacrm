@@ -33,6 +33,7 @@
  */
 
 import { supabaseAdmin } from "./admin-client";
+import { notifyUsers, teamForConversation } from "@/lib/notifications/notify";
 import {
   engineSendInteractiveButtons,
   engineSendInteractiveList,
@@ -673,6 +674,10 @@ async function executeHandoff(
   const convUpdate: Record<string, unknown> = {
     status: "pending",
     updated_at: new Date().toISOString(),
+    // A person takes it from here: the AI must not answer the next
+    // message as if nothing happened (review 2026-10, A8).
+    ai_autoreply_disabled: true,
+    ai_handoff_reason: "flow_handoff",
   };
   if (cfg.assign_to) {
     // `assign_to` is caller-supplied node config and this write runs
@@ -693,13 +698,46 @@ async function executeHandoff(
     await db
       .from("conversations")
       .update(convUpdate)
-      .eq("id", run.conversation_id);
+      .eq("id", run.conversation_id)
+      .eq("account_id", run.account_id);
+    // Assigning notifies the assignee (trigger). Nobody assigned: tell the
+    // team someone is waiting.
+    if (!convUpdate.assigned_agent_id) await notifyFlowHandoff(db, run);
   }
   await logEvent(db, run.id, "handoff", node.node_key, {
     note: cfg.note ?? null,
     assigned_to: cfg.assign_to ?? null,
   });
   await endRun(db, run.id, "handed_off", "handoff_node");
+}
+
+/** "Someone is waiting" for the team of this run's conversation. Best effort. */
+async function notifyFlowHandoff(db: AdminClient, run: FlowRunRow): Promise<void> {
+  if (!run.conversation_id) return;
+  try {
+    const { data: contact } = run.contact_id
+      ? await db
+          .from("contacts")
+          .select("name, phone")
+          .eq("id", run.contact_id)
+          .eq("account_id", run.account_id)
+          .maybeSingle()
+      : { data: null };
+    await notifyUsers(db, {
+      accountId: run.account_id,
+      userIds: await teamForConversation(db, run.account_id, run.conversation_id),
+      type: "handoff_waiting",
+      conversationId: run.conversation_id,
+      contactId: run.contact_id ?? undefined,
+      contactName:
+        (contact?.name as string | null) || (contact?.phone as string | null) || null,
+      data: { handoff_reason: "flow_handoff" },
+      link: `/inbox?c=${run.conversation_id}`,
+      groupKey: `handoff:${run.conversation_id}`,
+    });
+  } catch (err) {
+    console.warn("[flows] handoff notification failed:", err);
+  }
 }
 
 /**
@@ -1436,8 +1474,15 @@ async function handleReplyForActiveRun(
     if (run.conversation_id) {
       await db
         .from("conversations")
-        .update({ status: "pending", updated_at: new Date().toISOString() })
-        .eq("id", run.conversation_id);
+        .update({
+          status: "pending",
+          updated_at: new Date().toISOString(),
+          ai_autoreply_disabled: true,
+          ai_handoff_reason: "flow_handoff",
+        })
+        .eq("id", run.conversation_id)
+        .eq("account_id", run.account_id);
+      await notifyFlowHandoff(db, run);
     }
     await logEvent(db, run.id, "handoff", run.current_node_key, {
       reason: "fallback_exhausted",

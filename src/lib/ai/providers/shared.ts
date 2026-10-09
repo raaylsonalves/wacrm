@@ -54,6 +54,25 @@ export function normalizeUsage(raw: {
     : { promptTokens, completionTokens, totalTokens }
 }
 
+/**
+ * Sum of two usage reports. A tool-using turn makes several provider calls
+ * and each re-sends the whole prompt; recording only the last one
+ * under-counted the turn (review 2026-10, A10).
+ */
+export function addUsage(a: AiUsage | null, b: AiUsage | null): AiUsage | null {
+  if (!a) return b
+  if (!b) return a
+  const sum: AiUsage = {
+    promptTokens: a.promptTokens + b.promptTokens,
+    completionTokens: a.completionTokens + b.completionTokens,
+    totalTokens: a.totalTokens + b.totalTokens,
+  }
+  if (a.cachedTokens !== undefined || b.cachedTokens !== undefined) {
+    sum.cachedTokens = (a.cachedTokens ?? 0) + (b.cachedTokens ?? 0)
+  }
+  return sum
+}
+
 /** Map a fetch rejection (timeout / DNS / offline) to a typed AiError. */
 export function toNetworkError(err: unknown): AiError {
   if (err instanceof DOMException && err.name === 'TimeoutError') {

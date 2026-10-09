@@ -140,6 +140,7 @@ async function notifyHandoff(
         .from('contacts')
         .select('name, phone')
         .eq('id', notice.contactId)
+        .eq('account_id', notice.accountId)
         .maybeSingle()
       await notifyUsers(db, {
         accountId: notice.accountId,
@@ -200,15 +201,26 @@ async function loadOwningAgent(
       .select('whatsapp_channel_id, whatsapp_config_id, pinned_ai_agent_id')
       .eq('id', conversationId)
       .maybeSingle()
+    const channelId = (conv?.whatsapp_channel_id as string | null) ?? null
+    const configId = (conv?.whatsapp_config_id as string | null) ?? null
     const agentId =
       (conv?.pinned_ai_agent_id as string | null) ??
-      (await loadChannelAgentId(
-        db,
-        accountId,
-        (conv?.whatsapp_channel_id as string | null) ?? null,
-        (conv?.whatsapp_config_id as string | null) ?? null,
-      ))
-    return agentId ? await loadAiConfig(db, accountId, { agentId }) : null
+      (await loadChannelAgentId(db, accountId, channelId, configId))
+    if (agentId) return await loadAiConfig(db, accountId, { agentId })
+    // No pinned or bound agent, but a router covers this number: start
+    // from one of its agents (fallback first) so the router still runs —
+    // the routing below picks the right one for the message.
+    const router = await loadActiveRouterForChannel(db, accountId, channelId, configId)
+    if (!router) return null
+    const candidates = [
+      router.router.fallback_agent_id,
+      ...router.members.map((m) => m.agent_id),
+    ].filter((id): id is string => !!id)
+    for (const id of candidates) {
+      const cfg = await loadAiConfig(db, accountId, { agentId: id })
+      if (cfg?.autoReplyEnabled) return cfg
+    }
+    return null
   } catch (err) {
     console.warn(`${tag} owning agent could not be loaded:`, err)
     return null
@@ -441,6 +453,7 @@ export async function dispatchInboundToAiReply(
         'assigned_agent_id, ai_autoreply_disabled, ai_reply_count, whatsapp_channel_id, whatsapp_config_id, active_ai_agent_id, pinned_ai_agent_id',
       )
       .eq('id', conversationId)
+      .eq('account_id', accountId)
       .maybeSingle()
     if (convErr || !conv) {
       console.info(`${tag} skipped: conversation lookup failed`, convErr)
@@ -677,6 +690,19 @@ export async function dispatchInboundToAiReply(
       }
       Object.assign(conv, fresh)
     }
+
+    // The newest customer message this reply is built from. If another
+    // one lands while the reply is generated, the claim below refuses and
+    // that message's own dispatch answers the whole burst (A3).
+    const { data: answered } = await db
+      .from('messages')
+      .select('created_at')
+      .eq('conversation_id', conversationId)
+      .eq('sender_type', 'customer')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const answeredUpTo = (answered?.created_at as string | undefined) ?? null
 
     // Labelled per author (human, another agent) so this agent keeps its
     // own role when the conversation changed hands.
@@ -1026,6 +1052,7 @@ export async function dispatchInboundToAiReply(
         .from('contacts')
         .select('opted_out_at')
         .eq('id', contactId)
+        .eq('account_id', accountId)
         .maybeSingle()
       observeBeforeSend(db, {
         accountId,
@@ -1044,19 +1071,35 @@ export async function dispatchInboundToAiReply(
     // another inbound just took the last slot, `claimed` is false and we
     // skip the send. (We consume a slot slightly before the send lands —
     // fail-safe: under-reply rather than over-reply.)
-    const { data: claimed, error: claimErr } = await db.rpc(
-      'claim_ai_reply_slot',
+    //
+    // The same statement re-checks what may have changed while the reply
+    // was generated (migration 123): a person took the thread over, or a
+    // newer customer message arrived. Either way this reply is dropped
+    // silently — the person, or the newer message's dispatch, answers.
+    const { data: claim, error: claimErr } = await db.rpc(
+      'claim_ai_reply_turn',
       {
-        conversation_id: conversationId,
-        max_replies: config.autoReplyMaxPerConversation,
+        p_conversation_id: conversationId,
+        p_max_replies: config.autoReplyMaxPerConversation,
+        p_answered_up_to: answeredUpTo,
       },
     )
+    if (claim === 'human') {
+      console.info(`${tag} dropped: a person took the conversation over while the reply was generated`)
+      return
+    }
+    if (claim === 'newer') {
+      console.info(`${tag} dropped: a newer customer message arrived — its dispatch answers the burst`)
+      return
+    }
+    if (claim === 'missing') return
+    const claimed = claim === 'claimed'
     if (claimErr) {
       // A real error here (vs. losing the cap race) is almost always a
-      // deploy issue — e.g. `claim_ai_reply_slot` not EXECUTE-able by the
+      // deploy issue — e.g. `claim_ai_reply_turn` not EXECUTE-able by the
       // service role, or the migration not applied. Log it loudly: a
       // silent return makes "auto-reply never fires" undiagnosable.
-      console.error('[ai auto-reply] claim_ai_reply_slot failed:', claimErr)
+      console.error('[ai auto-reply] claim_ai_reply_turn failed:', claimErr)
       // Loud log AND a handoff: a deploy problem must not present to the
       // customer as "the bot ignores people".
       await handOffToHuman(

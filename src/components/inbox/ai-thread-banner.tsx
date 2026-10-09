@@ -221,6 +221,8 @@ const REASON_KEYS: Record<string, string> = {
   customer_requested_human: "customerRequestedHuman",
   audio_unintelligible: "audioUnintelligible",
   case_escalated: "caseEscalated",
+  flow_handoff: "flowHandoff",
+  followup_exhausted: "followupExhausted",
 };
 
 const ATTEMPT_CODES = new Set([

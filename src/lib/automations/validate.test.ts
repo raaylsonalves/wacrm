@@ -328,3 +328,21 @@ describe("validateTriggerForActivation", () => {
     expect(validateTriggerForActivation("some_future_trigger", {})).toEqual([]);
   });
 });
+
+describe('wait inside a condition branch (review 2026-10, A9)', () => {
+  const wait = { step_type: 'wait', step_config: { amount: 1, unit: 'hours' } }
+  const tag = { step_type: 'add_tag', step_config: { tag_id: 't1' } }
+  const cond = (yes: unknown[]) => ({
+    step_type: 'condition',
+    step_config: { field: 'tag', operator: 'has', value: 't1' },
+    branches: { yes, no: [] },
+  })
+  it('refuses steps after a condition whose branch waits', () => {
+    const issues = validateStepsForActivation([cond([wait, tag]) as never, tag as never])
+    expect(issues.some((i) => i.message.includes('wait inside a condition branch'))).toBe(true)
+  })
+  it('allows a wait in the last condition of the list', () => {
+    const issues = validateStepsForActivation([tag as never, cond([wait, tag]) as never])
+    expect(issues.some((i) => i.message.includes('wait inside a condition branch'))).toBe(false)
+  })
+})

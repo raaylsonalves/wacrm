@@ -450,6 +450,16 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'billing_pix_orders still unique per period — migration 122 did not apply';
   END IF;
+  IF to_regprocedure('public.claim_ai_reply_turn(uuid,integer,timestamptz)') IS NULL THEN
+    RAISE EXCEPTION 'claim_ai_reply_turn is missing — migration 123 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'conversations_ai_handoff_reason_check'
+      AND pg_get_constraintdef(oid) LIKE '%followup_exhausted%'
+  ) THEN
+    RAISE EXCEPTION 'handoff reasons flow_handoff/followup_exhausted missing — migration 124 did not apply';
+  END IF;
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'conversations'

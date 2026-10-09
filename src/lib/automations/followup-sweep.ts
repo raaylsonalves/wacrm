@@ -229,9 +229,12 @@ async function runExhaustActions(
   const accountId = automation.account_id
 
   // Who to tell is decided BEFORE a handoff/close changes the thread.
-  const team = actions.notify
-    ? await teamForConversation(db, accountId, t.conversationId)
-    : []
+  // A handoff always tells someone: stepping the AI out with nobody told
+  // would strand the conversation (review 2026-10, A12).
+  const team =
+    actions.notify || (actions.handoff && !actions.close)
+      ? await teamForConversation(db, accountId, t.conversationId)
+      : []
 
   if (actions.tag_id) {
     // Only a tag of this account (the config is user-edited JSON).
@@ -261,7 +264,7 @@ async function runExhaustActions(
     // The AI steps out; nobody assigned = the "waiting for a person" queue.
     await db
       .from('conversations')
-      .update({ ai_autoreply_disabled: true })
+      .update({ ai_autoreply_disabled: true, ai_handoff_reason: 'followup_exhausted' })
       .eq('id', t.conversationId)
       .eq('account_id', accountId)
   }
@@ -271,6 +274,7 @@ async function runExhaustActions(
       .from('contacts')
       .select('name, phone')
       .eq('id', t.contactId)
+      .eq('account_id', accountId)
       .maybeSingle()
     await notifyUsers(db, {
       accountId,

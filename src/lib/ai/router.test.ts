@@ -155,6 +155,57 @@ describe('resolveAgentViaRouter', () => {
     expect(h.generateReply).not.toHaveBeenCalled();
   });
 
+  it('never answers with an agent whose auto-reply is off (A4)', async () => {
+    h.generateReply.mockResolvedValue({
+      text: '{"intent": "sales", "confidence": 0.9}',
+      segments: [],
+      handoff: false,
+      usage: null,
+    });
+    h.loadAiConfig.mockResolvedValue({ ...DEFAULT_CONFIG, id: 'agent-sales', autoReplyEnabled: false });
+    const db = fakeDb({
+      conversations: {
+        update: () => ({ eq: () => ({ eq: () => Promise.resolve({ error: null }) }) }),
+      },
+    });
+    const result = await resolveAgentViaRouter({
+      db,
+      accountId: 'acc-1',
+      conversationId: 'conv-1',
+      defaultConfig: DEFAULT_CONFIG,
+      activeRouter: { router, members },
+      currentAgentId: null,
+      messageText: 'how much is it',
+    });
+    expect(result).toBe(DEFAULT_CONFIG);
+  });
+
+  it('drops a sticky agent that no longer belongs to the router (A14)', async () => {
+    h.generateReply.mockResolvedValue({
+      text: '{"intent": "none", "confidence": 0}',
+      segments: [],
+      handoff: false,
+      usage: null,
+    });
+    h.loadAiConfig.mockResolvedValue({ ...DEFAULT_CONFIG, id: 'agent-removed' });
+    const db = fakeDb({
+      conversations: {
+        update: () => ({ eq: () => ({ eq: () => Promise.resolve({ error: null }) }) }),
+      },
+    });
+    await resolveAgentViaRouter({
+      db,
+      accountId: 'acc-1',
+      conversationId: 'conv-1',
+      defaultConfig: DEFAULT_CONFIG,
+      activeRouter: { router, members },
+      currentAgentId: 'agent-removed',
+      messageText: 'hi',
+    });
+    // it reclassified instead of reusing the removed agent
+    expect(h.generateReply).toHaveBeenCalled();
+  });
+
   it('classifies and loads the matched agent above the confidence threshold', async () => {
     h.generateReply.mockResolvedValue({
       text: '{"intent": "sales", "confidence": 0.9}',
@@ -169,7 +220,7 @@ describe('resolveAgentViaRouter', () => {
       conversations: {
         update: (payload: { active_ai_agent_id: string }) => {
           updatedTo = payload.active_ai_agent_id;
-          return { eq: () => Promise.resolve({ error: null }) };
+          return { eq: () => ({ eq: () => Promise.resolve({ error: null }) }) };
         },
       },
     });
@@ -202,7 +253,7 @@ describe('resolveAgentViaRouter', () => {
     h.loadAiConfig.mockResolvedValue(fallbackConfig);
     const db = fakeDb({
       conversations: {
-        update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+        update: () => ({ eq: () => ({ eq: () => Promise.resolve({ error: null }) }) }),
       },
     });
 
@@ -231,7 +282,7 @@ describe('resolveAgentViaRouter', () => {
     });
     const db = fakeDb({
       conversations: {
-        update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+        update: () => ({ eq: () => ({ eq: () => Promise.resolve({ error: null }) }) }),
       },
     });
 
@@ -252,7 +303,7 @@ describe('resolveAgentViaRouter', () => {
     h.generateReply.mockRejectedValue(new Error('provider timeout'));
     const db = fakeDb({
       conversations: {
-        update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+        update: () => ({ eq: () => ({ eq: () => Promise.resolve({ error: null }) }) }),
       },
     });
 
@@ -278,7 +329,7 @@ describe('resolveAgentViaRouter', () => {
     });
     const db = fakeDb({
       conversations: {
-        update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+        update: () => ({ eq: () => ({ eq: () => Promise.resolve({ error: null }) }) }),
       },
     });
 

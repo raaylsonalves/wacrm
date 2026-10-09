@@ -593,7 +593,9 @@
           "systemError": "어시스턴트 답변을 예약하는 중 내부 오류가 발생했습니다",
           "customerRequestedHuman": "고객이 상담원을 요청했습니다",
           "audioUnintelligible": "어시스턴트가 고객의 음성 메시지를 이해하지 못했습니다",
-          "caseEscalated": "케이스에서 상담원이 대화를 인수했습니다"
+          "caseEscalated": "케이스에서 상담원이 대화를 인수했습니다",
+          "flowHandoff": "플로우가 대화를 담당자에게 넘겼습니다",
+          "followupExhausted": "후속 메시지가 응답 없이 끝나 담당자에게 넘어갔습니다"
         },
         "lastMessage": "고객의 마지막 메시지",
         "showMore": "더 보기",
@@ -3676,7 +3678,9 @@
       "system_error": "System error",
       "customer_requested_human": "The customer asked for a person",
       "audio_unintelligible": "Audio the AI couldn't understand",
-      "case_escalated": "Taken over from a case"
+      "case_escalated": "Taken over from a case",
+      "flow_handoff": "플로우에서 전달됨",
+      "followup_exhausted": "응답 없는 후속 메시지"
     }
   },
   "Agents": {

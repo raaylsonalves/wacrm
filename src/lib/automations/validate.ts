@@ -47,8 +47,36 @@ function walk(steps: StepLike[], prefix: string, issues: ValidationIssue[]): voi
     if (s.step_type === 'condition' && s.branches) {
       if (s.branches.yes) walk(s.branches.yes, `${path}.yes.`, issues)
       if (s.branches.no) walk(s.branches.no, `${path}.no.`, issues)
+      // A wait inside a branch resumes only that branch: the steps AFTER
+      // the condition would never run (engine.ts resumes one scope).
+      // Refuse the shape until the engine resumes the parent too.
+      const hasLater = i < steps.length - 1
+      const waitPath = hasLater ? branchWaitPath(s, path) : null
+      if (waitPath) {
+        issues.push({
+          path: waitPath,
+          message:
+            'a wait inside a condition branch cannot be followed by steps after the condition — move those steps into the branch',
+        })
+      }
     }
   })
+}
+
+/** Path of the first wait anywhere inside this condition's branches. */
+function branchWaitPath(step: StepLike, path: string): string | null {
+  for (const side of ['yes', 'no'] as const) {
+    const list = step.branches?.[side] ?? []
+    for (let j = 0; j < list.length; j++) {
+      const p = `${path}.${side}.steps[${j}]`
+      if (list[j].step_type === 'wait') return p
+      if (list[j].step_type === 'condition') {
+        const inner = branchWaitPath(list[j], p)
+        if (inner) return inner
+      }
+    }
+  }
+  return null
 }
 
 function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): void {

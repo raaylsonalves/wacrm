@@ -14,6 +14,11 @@ import { runBillingSweep } from '@/lib/billing/sweep'
 import { runOfficialNumberHealth } from '@/lib/whatsapp/official-health'
 import { sweepAppointmentReminders, sweepSlaBreaches } from '@/lib/notifications/sweeps'
 
+// The hub runs every sweep in series (billing, follow-ups, broadcasts,
+// health…); give it room so a slow tick is not cut halfway (review
+// 2026-10, A16). Every sweep is idempotent, so a cut tick is only late.
+export const maxDuration = 300
+
 /**
  * Drain due `automation_pending_executions` rows. Meant to be hit
  * on a schedule (Vercel Cron / external pinger) — requires a shared
