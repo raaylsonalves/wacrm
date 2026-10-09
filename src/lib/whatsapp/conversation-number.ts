@@ -79,7 +79,15 @@ export async function findConversationOnNumber<T = Record<string, unknown>>(
   if (error) throw error;
   if (data && data.length > 0) return data[0] as T;
 
-  if (!number.channelId && number.configId) {
+  // A thread from before multi-number support (no number) belongs to the
+  // primary — the inbox, sending and routing all read it that way. Only
+  // the primary adopts it: another number taking it moved the history,
+  // responsibles and AI agent to the wrong number (review 2026-10, M8).
+  if (
+    !number.channelId &&
+    number.configId &&
+    number.configId === (await primaryConfigId(db, accountId))
+  ) {
     const { data: legacy } = await db
       .from('conversations')
       .select('id')
@@ -91,11 +99,14 @@ export async function findConversationOnNumber<T = Record<string, unknown>>(
       .limit(1);
     const legacyId = legacy?.[0]?.id as string | undefined;
     if (legacyId) {
-      await db
+      const { error: adoptErr } = await db
         .from('conversations')
         .update({ whatsapp_config_id: number.configId })
         .eq('id', legacyId)
         .is('whatsapp_config_id', null);
+      // The primary already has its own thread with this contact: keep
+      // the legacy one as it is and answer on the existing primary thread.
+      if (adoptErr) return null;
       const { data: adopted } = await db
         .from('conversations')
         .select(select)

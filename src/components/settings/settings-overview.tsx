@@ -123,7 +123,7 @@ export function SettingsOverview({
     // WhatsApp connection status — slower, independent.
     (async () => {
       setWhatsappLoading(true);
-      const [row, health] = await Promise.allSettled([
+      const [row, health, numbers] = await Promise.allSettled([
         supabase
           .from('whatsapp_config')
           .select('phone_number_id')
@@ -131,11 +131,21 @@ export function SettingsOverview({
           .eq('is_primary', true)
           .maybeSingle(),
         fetch('/api/whatsapp/config', { cache: 'no-store' }).then((r) => r.json()),
+        // Every official number, not only the primary: one whose token
+        // Meta refuses is a broken connection too (migration 120).
+        supabase
+          .from('whatsapp_config')
+          .select('health_error')
+          .eq('account_id', acctId),
       ]);
       if (cancelled) return;
+      const anyFailing =
+        numbers.status === 'fulfilled' &&
+        (numbers.value.data ?? []).some((n) => !!n.health_error);
       setWhatsapp({
         configured: row.status === 'fulfilled' && !!row.value.data?.phone_number_id,
-        connected: health.status === 'fulfilled' && !!health.value?.connected,
+        connected:
+          health.status === 'fulfilled' && !!health.value?.connected && !anyFailing,
       });
       setWhatsappLoading(false);
     })();

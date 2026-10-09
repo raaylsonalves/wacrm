@@ -460,6 +460,9 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'handoff reasons flow_handoff/followup_exhausted missing — migration 124 did not apply';
   END IF;
+  IF to_regclass('public.webhook_dead_letters') IS NULL THEN
+    RAISE EXCEPTION 'webhook_dead_letters is missing — migration 125 did not apply';
+  END IF;
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'conversations'

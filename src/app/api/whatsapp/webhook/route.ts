@@ -270,19 +270,49 @@ export async function POST(request: Request) {
   // (see issue #301). `after()` hands the callback to the runtime, which
   // keeps the function alive until it resolves (within the route's
   // maxDuration).
+  //
+  // Meta has its 200 by then and never resends, so a message that fails to
+  // be stored (a transient DB error) would be lost for good. Processing is
+  // idempotent on the message id: retry in place, and keep the payload for
+  // replay if it still fails (review 2026-10, M4).
   after(async () => {
-    try {
-      await processWebhook(body);
-    } catch (error) {
-      console.error('Error processing webhook:', error);
+    let lastError = ''
+    for (let attempt = 0; attempt < INBOUND_ATTEMPTS; attempt++) {
+      try {
+        const { failed } = await processWebhook(body);
+        if (failed === 0) return;
+        lastError = `${failed} message(s) could not be stored`;
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error);
+        console.error('Error processing webhook:', error);
+      }
+      if (attempt < INBOUND_ATTEMPTS - 1) {
+        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+      }
     }
+    console.error('[webhook] inbound kept for replay after retries:', lastError);
+    const { error: dlErr } = await supabaseAdmin()
+      .from('webhook_dead_letters')
+      .insert({ source: 'meta', payload: body, error: lastError, attempts: INBOUND_ATTEMPTS });
+    if (dlErr) console.error('[webhook] could not keep the payload either:', dlErr.message);
   });
 
   return NextResponse.json({ status: 'received' }, { status: 200 });
 }
 
-async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
-  if (!body.entry) return;
+/** Tries per inbound delivery before it is kept in webhook_dead_letters. */
+const INBOUND_ATTEMPTS = 3;
+
+/**
+ * Process one delivery. Returns how many messages could NOT be stored
+ * (a transient DB failure) — the caller retries the whole delivery, which
+ * is safe because every step is idempotent on the message id.
+ */
+async function processWebhook(
+  body: { entry?: WhatsAppWebhookEntry[] }
+): Promise<{ failed: number }> {
+  let failed = 0;
+  if (!body.entry) return { failed };
 
   for (const entry of body.entry) {
     for (const change of entry.changes) {
@@ -373,13 +403,21 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
 
       const config = configRows[0];
 
-      const decryptedAccessToken = decrypt(config.access_token);
+      // Only media needs the token. A token that cannot be decrypted (a
+      // rotated ENCRYPTION_KEY) must not drop the whole batch of messages
+      // before any is stored (review 2026-10, M13): text still lands.
+      let decryptedAccessToken = '';
+      try {
+        decryptedAccessToken = decrypt(config.access_token);
+      } catch (err) {
+        console.error('[webhook] access token could not be decrypted; media will not load:', err);
+      }
 
       for (let i = 0; i < value.messages.length; i++) {
         const message = value.messages[i];
         const contact = value.contacts[i] || value.contacts[0];
 
-        await processMessage(
+        const stored = await processMessage(
           message,
           contact,
           // Tenancy — drives every contact / conversation lookup
@@ -398,9 +436,11 @@ async function processWebhook(body: { entry?: WhatsAppWebhookEntry[] }) {
           // conversation records it so replies can go out the same way.
           config.id as string
         );
+        if (!stored) failed++;
       }
     }
   }
+  return { failed };
 }
 
 // The happy-path status ladder — pending → sent → delivered → read →
@@ -751,7 +791,7 @@ async function processMessage(
   mirrorMedia: boolean,
   // The whatsapp_config row (official number) that received the message.
   whatsappConfigId: string
-) {
+): Promise<boolean> {
   // Phone number OR business-scoped user ID — Meta sends only the
   // latter for a sender who has adopted a WhatsApp username (#519).
   const identity = resolveInboundIdentity(message, contact);
@@ -763,7 +803,7 @@ async function processMessage(
       '[webhook] inbound message carries neither a phone number nor a BSUID; skipping:',
       message.id
     );
-    return;
+    return true;
   }
 
   // Find or create contact
@@ -772,7 +812,8 @@ async function processMessage(
     configOwnerUserId,
     identity
   );
-  if (!contactOutcome) return;
+  // Not stored: the caller retries the delivery.
+  if (!contactOutcome) return false;
   const contactRecord = contactOutcome.contact;
 
   // Find or create conversation
@@ -782,7 +823,7 @@ async function processMessage(
     contactRecord.id,
     whatsappConfigId
   );
-  if (!convResult) return;
+  if (!convResult) return false;
   const conversation = convResult.conversation;
 
   // Emit conversation.created as soon as the thread is opened — BEFORE
@@ -806,7 +847,7 @@ async function processMessage(
   // Done before parseMessageContent so the media-URL fetch is skipped.
   if (message.type === 'reaction') {
     await handleReaction(message, conversation.id, contactRecord.id);
-    return;
+    return true;
   }
 
   // Parse message content based on type
@@ -866,10 +907,20 @@ async function processMessage(
   // BEFORE we insert, so the count is accurate. Covers the case where
   // the contact row already exists (manual add / CSV import) but they've
   // never messaged us before — which new_contact_created wouldn't catch.
+  // Across ALL of the contact's conversations: with one thread per number
+  // (migration 114) a per-thread count re-fired "first message" every time
+  // the contact wrote to another of the account's numbers (review
+  // 2026-10, M10).
+  const { data: contactConvs } = await supabaseAdmin()
+    .from('conversations')
+    .select('id')
+    .eq('account_id', accountId)
+    .eq('contact_id', contactRecord.id);
+  const convIds = (contactConvs ?? []).map((c: { id: string }) => c.id);
   const { count: priorCustomerMsgCount } = await supabaseAdmin()
     .from('messages')
     .select('id', { count: 'exact', head: true })
-    .eq('conversation_id', conversation.id)
+    .in('conversation_id', convIds.length > 0 ? convIds : [conversation.id])
     .eq('sender_type', 'customer');
   const isFirstInboundMessage = (priorCustomerMsgCount ?? 0) === 0;
 
@@ -910,7 +961,7 @@ async function processMessage(
 
   if (msgError) {
     console.error('Error inserting message:', msgError);
-    return;
+    return false;
   }
 
   // Replayed delivery: the message already exists, so acknowledge it as a
@@ -922,7 +973,7 @@ async function processMessage(
       '[webhook] duplicate inbound message ignored (idempotent replay):',
       message.id
     );
-    return;
+    return true;
   }
 
   // Update conversation. The unread bump is done DB-side (migration 037's
@@ -1146,6 +1197,7 @@ async function processMessage(
     content_type: contentType,
     text: contentText,
   });
+  return true;
 }
 
 async function parseMessageContent(

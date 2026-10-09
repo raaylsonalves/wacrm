@@ -143,6 +143,18 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+    // A number was picked but is not this account's: refuse rather than
+    // silently broadcasting from the primary (review 2026-10, M12).
+    if (
+      typeof body.whatsapp_config_id === 'string' &&
+      body.whatsapp_config_id &&
+      config.id !== body.whatsapp_config_id
+    ) {
+      return NextResponse.json(
+        { error: 'The selected WhatsApp number does not belong to this account.' },
+        { status: 400 }
+      )
+    }
 
     const accessToken = decrypt(config.access_token)
 
@@ -156,6 +168,7 @@ export async function POST(request: Request) {
       accountId,
       template_name,
       template_language,
+      (config.waba_id as string | null) ?? null,
     )
     if (resolvedTemplate.malformed) {
       return NextResponse.json(

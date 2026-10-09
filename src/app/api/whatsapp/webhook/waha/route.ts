@@ -159,14 +159,26 @@ async function handleMessage(
       .select()
       .single();
     if (convInsertErr) {
-      console.error(
-        '[webhook/waha] conversation insert failed:',
-        convInsertErr
-      );
-      return;
+      // Two deliveries for a new contact at once: the other one created
+      // the thread (one per contact + number, migration 114). Join it
+      // instead of dropping this message (review 2026-10, M5).
+      if (isUniqueViolation(convInsertErr)) {
+        conversation = (await findConversationOnNumber(db, accountId, contact.id, {
+          channelId: channel.id,
+          configId: null,
+        }).catch(() => null)) as typeof conversation;
+      }
+      if (!conversation) {
+        console.error(
+          '[webhook/waha] conversation insert failed:',
+          convInsertErr
+        );
+        return;
+      }
+    } else {
+      conversation = newConv;
+      conversationCreated = true;
     }
-    conversation = newConv;
-    conversationCreated = true;
   }
   if (!conversation) return;
 

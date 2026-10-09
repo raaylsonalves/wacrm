@@ -16,6 +16,11 @@ import {
   shouldPersistVariant,
 } from '@/lib/whatsapp/phone-utils';
 import { resolveContactSendTarget } from '@/lib/whatsapp/wa-identity';
+import {
+  WahaUnsupportedError,
+  sendTextOverWaha,
+  wahaChannelOfConversation,
+} from '@/lib/whatsapp/waha-send';
 import { supabaseAdmin } from './admin-client';
 
 // ------------------------------------------------------------
@@ -46,6 +51,11 @@ export async function loadAccountMetaCredentials(
   // (specs/multi-official-numbers.md). Omitted = the primary number.
   conversationId?: string | null
 ): Promise<{ phoneNumberId: string; accessToken: string }> {
+  // Media / interactive have no WAHA path: never send them from the
+  // official number for a QR conversation (review 2026-10, M1).
+  if (await wahaChannelOfConversation(db, accountId, conversationId)) {
+    throw new WahaUnsupportedError('this kind of message');
+  }
   const config = await loadOfficialNumber(db, accountId, conversationId);
   if (!config) {
     throw new Error('WhatsApp not configured for this account');
@@ -114,39 +124,47 @@ export async function engineSendText(
   }
   const sanitized = sendTarget.target;
 
-  const { phoneNumberId, accessToken } = await loadAccountMetaCredentials(
-    db,
-    args.accountId,
-    args.conversationId
-  );
-
-  const attempt = async (phone: string): Promise<string> => {
-    const r = await sendTextMessage({
-      phoneNumberId,
-      accessToken,
-      to: phone,
-      text: args.text,
-    });
-    return r.messageId;
-  };
-
-  const variants = sendTarget.isPhone ? phoneVariants(sanitized) : [sanitized];
+  // A conversation on a QR (WAHA) channel answers from that same
+  // WhatsApp, not the official number (review 2026-10, M1).
   let workingPhone = sanitized;
   let waMessageId = '';
-  let lastError: unknown = null;
-  for (const v of variants) {
-    try {
-      waMessageId = await attempt(v);
-      workingPhone = v;
-      lastError = null;
-      break;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!isRecipientNotAllowedError(msg)) throw err;
-      lastError = err;
+  const waha = await wahaChannelOfConversation(db, args.accountId, args.conversationId);
+  if (waha) {
+    if (!sendTarget.isPhone) throw new WahaUnsupportedError('to a contact without a phone number');
+    waMessageId = await sendTextOverWaha(waha, sanitized, args.text);
+  } else {
+    const { phoneNumberId, accessToken } = await loadAccountMetaCredentials(
+      db,
+      args.accountId,
+      args.conversationId
+    );
+
+    const attempt = async (phone: string): Promise<string> => {
+      const r = await sendTextMessage({
+        phoneNumberId,
+        accessToken,
+        to: phone,
+        text: args.text,
+      });
+      return r.messageId;
+    };
+
+    const variants = sendTarget.isPhone ? phoneVariants(sanitized) : [sanitized];
+    let lastError: unknown = null;
+    for (const v of variants) {
+      try {
+        waMessageId = await attempt(v);
+        workingPhone = v;
+        lastError = null;
+        break;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!isRecipientNotAllowedError(msg)) throw err;
+        lastError = err;
+      }
     }
+    if (lastError) throw lastError;
   }
-  if (lastError) throw lastError;
 
   if (sendTarget.isPhone && shouldPersistVariant(sanitized, workingPhone)) {
     await db

@@ -14,10 +14,19 @@ interface Conv {
 }
 
 /** A tiny in-memory `conversations` table honouring eq / is / order / limit. */
-function fakeDb(rows: Conv[]) {
+function fakeDb(rows: Conv[], primary: string | null = 'n1') {
   const updates: { id: string; patch: Partial<Conv> }[] = [];
   const db = {
-    from: () => {
+    from: (table: string) => {
+      if (table === 'whatsapp_config') {
+        const c = {
+          select: () => c,
+          eq: () => c,
+          maybeSingle: () =>
+            Promise.resolve({ data: primary ? { id: primary } : null, error: null }),
+        };
+        return c;
+      }
       const filters: ((r: Conv) => boolean)[] = [];
       let patch: Partial<Conv> | null = null;
       const q = {
@@ -105,6 +114,14 @@ describe('findConversationOnNumber', () => {
     });
     expect(found?.id).toBe('legacy');
     expect(updates).toEqual([{ id: 'legacy', patch: { whatsapp_config_id: 'n1' } }]);
+  });
+
+  it('only the primary adopts it, not another number (review 2026-10, M8)', async () => {
+    const { db, updates } = fakeDb([conv({ id: 'legacy' })], 'n1');
+    expect(
+      await findConversationOnNumber(db, 'a', 'ct', { channelId: null, configId: 'n2' })
+    ).toBeNull();
+    expect(updates).toEqual([]);
   });
 });
 

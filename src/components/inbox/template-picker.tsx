@@ -29,6 +29,12 @@ interface TemplatePickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (template: MessageTemplate, values: TemplateSendValues) => void;
+  /**
+   * The official number the template will be sent from: only templates of
+   * its WABA are offered (migration 119), since Meta refuses another
+   * WABA's. `null` = the primary. Omitted = no filtering.
+   */
+  configId?: string | null;
 }
 
 function renderBodyPreview(body: string, params: string[]): string {
@@ -73,6 +79,7 @@ export function TemplatePicker({
   open,
   onOpenChange,
   onSelect,
+  configId,
 }: TemplatePickerProps) {
   const t = useTranslations('Inbox.templatePicker');
 
@@ -114,12 +121,27 @@ export function TemplatePicker({
         .is('unsupported_reason', null)
         .order('created_at', { ascending: false });
 
+      // The sending number's WABA (null configId = the primary).
+      let wabaId: string | null = null;
+      if (configId !== undefined) {
+        const { data: numbers } = await supabase
+          .from('whatsapp_config')
+          .select('id, waba_id, is_primary');
+        const number = (numbers ?? []).find((n) =>
+          configId ? n.id === configId : n.is_primary
+        );
+        wabaId = (number?.waba_id as string | null) ?? null;
+      }
+
       if (cancelled) return;
       if (error) {
         console.error('Failed to fetch templates:', error);
         setTemplates([]);
       } else {
-        setTemplates((data as MessageTemplate[]) ?? []);
+        const rows = (data as (MessageTemplate & { waba_id?: string | null })[]) ?? [];
+        setTemplates(
+          wabaId ? rows.filter((r) => !r.waba_id || r.waba_id === wabaId) : rows
+        );
       }
       setLoading(false);
     })();
@@ -127,7 +149,7 @@ export function TemplatePicker({
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, configId]);
 
   function resetSelection() {
     setSelected(null);

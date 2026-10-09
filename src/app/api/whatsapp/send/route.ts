@@ -217,12 +217,15 @@ async function findOrCreateConversation(
   // webhook's own find-or-create in lib/whatsapp/resolve-conversation.ts.
   // A contact can have one conversation per number (migration 114).
   // Messaging a contact (not a conversation) continues their most recent
-  // thread; with none, a new one on the primary official number.
+  // OFFICIAL-number thread — the same rule as the public API (review
+  // 2026-10, M9); a QR thread cannot carry templates. With none, a new
+  // one on the primary official number.
   const { data: existing, error: findErr } = await supabase
     .from('conversations')
     .select('id')
     .eq('account_id', accountId)
     .eq('contact_id', contactId)
+    .is('whatsapp_channel_id', null)
     .order('last_message_at', { ascending: false, nullsFirst: false })
     .limit(1)
 

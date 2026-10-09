@@ -104,6 +104,9 @@ vi.mock('@supabase/supabase-js', () => ({
           chain.order = () => chain
           chain.limit = () =>
             Promise.resolve({ data: [h.state.conversation], error: null })
+          // the contact's threads, awaited directly (first-inbound count)
+          chain.then = (resolve: (v: unknown) => unknown) =>
+            Promise.resolve({ data: [h.state.conversation], error: null }).then(resolve)
           return { select: () => chain }
         }
         case 'broadcast_recipients':
@@ -182,9 +185,9 @@ vi.mock('@supabase/supabase-js', () => ({
             // reply-context parent lookup.
             select: (_columns: string, options?: { head?: boolean }) =>
               options?.head
-                ? // priorCustomerMsgCount: select('id',{count,head}).eq().eq()
+                ? // priorCustomerMsgCount: select('id',{count,head}).in().eq()
                   {
-                    eq: () => ({
+                    in: () => ({
                       eq: () =>
                         Promise.resolve({
                           count: h.state.priorCustomerMsgCount,

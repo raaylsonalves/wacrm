@@ -145,6 +145,7 @@ export async function createBroadcast(
   let phoneNumberId = '';
   let accessToken = '';
   let configId: string | null = null;
+  let wabaId: string | null = null;
   if (!isWahaBroadcast) {
     const { data: config, error: configError } = await db
       .from('whatsapp_config')
@@ -162,6 +163,7 @@ export async function createBroadcast(
     accessToken = decrypt(config.access_token);
     phoneNumberId = config.phone_number_id;
     configId = config.id as string;
+    wabaId = (config.waba_id as string | null) ?? null;
   } else {
     // Every channel in the primary+pool set must actually belong to
     // this account — otherwise an account could broadcast through a
@@ -189,7 +191,8 @@ export async function createBroadcast(
     db,
     accountId,
     templateName,
-    params.templateLanguage
+    params.templateLanguage,
+    wabaId
   );
   if (resolvedTemplate.malformed) {
     throw new BroadcastError(

@@ -92,7 +92,11 @@ export async function resolveTemplateRow(
   db: SupabaseClient,
   accountId: string,
   templateName: string,
-  requestedLanguage?: string | null
+  requestedLanguage?: string | null,
+  /** The sending number's WABA: templates live per WABA (migration 119)
+   *  and the same name can exist in two with different components. Rows
+   *  of that WABA (or legacy rows without one) win over another WABA's. */
+  wabaId?: string | null
 ): Promise<ResolvedTemplate> {
   const { data } = await db
     .from('message_templates')
@@ -103,9 +107,16 @@ export async function resolveTemplateRow(
   // Sorted here rather than with `.order()` so the only query-builder
   // surface this helper depends on is select + eq — the same shape the
   // callers' existing fakes implement.
-  const rows = ((Array.isArray(data) ? data : []) as { language?: string }[])
+  const all = ((Array.isArray(data) ? data : []) as {
+    language?: string;
+    waba_id?: string | null;
+  }[])
     .slice()
     .sort((a, b) => (a.language ?? '').localeCompare(b.language ?? ''));
+  const ofWaba = wabaId
+    ? all.filter((r) => r.waba_id === wabaId || !r.waba_id)
+    : all;
+  const rows = ofWaba.length > 0 ? ofWaba : all;
   const fallbackLanguage = requestedLanguage || 'en_US';
 
   if (rows.length === 0) {

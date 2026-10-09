@@ -720,6 +720,25 @@ export async function DELETE(request: Request) {
       }
     }
 
+    // Its conversations move to the primary explicitly. Left to the FK's
+    // ON DELETE SET NULL they collided with the contact's existing
+    // primary thread on the one-thread-per-number index (a 500), or
+    // silently became "the primary's" (review 2026-10, M7).
+    if (!target.is_primary) {
+      const moved = await moveConversationsToPrimary(supabase, accountId, target.id)
+      if (!moved.ok) {
+        return NextResponse.json(
+          {
+            code: 'number_conversations_conflict',
+            error:
+              'Some contacts already have two conversations on the primary number; close or merge them before removing this number.',
+            conflicts: moved.conflicts,
+          },
+          { status: 409 }
+        )
+      }
+    }
+
     const { error: deleteError } = await supabase
       .from('whatsapp_config')
       .delete()
@@ -742,4 +761,45 @@ export async function DELETE(request: Request) {
     console.error('Error in WhatsApp config DELETE:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
+}
+
+/**
+ * Moves every conversation of a number being removed to the primary
+ * number — or, when the contact already has a thread there, to the
+ * legacy "no number" slot (also the primary's) if that one is free.
+ * Reports the contacts that already use both.
+ */
+async function moveConversationsToPrimary(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  accountId: string,
+  numberId: string
+): Promise<{ ok: boolean; conflicts: number }> {
+  const { data: primary } = await db
+    .from('whatsapp_config')
+    .select('id')
+    .eq('account_id', accountId)
+    .eq('is_primary', true)
+    .maybeSingle()
+  const primaryId = (primary?.id as string | undefined) ?? null
+  const { data: convs } = await db
+    .from('conversations')
+    .select('id, contact_id')
+    .eq('account_id', accountId)
+    .eq('whatsapp_config_id', numberId)
+  let conflicts = 0
+  for (const c of (convs ?? []) as { id: string; contact_id: string }[]) {
+    for (const slot of [primaryId, null]) {
+      if (slot === null && primaryId === null) continue
+      const { error } = await db
+        .from('conversations')
+        .update({ whatsapp_config_id: slot })
+        .eq('id', c.id)
+        .eq('account_id', accountId)
+      if (!error) break
+      if (error.code !== '23505') throw error
+      if (slot === null) conflicts++
+    }
+  }
+  return { ok: conflicts === 0, conflicts }
 }

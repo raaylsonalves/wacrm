@@ -170,8 +170,18 @@ async function findOrCreateConversationRow(
   contactId: string,
   ownerUserId: string
 ): Promise<string> {
-  // Sending by phone goes out the account's primary official number:
-  // the contact's conversation on that number (migration 114).
+  // Sending by phone continues the contact's most recent official-number
+  // thread (the same rule as the inbox's "send to contact", review
+  // 2026-10, M9); with none, the primary official number (migration 114).
+  const { data: latest } = await db
+    .from('conversations')
+    .select('id')
+    .eq('account_id', accountId)
+    .eq('contact_id', contactId)
+    .is('whatsapp_channel_id', null)
+    .order('last_message_at', { ascending: false, nullsFirst: false })
+    .limit(1);
+  if (latest && latest.length > 0) return latest[0].id as string;
   const number = await defaultNumber(db, accountId);
   let existing: { id: string } | null;
   try {

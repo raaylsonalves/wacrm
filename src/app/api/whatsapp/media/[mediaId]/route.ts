@@ -48,25 +48,35 @@ export async function GET(
       )
     }
 
-    // Fetch and decrypt WhatsApp config
-    const { data: config, error: configError } = await supabase
+    // The media lives with the number that received it, and each official
+    // number may have its own token (another WABA). Try the primary first,
+    // then the others (review 2026-10, M6).
+    const { data: configs } = await supabase
       .from('whatsapp_config')
-      .select('*')
+      .select('access_token, is_primary')
       .eq('account_id', accountId)
-      .eq('is_primary', true)
-      .single()
+      .order('is_primary', { ascending: false })
 
-    if (configError || !config) {
+    if (!configs || configs.length === 0) {
       return NextResponse.json(
         { error: 'WhatsApp not configured' },
         { status: 400 }
       )
     }
 
-    const accessToken = decrypt(config.access_token)
-
-    // Get the download URL from Meta
-    const mediaInfo = await getMediaUrl({ mediaId, accessToken })
+    let accessToken = ''
+    let mediaInfo: Awaited<ReturnType<typeof getMediaUrl>> | null = null
+    let lastError: unknown = null
+    for (const c of configs) {
+      try {
+        accessToken = decrypt(c.access_token as string)
+        mediaInfo = await getMediaUrl({ mediaId, accessToken })
+        break
+      } catch (err) {
+        lastError = err
+      }
+    }
+    if (!mediaInfo) throw lastError ?? new Error('media not found')
 
     // Download the binary data
     const { buffer, contentType } = await downloadMedia({

@@ -57,6 +57,7 @@ async function recipientsFor(db: SupabaseClient, accountId: string, conversation
     .from('conversations')
     .select('whatsapp_channel_id, whatsapp_config_id, assigned_agent_id')
     .eq('id', conversationId)
+    .eq('account_id', accountId)
     .maybeSingle()
   if (conv?.assigned_agent_id) return [conv.assigned_agent_id as string]
 

@@ -443,7 +443,8 @@ export async function sendMessageToConversation(
         db,
         accountId,
         templateName,
-        templateLanguage
+        templateLanguage,
+        (config.waba_id as string | null) ?? null
       );
       if (resolved.malformed) {
         throw new SendMessageError(

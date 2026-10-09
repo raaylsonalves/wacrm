@@ -1631,6 +1631,12 @@ export function MessageThread({
         open={templateModalOpen}
         onOpenChange={setTemplateModalOpen}
         onSelect={handleSendTemplate}
+        // Only the templates the conversation's own number can send.
+        configId={
+          conversation?.whatsapp_channel_id
+            ? undefined
+            : (conversation?.whatsapp_config_id ?? null)
+        }
       />
 
       {/* Full-size viewer for the thread's images/videos. Renders nothing

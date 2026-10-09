@@ -483,12 +483,20 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       // ── Step 4: Fetch recipients back (joined contact) ────────────
       setProgress(30);
-      const { data: recipients, error: recipientsFetchError } = await supabase
-        .from('broadcast_recipients')
-        .select('*, contact:contacts(*)')
-        .eq('broadcast_id', broadcast.id);
-
-      if (recipientsFetchError || !recipients) {
+      // Paginated: PostgREST returns at most 1000 rows per request, and
+      // reading them in one go silently sent only the first 1000 while the
+      // broadcast was marked sent (review 2026-10, M2).
+      let recipients;
+      try {
+        recipients = await fetchAllRows((from, to) =>
+          supabase
+            .from('broadcast_recipients')
+            .select('*, contact:contacts(*)')
+            .eq('broadcast_id', broadcast.id)
+            .order('id')
+            .range(from, to)
+        );
+      } catch {
         throw new Error('Failed to fetch broadcast recipients');
       }
 

@@ -45,7 +45,12 @@ export async function routingPolicyIdFor(
     p_channel: whatsappChannelId,
     p_config: whatsappConfigId,
   });
-  if (error) return null;
+  if (error) {
+    // "No policy" means unrestricted: say so in the logs when it is a
+    // failure rather than a real absence (review 2026-10, M15).
+    console.error('[routing] routing_policy_for failed:', error.message);
+    return null;
+  }
   return (data as string | null) ?? null;
 }
 

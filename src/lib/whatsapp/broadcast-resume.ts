@@ -213,6 +213,7 @@ export async function planBroadcastResume(
   let phoneNumberId = '';
   let accessToken = '';
   let configId: string | null = null;
+  let wabaId: string | null = null;
   let channelPoolIds: string[] = [];
   if (!isWahaBroadcast) {
     // The official number chosen when the broadcast was created
@@ -231,6 +232,7 @@ export async function planBroadcastResume(
     phoneNumberId = config.phone_number_id;
     accessToken = decrypt(config.access_token);
     configId = config.id as string;
+    wabaId = (config.waba_id as string | null) ?? null;
   } else {
     const { data: pool } = await db
       .from('broadcast_channel_pool')
@@ -243,7 +245,8 @@ export async function planBroadcastResume(
     db,
     accountId,
     broadcast.template_name,
-    broadcast.template_language
+    broadcast.template_language,
+    wabaId
   );
   if (resolvedTemplate.malformed) {
     throw new BroadcastError(

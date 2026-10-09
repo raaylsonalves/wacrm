@@ -3,7 +3,12 @@ import type { InteractiveMessagePayload } from '@/lib/whatsapp/interactive';
 import {
   engineSendInteractiveButtons,
   engineSendInteractiveList,
+  engineSendText as flowsEngineSendText,
 } from '@/lib/flows/meta-send';
+import {
+  WahaUnsupportedError,
+  wahaChannelOfConversation,
+} from '@/lib/whatsapp/waha-send';
 import { decrypt } from '@/lib/whatsapp/encryption';
 import { loadOfficialNumber } from '@/lib/whatsapp/official-number';
 import {
@@ -116,6 +121,20 @@ async function sendViaMeta(
 ): Promise<{ whatsapp_message_id: string }> {
   const db = supabaseAdmin();
 
+  // A QR (WAHA) conversation answers from its own channel; the Flows
+  // sender owns that path. Templates do not exist there (review
+  // 2026-10, M1) — never send one from the official number instead.
+  if (await wahaChannelOfConversation(db, input.accountId, input.conversationId)) {
+    if (input.kind !== 'text') throw new WahaUnsupportedError('templates');
+    return flowsEngineSendText({
+      accountId: input.accountId,
+      userId: input.userId,
+      conversationId: input.conversationId,
+      contactId: input.contactId,
+      text: input.text,
+    });
+  }
+
   // Scope the contact + config lookups by account_id, not user_id.
   // The engine uses the service-role client (bypassing RLS); without
   // this filter, an authenticated user could fire their own
@@ -167,7 +186,8 @@ async function sendViaMeta(
             db,
             input.accountId,
             input.templateName,
-            input.language
+            input.language,
+            (config.waba_id as string | null) ?? null
           )
         ).row
       : null;
