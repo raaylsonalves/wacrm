@@ -37,90 +37,71 @@ function fakeDb(tables: Record<string, unknown>) {
 }
 
 describe('loadActiveRouterForChannel', () => {
-  it('returns null when no active router exists', async () => {
-    const db = fakeDb({
+  const MEMBERS = [
+    {
+      agent_id: 'agent-sales',
+      intent_name: 'sales',
+      intent_description: 'wants to buy',
+      examples: [],
+    },
+  ];
+  function dbWith(routers: unknown[], members: unknown[] = MEMBERS) {
+    return fakeDb({
       ai_routers: {
         select: () => ({
           eq: () => ({
-            eq: () => ({
-              is: () => Promise.resolve({ data: [], error: null }),
-            }),
+            eq: () => Promise.resolve({ data: routers, error: null }),
+          }),
+        }),
+      },
+      ai_router_members: {
+        select: () => ({
+          eq: () => ({
+            order: () => Promise.resolve({ data: members, error: null }),
           }),
         }),
       },
     });
-    const result = await loadActiveRouterForChannel(db, 'acc-1', null);
-    expect(result).toBeNull();
+  }
+  const ACCOUNT = { id: 'router-account', channel_id: null, whatsapp_config_id: null };
+  const CHANNEL = { id: 'router-channel', channel_id: 'chan-1', whatsapp_config_id: null };
+  const OFFICIAL = { id: 'router-official', channel_id: null, whatsapp_config_id: 'cfg-1' };
+
+  it('returns null when no active router exists', async () => {
+    expect(await loadActiveRouterForChannel(dbWith([]), 'acc-1', null)).toBeNull();
   });
 
   it('returns null when the active router has no members configured', async () => {
-    const db = fakeDb({
-      ai_routers: {
-        select: () => ({
-          eq: () => ({
-            eq: () => ({
-              is: () =>
-                Promise.resolve({
-                  data: [
-                    { id: 'router-1', channel_id: null, account_id: 'acc-1' },
-                  ],
-                  error: null,
-                }),
-            }),
-          }),
-        }),
-      },
-      ai_router_members: {
-        select: () => ({
-          eq: () => ({
-            order: () => Promise.resolve({ data: [], error: null }),
-          }),
-        }),
-      },
-    });
-    const result = await loadActiveRouterForChannel(db, 'acc-1', null);
-    expect(result).toBeNull();
+    expect(
+      await loadActiveRouterForChannel(dbWith([ACCOUNT], []), 'acc-1', null)
+    ).toBeNull();
   });
 
   it('prefers a channel-specific router over a whole-account one', async () => {
-    const db = fakeDb({
-      ai_routers: {
-        select: () => ({
-          eq: () => ({
-            eq: () => ({
-              or: () =>
-                Promise.resolve({
-                  data: [
-                    { id: 'router-account', channel_id: null },
-                    { id: 'router-channel', channel_id: 'chan-1' },
-                  ],
-                  error: null,
-                }),
-            }),
-          }),
-        }),
-      },
-      ai_router_members: {
-        select: () => ({
-          eq: () => ({
-            order: () =>
-              Promise.resolve({
-                data: [
-                  {
-                    agent_id: 'agent-sales',
-                    intent_name: 'sales',
-                    intent_description: 'wants to buy',
-                    examples: [],
-                  },
-                ],
-                error: null,
-              }),
-          }),
-        }),
-      },
-    });
-    const result = await loadActiveRouterForChannel(db, 'acc-1', 'chan-1');
-    expect(result?.router.id).toBe('router-channel');
+    const r = await loadActiveRouterForChannel(dbWith([ACCOUNT, CHANNEL]), 'acc-1', 'chan-1');
+    expect(r?.router.id).toBe('router-channel');
+  });
+
+  it("picks the official number's own router", async () => {
+    const db = dbWith([ACCOUNT, CHANNEL, OFFICIAL]);
+    expect((await loadActiveRouterForChannel(db, 'acc-1', null, 'cfg-1'))?.router.id).toBe(
+      'router-official'
+    );
+    // another official number falls back to the whole-account router
+    expect((await loadActiveRouterForChannel(db, 'acc-1', null, 'cfg-2'))?.router.id).toBe(
+      'router-account'
+    );
+  });
+
+  it('skips the whole-account router when asked (agent bound to the number)', async () => {
+    const db = dbWith([ACCOUNT, OFFICIAL]);
+    expect(
+      await loadActiveRouterForChannel(db, 'acc-1', null, 'cfg-2', { skipWholeAccount: true })
+    ).toBeNull();
+    expect(
+      (await loadActiveRouterForChannel(db, 'acc-1', null, 'cfg-1', { skipWholeAccount: true }))
+        ?.router.id
+    ).toBe('router-official');
   });
 });
 
@@ -143,6 +124,7 @@ describe('resolveAgentViaRouter', () => {
     id: 'router-1',
     account_id: 'acc-1',
     channel_id: null,
+    whatsapp_config_id: null,
     classifier_model: null,
     min_confidence: 0.6,
     sticky: true,

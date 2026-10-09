@@ -42,6 +42,8 @@ interface RouterMember {
 interface RouterRow {
   id: string;
   channel_id: string | null;
+  /** Scoped to one official (Meta) number — migration 121. */
+  whatsapp_config_id: string | null;
   name: string;
   is_active: boolean;
   min_confidence: number;
@@ -58,6 +60,8 @@ interface WahaChannelOption {
 /** No-channel sentinel for the <Select> — base-ui/react's Select
  *  can't use an empty-string item value. */
 const WHOLE_ACCOUNT = '__whole_account__';
+/** Select value prefix for an official number (vs a WAHA channel id). */
+const OFFICIAL_PREFIX = 'cfg:';
 const NO_FALLBACK = '__no_fallback__';
 
 export function AiRouters({ agents }: { agents: AiAgentSummary[] }) {
@@ -81,9 +85,10 @@ export function AiRouters({ agents }: { agents: AiAgentSummary[] }) {
 
   const load = useCallback(async () => {
     try {
-      const [routersRes, channelsRes] = await Promise.all([
+      const [routersRes, channelsRes, numbersRes] = await Promise.all([
         fetch('/api/ai/routers'),
         fetch('/api/whatsapp/waha/channels'),
+        fetch('/api/whatsapp/numbers', { cache: 'no-store' }),
       ]);
       const routersPayload = await routersRes.json();
       if (!routersRes.ok) throw new Error(routersPayload?.error || 'failed');
@@ -91,7 +96,22 @@ export function AiRouters({ agents }: { agents: AiAgentSummary[] }) {
       const channelsPayload = await channelsRes
         .json()
         .catch(() => ({ channels: [] }));
-      setChannels(channelsPayload.channels ?? []);
+      const numbersPayload = await numbersRes
+        .json()
+        .catch(() => ({ numbers: [] }));
+      // Official numbers sit next to the WAHA channels, keyed `cfg:<id>`.
+      const official: WahaChannelOption[] = (
+        (numbersPayload?.numbers ?? []) as {
+          id: string;
+          label: string | null;
+          display_phone_number: string | null;
+          phone_number_id: string;
+        }[]
+      ).map((n) => ({
+        id: `${OFFICIAL_PREFIX}${n.id}`,
+        label: n.label || n.display_phone_number || n.phone_number_id,
+      }));
+      setChannels([...official, ...(channelsPayload.channels ?? [])]);
     } catch {
       toast.error(t('toastRoutersLoadFailed'));
     } finally {
@@ -115,7 +135,13 @@ export function AiRouters({ agents }: { agents: AiAgentSummary[] }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newName.trim(),
-          channel_id: newChannel === WHOLE_ACCOUNT ? null : newChannel,
+          channel_id:
+            newChannel === WHOLE_ACCOUNT || newChannel.startsWith(OFFICIAL_PREFIX)
+              ? null
+              : newChannel,
+          whatsapp_config_id: newChannel.startsWith(OFFICIAL_PREFIX)
+            ? newChannel.slice(OFFICIAL_PREFIX.length)
+            : null,
         }),
       });
       const payload = await res.json();
@@ -273,7 +299,12 @@ export function AiRouters({ agents }: { agents: AiAgentSummary[] }) {
     }
   }
 
-  function channelLabel(channelId: string | null): string {
+  function channelLabel(router: RouterRow): string {
+    const channelId = router.channel_id
+      ? router.channel_id
+      : router.whatsapp_config_id
+        ? `${OFFICIAL_PREFIX}${router.whatsapp_config_id}`
+        : null;
     if (!channelId) return t('wholeAccount');
     return (
       channels.find((c) => c.id === channelId)?.label ?? t('unknownChannel')
@@ -318,7 +349,7 @@ export function AiRouters({ agents }: { agents: AiAgentSummary[] }) {
                   {router.name}
                 </p>
                 <p className="text-muted-foreground truncate text-xs">
-                  {channelLabel(router.channel_id)} —{' '}
+                  {channelLabel(router)} —{' '}
                   {t('intentsCount', { count: router.members.length })}
                 </p>
               </div>

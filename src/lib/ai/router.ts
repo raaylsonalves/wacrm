@@ -8,6 +8,8 @@ interface RouterRow {
   id: string;
   account_id: string;
   channel_id: string | null;
+  /** Scoped to one official number (migration 121). */
+  whatsapp_config_id: string | null;
   classifier_model: string | null;
   min_confidence: number;
   sticky: boolean;
@@ -27,41 +29,48 @@ interface ActiveRouter {
 }
 
 /**
- * The account's active router for this conversation's channel
- * (specs/multi-agent-router.md) — a channel-specific router wins over
- * a whole-account one (`channel_id IS NULL`) if somehow both exist,
- * though `idx_ai_routers_active_per_channel` normally prevents two
- * *active* routers from coexisting on the same channel anyway. Returns
- * `null` when there's no active router OR it has no intents configured
- * yet (nothing to classify against) — either way the caller falls
- * straight back to the account's default agent, unchanged from before
- * this feature existed.
+ * The account's active router for this conversation's number
+ * (specs/multi-agent-router.md): the router scoped to that number — a
+ * WAHA channel or an official number (migration 121) — wins over the
+ * whole-account one. `idx_ai_routers_active_per_scope` keeps at most one
+ * active router per scope.
+ *
+ * `skipWholeAccount`: the caller has an agent bound to this number, which
+ * is a more specific instruction than a whole-account router — only a
+ * router of the number itself replaces it.
+ *
+ * Returns `null` when there's no applicable active router OR it has no
+ * intents configured yet — either way the caller falls straight back to
+ * the bound / default agent.
  */
 export async function loadActiveRouterForChannel(
   db: SupabaseClient,
   accountId: string,
-  channelId: string | null
+  channelId: string | null,
+  configId: string | null = null,
+  opts: { skipWholeAccount?: boolean } = {}
 ): Promise<ActiveRouter | null> {
-  let query = db
+  // Few routers per account: fetch the active ones and pick here.
+  const { data: routers, error } = await db
     .from('ai_routers')
     .select(
-      'id, account_id, channel_id, classifier_model, min_confidence, sticky, fallback_agent_id'
+      'id, account_id, channel_id, whatsapp_config_id, classifier_model, min_confidence, sticky, fallback_agent_id'
     )
     .eq('account_id', accountId)
     .eq('is_active', true);
-  query = channelId
-    ? query.or(`channel_id.eq.${channelId},channel_id.is.null`)
-    : query.is('channel_id', null);
-  const { data: routers, error } = await query;
 
   if (error || !routers || routers.length === 0) return null;
 
-  // Prefer a router scoped to this exact channel over the
-  // whole-account (`channel_id IS NULL`) one.
   const rows = routers as RouterRow[];
-  const router =
-    (channelId ? rows.find((r) => r.channel_id === channelId) : undefined) ??
-    rows.find((r) => r.channel_id === null);
+  const own = rows.find(
+    (r) =>
+      (!!channelId && r.channel_id === channelId) ||
+      (!channelId && !!configId && r.whatsapp_config_id === configId)
+  );
+  const wholeAccount = opts.skipWholeAccount
+    ? undefined
+    : rows.find((r) => !r.channel_id && !r.whatsapp_config_id);
+  const router = own ?? wholeAccount;
   if (!router) return null;
 
   const { data: members } = await db

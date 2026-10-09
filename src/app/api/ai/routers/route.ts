@@ -28,7 +28,7 @@ export async function GET() {
     const { data: routers, error } = await supabase
       .from('ai_routers')
       .select(
-        'id, channel_id, name, is_active, classifier_model, min_confidence, sticky, fallback_agent_id, created_at'
+        'id, channel_id, whatsapp_config_id, name, is_active, classifier_model, min_confidence, sticky, fallback_agent_id, created_at'
       )
       .eq('account_id', accountId)
       .order('created_at', { ascending: true });
@@ -102,15 +102,32 @@ export async function POST(request: Request) {
         return bad('channel_id must be a WAHA channel on this account');
     }
 
+    // Or one official (Meta) number (migration 121) — never both.
+    const configId =
+      !channelId && typeof body.whatsapp_config_id === 'string' && body.whatsapp_config_id.trim()
+        ? body.whatsapp_config_id.trim()
+        : null;
+    if (configId) {
+      const { data: cfg } = await supabase
+        .from('whatsapp_config')
+        .select('id')
+        .eq('id', configId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+      if (!cfg)
+        return bad('whatsapp_config_id must be an official number on this account');
+    }
+
     const { data: created, error } = await supabase
       .from('ai_routers')
       .insert({
         account_id: accountId,
         channel_id: channelId,
+        whatsapp_config_id: configId,
         name,
       })
       .select(
-        'id, channel_id, name, is_active, classifier_model, min_confidence, sticky, fallback_agent_id'
+        'id, channel_id, whatsapp_config_id, name, is_active, classifier_model, min_confidence, sticky, fallback_agent_id'
       )
       .single();
 

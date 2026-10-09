@@ -485,11 +485,23 @@ export async function dispatchInboundToAiReply(
     // as before this feature existed. When active, whichever agent it
     // resolves to takes over the cap/handoff/claim logic below, which
     // is why this runs before all three.
+    // An agent bound to this number (below) beats a whole-account router;
+    // only a router of the number itself replaces the binding.
+    const boundAgentId = routed
+      ? null
+      : await loadChannelAgentId(
+          db,
+          accountId,
+          conv.whatsapp_channel_id ?? null,
+          conv.whatsapp_config_id ?? null,
+        )
     if (!routed) try {
       const activeRouter = await loadActiveRouterForChannel(
         db,
         accountId,
         conv.whatsapp_channel_id ?? null,
+        conv.whatsapp_config_id ?? null,
+        { skipWholeAccount: !!boundAgentId },
       )
       if (activeRouter) {
         const { data: latestInbound } = await db
@@ -533,12 +545,7 @@ export async function dispatchInboundToAiReply(
     if (!routed) {
       // The agent bound to this conversation's number — each official
       // number can have its own (migration 114).
-      const boundId = await loadChannelAgentId(
-        db,
-        accountId,
-        conv.whatsapp_channel_id ?? null,
-        conv.whatsapp_config_id ?? null,
-      )
+      const boundId = boundAgentId
       if (boundId && boundId !== config.id) {
         let bound: AiConfig | null = null
         try {

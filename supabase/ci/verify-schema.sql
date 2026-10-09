@@ -434,6 +434,13 @@ BEGIN
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'ai_routers'
+      AND column_name = 'whatsapp_config_id'
+  ) OR to_regclass('public.idx_ai_routers_active_per_scope') IS NULL THEN
+    RAISE EXCEPTION 'ai_routers.whatsapp_config_id / idx_ai_routers_active_per_scope missing — migration 121 did not apply';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'conversations'
       AND column_name = 'active_ai_agent_id'
   ) THEN
