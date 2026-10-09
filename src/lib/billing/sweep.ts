@@ -52,6 +52,9 @@ export interface SweepSubscription {
 
 /** A pending row younger than this may still be a checkout in flight. */
 export const STALE_PENDING_MS = 86_400_000;
+/** How long after the period a resumed card plan may wait for its first
+ *  charge (Mercado Pago retries a declined one for ~10 days). */
+export const CARD_FIRST_CHARGE_MS = 12 * 86_400_000;
 
 export type SweepAction =
   'to_past_due' | 'lapse' | 'close_canceled' | 'renew_pix' | null;
@@ -83,12 +86,14 @@ export function classifySubscription(
     const usable = accountStatus === 'active' || accountStatus === 'past_due';
     const touched = sub.updated_at ? new Date(sub.updated_at).getTime() : 0;
     const periodOver = !end || end.getTime() < t;
-    return usable &&
-      !sub.mp_preapproval_id &&
-      periodOver &&
-      t - touched > STALE_PENDING_MS
-      ? 'lapse'
-      : null;
+    if (!usable || !periodOver || t - touched <= STALE_PENDING_MS) return null;
+    // A card subscription exists but its first charge never landed long
+    // after the period ended (Mercado Pago retries for ~10 days): close
+    // it instead of leaving access open while it stays paused.
+    if (sub.mp_preapproval_id) {
+      return end && t - end.getTime() > CARD_FIRST_CHARGE_MS ? 'lapse' : null;
+    }
+    return 'lapse';
   }
   if (sub.status === 'active' && sub.method === 'pix' && end) {
     if (end.getTime() < t) return 'to_past_due';
@@ -313,12 +318,12 @@ export async function runBillingSweep(
               console.error('[billing/sweep] could not cancel preapproval', err)
             );
           }
-          await notifyBilling(db, sub.account_id, { kind: 'ended' }, `ended:${sub.id}:${sub.current_period_end ?? ''}`);
+          await notifyBilling(db, sub.account_id, { kind: 'ended' }, `ended:${sub.id}:${sub.current_period_end ?? sub.updated_at ?? now.toISOString()}`);
         }
       } else if (action === 'close_canceled') {
         await setAccountStatus(db, sub.account_id, 'canceled');
         summary.closed++;
-        await notifyBilling(db, sub.account_id, { kind: 'ended' }, `ended:${sub.id}:${sub.current_period_end ?? ''}`);
+        await notifyBilling(db, sub.account_id, { kind: 'ended' }, `ended:${sub.id}:${sub.current_period_end ?? sub.updated_at ?? now.toISOString()}`);
       } else if (action === 'renew_pix') {
         if (await renewPix(db, sub, now)) summary.renewed++;
       }

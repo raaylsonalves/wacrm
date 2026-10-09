@@ -35,7 +35,9 @@ import {
 // Inbound processing can fan out to per-media Meta verification calls, so
 // give it headroom beyond the platform default (Vercel clamps this to the
 // plan's ceiling). Tune as needed.
-export const maxDuration = 60;
+// The retry loop below (review 2026-10, M4) runs after the AI fan-out of
+// the same delivery, so it needs more room than one pass.
+export const maxDuration = 300;
 
 // Lazy-initialized to avoid build-time crash when env vars are missing
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -275,26 +277,45 @@ export async function POST(request: Request) {
   // be stored (a transient DB error) would be lost for good. Processing is
   // idempotent on the message id: retry in place, and keep the payload for
   // replay if it still fails (review 2026-10, M4).
+  //
+  // The payload is kept at the FIRST failure (and removed once a retry
+  // stores it), so it survives even if the function runs out of time.
   after(async () => {
-    let lastError = ''
+    let deadLetterId: string | null = null;
     for (let attempt = 0; attempt < INBOUND_ATTEMPTS; attempt++) {
+      let lastError = '';
       try {
         const { failed } = await processWebhook(body);
-        if (failed === 0) return;
+        if (failed === 0) {
+          if (deadLetterId) {
+            await supabaseAdmin().from('webhook_dead_letters').delete().eq('id', deadLetterId);
+          }
+          return;
+        }
         lastError = `${failed} message(s) could not be stored`;
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error);
         console.error('Error processing webhook:', error);
       }
+      if (!deadLetterId) {
+        const { data: dl, error: dlErr } = await supabaseAdmin()
+          .from('webhook_dead_letters')
+          .insert({ source: 'meta', payload: body, error: lastError, attempts: 1 })
+          .select('id')
+          .single();
+        if (dlErr) console.error('[webhook] could not keep the payload:', dlErr.message);
+        deadLetterId = (dl?.id as string | undefined) ?? null;
+      } else {
+        await supabaseAdmin()
+          .from('webhook_dead_letters')
+          .update({ error: lastError, attempts: attempt + 1 })
+          .eq('id', deadLetterId);
+      }
       if (attempt < INBOUND_ATTEMPTS - 1) {
         await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
       }
     }
-    console.error('[webhook] inbound kept for replay after retries:', lastError);
-    const { error: dlErr } = await supabaseAdmin()
-      .from('webhook_dead_letters')
-      .insert({ source: 'meta', payload: body, error: lastError, attempts: INBOUND_ATTEMPTS });
-    if (dlErr) console.error('[webhook] could not keep the payload either:', dlErr.message);
+    console.error('[webhook] inbound kept for replay after retries');
   });
 
   return NextResponse.json({ status: 'received' }, { status: 200 });
@@ -379,6 +400,8 @@ async function processWebhook(
           phoneNumberId,
           configError
         );
+        // A transient read error: its messages were not stored — retry.
+        failed += value.messages?.length ?? 1;
         continue;
       }
 

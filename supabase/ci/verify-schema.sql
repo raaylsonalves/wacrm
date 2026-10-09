@@ -464,6 +464,12 @@ BEGIN
     RAISE EXCEPTION 'webhook_dead_letters is missing — migration 125 did not apply';
   END IF;
   IF NOT EXISTS (
+    SELECT 1 FROM pg_proc
+    WHERE proname = 'claim_ai_reply_turn' AND prosrc LIKE '%content_type = ''audio''%'
+  ) THEN
+    RAISE EXCEPTION 'claim_ai_reply_turn still counts every newer message — migration 126 did not apply';
+  END IF;
+  IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'conversations'
       AND column_name = 'active_ai_agent_id'

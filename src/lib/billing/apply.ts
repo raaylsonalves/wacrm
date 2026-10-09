@@ -168,7 +168,9 @@ async function applyOrder(
 
   // A paid order never goes back. A replaced (cancelled) order that is
   // paid anyway is real money: it is recorded and credited like any other.
-  if (row.status !== 'paid') {
+  // Only payment moves it on: a late "still open" about a replaced order
+  // must not reopen it (QA of review 2026-10).
+  if (row.status !== 'paid' && (row.status !== 'canceled' || status === 'paid')) {
     const patch: Record<string, unknown> = { status, mp_order_id: order.id };
     if (status === 'paid') patch.paid_at = new Date().toISOString();
     const { error: upErr } = await db
@@ -276,12 +278,23 @@ async function enterCardGrace(
   sub: SubRow,
   chargeRef: string | null
 ) {
+  // A plan resumed inside a paid period is `pending` until its first charge
+  // while the account keeps its access: when that charge fails it must
+  // enter grace like an active one, or access stayed open with nothing
+  // paying for it (QA of review 2026-10).
+  const { data: acc } = await db
+    .from('accounts')
+    .select('subscription_status')
+    .eq('id', sub.account_id)
+    .maybeSingle();
+  const from =
+    acc?.subscription_status === 'active' ? ['active', 'pending'] : ['active'];
   const grace = new Date(Date.now() + CARD_GRACE_MS);
   const { data: changed, error } = await db
     .from('billing_subscriptions')
     .update({ status: 'past_due', grace_until: grace.toISOString() })
     .eq('id', sub.id)
-    .eq('status', 'active')
+    .in('status', from)
     .select('id');
   if (error) throw error;
   if (!changed || changed.length === 0) return;
@@ -332,9 +345,9 @@ async function applyAuthorizedPayment(
   }
   if (outcome === 'retrying' || outcome === 'failed') {
     // Mercado Pago retries a declined charge up to 4 times in 10 days. Only
-    // an ACTIVE subscription enters grace: a first charge declined on a
-    // pending one never had access to keep, and past_due already has its
-    // window running.
+    // a subscription with access to keep enters grace (active, or a resumed
+    // plan on a still-active account); a brand-new one never had access,
+    // and past_due already has its window running.
     await enterCardGrace(db, sub, String(ap.id));
     return 'applied';
   }

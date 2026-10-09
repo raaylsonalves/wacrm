@@ -138,7 +138,7 @@ export async function POST(
       if (
         sub.method === 'card' &&
         sub.mp_preapproval_id &&
-        (sub.status === 'active' || sub.status === 'past_due')
+        sub.status !== 'canceled'
       ) {
         return NextResponse.json({ error: 'card_managed' }, { status: 409 });
       }

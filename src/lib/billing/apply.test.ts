@@ -254,6 +254,23 @@ describe('card notifications', () => {
     expect(notify.notifyBilling).toHaveBeenCalledTimes(1);
   });
 
+  it('a resumed plan (pending, account still active) enters grace when its first charge fails', async () => {
+    const db = fakeDb(baseTables(cardSub, { subscription_status: 'active' }));
+    mp.getAuthorizedPayment.mockResolvedValue({ id: 6, preapproval_id: 'PRE1', status: 'rejected' });
+    await applyNotification(db as never, 'subs', 'subscription_authorized_payment', '6');
+    expect(db.tables.billing_subscriptions[0].status).toBe('past_due');
+    expect(db.tables.accounts[0].subscription_status).toBe('past_due');
+  });
+
+  it('a replaced Pix order is not reopened by a late "still open" (QA)', async () => {
+    const t = baseTables({});
+    t.billing_pix_orders.push({ id: 'o9', account_id: ACC, external_reference: 'ref-9', mp_order_id: 'MP9', amount_cents: 19700, status: 'canceled' });
+    const db = fakeDb(t);
+    mp.getOrder.mockResolvedValue({ id: 'MP9', external_reference: 'ref-9', status: 'action_required', total_amount: '197.00' });
+    await applyNotification(db as never, 'pix', 'order', 'MP9');
+    expect(db.tables.billing_pix_orders[0].status).toBe('canceled');
+  });
+
   it('a decline on a pending subscription opens no grace (B6)', async () => {
     const db = fakeDb(baseTables(cardSub));
     mp.getAuthorizedPayment.mockResolvedValue({ id: 5, preapproval_id: 'PRE1', status: 'rejected' });

@@ -90,8 +90,9 @@ export async function POST(request: Request) {
       .eq('account_id', ctx.accountId)
       .maybeSingle();
     // A Pix month that went unpaid (past_due, in grace): charge that same
-    // month again without rewriting the row, so the paid count and the
-    // period carry over and the payment extends the period it is late for.
+    // month again without rewriting the row, so the paid count carries
+    // over. Paid late, the new month counts from the payment date
+    // (billing_register_payment, migration 122).
     const overdue =
       existing?.status === 'past_due' &&
       existing.method === 'pix' &&

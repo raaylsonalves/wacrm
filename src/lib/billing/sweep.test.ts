@@ -3,6 +3,7 @@ import {
   GRACE_MS,
   RENEW_BEFORE_MS,
   STALE_PENDING_MS,
+  CARD_FIRST_CHARGE_MS,
   classifySubscription,
   monthStartOf,
   type SweepSubscription,
@@ -183,6 +184,21 @@ describe('classifySubscription — review 2026-10 hardening', () => {
         'pending',
         NOW
       )
+    ).toBeNull();
+  });
+
+  it('closes a resumed card plan whose first charge never landed (QA)', () => {
+    const base = {
+      status: 'pending' as const,
+      method: 'card' as const,
+      mp_preapproval_id: 'pre-1',
+      updated_at: iso(-30 * 86_400_000),
+    };
+    expect(
+      classifySubscription(sub({ ...base, current_period_end: iso(-CARD_FIRST_CHARGE_MS - 1000) }), 'active', NOW)
+    ).toBe('lapse');
+    expect(
+      classifySubscription(sub({ ...base, current_period_end: iso(-2 * 86_400_000) }), 'active', NOW)
     ).toBeNull();
   });
 });
