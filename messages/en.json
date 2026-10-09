@@ -2814,6 +2814,8 @@
       }
     },
     "templates": {
+      "createInNumber": "Number",
+      "createInNumberHint": "The template is created in this number's Meta account and can only be sent from that account's numbers.",
       "toastSyncNumberFailed": "Could not read the templates of number \"{number}\": {error}",
       "removeButtonAria": "Remove button",
       "title": "Message templates",

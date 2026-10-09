@@ -139,6 +139,49 @@ export function TemplateManager() {
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // The account's official numbers, one entry per WABA: templates live in
+  // a WABA (migration 119), so with several the list says which number
+  // each template belongs to and a new one picks where it is created.
+  const [wabaNumbers, setWabaNumbers] = useState<
+    { configId: string; wabaId: string; label: string }[]
+  >([]);
+  const [createConfigId, setCreateConfigId] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/whatsapp/numbers', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!alive || !d?.numbers) return;
+        const byWaba = new Map<string, { configId: string; wabaId: string; labels: string[] }>();
+        for (const n of d.numbers as {
+          id: string;
+          waba_id: string | null;
+          label: string | null;
+          display_phone_number: string | null;
+          phone_number_id: string;
+        }[]) {
+          if (!n.waba_id) continue;
+          const label = n.label || n.display_phone_number || n.phone_number_id;
+          const entry = byWaba.get(n.waba_id);
+          if (entry) entry.labels.push(label);
+          else byWaba.set(n.waba_id, { configId: n.id, wabaId: n.waba_id, labels: [label] });
+        }
+        setWabaNumbers(
+          [...byWaba.values()].map((w) => ({
+            configId: w.configId,
+            wabaId: w.wabaId,
+            label: w.labels.join(', '),
+          }))
+        );
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const multiWaba = wabaNumbers.length > 1;
+  const wabaLabel = (wabaId: string | null | undefined) =>
+    wabaNumbers.find((w) => w.wabaId === wabaId)?.label ?? null;
   const [syncing, setSyncing] = useState(false);
   const [form, setForm] = useState<TemplateFormData>(emptyForm);
   // Non-null when the dialog is editing an existing row — switches the
@@ -282,7 +325,13 @@ export function TemplateManager() {
       const res = await fetch(url, {
         method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildSubmitPayload()),
+        body: JSON.stringify({
+          ...buildSubmitPayload(),
+          // New template: created in the picked number's WABA.
+          ...(!isEdit && multiWaba && createConfigId
+            ? { config_id: createConfigId }
+            : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -322,12 +371,29 @@ export function TemplateManager() {
       if (!res.ok) {
         throw new Error(data?.error || `Sync failed (HTTP ${res.status})`);
       }
-      toast.success(
+      // One toast for the whole result: a number whose WABA could not be
+      // read (e.g. an expired token) turns it into a warning that says so,
+      // instead of a second toast on top of the success.
+      const summary =
         t('toastSyncCount', { total: data.total }) +
-          (data.inserted || data.updated
-            ? t('toastSyncDetails', { inserted: data.inserted, updated: data.updated })
-            : ''),
-      );
+        (data.inserted || data.updated
+          ? t('toastSyncDetails', { inserted: data.inserted, updated: data.updated })
+          : '');
+      const wabaErrors = Array.isArray(data.waba_errors)
+        ? (data.waba_errors as { number: string; message: string }[])
+        : [];
+      if (wabaErrors.length > 0) {
+        toast.warning(summary, {
+          description: wabaErrors
+            .map((w) =>
+              t('toastSyncNumberFailed', { number: w.number, error: w.message })
+            )
+            .join(' · '),
+          duration: 15000,
+        });
+      } else {
+        toast.success(summary);
+      }
       if (Array.isArray(data.errors) && data.errors.length > 0) {
         const preview = data.errors.slice(0, 3).map(
           (e: { name: string; language: string; message: string }) =>
@@ -336,14 +402,6 @@ export function TemplateManager() {
         const suffix =
           data.errors.length > 3 ? `, +${data.errors.length - 3} more` : '';
         toast.error(t('toastSyncFailed', { preview: preview.join(', ') + suffix }));
-      }
-      // A number whose WABA could not be read (e.g. an expired token).
-      if (Array.isArray(data.waba_errors)) {
-        for (const w of data.waba_errors as { number: string; message: string }[]) {
-          toast.error(t('toastSyncNumberFailed', { number: w.number, error: w.message }), {
-            duration: 12000,
-          });
-        }
       }
       if (data.truncated) {
         // Use error (not warning) so the message survives long
@@ -588,6 +646,12 @@ export function TemplateManager() {
                           {template.language}
                         </span>
                       )}
+                      {multiWaba &&
+                        wabaLabel((template as { waba_id?: string | null }).waba_id) && (
+                          <Badge variant="outline" className="text-xs">
+                            {wabaLabel((template as { waba_id?: string | null }).waba_id)}
+                          </Badge>
+                        )}
                       {template.quality_score && (
                         <span
                           className={`text-[10px] uppercase font-medium ${
@@ -708,6 +772,23 @@ export function TemplateManager() {
           )}
 
           <div className="space-y-4 py-2">
+            {multiWaba && editingId === null && (
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">{t('createInNumber')}</Label>
+                <select
+                  value={createConfigId ?? wabaNumbers[0]?.configId ?? ''}
+                  onChange={(e) => setCreateConfigId(e.target.value || null)}
+                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                >
+                  {wabaNumbers.map((w) => (
+                    <option key={w.wabaId} value={w.configId}>
+                      {w.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground">{t('createInNumberHint')}</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label className="text-muted-foreground">{t('templateName')}</Label>
               <Input

@@ -7,6 +7,7 @@ import {
   toErrorResponse,
 } from '@/lib/auth/account'
 import { decrypt } from '@/lib/whatsapp/encryption'
+import { loadOfficialNumber } from '@/lib/whatsapp/official-number'
 import { submitMessageTemplate } from '@/lib/whatsapp/meta-api'
 import {
   validateTemplatePayload,
@@ -140,13 +141,14 @@ export async function POST(request: Request) {
       metaTemplateId = `dry-run-${crypto.randomUUID()}`
       metaStatus = 'PENDING'
     } else {
-      const { data: config, error: configError } = await supabase
-        .from('whatsapp_config')
-        .select('*')
-        .eq('account_id', accountId)
-        .eq('is_primary', true)
-        .single()
-      if (configError || !config) {
+      // The number picked in the form decides the WABA the template is
+      // created in (migration 119); none = the primary's.
+      const config = await loadOfficialNumber(supabase, accountId, null, {
+        configId: typeof (payload as { config_id?: unknown }).config_id === 'string'
+            ? ((payload as { config_id?: string }).config_id as string)
+            : null,
+      })
+      if (!config) {
         return NextResponse.json(
           {
             error:

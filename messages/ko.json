@@ -2814,6 +2814,8 @@
       }
     },
     "templates": {
+      "createInNumber": "번호",
+      "createInNumberHint": "템플릿은 이 번호의 Meta 계정에서 생성되며 해당 계정의 번호로만 보낼 수 있습니다.",
       "toastSyncNumberFailed": "번호 \"{number}\"의 템플릿을 읽을 수 없습니다: {error}",
       "removeButtonAria": "버튼 제거",
       "title": "메시지 템플릿",

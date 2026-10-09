@@ -65,3 +65,28 @@ export async function loadOfficialNumber(
     .maybeSingle();
   return primary ?? null;
 }
+
+/**
+ * The official number to act on a WABA with (its templates live there,
+ * migration 119): one of the account's numbers in that WABA, the primary
+ * first; else the primary. Null when the account has no official number.
+ */
+export async function loadNumberForWaba(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: SupabaseClient<any, any, any>,
+  accountId: string,
+  wabaId: string | null | undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<Record<string, any> | null> {
+  if (wabaId) {
+    const { data } = await db
+      .from('whatsapp_config')
+      .select('*')
+      .eq('account_id', accountId)
+      .eq('waba_id', wabaId)
+      .order('is_primary', { ascending: false })
+      .limit(1);
+    if (data && data.length > 0) return data[0];
+  }
+  return loadOfficialNumber(db, accountId);
+}

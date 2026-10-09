@@ -6,6 +6,7 @@ import {
   toErrorResponse,
 } from '@/lib/auth/account'
 import { decrypt } from '@/lib/whatsapp/encryption'
+import { loadNumberForWaba } from '@/lib/whatsapp/official-number'
 import {
   deleteMessageTemplate,
   editMessageTemplate,
@@ -77,7 +78,7 @@ export async function PATCH(
     // meta_template_id and status — fetch explicitly.
     const { data: existing, error: lookupErr } = await supabase
       .from('message_templates')
-      .select('id, name, status, meta_template_id, language')
+      .select('id, name, status, meta_template_id, language, waba_id')
       .eq('id', id)
       .eq('account_id', accountId)
       .maybeSingle()
@@ -124,13 +125,14 @@ export async function PATCH(
     }
 
     if (!isDryRun()) {
-      const { data: config, error: configError } = await supabase
-        .from('whatsapp_config')
-        .select('*')
-        .eq('account_id', accountId)
-        .eq('is_primary', true)
-        .single()
-      if (configError || !config) {
+      // The template lives in its WABA (migration 119): edit it through a
+      // number of that WABA, not necessarily the primary.
+      const config = await loadNumberForWaba(
+        supabase,
+        accountId,
+        existing.waba_id as string | null,
+      )
+      if (!config) {
         return NextResponse.json(
           { error: 'WhatsApp not configured.' },
           { status: 400 },
@@ -240,7 +242,7 @@ export async function DELETE(
 
     const { data: existing, error: lookupErr } = await supabase
       .from('message_templates')
-      .select('id, name, meta_template_id')
+      .select('id, name, meta_template_id, waba_id')
       .eq('id', id)
       .eq('account_id', accountId)
       .maybeSingle()
@@ -249,13 +251,13 @@ export async function DELETE(
     }
 
     if (existing.meta_template_id && !isDryRun()) {
-      const { data: config, error: configError } = await supabase
-        .from('whatsapp_config')
-        .select('*')
-        .eq('account_id', accountId)
-        .eq('is_primary', true)
-        .single()
-      if (configError || !config || !config.waba_id) {
+      // Deleted in the WABA it lives in (migration 119).
+      const config = await loadNumberForWaba(
+        supabase,
+        accountId,
+        existing.waba_id as string | null,
+      )
+      if (!config || !config.waba_id) {
         return NextResponse.json(
           { error: 'WhatsApp not configured — cannot delete on Meta.' },
           { status: 400 },

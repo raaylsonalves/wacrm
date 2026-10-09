@@ -39,6 +39,12 @@ export function ThemedToaster() {
     <Toaster
       theme={isClient ? mode : DEFAULT_MODE}
       position="top-right"
+      // Several toasts list one under the other instead of stacking on top
+      // of each other (sonner collapses them by default), so a success and
+      // the warning that came with it are both readable.
+      expand
+      visibleToasts={4}
+      gap={8}
       toastOptions={{
         style: {
           background: "var(--popover)",

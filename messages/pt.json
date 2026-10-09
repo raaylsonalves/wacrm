@@ -2814,6 +2814,8 @@
       }
     },
     "templates": {
+      "createInNumber": "Número",
+      "createInNumberHint": "O modelo é criado na conta da Meta desse número e só pode ser enviado pelos números dessa conta.",
       "toastSyncNumberFailed": "Não foi possível ler os modelos do número \"{number}\": {error}",
       "removeButtonAria": "Remover botão",
       "title": "Modelos de mensagem",

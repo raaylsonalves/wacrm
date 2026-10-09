@@ -2814,6 +2814,8 @@
       }
     },
     "templates": {
+      "createInNumber": "Número",
+      "createInNumberHint": "La plantilla se crea en la cuenta de Meta de ese número y solo puede enviarse desde los números de esa cuenta.",
       "toastSyncNumberFailed": "No se pudieron leer las plantillas del número \"{number}\": {error}",
       "removeButtonAria": "Quitar botón",
       "title": "Plantillas de mensaje",
