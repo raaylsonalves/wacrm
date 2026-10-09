@@ -20,6 +20,7 @@ import {
   toCents,
 } from './transitions';
 import type { BillingSource } from './webhook-signature';
+import { sendBillingEmail } from '@/lib/email/billing';
 
 export type ApplyResult =
   | 'applied'
@@ -112,6 +113,18 @@ async function registerPaidCharge(
   if (upErr) throw upErr;
   // A finished annual plan simply stops: access runs to the period end.
   await setAccountStatus(db, accountId, 'active');
+  await sendBillingEmail(
+    db,
+    accountId,
+    {
+      kind: 'paid',
+      amountCents: payment.amountCents,
+      method: payment.method,
+      periodEnd: end,
+      finished: done,
+    },
+    `paid:${payment.method}:${payment.providerRef}`
+  );
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -292,6 +305,11 @@ async function applyAuthorizedPayment(
     // Mercado Pago retries a declined charge up to 4 times in 10 days:
     // past_due now, with a grace window the app can enforce later.
     const grace = new Date(Date.now() + 7 * 86_400_000).toISOString();
+    const { data: before } = await db
+      .from('billing_subscriptions')
+      .select('status')
+      .eq('id', sub.id)
+      .maybeSingle();
     const { error: upErr } = await db
       .from('billing_subscriptions')
       .update({ status: 'past_due', grace_until: grace })
@@ -299,6 +317,15 @@ async function applyAuthorizedPayment(
       .neq('status', 'canceled');
     if (upErr) throw upErr;
     await setAccountStatus(db, sub.account_id as string, 'past_due');
+    // Once per decline episode: Mercado Pago's retries notify again.
+    if (before && before.status !== 'past_due' && before.status !== 'canceled') {
+      await sendBillingEmail(
+        db,
+        sub.account_id as string,
+        { kind: 'card_declined', amountCents: sub.amount_cents },
+        `declined:${ap.id}`
+      );
+    }
     return 'applied';
   }
   return 'ignored_topic';
