@@ -88,6 +88,18 @@ const THEME_BOOT_SCRIPT = `
     var MODES = ${JSON.stringify(MODES)};
     var savedMode = localStorage.getItem(MODE_KEY);
     d.dataset.mode = MODES.indexOf(savedMode) !== -1 ? savedMode : MODE_DEFAULT;
+
+    // The account's brand color, cached by BrandColorEffect on the last
+    // visit: applied before first paint so a reload doesn't flash the
+    // default palette while the account loads.
+    var brand = JSON.parse(localStorage.getItem('wacrm.brandColor') || 'null');
+    if (brand && /^#[0-9a-fA-F]{6}$/.test(brand.color)) {
+      var s = d.style;
+      s.setProperty('--primary', brand.color);
+      s.setProperty('--primary-foreground', brand.fg === '#000000' ? '#000000' : '#ffffff');
+      s.setProperty('--primary-hover', brand.color);
+      s.setProperty('--ring', brand.color);
+    }
   } catch (_e) {
     d.dataset.theme = ${JSON.stringify(DEFAULT_THEME)};
     d.dataset.mode = ${JSON.stringify(DEFAULT_MODE)};

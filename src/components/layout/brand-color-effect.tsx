@@ -10,19 +10,24 @@ import { getContrastForeground, isValidHexColor } from "@/lib/color-contrast";
  * tokens that key off the same hue in globals.css) with the current
  * account's `brand_color`, if one is set.
  *
- * Deliberately NOT applied via the pre-hydration boot script the way
- * `data-theme`/`data-mode` are: account branding lives in Postgres,
- * not `localStorage`, so it can't be read synchronously before first
- * paint. A brief default-theme flash before the account loads is an
- * accepted trade-off (see specs/account-branding.md — "Decisions").
+ * Branding lives in Postgres, so the first visit can't know it before
+ * paint. The last value is cached in localStorage and applied by the
+ * pre-hydration boot script in app/layout.tsx, so a reload no longer
+ * flashes the default palette before the account loads.
  */
+const CACHE_KEY = "wacrm.brandColor";
 export function BrandColorEffect() {
   const { account } = useAuth();
   const brandColor = account?.brand_color ?? null;
 
   useEffect(() => {
     const root = document.documentElement;
+    // Wait for the account: until it loads, keep what the boot script set.
+    if (account === null || account === undefined) return;
     if (!brandColor || !isValidHexColor(brandColor)) {
+      try {
+        localStorage.removeItem(CACHE_KEY);
+      } catch {}
       root.style.removeProperty("--primary");
       root.style.removeProperty("--primary-foreground");
       root.style.removeProperty("--primary-hover");
@@ -30,6 +35,12 @@ export function BrandColorEffect() {
       return;
     }
     const foreground = getContrastForeground(brandColor);
+    try {
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ color: brandColor, fg: foreground })
+      );
+    } catch {}
     root.style.setProperty("--primary", brandColor);
     root.style.setProperty("--primary-foreground", foreground);
     // No separate hover shade for an arbitrary admin-picked color —
@@ -44,7 +55,7 @@ export function BrandColorEffect() {
       root.style.removeProperty("--primary-hover");
       root.style.removeProperty("--ring");
     };
-  }, [brandColor]);
+  }, [account, brandColor]);
 
   return null;
 }
