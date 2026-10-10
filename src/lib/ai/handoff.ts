@@ -19,6 +19,7 @@ export type HandoffReason =
   | 'case_escalated'
   | 'flow_handoff'
   | 'followup_exhausted'
+  | 'automated_sender'
 
 /** Structured, non-translated facts stored in `ai_handoff_meta`. */
 export interface HandoffMeta {

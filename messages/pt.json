@@ -597,7 +597,8 @@
           "audioUnintelligible": "O assistente não conseguiu entender o áudio do cliente",
           "caseEscalated": "Uma pessoa assumiu a conversa a partir de um caso",
           "flowHandoff": "Um fluxo passou a conversa para uma pessoa",
-          "followupExhausted": "O follow-up terminou sem resposta e passou para uma pessoa"
+          "followupExhausted": "O follow-up terminou sem resposta e passou para uma pessoa",
+          "automatedSender": "A IA parou: o outro lado parece ser um robô (respostas automáticas)"
         },
         "lastMessage": "Última mensagem do cliente",
         "showMore": "Ver mais",
@@ -3670,7 +3671,8 @@
       "audio_unintelligible": "Áudio que a IA não entendeu",
       "case_escalated": "Assumida a partir de um caso",
       "flow_handoff": "Passada por um fluxo",
-      "followup_exhausted": "Follow-up sem resposta"
+      "followup_exhausted": "Follow-up sem resposta",
+      "automated_sender": "Robô do outro lado"
     }
   },
   "Agents": {

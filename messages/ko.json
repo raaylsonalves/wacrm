@@ -597,7 +597,8 @@
           "audioUnintelligible": "어시스턴트가 고객의 음성 메시지를 이해하지 못했습니다",
           "caseEscalated": "케이스에서 상담원이 대화를 인수했습니다",
           "flowHandoff": "플로우가 대화를 담당자에게 넘겼습니다",
-          "followupExhausted": "후속 메시지가 응답 없이 끝나 담당자에게 넘어갔습니다"
+          "followupExhausted": "후속 메시지가 응답 없이 끝나 담당자에게 넘어갔습니다",
+          "automatedSender": "AI 중단: 상대방이 자동 응답 봇으로 보입니다"
         },
         "lastMessage": "고객의 마지막 메시지",
         "showMore": "더 보기",
@@ -3682,7 +3683,8 @@
       "audio_unintelligible": "Audio the AI couldn't understand",
       "case_escalated": "Taken over from a case",
       "flow_handoff": "플로우에서 전달됨",
-      "followup_exhausted": "응답 없는 후속 메시지"
+      "followup_exhausted": "응답 없는 후속 메시지",
+      "automated_sender": "자동 발신자"
     }
   },
   "Agents": {

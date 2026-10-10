@@ -15,6 +15,7 @@ import { observeBeforeSend } from './guardrails/observe'
 import { classifyAcknowledgment, shouldSkipAcknowledgment } from './ack'
 import { loadNoticeText } from './notice-text'
 import { waitForQuietPeriod } from './burst'
+import { looksLikeAutomatedSender } from './automated-sender'
 import { TTS_MODEL, sendVoiceReply, shouldReplyInVoice } from './voice-reply'
 import { TRANSCRIBE_MODEL } from './transcribe'
 import { loadEmbeddingsKey } from './config'
@@ -689,6 +690,30 @@ export async function dispatchInboundToAiReply(
         return
       }
       Object.assign(conv, fresh)
+    }
+
+    // Another company's bot on the other side (a carrier's self-service
+    // menu, seen live): it answers in seconds with the same long texts,
+    // and the AI answered back for twenty minutes. Step out — no notice to
+    // the customer (it would only feed the loop) — and tell the team.
+    {
+      const { data: recent } = await db
+        .from('messages')
+        .select('sender_type, created_at, content_text')
+        .eq('conversation_id', conversationId)
+        .gte('created_at', new Date(Date.now() - 30 * 60_000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(20)
+      if (recent && looksLikeAutomatedSender(recent as never)) {
+        await db
+          .from('conversations')
+          .update({ ai_autoreply_disabled: true, ai_handoff_reason: 'automated_sender' })
+          .eq('id', conversationId)
+          .eq('account_id', accountId)
+        await notifyHandoff(db, conversationId, 'automated_sender', noticeCtx, !!conv.assigned_agent_id)
+        console.info(`${tag} stopped: the other side looks like an automated sender`)
+        return
+      }
     }
 
     // The newest customer message this reply is built from. If another

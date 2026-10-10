@@ -2,6 +2,7 @@ import {
   findConversationOnNumber,
   numberColumns,
 } from '@/lib/whatsapp/conversation-number';
+import { isUnsupportedPlaceholder } from '@/lib/ai/automated-sender';
 import { NextResponse, after } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption';
@@ -1181,9 +1182,13 @@ async function processMessage(
   // A voice note has no text; the AI path transcribes it (only once it
   // knows it is going to answer) — specs/ai-audio-inbound.md.
   const voiceNote = message.type === 'audio' && !!message.audio?.id;
+  // A message type we can't read is stored as a placeholder text; the AI
+  // must not "answer" it (it replied "I didn't understand" to a carrier's
+  // bot, starting a loop).
   const aiShouldDispatch =
     !flowConsumed &&
-    (inboundText.trim().length > 0 || voiceNote) &&
+    ((inboundText.trim().length > 0 && !isUnsupportedPlaceholder(inboundText)) ||
+      voiceNote) &&
     (!interactiveReplyId ||
       (await wasLastBotMessageAiGenerated(conversation.id)));
   if (aiShouldDispatch) {

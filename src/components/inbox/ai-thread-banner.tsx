@@ -223,6 +223,7 @@ const REASON_KEYS: Record<string, string> = {
   case_escalated: "caseEscalated",
   flow_handoff: "flowHandoff",
   followup_exhausted: "followupExhausted",
+  automated_sender: "automatedSender",
 };
 
 const ATTEMPT_CODES = new Set([

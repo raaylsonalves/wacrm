@@ -20,7 +20,7 @@ const h = vi.hoisted(() => ({
   loadAudioRetryText: vi.fn(),
   state: {
     /** The customer's two latest messages' transcript_status, newest first. */
-    recentCustomer: [] as { transcript_status: string | null }[],
+    recentCustomer: [] as Record<string, unknown>[],
     /** The business's latest message (for the acknowledgment skip). */
     lastBusiness: null as { content_type: string; content_text: string } | null,
     conv: null as Record<string, unknown> | null,
@@ -154,6 +154,7 @@ vi.mock('./admin-client', () => ({
           select: () => chain,
           eq: () => chain,
           neq: () => chain,
+          gte: () => chain,
           order: () => chain,
           limit: () => Object.assign(Promise.resolve({ data: h.state.recentCustomer, error: null }), chain),
           maybeSingle: () => Promise.resolve({ data: h.state.lastBusiness, error: null }),
@@ -329,6 +330,23 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
     expect(h.engineSendText).not.toHaveBeenCalled()
     expect(h.sendTypingIndicator).not.toHaveBeenCalled()
+  })
+
+  it('stops, without answering, when the other side is a bot', async () => {
+    const menu = 'Para resolver sua solicitação de forma rápida e prática, acesse o app e use o autoatendimento'
+    const t = (s: number) => new Date(Date.UTC(2026, 9, 10, 11, 0, s)).toISOString()
+    h.state.recentCustomer = [
+      { sender_type: 'bot', created_at: t(0), content_text: 'Posso ajudar?' },
+      { sender_type: 'customer', created_at: t(3), content_text: menu },
+      { sender_type: 'bot', created_at: t(20), content_text: 'Posso ajudar?' },
+      { sender_type: 'customer', created_at: t(23), content_text: menu },
+    ]
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
+    expect(h.engineSendText).not.toHaveBeenCalled()
+    expect(h.state.updates).toContainEqual(
+      expect.objectContaining({ ai_autoreply_disabled: true, ai_handoff_reason: 'automated_sender' }),
+    )
   })
 
   it('drops the reply silently when a person took over during generation (A2)', async () => {

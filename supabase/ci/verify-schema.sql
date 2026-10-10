@@ -474,6 +474,13 @@ BEGIN
     RAISE EXCEPTION 'service analytics functions missing — migration 127 did not apply';
   END IF;
   IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'conversations_ai_handoff_reason_check'
+      AND pg_get_constraintdef(oid) LIKE '%automated_sender%'
+  ) THEN
+    RAISE EXCEPTION 'handoff reason automated_sender missing — migration 128 did not apply';
+  END IF;
+  IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'conversations'
       AND column_name = 'active_ai_agent_id'
