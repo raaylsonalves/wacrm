@@ -469,6 +469,10 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'claim_ai_reply_turn still counts every newer message — migration 126 did not apply';
   END IF;
+  IF to_regprocedure('public.service_leads(uuid,timestamptz,timestamptz)') IS NULL
+     OR to_regprocedure('public.service_responses(uuid,timestamptz,timestamptz)') IS NULL THEN
+    RAISE EXCEPTION 'service analytics functions missing — migration 127 did not apply';
+  END IF;
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'conversations'

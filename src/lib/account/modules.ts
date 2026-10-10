@@ -28,6 +28,7 @@ export const MODULE_PRESETS: Record<string, ModuleKey[] | null> = {
 
 const PATH_MODULE: [string, ModuleKey][] = [
   ['/inbox', 'inbox'],
+  ['/analytics', 'inbox'],
   ['/cases', 'cases'],
   ['/contacts', 'contacts'],
   ['/pipelines', 'pipelines'],

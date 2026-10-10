@@ -45,6 +45,7 @@
     "createAccount": "계정 만들기"
   },
   "Sidebar": {
+    "analytics": "응대",
     "operator": "포트폴리오",
     "title": "WhatsApp용 CRM 템플릿",
     "primaryNav": "기본 메뉴",
@@ -93,6 +94,7 @@
     }
   },
   "Header": {
+    "analytics": "응대",
     "operator": "포트폴리오",
     "agenda": "일정",
     "push": {
@@ -4248,6 +4250,70 @@
       "stillConfirming": "확인이 지연되고 있습니다. 이 페이지를 닫아도 됩니다. 결제가 확인되면 계정이 활성화됩니다.",
       "checkAgain": "다시 확인",
       "terms": "결제하면 <terms>이용약관</terms>과 <privacy>개인정보 처리방침</privacy>에 동의하게 됩니다."
+    }
+  },
+  "Analytics": {
+    "title": "응대",
+    "subtitle": "고객이 첫 답변을 얼마나 기다리는지, 누가 답하는지 확인합니다. 응답 목표: {target}분.",
+    "range": "{days}일",
+    "refresh": "새로고침",
+    "loadError": "데이터를 불러오지 못했습니다. 새로고침해 보세요.",
+    "empty": "이 기간에 데이터가 없습니다",
+    "kpi": {
+      "leads": "신규 리드",
+      "unanswered": "미응답 {count}건",
+      "firstReply": "첫 응답 (중앙값)",
+      "average": "평균 {value}",
+      "withinTarget": "목표 이내 ({target}분)",
+      "ofAnswered": "응답 {count}건 중",
+      "aiFirst": "AI가 먼저 응답",
+      "aiFirstHint": "첫 응답이 AI에서 나옴"
+    },
+    "charts": {
+      "leads": "리드",
+      "timeTitle": "일별 응답 시간",
+      "timeHint": "고객 메시지와 응답 사이의 중앙값, AI 대 팀",
+      "leadsTitle": "일별 신규 리드",
+      "leadsHint": "각 대화의 첫 메시지",
+      "hoursTitle": "도착 시간",
+      "hoursHint": "리드가 도착하는 시간대 — 팀 배치에 유용"
+    },
+    "team": {
+      "title": "팀",
+      "hint": "고객이 메시지를 보내고 누군가 답한 모든 경우. 빨간색: 중앙값 {target}분 초과",
+      "who": "담당",
+      "replies": "응답",
+      "median": "중앙값",
+      "within": "목표 내",
+      "unknown": "삭제된 구성원"
+    },
+    "kind": {
+      "ai": "AI",
+      "aiAgents": "AI 에이전트",
+      "human": "팀",
+      "automation": "자동화",
+      "none": "미응답"
+    },
+    "filter": {
+      "all": "전체",
+      "late": "목표 초과",
+      "unanswered": "미응답",
+      "ai": "AI",
+      "human": "팀"
+    },
+    "table": {
+      "title": "기간 내 리드",
+      "hint": "각 리드의 도착 시점과 첫 응답까지 기다린 시간",
+      "contact": "연락처",
+      "phone": "전화번호",
+      "number": "번호",
+      "arrived": "도착",
+      "firstReply": "첫 응답",
+      "firstReplyAt": "응답 시각",
+      "minutes": "응답까지 분",
+      "by": "응답 주체",
+      "who": "응답자",
+      "truncated": "{count}건 중 500건 표시. 전체는 CSV로 내보내세요."
     }
   }
 }

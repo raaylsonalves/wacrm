@@ -45,6 +45,7 @@
     "createAccount": "Criar conta"
   },
   "Sidebar": {
+    "analytics": "Atendimento",
     "operator": "Carteira",
     "title": "Modelo de CRM para WhatsApp",
     "primaryNav": "Principal",
@@ -93,6 +94,7 @@
     }
   },
   "Header": {
+    "analytics": "Atendimento",
     "operator": "Carteira",
     "agenda": "Agenda",
     "push": {
@@ -4236,6 +4238,70 @@
       "stillConfirming": "A confirmação está demorando. Você pode fechar esta página: a conta é liberada assim que o pagamento for confirmado.",
       "checkAgain": "Verificar de novo",
       "terms": "Ao pagar, você aceita os <terms>Termos de uso</terms> e a <privacy>Política de privacidade</privacy>."
+    }
+  },
+  "Analytics": {
+    "title": "Atendimento",
+    "subtitle": "Quanto tempo seus clientes esperam pela primeira resposta e quem responde. Meta de resposta: {target} min.",
+    "range": "{days} dias",
+    "refresh": "Atualizar",
+    "loadError": "Não foi possível carregar os dados. Tente atualizar.",
+    "empty": "Sem dados no período",
+    "kpi": {
+      "leads": "Leads novos",
+      "unanswered": "{count} sem resposta",
+      "firstReply": "1ª resposta (mediana)",
+      "average": "média {value}",
+      "withinTarget": "Dentro da meta ({target} min)",
+      "ofAnswered": "de {count} atendidos",
+      "aiFirst": "Atendidos primeiro pela IA",
+      "aiFirstHint": "da 1ª resposta veio da IA"
+    },
+    "charts": {
+      "leads": "Leads",
+      "timeTitle": "Tempo de resposta por dia",
+      "timeHint": "Mediana entre a mensagem do cliente e a resposta, IA x equipe",
+      "leadsTitle": "Leads novos por dia",
+      "leadsHint": "Primeira mensagem de cada conversa",
+      "hoursTitle": "Horário de chegada",
+      "hoursHint": "Em que hora do dia os leads chegam — útil para escalar a equipe"
+    },
+    "team": {
+      "title": "Equipe",
+      "hint": "Cada vez que um cliente escreveu e alguém respondeu. Em vermelho: mediana acima de {target} min",
+      "who": "Quem",
+      "replies": "Respostas",
+      "median": "Mediana",
+      "within": "Na meta",
+      "unknown": "Membro removido"
+    },
+    "kind": {
+      "ai": "IA",
+      "aiAgents": "Agentes de IA",
+      "human": "Equipe",
+      "automation": "Automação",
+      "none": "Sem resposta"
+    },
+    "filter": {
+      "all": "Todos",
+      "late": "Acima da meta",
+      "unanswered": "Sem resposta",
+      "ai": "IA",
+      "human": "Equipe"
+    },
+    "table": {
+      "title": "Leads do período",
+      "hint": "Quando cada lead chegou e quanto esperou pela primeira resposta",
+      "contact": "Contato",
+      "phone": "Telefone",
+      "number": "Número",
+      "arrived": "Chegou em",
+      "firstReply": "1ª resposta",
+      "firstReplyAt": "Respondido em",
+      "minutes": "Minutos até a resposta",
+      "by": "Respondido por",
+      "who": "Quem respondeu",
+      "truncated": "Mostrando 500 de {count}. Exporte o CSV para ver todos."
     }
   }
 }

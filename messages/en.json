@@ -45,6 +45,7 @@
     "createAccount": "Create account"
   },
   "Sidebar": {
+    "analytics": "Service",
     "operator": "Portfolio",
     "title": "CRM Template for WhatsApp",
     "primaryNav": "Primary",
@@ -93,6 +94,7 @@
     }
   },
   "Header": {
+    "analytics": "Service",
     "operator": "Portfolio",
     "agenda": "Agenda",
     "push": {
@@ -4248,6 +4250,70 @@
       "stillConfirming": "Confirmation is taking a while. You can close this page: the account unlocks as soon as the payment is confirmed.",
       "checkAgain": "Check again",
       "terms": "By paying you accept the <terms>Terms of use</terms> and the <privacy>Privacy policy</privacy>."
+    }
+  },
+  "Analytics": {
+    "title": "Service",
+    "subtitle": "How long your customers wait for the first reply and who answers. Response target: {target} min.",
+    "range": "{days} days",
+    "refresh": "Refresh",
+    "loadError": "Could not load the data. Try refreshing.",
+    "empty": "No data in this period",
+    "kpi": {
+      "leads": "New leads",
+      "unanswered": "{count} unanswered",
+      "firstReply": "First reply (median)",
+      "average": "average {value}",
+      "withinTarget": "Within target ({target} min)",
+      "ofAnswered": "of {count} answered",
+      "aiFirst": "Answered first by AI",
+      "aiFirstHint": "of first replies came from the AI"
+    },
+    "charts": {
+      "leads": "Leads",
+      "timeTitle": "Response time per day",
+      "timeHint": "Median between the customer's message and the reply, AI vs team",
+      "leadsTitle": "New leads per day",
+      "leadsHint": "First message of each conversation",
+      "hoursTitle": "Arrival time",
+      "hoursHint": "Hour of the day leads arrive — useful to staff the team"
+    },
+    "team": {
+      "title": "Team",
+      "hint": "Every time a customer wrote and someone replied. In red: median above {target} min",
+      "who": "Who",
+      "replies": "Replies",
+      "median": "Median",
+      "within": "On target",
+      "unknown": "Removed member"
+    },
+    "kind": {
+      "ai": "AI",
+      "aiAgents": "AI agents",
+      "human": "Team",
+      "automation": "Automation",
+      "none": "No reply"
+    },
+    "filter": {
+      "all": "All",
+      "late": "Over target",
+      "unanswered": "No reply",
+      "ai": "AI",
+      "human": "Team"
+    },
+    "table": {
+      "title": "Leads in the period",
+      "hint": "When each lead arrived and how long they waited for the first reply",
+      "contact": "Contact",
+      "phone": "Phone",
+      "number": "Number",
+      "arrived": "Arrived",
+      "firstReply": "First reply",
+      "firstReplyAt": "Replied at",
+      "minutes": "Minutes to reply",
+      "by": "Replied by",
+      "who": "Who replied",
+      "truncated": "Showing 500 of {count}. Export the CSV to see all."
     }
   }
 }

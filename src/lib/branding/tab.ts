@@ -11,6 +11,7 @@ export const DEFAULT_APP_NAME = 'wacrm';
 const SECTION_KEYS: Record<string, string> = {
   dashboard: 'dashboard',
   inbox: 'inbox',
+  analytics: 'analytics',
   notifications: 'notifications',
   contacts: 'contacts',
   pipelines: 'pipelines',
