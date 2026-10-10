@@ -27,6 +27,7 @@ import { dispatchInboundToAiReply } from '@/lib/ai/auto-reply';
 import { pushInboundMessage } from '@/lib/push/send';
 import type { ContentType } from '@/types';
 import { dispatchWebhookEvent } from '@/lib/webhooks/deliver';
+import { databaseReachable } from '@/lib/health/db';
 import {
   handleTemplateWebhookChange,
   isTemplateWebhookField,
@@ -257,6 +258,15 @@ export async function POST(request: Request) {
     body = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  // Database unreachable (2026-10-10: the Supabase API was down ~1h20):
+  // after a 200 Meta never resends, and the dead-letter insert below goes
+  // through the same dead API — the message would be lost. A 503 makes Meta
+  // retry the delivery for days instead.
+  if (!(await databaseReachable(supabaseAdmin()))) {
+    console.error('[webhook] database unreachable — asking Meta to retry');
+    return NextResponse.json({ error: 'Temporarily unavailable' }, { status: 503 });
   }
 
   // Process AFTER the response so we ack Meta within their ~20s timeout

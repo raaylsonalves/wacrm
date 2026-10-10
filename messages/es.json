@@ -1,4 +1,8 @@
 {
+  "Outage": {
+    "title": "Inestabilidad en el servidor.",
+    "body": "Tus datos están seguros — estamos reconectando y la página volverá sola."
+  },
   "Common": {
     "save": {
       "saving": "Guardando…",

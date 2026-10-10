@@ -18,6 +18,7 @@ import { PresenceHeartbeat } from '@/components/presence/presence-heartbeat';
 import { BrowserNotificationsListener } from '@/components/notifications/browser-notifications-listener';
 import { SplashScreen } from '@/components/layout/splash-screen';
 import { RouteProgress } from '@/components/layout/route-progress';
+import { OutageBanner } from '@/components/layout/outage-banner';
 import { QueryProvider } from '@/lib/query/provider';
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout
@@ -113,6 +114,8 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           </Suspense>
           <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
             <RouteProgress />
+            {/* Supabase unreachable: says so instead of empty pages. */}
+            <OutageBanner />
             {/* Operators only: "Operando: <client>" + the stale-tab guard. */}
             <OperatorBanner />
             <Header onOpenSidebar={() => setSidebarOpen(true)} />

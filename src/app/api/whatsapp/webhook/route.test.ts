@@ -283,6 +283,8 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }))
 
+vi.mock('@/lib/health/db', () => ({ databaseReachable: async () => true }))
+
 vi.mock('@/lib/whatsapp/encryption', () => ({
   decrypt: () => 'plain-token',
   encrypt: (v: string) => v,
