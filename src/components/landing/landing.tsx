@@ -336,6 +336,53 @@ const FAQ = [
   ],
 ];
 
+// Compared by kind of tool, not by brand: competitor prices change often and
+// a stale named comparison is both misleading and a legal exposure (CONAR).
+// Source: specs/market-research-2026-10.md.
+const COMPARE_COLS = [
+  'Nordia',
+  'CRMs de WhatsApp comuns',
+  'Plataformas de grande porte',
+];
+const COMPARE: [string, string, string, string][] = [
+  [
+    'Preço',
+    'Público, de R$ 197 a R$ 797 por mês',
+    'Entrada baixa, extras cobrados à parte',
+    'Sob consulta, muitas vezes com taxa de implantação',
+  ],
+  [
+    'Cobrança por mensagem',
+    'O plano não cobra por mensagem',
+    'Pacotes de créditos que expiram',
+    'Créditos mínimos por mês',
+  ],
+  [
+    'Inteligência artificial',
+    'Agentes de IA e roteador por número, sem cobrar por resposta',
+    'Ausente ou paga por crédito',
+    'Módulo adicional',
+  ],
+  [
+    'Seu número',
+    'API oficial da Meta ou o número que você já usa, por QR code',
+    'Geralmente um ou outro',
+    'Só API oficial',
+  ],
+  [
+    'Tempo de resposta da equipe',
+    'Relatório de primeira resposta por pessoa e pela IA',
+    'Básico ou ausente',
+    'Completo',
+  ],
+  [
+    'Contrato',
+    'Sem fidelidade, cancele quando quiser',
+    'Varia',
+    'Contrato anual é comum',
+  ],
+];
+
 const FORM_ERRORS: Record<string, string> = {
   invalid_phone: 'Confira o WhatsApp: use DDD + número, como (85) 99999-0000.',
   rate: 'Muitas tentativas seguidas. Tente de novo em alguns minutos.',
@@ -1257,6 +1304,78 @@ export function Landing() {
               </>
             )}
           </form>
+        </div>
+      </section>
+
+      {/* ============ COMPARATIVO ============ */}
+      <section
+        id="comparativo"
+        className="lp-sec"
+        style={{ padding: '20px 20px 90px' }}
+      >
+        <div
+          style={{
+            maxWidth: 1100,
+            margin: '0 auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 28,
+          }}
+        >
+          <div
+            className="lp-rise"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14,
+              alignItems: 'center',
+              textAlign: 'center',
+            }}
+          >
+            <span className="lp-eyebrow">Por que o Nordia</span>
+            <h2 className="lp-h2">Sem crédito, sem surpresa na fatura.</h2>
+          </div>
+          <div className="lp-cmp lp-rise" role="table" aria-label="Comparativo">
+            <div className="lp-cmp-row lp-cmp-head" role="row">
+              <span role="columnheader" />
+              {COMPARE_COLS.map((c, i) => (
+                <span
+                  key={c}
+                  role="columnheader"
+                  className={i === 0 ? 'lp-cmp-us' : undefined}
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
+            {COMPARE.map(([label, us, common, big]) => (
+              <div key={label} className="lp-cmp-row" role="row">
+                <span role="rowheader" className="lp-cmp-label">
+                  {label}
+                </span>
+                <span role="cell" className="lp-cmp-us">
+                  {us}
+                </span>
+                <span role="cell" data-col={COMPARE_COLS[1]}>
+                  {common}
+                </span>
+                <span role="cell" data-col={COMPARE_COLS[2]}>
+                  {big}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p
+            style={{
+              margin: 0,
+              textAlign: 'center',
+              fontSize: 12.5,
+              color: 'var(--soft)',
+            }}
+          >
+            Comparação por tipo de ferramenta, com base em planos públicos do
+            mercado brasileiro em outubro de 2026.
+          </p>
         </div>
       </section>
 

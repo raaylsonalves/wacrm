@@ -1593,3 +1593,68 @@ html:has(.lp) {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* ---- Comparativo (por tipo de ferramenta) ---- */
+.lp-cmp {
+  border-radius: 24px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.lp-cmp-row {
+  display: grid;
+  grid-template-columns: 1.1fr 1.4fr 1fr 1fr;
+  border-top: 1px solid var(--line);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+.lp-cmp-row > span {
+  padding: 16px 20px;
+  color: var(--muted);
+}
+.lp-cmp-head {
+  border-top: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+.lp-cmp-head > span {
+  color: var(--ink);
+}
+.lp-cmp-label {
+  font-weight: 600;
+  color: var(--ink) !important;
+}
+.lp-cmp-row > .lp-cmp-us {
+  background: #141318;
+  color: #f2f0ec;
+  font-weight: 600;
+}
+@media (max-width: 760px) {
+  .lp-cmp-head {
+    display: none;
+  }
+  .lp-cmp-row {
+    grid-template-columns: 1fr;
+  }
+  .lp-cmp-row:first-of-type {
+    border-top: 0;
+  }
+  .lp-cmp-row > span {
+    padding: 6px 18px;
+  }
+  .lp-cmp-label {
+    padding-top: 16px !important;
+  }
+  .lp-cmp-row > .lp-cmp-us {
+    margin: 4px 12px;
+    border-radius: 12px;
+    padding: 10px 14px;
+  }
+  .lp-cmp-row > [data-col]::before {
+    content: attr(data-col) ': ';
+    font-weight: 600;
+  }
+  .lp-cmp-row > span:last-child {
+    padding-bottom: 16px;
+  }
+}
