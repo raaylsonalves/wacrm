@@ -82,6 +82,12 @@ export function billingTemplateFor(
         name: 'nordia_acesso_encerrado',
         params: [ctx.firstName, ctx.accountName],
       };
+    case 'signup_incomplete':
+      // Only the first nudge goes to WhatsApp; the second is e-mail only.
+      // Marketing template — sent once Meta approves it (see the spec).
+      return e.stage === 1
+        ? { name: 'nordia_cadastro_incompleto', params: [ctx.firstName] }
+        : null;
     default:
       // past_due (Pix not paid): no approved template yet, e-mail only.
       return null;

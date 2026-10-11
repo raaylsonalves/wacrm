@@ -34,7 +34,9 @@ export type BillingEmail =
     }
   | { kind: 'card_declined'; amountCents: number; graceUntil: Date }
   | { kind: 'past_due'; amountCents: number; graceUntil: Date }
-  | { kind: 'ended' };
+  | { kind: 'ended' }
+  /** Signed up, never paid (lib/billing/signup-recovery.ts). */
+  | { kind: 'signup_incomplete'; stage: 1 | 2 };
 
 export function formatBRL(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', {
@@ -123,6 +125,26 @@ export function buildBillingEmail(
         button('Regularizar pagamento', billing) +
         small('Se você já pagou, pode ignorar este e-mail — a confirmação chega em instantes.');
       text = `Ainda não identificamos o pagamento da assinatura${accText} no Nordia CRM (${formatBRL(e.amountCents)}). Acesso garantido até ${formatDate(e.graceUntil)}. Regularize: ${billing}`;
+      break;
+    }
+    case 'signup_incomplete': {
+      subject =
+        e.stage === 1
+          ? 'Falta pouco para começar no Nordia CRM'
+          : 'Seu Nordia CRM está esperando por você';
+      body =
+        para('Olá,') +
+        para(
+          e.stage === 1
+            ? `Você criou a conta${acc} no <strong>Nordia CRM</strong>, mas ainda não escolheu um plano. Falta só esse passo para conectar seu WhatsApp e colocar a IA para atender.`
+            : `Sua conta${acc} no <strong>Nordia CRM</strong> continua reservada. Quando quiser, é só escolher o plano e começar — leva poucos minutos.`
+        ) +
+        button('Escolher meu plano', billing) +
+        small('Ficou alguma dúvida? Responda a este e-mail ou fale com a gente pelo WhatsApp que ajudamos você a escolher.');
+      text =
+        e.stage === 1
+          ? `Você criou a conta${accText} no Nordia CRM, mas ainda não escolheu um plano. Escolha aqui: ${billing}`
+          : `Sua conta${accText} no Nordia CRM continua reservada. Escolha o plano quando quiser: ${billing}`;
       break;
     }
     case 'ended': {

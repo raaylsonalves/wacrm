@@ -11,6 +11,7 @@ import { dispatchPendingPushes } from '@/lib/notifications/notify'
 import { runScheduledBroadcasts } from '@/lib/whatsapp/broadcast-schedule'
 import { runCalendarSync } from '@/lib/google-calendar/sync'
 import { runBillingSweep } from '@/lib/billing/sweep'
+import { runSignupRecovery } from '@/lib/billing/signup-recovery'
 import { runOfficialNumberHealth } from '@/lib/whatsapp/official-health'
 import { sweepAppointmentReminders, sweepSlaBreaches } from '@/lib/notifications/sweeps'
 
@@ -159,6 +160,9 @@ export async function GET(request: Request) {
     return null
   })
 
+  // Signed up, never paid: a nudge after 1 h and 24 h. Never throws.
+  const signupRecovery = await runSignupRecovery(supabaseAdmin())
+
   // Official (Meta) numbers: is each token still accepted? Every 30
   // minutes per number (migration 120). Never throws.
   const officialHealth = await runOfficialNumberHealth(supabaseAdmin())
@@ -169,5 +173,5 @@ export async function GET(request: Request) {
     push: await dispatchPendingPushes(supabaseAdmin()),
   }
 
-  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays, broadcasts, calendar, notifications, billing, officialHealth })
+  return NextResponse.json({ processed, followups, prospecting, avatars, caseRelays, broadcasts, calendar, notifications, billing, signupRecovery, officialHealth })
 }
