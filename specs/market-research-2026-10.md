@@ -31,7 +31,38 @@ Todos os planos padrão têm 1 número. Não há teste grátis, só demonstraç�
 | **Digisac** | PME e médias | sob consulta [18] | módulos de IA à parte [18] | sim [18] | oficial [18] | não | integração com Reclame Aqui | não confirmado |
 | **Chatwoot** | times técnicos | US$ 19 a 99 por agente [19] | Captain AI por créditos [19] | sim | oficial | **sim**, mas a versão grátis vem sem IA [20] | código aberto | em inglês, sem funil e sem agenda |
 | **Helena CRM** (Asaas) | PME e agências | não confirmado | no roadmap [21] | não confirmado | oficial (BSP) [21] | não, mas tem white label [21] | +500 parceiros, venda junto com pagamento [22] | não confirmado |
+| **WeSales CRM** | micro e PME | R$ 147 (promo nos 12 primeiros meses), intermediário R$ 197 promo / R$ 297 cheio [38][39] | não aparece como centro da oferta (não confirmado) | não confirmado | QR e oficial; "risco zero de bloqueio" só no plano superior [38] | não | usuários e contatos ilimitados, 15+ automações, WhatsApp/Instagram/e-mail/Messenger [38][40] | âncora de "70% vitalício" (R$ 497 → R$ 147) em datas específicas [39] |
 | **Whaticket e clones** | micro | US$ 49 [23] | básica | sim | QR [23] | sim | barato | risco de bloqueio [23] |
+
+## 1.1 WeSales CRM: como sustentam o preço (11/10/2026)
+
+O WeSales é o concorrente mais próximo em preço, com mais recursos listados. As
+explicações abaixo são **hipóteses** baseadas em como esse mercado funciona,
+ainda não verificadas. Vale criar uma conta no teste de 7 dias e conferir três
+coisas: se a IA é inclusa ou paga à parte, quanto custa depois da promoção, e se
+o "ilimitado" tem limites.
+
+1. **"Usuários ilimitados" quase não custa nada.** O custo de um CRM está na IA
+   e na mídia armazenada, não no número de logins. O argumento é forte e barato,
+   e nós podemos oferecer o mesmo.
+2. **Conexão por QR code em vez da API oficial.** Sem custo da Meta e sem
+   homologação, daí o "sem custo por mensagem". O preço disso é o risco de
+   bloqueio, tanto que eles vendem "risco zero de bloqueio" no plano superior.
+3. **IA fora do centro da oferta.** A IA é justamente a parte que custa.
+4. **Funil de marketing agressivo.** Âncora alta, "desconto vitalício" e
+   promoções com data. O preço de longo prazo é o cheio.
+5. **Volume com pouco suporte.** Pode ser white-label de uma base pronta (não
+   verificado).
+
+**Resposta do Nordia:** não competir em quantidade de recursos. Os
+diferenciais são:
+
+- IA inclusa de verdade;
+- QR para planos baratos e API oficial para escala, com o risco explicado;
+- preço sem "promoção que dobra depois";
+- usuários ilimitados.
+
+A estrutura proposta está em `pricing-costs.md`, seção 9.
 
 ## 2. Tendências 2025–2026
 
@@ -161,3 +192,6 @@ reclamam. **Esforço:** P (dias), M (1–2 semanas), G (mais de 2 semanas).
 [35] https://www.em.com.br/mundo-corporativo/2026/02/7361830-banimento-de-numeros-no-whatsapp-dispara-no-brasil.html
 [36] https://confidata.com.br/blog/regulamentacao-ia-brasil-protecao-dados
 [37] https://confidata.com.br/blog/anpd-regulacao-ia-brasil-2026-2027
+[38] https://www.wesalescrm.com/
+[39] https://assinar.wesalescrm.com/
+[40] https://apps.apple.com/us/app/wesales-crm/id6760725835

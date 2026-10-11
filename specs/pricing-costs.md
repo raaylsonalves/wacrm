@@ -377,6 +377,74 @@ quando acontecer um destes gatilhos:
 - o backup externo já estiver automatizado e com restauração testada;
 - houver alguém para cuidar da infraestrutura.
 
+## 9. Estrutura de planos proposta (11/10/2026)
+
+Rascunho para validar. **Os preços são proposta, não decisão.**
+
+### Princípios
+
+1. **Usuários ilimitados em todos os planos.** O custo marginal de um login é
+   quase zero. O que limita os planos é número de WhatsApp, atendimentos com IA
+   e volume de disparos.
+2. **O tipo de conexão separa os planos de entrada dos demais:**
+   - **QR code (WAHA)**, nos planos mais baratos. Não tem custo da Meta nem
+     homologação, e liga em minutos. Por outro lado, **é um uso não oficial do
+     WhatsApp e tem risco de bloqueio do número.** Serve para **pouco tráfego**:
+     atendimento de quem chama, com volume baixo e sem disparos em massa.
+   - **API oficial da Meta**, nos planos para escala, com disparos e campanhas.
+     Não há risco de bloqueio por uso não oficial, a Meta cobra os modelos
+     direto na conta do cliente e há limites de envio oficiais.
+3. **A IA vem inclusa em todos os planos por padrão.** Para quem não quer IA,
+   existe a **versão "sem IA", mais barata.** O desconto deve ser moderado: a IA
+   nos custa só R$ 1–15 por mês com prompt enxuto (seção 7.1), então a versão
+   sem IA é questão de valor percebido e de acessibilidade, não de custo.
+   Isso ajusta a decisão 4.1: a IA continua sendo o padrão e o argumento de
+   venda, e a versão sem IA é uma opção.
+4. **Preço sem pegadinha:** sem "promoção nos 12 primeiros meses" e sem âncora
+   falsa. É o argumento contra o WeSales e companhia (pesquisa de mercado,
+   seção 1.1).
+
+### Escada proposta
+
+| Plano | Conexão | Com IA | Sem IA | Atendimentos com IA/mês | Disparos |
+|---|---|---|---|---|---|
+| **Start** | 1 número por QR | R$ 97 | R$ 67 | 300 | não, só atendimento |
+| **Essencial** | 1 número, QR ou API oficial | R$ 197 | R$ 147 | 1.000 | sim, na API oficial |
+| **Profissional** | até 3 números (API ou QR) | R$ 397 | R$ 317 | 3.000 | sim, com follow-up e roteador |
+| **Escala** | números sob medida | R$ 797 | — | 8.000 ou chave própria (sem cota) | sim, com API, webhooks e MCP |
+
+Em todos os planos:
+
+- usuários ilimitados;
+- contatos ilimitados;
+- funil, agenda, automações e relatório de atendimento;
+- sem fidelidade.
+
+Pontos a definir:
+
+- Os planos de **R$ 50/80**, citados em 10/10, cabem como Start sem IA (R$ 67)
+  ou como um "Start Lite" ainda mais limitado. Validar no simulador.
+- Pacote extra de atendimentos com IA (seção 4.1): +1.000 por R$ 49.
+- Número extra (seção 4.3).
+- Se a versão sem IA pode ligar a IA depois, pagando a diferença no ciclo
+  seguinte.
+
+### Como comunicar o risco do QR
+
+Na landing e na tela de conexão, em linguagem simples:
+
+> **Conexão por QR code:** ideal para começar e para atendimento do dia a dia,
+> com pouco volume. Não é a conexão oficial do WhatsApp, então disparos em massa
+> ou muitas mensagens para quem não chamou podem levar ao bloqueio do número.
+> Para campanhas e volume, use a API oficial.
+
+No produto:
+
+- Ao conectar por QR, o dono confirma que leu o aviso.
+- Nos planos com QR, o envio de disparos fica bloqueado.
+- Um limite diário de mensagens iniciadas pela empresa avisa antes de chegar
+  perto de um padrão de risco.
+
 ### Consulta para refazer a medição de IA
 
 ```sql
