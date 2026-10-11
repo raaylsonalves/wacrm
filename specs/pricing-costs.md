@@ -92,23 +92,64 @@ a margem é a IA.
 
 ## 4. Decisões propostas
 
-### 4.1 IA gerenciada pela Nordia, com travas
+### 4.1 IA inclusa em todo plano (decidido em 10/10/2026)
 
-O atrito de hoje: o cliente precisa criar uma chave na OpenAI, cadastrar um
-cartão em dólar e configurar tudo. Para uma clínica ou imobiliária, isso trava a
-venda. "IA inclusa" é um diferencial na landing.
+O produto é "atendimento com IA no WhatsApp". Um plano sem IA viraria só mais
+um CRM de inbox, disputando por preço. Por isso **todo plano inclui IA**, e os
+planos se diferenciam pela cota e pelos recursos.
 
-1. **Modelo fixo e leve por plano**, como Gemini Flash-Lite ou GPT-4o-mini, com a
-   chave da Nordia guardada em variável de ambiente e nunca exposta ao cliente.
-   Quem quiser um modelo top continua podendo usar a própria chave, como funciona
-   hoje.
-2. **Cota de conversas com IA por plano.** Sugestão inicial: Essencial 1.000,
-   Profissional 3.000, Escala 8.000. Ao bater a cota, a IA pausa com aviso para
-   o dono, ou o cliente compra um pacote extra.
-   Isso fecha o item aberto "teto mensal de gasto com IA" de
-   `review-2026-10.md`.
-3. **Painel interno de custo por cliente**, só para operadores da plataforma:
-   tokens e R$ estimados no mês, por conta, comparados ao valor do plano.
+Hoje o cliente precisa criar uma chave na OpenAI, cadastrar um cartão em dólar e
+configurar tudo. A IA inclusa elimina esse atrito, que trava a venda para
+clínicas e imobiliárias.
+
+**Unidade vendida: "atendimento com IA".** Um atendimento é um contato atendido
+pela IA dentro de uma janela de 24 h, na mesma lógica da conversa da Meta.
+
+- O custo real é em tokens, mas token não serve para vender: o cliente não
+  entende a unidade e não consegue prever o gasto.
+- Pelas medições, 1 atendimento tem de 8 a 14 respostas da IA, cada resposta
+  usa ~2.500 tokens, e o custo fica entre R$ 0,02 e R$ 0,05 com modelo leve.
+- Por dentro, há uma **trava em tokens por atendimento**. Ela impede que um caso
+  anormal estoure o custo: um robô do outro lado (o caso da Claro) ou uma
+  conversa de horas.
+
+| Plano | Atendimentos com IA/mês | Agentes | Custo de IA no pior caso |
+|---|---|---|---|
+| Essencial | 500 | 1 | ~R$ 15–25 |
+| Profissional | 2.000 | 5 + roteador | ~R$ 60–100 |
+| Escala | 6.000 | ilimitados | ~R$ 180–300 |
+
+As cotas são um ponto de partida e devem ser ajustadas com o uso real dos
+primeiros clientes. No teste ou na demonstração, a cota é pequena (~50).
+
+**Modelo:** fixo e leve, com a chave da Nordia guardada em variável de ambiente
+e nunca exposta ao cliente. Ver a seção 6 sobre a descontinuação de modelos.
+
+**"Use sua própria chave":** opção avançada do Escala. Nesse caso não há cota,
+porque o custo é do cliente, e ele pode usar modelos top.
+
+**Ao atingir a cota:**
+
+1. Com 80% da cota, o dono recebe aviso no painel, por e-mail e por WhatsApp.
+2. Com 100%, a IA pausa e as conversas vão para a fila da equipe, de modo que
+   nenhum cliente fica sem resposta. Aparece o botão "Comprar mais
+   atendimentos".
+3. **Pacote pré-pago avulso**, no Pix ou no cartão, reaproveitando os Pix
+   avulsos (Orders) que já existem. Sugestão: +1.000 atendimentos por R$ 49.
+   O custo é de ~R$ 30–50, e a Octadesk cobra ~R$ 0,35 por crédito, então há
+   espaço para subir. Falta decidir se o pacote vale só até o fim do mês ou se
+   acumula.
+4. Mais para frente, **recarga automática** opcional no cartão.
+
+O excedente **não** vai somado na mensalidade seguinte. A assinatura recorrente
+do Mercado Pago tem valor fixo, e somar o excedente seria a "surpresa na
+fatura" que a landing critica nos concorrentes.
+
+**Painel interno de custo por cliente**, só para os operadores da plataforma:
+atendimentos, tokens e R$ estimados no mês, por conta, comparados ao valor do
+plano.
+
+Isso fecha o item aberto "teto mensal de gasto com IA" em `review-2026-10.md`.
 
 ### 4.2 Taxa de implantação
 
@@ -182,6 +223,26 @@ VPS **não** hospeda o banco.
 4. IA gerenciada com cota, painel de custo e taxa de implantação.
 
 ---
+
+## 6. Descontinuação de modelos da OpenAI
+
+Situação levantada em 10/10/2026. Confirmar sempre na página oficial:
+https://developers.openai.com/api/docs/deprecations
+
+| Uso no código | Modelo | Desligamento | Substituto indicado |
+|---|---|---|---|
+| Resposta em áudio (`lib/ai/voice-reply.ts`) | `gpt-4o-mini-tts` | **06/01/2027** | `gpt-realtime-2.1-mini` |
+| Transcrição de áudio (`lib/ai/transcribe.ts`) | `gpt-4o-mini-transcribe` | **26/02/2027** | `gpt-transcribe` / `gpt-live-transcribe` |
+| Chat (`lib/ai/models.ts`) | `gpt-4o-mini`, `gpt-4o` | sem data anunciada na API da OpenAI (o Azure tem 2027) | — |
+
+**Ações:**
+
+- Trocar o TTS e a transcrição antes de dezembro de 2026, conferindo o preço
+  dos substitutos.
+- Ter um modelo de chat padrão que não seja de uma geração antiga: o
+  `gpt-5.4-mini`, que já está na lista, ou o Gemini Flash-Lite.
+- Na IA inclusa, o modelo fica sob controle da Nordia. Uma troca vira mudança
+  de configuração e não exige que cada cliente reconfigure nada.
 
 ### Consulta para refazer a medição de IA
 
