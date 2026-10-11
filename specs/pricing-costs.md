@@ -400,18 +400,32 @@ Rascunho para validar. **Os preços são proposta, não decisão.**
    sem IA é questão de valor percebido e de acessibilidade, não de custo.
    Isso ajusta a decisão 4.1: a IA continua sendo o padrão e o argumento de
    venda, e a versão sem IA é uma opção.
+5. **Qualquer plano pode usar a própria IA (chave própria).** Quem cadastra a
+   própria chave (OpenAI, Anthropic, Gemini ou OpenRouter) paga o preço da
+   coluna "sem IA inclusa" e usa a IA **sem cota de atendimentos**, com
+   qualquer modelo, porque o custo é dele. Isso já funciona hoje.
+   - A coluna "Sem IA" vira **"Sem IA inclusa"**: atende tanto quem não quer
+     IA quanto quem traz a própria chave.
+   - Os recursos de IA do plano continuam valendo com a chave própria: número
+     de agentes, roteador e follow-up.
+   - Trava de abuso mesmo com chave própria: o limite de respostas por
+     atendimento (40) e a detecção de robô continuam ativos, porque protegem a
+     reputação do número e não o nosso custo.
+   - Suporte: problemas na conta do provedor (saldo, limite, chave revogada)
+     são do cliente. O CRM avisa quando a chave falha (`provider_failure` já
+     passa a conversa para humano).
 4. **Preço sem pegadinha:** sem "promoção nos 12 primeiros meses" e sem âncora
    falsa. É o argumento contra o WeSales e companhia (pesquisa de mercado,
    seção 1.1).
 
 ### Escada proposta
 
-| Plano | Conexão | Com IA | Sem IA | Atendimentos com IA/mês | Disparos |
+| Plano | Conexão | Com IA inclusa | Sem IA inclusa (sem IA ou chave própria) | Atendimentos com IA inclusa/mês | Disparos |
 |---|---|---|---|---|---|
 | **Start** | 1 número por QR | R$ 97 | R$ 67 | 300 | não, só atendimento |
 | **Essencial** | 1 número, QR ou API oficial | R$ 197 | R$ 147 | 1.000 | sim, na API oficial |
 | **Profissional** | até 3 números (API ou QR) | R$ 397 | R$ 317 | 3.000 | sim, com follow-up e roteador |
-| **Escala** | números sob medida | R$ 797 | — | 8.000 ou chave própria (sem cota) | sim, com API, webhooks e MCP |
+| **Escala** | números sob medida | R$ 797 | R$ 697 | 8.000 | sim, com API, webhooks e MCP |
 
 Em todos os planos:
 
@@ -428,6 +442,8 @@ Pontos a definir:
 - Número extra (seção 4.3).
 - Se a versão sem IA pode ligar a IA depois, pagando a diferença no ciclo
   seguinte.
+- Como mostrar a escolha na assinatura: "IA inclusa (recomendado)" ou "Usar
+  minha própria chave / sem IA".
 
 ### Como comunicar o risco do QR
 
