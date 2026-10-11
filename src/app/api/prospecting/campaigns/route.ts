@@ -98,6 +98,13 @@ export async function POST(request: Request) {
     const config = parsed.config
 
     const db = supabaseAdmin()
+    // Migration 129: prospecting starts at the Profissional plan. Checked up
+    // front (validate_only included) so the wizard never imports a file for
+    // a campaign the insert trigger would then refuse.
+    const { data: allowed } = await db.rpc('plan_allows', { p_account: accountId, p_feature: 'prospecting' })
+    if (allowed === false) {
+      return planGateResponse({ message: 'plan_feature_unavailable:prospecting' })!
+    }
     if (!validateOnly) {
       const { data: tag } = await db
         .from('tags')

@@ -19,6 +19,8 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SkeletonList } from '@/components/ui/skeleton';
+import { PlanNotice } from '@/components/billing/plan-notice';
+import { useEntitlements } from '@/hooks/use-entitlements';
 
 interface Funnel {
   total: number;
@@ -142,6 +144,7 @@ function Step({
  */
 export default function ProspectingPage() {
   const t = useTranslations('Prospecting');
+  const { can } = useEntitlements();
   const canManage = useCan('edit-settings');
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
 
@@ -232,13 +235,23 @@ export default function ProspectingPage() {
           </p>
         </div>
         {canManage && (
-          <Button
-            nativeButton={false}
-            render={<Link href="/prospecting/new" />}
-          >
-            <Plus className="size-4" />
-            {t('new')}
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            {can('prospecting') ? (
+              <Button
+                nativeButton={false}
+                render={<Link href="/prospecting/new" />}
+              >
+                <Plus className="size-4" />
+                {t('new')}
+              </Button>
+            ) : (
+              <Button disabled>
+                <Plus className="size-4" />
+                {t('new')}
+              </Button>
+            )}
+            <PlanNotice feature="prospecting" />
+          </div>
         )}
       </div>
 

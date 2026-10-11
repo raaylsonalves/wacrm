@@ -1,4 +1,20 @@
 {
+  "PlanGate": {
+    "availableOn": "Disponível no plano {plan}.",
+    "limitReached": "Seu plano inclui até {count} {what}.",
+    "seePlans": "Ver planos",
+    "upgradeToast": "Esse recurso não está incluído no seu plano. Veja os planos em Configurações → Cobrança.",
+    "limitToast": "Você chegou ao limite do seu plano. Veja os planos em Configurações → Cobrança.",
+    "what": {
+      "agents": "agentes de IA",
+      "users": "usuários"
+    },
+    "plan": {
+      "essencial": "Essencial",
+      "profissional": "Profissional",
+      "escala": "Escala"
+    }
+  },
   "Outage": {
     "title": "Instabilidade no servidor.",
     "body": "Seus dados estão seguros — estamos tentando reconectar e a página volta sozinha."

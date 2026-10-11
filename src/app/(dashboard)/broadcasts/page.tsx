@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Radio, Plus } from 'lucide-react';
 import { useCan } from '@/hooks/use-can';
 import { GatedButton } from '@/components/ui/gated-button';
+import { PlanNotice } from '@/components/billing/plan-notice';
+import { useEntitlements } from '@/hooks/use-entitlements';
 import { getBroadcastStatus } from '@/lib/broadcast-status';
 import { useTranslations } from 'next-intl';
 import { APP_LOCALE } from '@/lib/currency';
@@ -69,7 +71,8 @@ export default function BroadcastsPage() {
   const router = useRouter();
   const t = useTranslations('Broadcasts.page');
   const tStatus = useTranslations('Broadcasts.status');
-  const canCreate = useCan('send-messages');
+  const { can } = useEntitlements();
+  const canCreate = useCan('send-messages') && can('broadcasts');
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,6 +217,7 @@ export default function BroadcastsPage() {
           {t('newBroadcast')}
         </GatedButton>
       </div>
+      <PlanNotice feature="broadcasts" className="-mt-2 justify-end" />
 
       {broadcasts.length === 0 ? (
         <div className="border-border bg-card flex h-64 flex-col items-center justify-center rounded-xl border">

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
+import { planGateFromError } from '@/lib/billing/entitlements';
 import { MessageTemplate } from '@/types';
 import { Step1ChooseTemplate } from '@/components/broadcasts/step1-choose-template';
 import { Step2SelectAudience } from '@/components/broadcasts/step2-select-audience';
@@ -24,8 +25,10 @@ const steps = [
 export default function NewBroadcastPage() {
   const router = useRouter();
   const t = useTranslations('Broadcasts.new');
+  const tPlan = useTranslations('PlanGate');
   const { accountId } = useAuth();
-  const { createAndSendBroadcast, isProcessing, progress } = useBroadcastSending();
+  const { createAndSendBroadcast, isProcessing, progress } =
+    useBroadcastSending();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [template, setTemplate] = useState<MessageTemplate | null>(null);
@@ -137,6 +140,10 @@ export default function NewBroadcastPage() {
       failed_count: 0,
     });
 
+    if (planGateFromError(error)) {
+      toast.error(tPlan('upgradeToast'));
+      return;
+    }
     if (error) {
       toast.error(t('toastFailedDraft', { error: error.message }));
       return;
@@ -149,10 +156,10 @@ export default function NewBroadcastPage() {
     <div className="mx-auto max-w-3xl space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-foreground text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">{t('title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('subtitle')}
-        </p>
+        <h1 className="text-foreground text-[26px] leading-tight font-bold tracking-[-0.02em] lg:text-[28px]">
+          {t('title')}
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm">{t('subtitle')}</p>
       </div>
 
       {/* Step Indicator */}
@@ -169,15 +176,19 @@ export default function NewBroadcastPage() {
                     isCompleted
                       ? 'bg-foreground text-background'
                       : isActive
-                        ? 'border-2 border-foreground bg-card text-foreground'
-                        : 'border border-border bg-muted text-muted-foreground'
+                        ? 'border-foreground bg-card text-foreground border-2'
+                        : 'border-border bg-muted text-muted-foreground border'
                   }`}
                 >
                   {isCompleted ? <Check className="h-4 w-4" /> : index + 1}
                 </div>
                 <span
                   className={`hidden text-sm font-medium sm:block ${
-                    isActive ? 'text-foreground' : isCompleted ? 'text-primary' : 'text-muted-foreground'
+                    isActive
+                      ? 'text-foreground'
+                      : isCompleted
+                        ? 'text-primary'
+                        : 'text-muted-foreground'
                   }`}
                 >
                   {t(`steps.${step.label}`)}

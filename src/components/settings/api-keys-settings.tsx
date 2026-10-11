@@ -42,6 +42,8 @@ import {
 } from '@/lib/api-keys/scopes';
 import { useTranslations } from 'next-intl';
 import { SettingsPanelHead } from './settings-panel-head';
+import { PlanNotice, planErrorText } from '@/components/billing/plan-notice';
+import { useEntitlements } from '@/hooks/use-entitlements';
 
 interface ApiKey {
   id: string;
@@ -72,6 +74,7 @@ function keyStatus(k: ApiKey): 'active' | 'revoked' | 'expired' {
 export function ApiKeysSettings() {
   const { canEditSettings } = useAuth();
   const t = useTranslations('Settings.apiKeys');
+  const canUseApi = useEntitlements().can('api');
 
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,10 +150,13 @@ export function ApiKeysSettings() {
         }
         action={
           <RequireRole min="admin">
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="size-4" />
-              {t('newApiKey')}
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              <Button onClick={() => setCreateOpen(true)} disabled={!canUseApi}>
+                <Plus className="size-4" />
+                {t('newApiKey')}
+              </Button>
+              <PlanNotice feature="api" />
+            </div>
           </RequireRole>
         }
       />
@@ -356,6 +362,7 @@ function CreateKeyDialog({
   onCreated: () => void;
 }) {
   const t = useTranslations('Settings.apiKeys');
+  const tPlan = useTranslations('PlanGate');
   const [name, setName] = useState('');
   const [scopes, setScopes] = useState<ApiScope[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -392,7 +399,7 @@ function CreateKeyDialog({
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(payload.error || t('createError'));
+        toast.error(planErrorText(tPlan, payload) ?? (payload.error || t('createError')));
         return;
       }
       setCreatedKey(payload.plaintext as string);

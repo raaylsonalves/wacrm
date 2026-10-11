@@ -24,6 +24,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { confirmDialog } from '@/components/confirm-dialog';
+import { PlanNotice, planErrorText } from '@/components/billing/plan-notice';
+import { useEntitlements } from '@/hooks/use-entitlements';
 
 export interface AiAgentSummary {
   id: string;
@@ -56,6 +58,8 @@ export function AiAgentsList({
   onAgentsChanged?: () => void;
 }) {
   const t = useTranslations('Agents.multi');
+  const tPlan = useTranslations('PlanGate');
+  const { roomFor } = useEntitlements();
   const router = useRouter();
 
   const [agents, setAgents] = useState<AiAgentSummary[]>([]);
@@ -104,7 +108,10 @@ export function AiAgentsList({
         body: JSON.stringify({ name: name.trim() }),
       });
       const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.error || 'failed');
+      if (!res.ok)
+        throw new Error(
+          planErrorText(tPlan, payload) ?? (payload?.error || 'failed')
+        );
       setAgents((prev) => [...prev, payload.agent]);
       setAddOpen(false);
       resetForm();
@@ -149,10 +156,17 @@ export function AiAgentsList({
           <CardTitle>{t('agentsTitle')}</CardTitle>
           <CardDescription>{t('agentsDescription')}</CardDescription>
         </div>
-        <Button size="sm" onClick={() => setAddOpen(true)}>
-          <Plus className="size-4" />
-          {t('addAgentBtn')}
-        </Button>
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            size="sm"
+            onClick={() => setAddOpen(true)}
+            disabled={!loading && !roomFor('agents', agents.length)}
+          >
+            <Plus className="size-4" />
+            {t('addAgentBtn')}
+          </Button>
+          {!loading && <PlanNotice count="agents" used={agents.length} />}
+        </div>
       </CardHeader>
       <CardContent className="space-y-2">
         {loading ? (

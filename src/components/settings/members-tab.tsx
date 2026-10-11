@@ -77,6 +77,8 @@ import { useSubscriptionStatus } from '@/hooks/use-subscription-status';
 import { canInviteMembers } from '@/lib/billing/status';
 import { SettingsPanelHead } from './settings-panel-head';
 import { ROLE_META } from './role-meta';
+import { PlanNotice } from '@/components/billing/plan-notice';
+import { useEntitlements } from '@/hooks/use-entitlements';
 
 interface Member {
   user_id: string;
@@ -141,6 +143,9 @@ export function MembersTab() {
   const [loading, setLoading] = useState(true);
 
   const [inviteOpen, setInviteOpen] = useState(false);
+  const { roomFor } = useEntitlements();
+  // Migration 129: members plus open invitations count against the seats.
+  const seatsUsed = members.length + invitations.length;
   const [removingMember, setRemovingMember] = useState<Member | null>(null);
   const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(
     null,
@@ -293,14 +298,17 @@ export function MembersTab() {
         description={t('description')}
         action={
           <RequireRole min="admin">
+            <div className="flex flex-col items-end gap-1">
             <Button
               onClick={() => setInviteOpen(true)}
-              disabled={inviteLocked}
+              disabled={inviteLocked || !roomFor('users', seatsUsed)}
               title={inviteLocked ? tLocked('message') : undefined}
             >
               <Plus className="size-4" />
               {t('inviteMember')}
             </Button>
+            <PlanNotice count="users" used={seatsUsed} />
+            </div>
           </RequireRole>
         }
       />

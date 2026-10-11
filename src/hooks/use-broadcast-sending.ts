@@ -7,6 +7,7 @@ import { BATCH_SEND_ATTEMPTS, batchRetryDelayMs } from '@/lib/broadcast-retry';
 import { normalizeKey } from '@/lib/contacts/dedupe';
 import { customFieldMatchIds, tagMemberIds } from '@/lib/broadcast-audience';
 import { chunk, fetchAllRows } from '@/lib/supabase/paginate';
+import { planGateFromError } from '@/lib/billing/entitlements';
 import { Contact, MessageTemplate } from '@/types';
 
 export type CustomFieldOperator = 'is' | 'is_not' | 'contains';
@@ -414,6 +415,10 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         .select()
         .single();
 
+      if (planGateFromError(broadcastError)) {
+        // Migration 129: broadcasts start at the Profissional plan.
+        throw new Error('Broadcasts are not included in your plan.');
+      }
       if (broadcastError || !broadcast) {
         throw new Error(
           `Failed to create broadcast: ${broadcastError?.message ?? 'unknown error'}`

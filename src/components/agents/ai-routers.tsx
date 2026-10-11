@@ -31,6 +31,8 @@ import {
 } from '@/components/ui/dialog';
 import type { AiAgentSummary } from './ai-agents-list';
 import { confirmDialog } from '@/components/confirm-dialog';
+import { PlanNotice, planErrorText } from '@/components/billing/plan-notice';
+import { useEntitlements } from '@/hooks/use-entitlements';
 
 interface RouterMember {
   agent_id: string;
@@ -66,6 +68,8 @@ const NO_FALLBACK = '__no_fallback__';
 
 export function AiRouters({ agents }: { agents: AiAgentSummary[] }) {
   const t = useTranslations('Agents.multi');
+  const tPlan = useTranslations('PlanGate');
+  const { can } = useEntitlements();
 
   const [routers, setRouters] = useState<RouterRow[]>([]);
   const [channels, setChannels] = useState<WahaChannelOption[]>([]);
@@ -136,7 +140,8 @@ export function AiRouters({ agents }: { agents: AiAgentSummary[] }) {
         body: JSON.stringify({
           name: newName.trim(),
           channel_id:
-            newChannel === WHOLE_ACCOUNT || newChannel.startsWith(OFFICIAL_PREFIX)
+            newChannel === WHOLE_ACCOUNT ||
+            newChannel.startsWith(OFFICIAL_PREFIX)
               ? null
               : newChannel,
           whatsapp_config_id: newChannel.startsWith(OFFICIAL_PREFIX)
@@ -145,7 +150,10 @@ export function AiRouters({ agents }: { agents: AiAgentSummary[] }) {
         }),
       });
       const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.error || 'failed');
+      if (!res.ok)
+        throw new Error(
+          planErrorText(tPlan, payload) ?? (payload?.error || 'failed')
+        );
       setRouters((prev) => [...prev, payload.router]);
       setAddOpen(false);
       setNewName('');
@@ -318,14 +326,17 @@ export function AiRouters({ agents }: { agents: AiAgentSummary[] }) {
           <CardTitle>{t('routersTitle')}</CardTitle>
           <CardDescription>{t('routersDescription')}</CardDescription>
         </div>
-        <Button
-          size="sm"
-          onClick={() => setAddOpen(true)}
-          disabled={agents.length === 0}
-        >
-          <Plus className="size-4" />
-          {t('addRouterBtn')}
-        </Button>
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            size="sm"
+            onClick={() => setAddOpen(true)}
+            disabled={agents.length === 0 || !can('router')}
+          >
+            <Plus className="size-4" />
+            {t('addRouterBtn')}
+          </Button>
+          <PlanNotice feature="router" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-2">
         {loading ? (

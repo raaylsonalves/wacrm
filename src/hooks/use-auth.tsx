@@ -56,6 +56,10 @@ interface AccountSummary {
   response_time_target_minutes: number;
   /** What an agency-managed client bought (migration 091). NULL = all. */
   modules: string[] | null;
+  /** Contracted plan (migration 129). NULL = no plan limits. */
+  plan: string | null;
+  /** accounts.subscription_status (migration 106). */
+  subscription_status: string | null;
 }
 
 /**
@@ -258,7 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // display_name/logo_url/brand_color added in migration 044;
             // response_time_target_minutes added in migration 049.
             .select(
-              "id, name, default_currency, display_name, logo_url, brand_color, response_time_target_minutes, modules",
+              "id, name, default_currency, display_name, logo_url, brand_color, response_time_target_minutes, modules, plan, subscription_status",
             )
             .eq("id", data.account_id)
             .maybeSingle();
@@ -280,6 +284,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               response_time_target_minutes:
                 account.response_time_target_minutes ?? DEFAULT_RESPONSE_TIME_TARGET_MINUTES,
               modules: (account.modules as string[] | null) ?? null,
+              plan: (account.plan as string | null) ?? null,
+              subscription_status:
+                (account.subscription_status as string | null) ?? null,
             };
           }
         }

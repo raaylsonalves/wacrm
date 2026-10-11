@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/select';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { planErrorText } from '@/components/billing/plan-notice';
 
 type InviteRole = 'admin' | 'agent' | 'viewer';
 
@@ -77,6 +78,7 @@ export function InviteMemberDialog({
   const t = useTranslations('Settings.invite');
   const tRoles = useTranslations('Settings.roles');
   const tLocked = useTranslations('Onboarding.team.locked');
+  const tPlan = useTranslations('PlanGate');
   const { account } = useAuth();
   const [role, setRole] = useState<InviteRole>('agent');
   const [expiry, setExpiry] = useState<string>('7');
@@ -121,7 +123,7 @@ export function InviteMemberDialog({
         toast.error(
           payload.error === 'subscription_required'
             ? tLocked('message')
-            : payload.error || 'Failed to create invitation'
+            : planErrorText(tPlan, payload) ?? (payload.error || 'Failed to create invitation')
         );
         return;
       }

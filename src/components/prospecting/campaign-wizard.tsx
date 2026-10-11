@@ -97,6 +97,7 @@ function money(n: number) {
 export function CampaignWizard() {
   const t = useTranslations('Prospecting');
   const tw = useTranslations('Prospecting.wizard');
+  const tPlan = useTranslations('PlanGate');
   const router = useRouter();
   const supabase = createClient();
   const { accountId } = useAuth();
@@ -339,6 +340,7 @@ export function CampaignWizard() {
   }
 
   const errorText = (code: string) =>
+    code === 'plan_upgrade_required' ? tPlan('upgradeToast') :
     t.has(`errors.${code}`) ? t(`errors.${code}`) : tw.has(`errors.${code}`) ? tw(`errors.${code}`) : t('errors.generic');
 
   async function start() {
