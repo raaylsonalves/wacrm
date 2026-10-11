@@ -329,6 +329,54 @@ A saída ficou entre ~25 e 50 tokens por resposta, como na medição de produç�
 Para rodar de novo:
 `npx tsx --env-file=.env.local scripts/ai-load-test.ts <account_id> [runs]`
 
+## 8. Supabase na própria VPS (self-host): conta e gatilho (11/10/2026)
+
+**É possível.** Tudo o que o app usa existe na versão open source em Docker:
+Postgres com pgvector, Auth (GoTrue, com SMTP do Resend), PostgREST, Realtime
+(inbox ao vivo), Storage (mídia do WhatsApp) e as RPCs e políticas de RLS das
+migrations. A KVM 4 (16 GB) comporta o Supabase (~4–6 GB) junto com o app e
+o WAHA.
+
+**Economia direta:** o Supabase Pro custa US$ 25/mês, ~R$ 140/mês ou ~R$ 3.400
+em 2 anos. Com crescimento, o gerenciado sobe:
+
+- compute maior: +US$ 15 a 60/mês;
+- storage acima de 100 GB: ~US$ 0,02/GB;
+- egress (tráfego de saída).
+
+Já o self-host fica fixo até a VPS lotar. Com dezenas de clientes, a economia
+pode chegar a ~R$ 300–500/mês.
+
+**O que se perde, ou passa a ser trabalho nosso:**
+
+- **Backup e restauração.** É o ponto crítico: se a VPS morrer sem backup fora
+  dela, perdem-se todas as contas. É preciso dump diário do Postgres e cópia do
+  storage para fora (Cloudflare R2 ou Backblaze, ~R$ 10–30/mês), além de um
+  teste de restauração periódico.
+- **Atualizações de segurança** do Postgres e dos serviços, feitas à mão.
+- **Monitoramento e incidentes.** Uma queda como a de 10/10 vira
+  responsabilidade nossa, sem suporte da Supabase.
+- **Ferramentas:** sem o painel gerenciado, sem PITR (voltar no tempo), sem
+  branches e sem a integração de gerenciamento (MCP) usada para migrations e
+  diagnóstico.
+- **Um único ponto de falha.** App, banco e WAHA ficam na mesma máquina.
+
+**Migração (quando for a hora):**
+
+1. `pg_dump` / `pg_restore` dos schemas `public`, `auth` e `storage`.
+2. Copiar os arquivos dos buckets.
+3. Gerar novas chaves (JWT secret, anon e service role) e atualizar o `.env`.
+   As senhas dos usuários são mantidas, porque os hashes ficam no schema
+   `auth`.
+4. Reapontar as variáveis `NEXT_PUBLIC_SUPABASE_*` e fazer o rebuild.
+
+**Decisão sugerida:** começar com o Supabase Pro e migrar para self-host
+quando acontecer um destes gatilhos:
+
+- a fatura do Supabase passar de ~US$ 75/mês;
+- o backup externo já estiver automatizado e com restauração testada;
+- houver alguém para cuidar da infraestrutura.
+
 ### Consulta para refazer a medição de IA
 
 ```sql
