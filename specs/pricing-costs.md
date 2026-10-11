@@ -461,6 +461,69 @@ No produto:
 - Um limite diário de mensagens iniciadas pela empresa avisa antes de chegar
   perto de um padrão de risco.
 
+## 10. Controle de acesso por plano (levantamento em 11/10/2026)
+
+### O que existe hoje
+
+| Controle | Como funciona | Depende do plano? |
+|---|---|---|
+| Bloqueio por inadimplência | `BillingLock` trava o app quando a assinatura vence | não, só do status |
+| Limite de números de WhatsApp | `lib/billing/number-limit.ts`: 1 número para todo plano padrão; mais que isso exige ajuste manual (`accounts.max_whatsapp_numbers`) | **não** |
+| Módulos por conta | `accounts.modules` (migration 091), escolhidos à mão pelo operador para clientes de agência | **não** |
+| Plano contratado | gravado em `billing_subscriptions.plan` | **nada lê esse campo para liberar recursos** |
+| Usuários por plano (3/8/20) | `PLAN_USERS` em `lib/billing/plans.ts`, usado só para sugerir plano no onboarding | anunciado, **não aplicado** |
+| Agentes por plano (1/5/ilimitado), roteador, disparos, API | — | anunciado na landing, **não aplicado** |
+| Cota de IA | — | não existe |
+
+**Resumo:** hoje, uma conta Essencial consegue usar tudo do Escala, exceto o
+segundo número. Antes de vender planos diferentes, é preciso uma camada de
+permissões por plano.
+
+### Proposta: uma fonte única de permissões por plano
+
+1. **`lib/billing/entitlements.ts`** (função pura, testada), no mesmo padrão
+   de `lib/auth/roles.ts`:
+   `entitlementsFor({ plan, aiMode, overrides })` →
+   `{ numbers, connections: 'qr' | 'qr+api', aiIncluded, aiQuota, maxAgents, router, broadcasts, followups, apiAccess }`.
+   - `aiMode`: `included` ou `own_key_or_none`, a coluna "sem IA inclusa" da
+     seção 9.
+   - `overrides` são os ajustes manuais que já existem
+     (`max_whatsapp_numbers`, `modules`), que continuam funcionando para
+     acordos sob medida.
+   - Contas `exempt` (a plataforma e os clientes de agência) recebem tudo.
+2. **No banco:** `accounts.plan` e `accounts.ai_mode`, gravados pelo checkout ao
+   ativar a assinatura (em `billing/apply.ts`), para que a leitura seja barata
+   em todo lugar.
+3. **Onde aplicar:**
+   - API (servidor):
+     - criar agente (`/api/ai/agents`) e roteador (`/api/ai/routers`);
+     - conectar número (já existe, passa a ler o plano e o tipo de conexão);
+     - convites;
+     - chaves da API v1.
+   - Banco (gatilho ou RLS), para o que o navegador grava direto. Exemplo: criar
+     disparo em `broadcasts/new`, que hoje não passa por API. Sem isso, a trava
+     só na tela é contornável.
+   - IA: a cota de atendimentos é verificada no `auto-reply` antes de responder,
+     com os avisos de 80% e 100% (seção 4.1). Com chave própria, a cota não se
+     aplica.
+   - Tela:
+     - um hook `useEntitlement()`, como o `useCan`;
+     - botões bloqueados mostram um selo "Disponível no Profissional" com um
+       link para trocar de plano, em vez de sumir.
+4. **Troca de plano:**
+   - Subir de plano libera na hora.
+   - Descer de plano não apaga nada, só bloqueia a criação de coisas novas
+     acima do limite. Os agentes extras ficam pausados, e o cliente escolhe
+     quais manter.
+
+**Ordem sugerida:**
+
+1. Entitlements com testes e as colunas novas.
+2. Travas nas APIs.
+3. Gatilho para disparos.
+4. Selos na tela.
+5. Cota de IA, que depende do painel de custo.
+
 ### Consulta para refazer a medição de IA
 
 ```sql
