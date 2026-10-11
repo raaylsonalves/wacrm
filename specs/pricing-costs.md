@@ -244,6 +244,50 @@ https://developers.openai.com/api/docs/deprecations
 - Na IA inclusa, o modelo fica sob controle da Nordia. Uma troca vira mudança
   de configuração e não exige que cada cliente reconfigure nada.
 
+## 7. Simulação por tipo de negócio e planos de entrada (10/10/2026)
+
+O pedido é atender empresas pequenas, com caixa curto, por meio de planos de
+entrada de **R$ 50, R$ 80 e R$ 100**.
+
+Simulador interativo (Monte Carlo com 2.000 meses por cenário, calibrado com o
+`ai_usage_log`): https://claude.ai/artifact/WG39Ym2NYTQbq5xmxTxomw
+
+**Premissas da tabela:**
+
+- GPT-4o-mini;
+- imposto de 10% e Mercado Pago de 3%;
+- custo fixo de R$ 200 dividido entre 20 clientes (R$ 10 por cliente);
+- coluna "IA, mês forte" é o percentil 90: 9 em cada 10 meses custam menos que
+  isso.
+
+| Perfil | Atendimentos com IA/mês | IA, mês típico | IA, mês forte (p90) | Sobra no plano de R$ 50 | Sobra no plano de R$ 80 |
+|---|---|---|---|---|---|
+| Autônomo | ~130 | R$ 2,30 | R$ 2,70 | R$ 31 | R$ 57 |
+| Loja de bairro | ~530 | R$ 7,30 | R$ 7,80 | R$ 26 | R$ 52 |
+| Clínica pequena | ~300 | R$ 5,50 | R$ 6,10 | R$ 27 | R$ 53 |
+| Imobiliária pequena | ~290 | R$ 7,20 | R$ 8,00 | R$ 26 | R$ 52 |
+| Correspondente de crédito | ~530 | R$ 13,10 | R$ 14,10 | R$ 19 | R$ 46 |
+
+**Leitura:**
+
+- Com modelo leve, **a IA não é o que inviabiliza um plano de R$ 50**. Mesmo o
+  perfil mais pesado gasta cerca de R$ 14 de IA.
+- No plano barato, o que pesa é a **fatia do custo fixo**, que depende de quantos
+  clientes dividem a conta, e o **tempo de suporte e de implantação**, que não
+  entra nessa conta.
+- O plano de entrada precisa de **cota** (por exemplo, 300 atendimentos com IA),
+  de **modelo leve fixo** e de **implantação self-service**: o cliente usa os
+  modelos prontos por segmento, sem horas da Nordia.
+
+**Limites da simulação:**
+
+- A amostra real ainda é pequena (86 chamadas).
+- Um cliente com prompt ou base de conhecimento muito grande pode dobrar os
+  tokens por resposta.
+- A validação de verdade é o painel de custo por cliente (seção 4.1) rodando nos
+  primeiros clientes reais. Antes disso, dá para fazer um teste de carga com um
+  "cliente robô" simulado contra um agente real, que custa centavos.
+
 ### Consulta para refazer a medição de IA
 
 ```sql
