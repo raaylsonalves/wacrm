@@ -27,6 +27,7 @@ import {
   inviteUrl,
 } from "@/lib/auth/invitations";
 import { isAccountRole } from "@/lib/auth/roles";
+import { planGateResponse } from "@/lib/billing/entitlements";
 import {
   checkRateLimit,
   rateLimitResponse,
@@ -237,6 +238,10 @@ export async function POST(request: Request) {
         { status: 402 },
       );
     }
+
+    // Migration 129: the plan's seat limit (members + open invitations).
+    const inviteGate = planGateResponse(error);
+    if (inviteGate) return inviteGate;
 
     if (error || !data) {
       console.error("[POST /api/account/invitations] insert error:", error);

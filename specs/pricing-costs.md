@@ -516,6 +516,25 @@ permissões por plano.
      acima do limite. Os agentes extras ficam pausados, e o cliente escolhe
      quais manter.
 
+**Andamento:**
+
+- Etapas 1 e 2 feitas em 11/10/2026, com a migration 129 aplicada e
+  `lib/billing/entitlements.ts`. A migration também fecha uma brecha: um admin
+  de qualquer conta conseguia alterar o próprio `max_whatsapp_numbers`,
+  `modules` e `managed_by` direto pela API do banco.
+- Limites atuais iguais aos da landing:
+
+  | Plano | Agentes | Usuários | Recursos liberados |
+  |---|---|---|---|
+  | Essencial | 1 | 3 | — |
+  | Profissional | 5 | 8 | roteador, disparos, prospecção, follow-ups |
+  | Escala | ilimitados | 20 | tudo, incluindo API e webhooks |
+
+  Contas isentas ou sem plano não têm limites.
+- Ainda não travados: o follow-up, que é configuração do agente e não uma
+  tabela nova, e o tipo de conexão (QR ou API). Eles entram junto com a nova
+  escada de planos.
+
 **Ordem sugerida:**
 
 1. Entitlements com testes e as colunas novas.

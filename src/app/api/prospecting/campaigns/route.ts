@@ -22,6 +22,7 @@ import { audit } from '@/lib/audit'
 import { parseCampaignConfig } from '@/lib/prospecting/logic'
 import { activateCampaign, checkCampaignReady } from '@/lib/prospecting/activate'
 import { runProspectingTick } from '@/lib/prospecting/tick'
+import { planGateResponse } from '@/lib/billing/entitlements'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -144,6 +145,8 @@ export async function POST(request: Request) {
       })
       .select('id')
       .single()
+    const campaignGate = planGateResponse(error)
+    if (campaignGate) return campaignGate
     if (error || !campaign) {
       console.error('[prospecting POST] insert failed:', error)
       return NextResponse.json({ error: 'failed' }, { status: 500 })

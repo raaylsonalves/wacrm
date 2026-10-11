@@ -998,6 +998,19 @@ BEGIN
     RAISE EXCEPTION 'official number health missing — migration 120 did not apply';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'accounts'
+         AND column_name = 'plan')
+     OR to_regprocedure('public.plan_allows(uuid,text)') IS NULL
+     OR to_regprocedure('public.plan_limit(uuid,text)') IS NULL
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'enforce_plan_agents')
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'enforce_plan_broadcasts')
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'enforce_plan_users')
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'enforce_account_billing_columns')
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'sync_account_plan') THEN
+    RAISE EXCEPTION 'plan entitlements missing — migration 129 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

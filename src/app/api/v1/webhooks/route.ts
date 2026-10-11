@@ -11,6 +11,7 @@ import { requireApiKey } from '@/lib/auth/api-context';
 import { ok, okList, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
 import { encrypt } from '@/lib/whatsapp/encryption';
 import { normalizeEvents } from '@/lib/webhooks/events';
+import { planGateFromError } from '@/lib/billing/entitlements';
 import {
   WEBHOOK_PUBLIC_COLUMNS,
   serializeWebhookEndpoint,
@@ -86,6 +87,10 @@ export async function POST(request: Request) {
       .select(WEBHOOK_PUBLIC_COLUMNS)
       .single();
 
+    // Migration 129: outbound webhooks are part of the API (Escala).
+    if (planGateFromError(error)) {
+      return fail('plan_upgrade_required', 'Webhooks are not included in this plan', 403);
+    }
     if (error || !created) {
       console.error('[api/v1/webhooks] create error:', error);
       return fail('internal', 'Failed to create webhook', 500);

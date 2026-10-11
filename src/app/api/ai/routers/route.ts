@@ -10,6 +10,7 @@
 // ============================================================
 
 import { NextResponse } from 'next/server';
+import { planGateResponse } from '@/lib/billing/entitlements';
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
 import {
   checkRateLimit,
@@ -131,6 +132,8 @@ export async function POST(request: Request) {
       )
       .single();
 
+    const routerGate = planGateResponse(error);
+    if (routerGate) return routerGate;
     if (error || !created) {
       console.error('[ai/routers POST] insert error:', error);
       return NextResponse.json(

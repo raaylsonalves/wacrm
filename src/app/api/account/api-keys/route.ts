@@ -18,6 +18,7 @@
 // ============================================================
 
 import { NextResponse } from 'next/server';
+import { planGateResponse } from '@/lib/billing/entitlements';
 
 import {
   getCurrentAccount,
@@ -137,6 +138,8 @@ export async function POST(request: Request) {
       .select(SAFE_COLUMNS)
       .single();
 
+    const keyGate = planGateResponse(error);
+    if (keyGate) return keyGate;
     if (error || !data) {
       console.error('[POST /api/account/api-keys] insert error:', error);
       return NextResponse.json(

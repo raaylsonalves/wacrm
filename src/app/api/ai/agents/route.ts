@@ -15,6 +15,7 @@
 // ============================================================
 
 import { NextResponse } from 'next/server';
+import { planGateResponse } from '@/lib/billing/entitlements';
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
 import {
   checkRateLimit,
@@ -168,6 +169,8 @@ export async function POST(request: Request) {
       .select('id, name, provider, model, is_default, is_active')
       .single();
 
+    const agentGate = planGateResponse(insErr);
+    if (agentGate) return agentGate;
     if (insErr || !created) {
       console.error('[ai/agents POST] insert error:', insErr);
       return NextResponse.json(
