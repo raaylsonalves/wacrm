@@ -288,6 +288,47 @@ Simulador interativo (Monte Carlo com 2.000 meses por cenário, calibrado com o
   primeiros clientes reais. Antes disso, dá para fazer um teste de carga com um
   "cliente robô" simulado contra um agente real, que custa centavos.
 
+### 7.1 Teste real com "cliente robô" (10/10/2026)
+
+O script `scripts/ai-load-test.ts` simula um cliente com um roteiro fixo de
+mensagens por segmento. Ele conversa com a IA pelo mesmo caminho da produção:
+prompt de auto-resposta, base de conhecimento e provedor da conta.
+
+- Não grava no banco e não envia nada pelo WhatsApp.
+- Rodou 3 vezes por cenário, com GPT-4o-mini, totalizando 136 respostas.
+- Custo do teste: menos de US$ 0,10.
+
+| Cenário | Respostas por atendimento | Tokens de entrada por resposta | Custo por atendimento |
+|---|---|---|---|
+| Agente real da Nordia (prompt de 8,4 mil caracteres + base de conhecimento) | 8 | ~3.000 | ~R$ 0,021 |
+| Autônomo (manicure) | 5–7 (passou para humano ao agendar) | ~1.170 | ~R$ 0,006 |
+| Loja de bairro | 6 | ~1.210 | ~R$ 0,007 |
+| Clínica pequena | 7–9 (passou para humano ao agendar) | ~1.240 | ~R$ 0,009 |
+| Imobiliária pequena | 10 | ~1.270 | ~R$ 0,012 |
+| Correspondente de crédito | 7–9 | ~1.220 | ~R$ 0,010 |
+
+A saída ficou entre ~25 e 50 tokens por resposta, como na medição de produção.
+
+**Conclusões:**
+
+- **O tamanho do prompt e da base de conhecimento é o que mais pesa.** O agente
+  real, com prompt longo e base de conhecimento, usa ~3.000 tokens por resposta.
+  Um negócio pequeno com prompt objetivo usa ~1.200.
+- **O simulador (2.000–3.200 tokens por resposta) é conservador.** Para prompts
+  enxutos, o custo real fica cerca de metade do que ele mostra. Ainda assim,
+  vale manter essa margem, porque na produção entram as ferramentas da agenda e
+  dos contatos (algumas centenas de tokens) e o histórico de conversas reais
+  tende a ser maior que o roteiro.
+- Custo real de IA para os perfis pequenos: **~R$ 1 a R$ 6 por mês**. No plano
+  de R$ 50, a IA não é o problema.
+- **Nos modelos prontos por segmento, manter o prompt enxuto (~2–4 mil
+  caracteres)** é a principal alavanca de custo. Um limite de tamanho do prompt
+  e da base de conhecimento por plano é uma trava mais simples que a cota em
+  tokens.
+
+Para rodar de novo:
+`npx tsx --env-file=.env.local scripts/ai-load-test.ts <account_id> [runs]`
+
 ### Consulta para refazer a medição de IA
 
 ```sql
