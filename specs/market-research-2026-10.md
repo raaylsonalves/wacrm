@@ -64,6 +64,27 @@ diferenciais são:
 
 A estrutura proposta está em `pricing-costs.md`, seção 9.
 
+
+**Teste do checkout, feito pelo Raylson em 11/10/2026:**
+
+- **Preço do Profissional:** de R$ 497 por **R$ 297/mês** ("40% OFF"). A
+  condição vale **nos primeiros 12 meses**, sem fidelidade. Isso confirma a
+  hipótese 4: o preço de longo prazo é o cheio.
+- **Funil em duas etapas:**
+  1. Uma página do plano pede nome, e-mail e WhatsApp **antes** do cartão.
+  2. O cartão vem só no passo seguinte.
+
+  Quem desiste no cartão já virou lead.
+- **Recuperação automática:** ao abandonar no cartão, chega uma mensagem
+  automática no WhatsApp perguntando se ficou alguma dúvida sobre o cadastro.
+
+**Para o Nordia:** o cadastro já pede o WhatsApp do dono, e já existem os
+avisos de cobrança por WhatsApp e e-mail. Falta a **recuperação de cadastro
+abandonado**: uma conta criada que segue `pending` (não pagou) depois de X
+minutos ou horas recebe uma mensagem. É barato e recupera vendas. Precisa de um
+modelo aprovado na Meta (`nordia_*`) e do OK do Raylson antes de criar o
+modelo.
+
 ## 2. Tendências 2025–2026
 
 - **Preço da Meta por mensagem.** Desde 01/07/2025 a Meta cobra por template entregue [26].
