@@ -5,7 +5,7 @@ import { isValidHexColor } from '@/lib/color-contrast';
 // (Settings → Branding, migration 044). Pure so it's unit-tested.
 
 /** Deploy-level name — what the tab says before login / without branding. */
-export const DEFAULT_APP_NAME = 'wacrm';
+export const DEFAULT_APP_NAME = 'Nordia CRM';
 
 /** First path segment → Sidebar translation key. */
 const SECTION_KEYS: Record<string, string> = {

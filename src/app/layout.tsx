@@ -28,10 +28,10 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://crm.nordiatech.com.br'
   ),
   title: {
-    default: 'wacrm',
-    template: '%s — wacrm',
+    default: 'Nordia CRM',
+    template: '%s — Nordia CRM',
   },
-  description: 'Self-hostable CRM template for WhatsApp.',
+  description: 'CRM de atendimento e vendas no WhatsApp com IA.',
   robots: {
     index: false,
     follow: false,
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   // Web Push on iOS only works from the installed app at all.
   appleWebApp: {
     capable: true,
-    title: 'wacrm',
+    title: 'Nordia CRM',
     statusBarStyle: 'black-translucent',
   },
   formatDetection: {

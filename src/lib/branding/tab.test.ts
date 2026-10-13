@@ -26,8 +26,8 @@ describe('buildTabTitle', () => {
     );
   });
   it('falls back to the app name when the account has no display name', () => {
-    expect(buildTabTitle('Contatos', null)).toBe('Contatos — wacrm');
-    expect(buildTabTitle(null, '  ')).toBe('wacrm');
+    expect(buildTabTitle('Contatos', null)).toBe('Contatos — Nordia CRM');
+    expect(buildTabTitle(null, '  ')).toBe('Nordia CRM');
   });
 });
 

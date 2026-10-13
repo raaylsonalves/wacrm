@@ -8,6 +8,8 @@
  * by the case flow) and rows from before migration 048.
  */
 
+import { isUnsupportedPlaceholder } from '@/lib/ai/automated-sender';
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Translate = (key: string, values?: Record<string, any>) => string;
 
@@ -57,7 +59,23 @@ export function formatMoney(value: unknown, currency: unknown): string {
   }
 }
 
+/**
+ * A message type the webhook can't read is stored as a raw placeholder
+ * ("[Unsupported message type: …]"); show people a sentence instead
+ * (seen in a push: "respondeu [Unsupported…").
+ */
 export function renderNotification(
+  n: RenderableNotification,
+  t: Translate
+): { title: string; body: string | null } {
+  const out = renderNotificationRaw(n, t);
+  if (out.body && isUnsupportedPlaceholder(out.body)) {
+    return { ...out, body: t('unsupportedMessage') };
+  }
+  return out;
+}
+
+function renderNotificationRaw(
   n: RenderableNotification,
   t: Translate
 ): { title: string; body: string | null } {

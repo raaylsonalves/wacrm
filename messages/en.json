@@ -3601,6 +3601,7 @@
     "emptyFiltered": "Nothing here.",
     "unread": "Unread",
     "someone": "Someone",
+    "unsupportedMessage": "Sent a message WhatsApp doesn't show here (open it on the phone).",
     "aContact": "a contact",
     "fallbackTitle": "Notification",
     "preferences": "Preferences",

@@ -7,6 +7,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { notifyUsers, teamForChannel, teamForConversation } from './notify';
+import { isUnsupportedPlaceholder } from '@/lib/ai/automated-sender';
 
 /** Only look this far back — a first run must not page for last month. */
 const SLA_LOOKBACK_MS = 12 * 60 * 60 * 1000;
@@ -41,6 +42,9 @@ export async function sweepSlaBreaches(db: SupabaseClient): Promise<number> {
       )
       .neq('status', 'closed')
       .eq('last_message_sender_type', 'customer')
+      // Another company's bot on the other side (migration 128): nobody
+      // owes it a reply, so it is not a late customer.
+      .or('ai_handoff_reason.is.null,ai_handoff_reason.neq.automated_sender')
       .gte(
         'last_customer_message_at',
         new Date(now - SLA_LOOKBACK_MS).toISOString()
@@ -58,6 +62,9 @@ export async function sweepSlaBreaches(db: SupabaseClient): Promise<number> {
         now,
       });
       if (minutes === null) continue;
+      // A message type we can't read (often a company's automated card)
+      // is not a question anyone can answer from here.
+      if (isUnsupportedPlaceholder((r.last_message_text as string | null) ?? '')) continue;
 
       // Claim first so an overlapping cron run can't double-page.
       const { data: claimed } = await db

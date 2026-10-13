@@ -22,7 +22,7 @@ self.addEventListener('push', (event) => {
     data = { body: event.data ? event.data.text() : '' };
   }
 
-  const title = data.title || 'wacrm';
+  const title = data.title || 'Nordia CRM';
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || '',

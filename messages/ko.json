@@ -3601,6 +3601,7 @@
     "emptyFiltered": "여기에는 아무것도 없습니다.",
     "unread": "읽지 않음",
     "someone": "누군가",
+    "unsupportedMessage": "여기에 표시되지 않는 메시지를 보냈습니다 (휴대폰에서 확인하세요).",
     "aContact": "연락처",
     "fallbackTitle": "Notification",
     "preferences": "환경설정",

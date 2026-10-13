@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => null);
     const title =
-      typeof body?.title === 'string' ? body.title.slice(0, 100) : 'wacrm';
+      typeof body?.title === 'string' ? body.title.slice(0, 100) : 'Nordia CRM';
     const text = typeof body?.body === 'string' ? body.body.slice(0, 200) : '';
 
     const result = await sendPushToAccount(

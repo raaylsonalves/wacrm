@@ -25,8 +25,14 @@ export const PWA_ICON_SIZE: Record<PwaIconVariant, number> = {
 /** Notification badge — a monochrome glyph, same for every account. */
 export const PUSH_BADGE_URL = '/pwa-icon/badge';
 
-/** Mirrors `viewport.themeColor` in src/app/layout.tsx. */
-export const PWA_THEME_COLOR = '#020617';
+/**
+ * The installed app's launch screen (Android paints it from the manifest:
+ * background_color + the 512 icon) and status bar. Same cream as the
+ * light theme's background (`viewport.themeColor` in src/app/layout.tsx),
+ * so the OS splash hands over to the in-app opening screen without a
+ * dark flash.
+ */
+export const PWA_THEME_COLOR = '#f3eee6';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -74,14 +80,14 @@ export function accountNotificationIconUrl(
 export function buildManifest(
   branding?: ManifestBranding | null
 ): MetadataRoute.Manifest {
-  const name = branding?.name?.trim().slice(0, 45) || 'wacrm';
+  const name = branding?.name?.trim().slice(0, 45) || 'Nordia CRM';
   const q = brandingQuery(branding);
   return {
     name,
     // Home-screen label: the OS truncates long names; 12 chars is the
     // commonly recommended ceiling.
     short_name: name.length > 12 ? name.slice(0, 12).trim() : name,
-    description: 'WhatsApp CRM',
+    description: 'CRM de atendimento e vendas no WhatsApp com IA',
     // Same id for every account — it's the same app; only its look varies.
     id: '/dashboard',
     start_url: '/dashboard',
