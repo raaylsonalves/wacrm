@@ -3954,6 +3954,21 @@
     "COP": "콜롬비아 페소"
   },
   "Agenda": {
+    "scale": {
+      "title": "외부 일정 · ScaLE",
+      "pitch": "매장의 ScaLE 연동 키를 붙여넣으세요. 일정 기능이 켜진 에이전트는 CRM 자체 일정 대신 ScaLE에서 시간을 확인하고 예약합니다.",
+      "keyPlaceholder": "연동 키 (scale_...)",
+      "connect": "연결",
+      "connected": "ScaLE가 연결되었습니다.",
+      "connectedTo": "연결됨:",
+      "enabledHint": "AI가 ScaLE에 예약",
+      "lastError": "마지막 오류: {error}",
+      "disconnect": "연결 해제",
+      "confirmDisconnect": "ScaLE 연결을 해제할까요? AI는 CRM 자체 일정을 다시 사용합니다.",
+      "disconnected": "ScaLE 연결이 해제되었습니다.",
+      "keyRejected": "ScaLE가 이 키를 거부했습니다. 전체가 복사되었는지 확인하세요.",
+      "failed": "저장하지 못했습니다. 다시 시도하세요."
+    },
     "google": {
       "title": "Google 캘린더",
       "pitch": "Bookings made here (by the team or the AI) show up in your Google Calendar, and what you mark busy there stops being offered to customers.",

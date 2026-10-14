@@ -1011,6 +1011,12 @@ BEGIN
     RAISE EXCEPTION 'plan entitlements missing — migration 129 did not apply';
   END IF;
 
+  IF to_regclass('public.scheduling_integrations') IS NULL
+     OR to_regclass('public.external_bookings') IS NULL
+     OR has_column_privilege('authenticated', 'public.scheduling_integrations', 'api_key_enc', 'SELECT') THEN
+    RAISE EXCEPTION 'scheduling integrations missing or key readable — migration 130 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

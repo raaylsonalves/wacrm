@@ -47,6 +47,8 @@ import type { AiConfig } from './types'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
 import { AGENDA_TOOLS, createAgendaToolExecutor } from './tools/agenda'
+import { SCALE_TOOLS, createScaleToolExecutor } from './tools/scale'
+import { loadSchedulingIntegration } from '@/lib/scheduling/integration'
 import { CONTACT_TOOLS, createContactToolExecutor } from './tools/contact'
 import {
   CASE_TOOLS,
@@ -867,7 +869,13 @@ export async function dispatchInboundToAiReply(
       .eq('account_id', accountId)
       .maybeSingle()
 
+    // Agenda in a partner's booking system (migration 130) instead of ours.
+    const scheduling = config.agendaEnabled
+      ? await loadSchedulingIntegration(db, accountId)
+      : null
+
     let systemPrompt = buildSystemPrompt({
+      agendaProvider: scheduling ? 'scale' : 'native',
       userPrompt: config.systemPrompt,
       mode: 'auto_reply',
       knowledge,
@@ -892,7 +900,7 @@ export async function dispatchInboundToAiReply(
     const prospect = await loadProspectContext(db, conversationId)
     if (prospect) systemPrompt = `${systemPrompt}\n\n${prospectPromptLine(prospect)}`
     const baseTools = config.agendaEnabled
-      ? [...CONTACT_TOOLS, ...AGENDA_TOOLS]
+      ? [...CONTACT_TOOLS, ...(scheduling ? SCALE_TOOLS : AGENDA_TOOLS)]
       : CONTACT_TOOLS
     // Human cases (specs/human-cases.md): per-agent opt-in. The open
     // cases of this thread go in the prompt so the model knows their ids.
@@ -919,7 +927,16 @@ export async function dispatchInboundToAiReply(
       ? createProspectingToolExecutor({ db, accountId, ctx: prospect })
       : null
     const contactExecutor = createContactToolExecutor({ db, accountId, contactId })
-    const agendaExecutor = config.agendaEnabled
+    const agendaExecutor = scheduling
+      ? createScaleToolExecutor({
+          db,
+          client: scheduling.client,
+          accountId,
+          conversationId,
+          contactId,
+          userId: configOwnerUserId,
+        })
+      : config.agendaEnabled
       ? createAgendaToolExecutor({
           db,
           accountId,

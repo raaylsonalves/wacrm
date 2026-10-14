@@ -3942,6 +3942,21 @@
     "COP": "Peso colombiano"
   },
   "Agenda": {
+    "scale": {
+      "title": "Agenda externa · ScaLE",
+      "pitch": "Cole a chave de integração da barbearia no ScaLE. Com ela, a IA consulta os horários e marca direto na agenda do ScaLE, em vez da agenda própria do CRM. Vale para os agentes com a agenda ligada.",
+      "keyPlaceholder": "Chave de integração (scale_...)",
+      "connect": "Conectar",
+      "connected": "ScaLE conectado.",
+      "connectedTo": "Conectado a",
+      "enabledHint": "A IA marca no ScaLE",
+      "lastError": "Último erro: {error}",
+      "disconnect": "Desconectar",
+      "confirmDisconnect": "Desconectar o ScaLE? A IA volta a usar a agenda própria do CRM.",
+      "disconnected": "ScaLE desconectado.",
+      "keyRejected": "O ScaLE recusou essa chave. Confira se foi copiada inteira.",
+      "failed": "Não foi possível salvar. Tente de novo."
+    },
     "google": {
       "title": "Google Agenda",
       "pitch": "Os agendamentos feitos aqui (pela equipe ou pela IA) aparecem no seu Google Agenda, e o que você marcar lá como ocupado deixa de ser oferecido aos clientes.",

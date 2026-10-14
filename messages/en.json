@@ -3954,6 +3954,21 @@
     "COP": "Colombian Peso"
   },
   "Agenda": {
+    "scale": {
+      "title": "External agenda · ScaLE",
+      "pitch": "Paste the shop's ScaLE integration key. The AI then checks times and books straight into ScaLE instead of the CRM's own calendar, for agents with the agenda on.",
+      "keyPlaceholder": "Integration key (scale_...)",
+      "connect": "Connect",
+      "connected": "ScaLE connected.",
+      "connectedTo": "Connected to",
+      "enabledHint": "The AI books in ScaLE",
+      "lastError": "Last error: {error}",
+      "disconnect": "Disconnect",
+      "confirmDisconnect": "Disconnect ScaLE? The AI goes back to the CRM's own calendar.",
+      "disconnected": "ScaLE disconnected.",
+      "keyRejected": "ScaLE rejected this key. Check it was copied in full.",
+      "failed": "Could not save. Try again."
+    },
     "google": {
       "title": "Google Calendar",
       "pitch": "Bookings made here (by the team or the AI) show up in your Google Calendar, and what you mark busy there stops being offered to customers.",

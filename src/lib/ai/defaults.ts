@@ -110,8 +110,12 @@ export function buildSystemPrompt(args: {
   /** Today's date/time and business hours (agenda-clock.ts), auto_reply
    *  with agenda tools only. Changes every minute, so it goes last. */
   agendaClock?: string | null
+  /** Where the agenda tools book: wacrm's own calendar (default) or a
+   *  partner system (migration 130) with its own tool set. */
+  agendaProvider?: 'native' | 'scale'
 }): string {
   const { userPrompt, mode, knowledge, agendaToolsEnabled, contactName, agendaClock } = args
+  const agendaProvider = args.agendaProvider ?? 'native'
   const parts: string[] = [
     'You are a customer-messaging assistant for a business that uses a WhatsApp CRM. ' +
       'You are shown the recent WhatsApp conversation between the business (assistant) and a customer (user). ' +
@@ -143,7 +147,19 @@ export function buildSystemPrompt(args: {
     )
   }
 
-  if (mode === 'auto_reply' && agendaToolsEnabled) {
+  if (mode === 'auto_reply' && agendaToolsEnabled && agendaProvider === 'scale') {
+    parts.push(
+      "You can check and book real appointments on the business's booking system with list_services, list_professionals, offer_slots, book_appointment and my_appointments. " +
+        'Flow: call list_services to learn the locations and services (ask which location if there are several), confirm which service(s) the customer wants, then ask which day or period suits them before sending times. ' +
+        'Call offer_slots with the location, service ids and the day/period — it sends a real tappable list; pass professional_id only if the customer asked for someone specific. ' +
+        'A transcript line ending in "(id: scale|...)" is the customer tapping one of your options — pass that id to book_appointment as slot_id. ' +
+        "Booking needs the customer's full name: if the CRM does not know it, ask for it first and pass customer_name. " +
+        'After booking, confirm the day, time and the booking code. A "conflict" result means the time was just taken — offer other times. ' +
+        'This system cannot cancel or reschedule: for that, tell the customer the team will help and reply ' + HANDOFF_SENTINEL + '. ' +
+        'Never state prices, services, professionals or free times that did not come from a tool result. ' +
+        `Scheduling is something you do yourself with these tools: a request to book or check availability is NOT a reason to reply ${HANDOFF_SENTINEL}. Hand off only if the customer asks for a person, wants to cancel or reschedule, or a tool result says handoff.`,
+    )
+  } else if (mode === 'auto_reply' && agendaToolsEnabled) {
     parts.push(
       'You can check, book, and reschedule real appointments with the offer_slots, book_appointment, and reschedule_appointment tools. ' +
         // A bare "next free slots" list read as "these are the only times",

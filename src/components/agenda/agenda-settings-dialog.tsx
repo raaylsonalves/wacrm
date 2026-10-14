@@ -24,6 +24,7 @@ import {
 import { templateVarCount } from '@/lib/appointments/followup';
 import { cn } from '@/lib/utils';
 import { GoogleCalendarCard } from './google-calendar-card';
+import { ScaleIntegrationCard } from './scale-integration-card';
 
 /** Monday first, as the calendar shows it. */
 const DAYS = [1, 2, 3, 4, 5, 6, 0];
@@ -444,6 +445,7 @@ function SettingsForm({
         </section>
 
         <GoogleCalendarCard />
+        <ScaleIntegrationCard />
       </div>
 
       <div className="border-border flex flex-col-reverse gap-2 border-t px-5 pt-3 pb-5 sm:flex-row sm:justify-end lg:px-6">
