@@ -47,7 +47,7 @@ export const SCALE_TOOLS: ToolDefinition[] = [
     parameters: {
       type: 'object',
       properties: {
-        unit_id: { type: 'string', description: 'Location id from a previous list_services result.' },
+        unit_id: { type: 'string', description: 'Location id from list_services, or the location name.' },
       },
       required: [],
     },
@@ -162,8 +162,39 @@ function errorResult(err: unknown): Record<string, unknown> {
   return { error: 'agenda_unavailable', handoff: true }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const norm = (v: string) =>
+  v.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim()
+
+/**
+ * The transcript keeps the chat text, not earlier tool results, so on a
+ * later turn the model often knows a location or service only by name
+ * (seen in a dry run: unit_id "aldeota"). Accept a name and resolve it,
+ * instead of an error and another listing round-trip.
+ */
+async function resolveUnitId(ctx: ScaleToolContext, raw: string | null): Promise<string | null> {
+  if (raw && UUID_RE.test(raw)) return raw
+  const units = await ctx.client.units()
+  if (!raw) return units.length === 1 ? units[0].id : null
+  const n = norm(raw)
+  const hit = units.find((u) => norm(u.nome) === n) ?? units.find((u) => norm(u.nome).includes(n))
+  return hit?.id ?? (units.length === 1 ? units[0].id : null)
+}
+
+async function resolveServiceIds(ctx: ScaleToolContext, unitId: string, raw: string[]): Promise<string[]> {
+  if (raw.every((r) => UUID_RE.test(r))) return raw
+  const services = await ctx.client.services(unitId)
+  return raw
+    .map((r) => {
+      if (UUID_RE.test(r)) return r
+      const n = norm(r)
+      return (services.find((x) => norm(x.nome) === n) ?? services.find((x) => norm(x.nome).includes(n)))?.id
+    })
+    .filter((x): x is string => !!x)
+}
+
 async function listServices(ctx: ScaleToolContext, args: Record<string, unknown>) {
-  let unitId = str(args, 'unit_id')
+  let unitId = await resolveUnitId(ctx, str(args, 'unit_id'))
   if (!unitId) {
     const units = await ctx.client.units()
     if (units.length !== 1) {
@@ -184,16 +215,17 @@ async function listServices(ctx: ScaleToolContext, args: Record<string, unknown>
 }
 
 async function listProfessionals(ctx: ScaleToolContext, args: Record<string, unknown>) {
-  const unitId = str(args, 'unit_id')
-  if (!unitId) return { error: 'unit_id_required' }
-  const pros = await ctx.client.professionals(unitId, ids(args, 'service_ids'))
+  const unitId = await resolveUnitId(ctx, str(args, 'unit_id'))
+  if (!unitId) return { error: 'unit_not_found', hint: 'call list_services without unit_id' }
+  const pros = await ctx.client.professionals(unitId, await resolveServiceIds(ctx, unitId, ids(args, 'service_ids')))
   return { professionals: pros.map((p) => ({ id: p.id, name: p.nome })) }
 }
 
 async function offerSlots(ctx: ScaleToolContext, args: Record<string, unknown>) {
-  const unitId = str(args, 'unit_id')
-  const serviceIds = ids(args, 'service_ids')
-  if (!unitId || serviceIds.length === 0) return { error: 'unit_and_services_required' }
+  const unitId = await resolveUnitId(ctx, str(args, 'unit_id'))
+  if (!unitId) return { error: 'unit_not_found', hint: 'call list_services without unit_id' }
+  const serviceIds = await resolveServiceIds(ctx, unitId, ids(args, 'service_ids'))
+  if (serviceIds.length === 0) return { error: 'service_not_found', hint: 'call list_services with the unit' }
   const date = str(args, 'date')
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: 'invalid_date' }
   const today = todayLocal()
