@@ -112,7 +112,9 @@ export default function AgendaPage() {
     const from = zonedToUtc(first.getUTCFullYear(), first.getUTCMonth() + 1, first.getUTCDate(), 0, 0, tz);
     const to = zonedToUtc(after.getUTCFullYear(), after.getUTCMonth() + 1, after.getUTCDate(), 0, 0, tz);
     const supabase = createClient();
-    const [{ data }, { data: busy }] = await Promise.all([
+    // Partner bookings (migration 130) are stored as the shop's wall time.
+    const localDay = (d: Date) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+    const [{ data }, { data: busy }, { data: ext }] = await Promise.all([
       supabase
         .from('appointments')
         .select('*, contact:contacts(id, name, phone)')
@@ -125,9 +127,18 @@ export default function AgendaPage() {
         .lt('starts_at', to.toISOString())
         .gt('ends_at', from.toISOString())
         .order('starts_at'),
+      supabase
+        .from('external_bookings')
+        .select('id, account_id, provider, code, professional_name, starts_local, ends_local, conversation_id, contact:contacts(id, name, phone)')
+        .gte('starts_local', `${localDay(first)}T00:00:00`)
+        .lt('starts_local', `${localDay(after)}T00:00:00`)
+        .order('starts_local'),
     ]);
     if (seq !== loadSeq.current) return;
-    setAppointments((data as Appointment[] | null) ?? []);
+    const external = ((ext ?? []) as unknown as ExternalBookingRow[]).map((b) => toAppointment(b, tz));
+    setAppointments(
+      [...((data as Appointment[] | null) ?? []), ...external].sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+    );
     setBlocks((busy as typeof blocks | null) ?? []);
   }, [days, tz]);
 
@@ -208,6 +219,11 @@ export default function AgendaPage() {
   }
 
   function openEdit(a: Appointment) {
+    // Read-only: it is changed in the partner system, not here.
+    if (a.source === 'external') {
+      toast.info(t('grid.externalNote', { code: a.external?.code ?? '—' }));
+      return;
+    }
     setEditing(a);
   }
 
@@ -233,7 +249,8 @@ export default function AgendaPage() {
   const busyRanges = useMemo(
     () => [
       ...appointments
-        .filter((a) => a.status !== 'cancelled')
+        // A partner booking doesn't block the CRM's own calendar.
+        .filter((a) => a.status !== 'cancelled' && a.source !== 'external')
         .map((a) => ({ start: new Date(a.starts_at), end: new Date(a.ends_at) })),
       ...blocks.map((b) => ({ start: new Date(b.starts_at), end: new Date(b.ends_at) })),
     ],
@@ -580,4 +597,45 @@ export default function AgendaPage() {
       )}
     </div>
   );
+}
+
+interface ExternalBookingRow {
+  id: string;
+  account_id: string;
+  provider: string;
+  code: string | null;
+  professional_name: string | null;
+  starts_local: string;
+  ends_local: string | null;
+  conversation_id: string | null;
+  contact: { id: string; name: string | null; phone: string | null } | null;
+}
+
+/** A partner booking shaped like an appointment for the grids (read-only). */
+function toAppointment(b: ExternalBookingRow, tz: string): Appointment {
+  const at = (wall: string) => {
+    const [d, t] = wall.replace(' ', 'T').split('T');
+    const [y, m, day] = d.split('-').map(Number);
+    const [h, mi] = t.split(':').map(Number);
+    return zonedToUtc(y, m, day, h, mi, tz).toISOString();
+  };
+  const starts = at(b.starts_local);
+  const ends = b.ends_local
+    ? at(b.ends_local)
+    : new Date(Date.parse(starts) + 30 * 60_000).toISOString();
+  return {
+    id: `ext:${b.id}`,
+    account_id: b.account_id,
+    contact_id: b.contact?.id ?? '',
+    conversation_id: b.conversation_id,
+    assigned_to: null,
+    title: ['ScaLE', b.professional_name, b.code].filter(Boolean).join(' · '),
+    notes: null,
+    starts_at: starts,
+    ends_at: ends,
+    status: 'scheduled',
+    source: 'external',
+    external: { provider: b.provider, code: b.code, professional: b.professional_name },
+    contact: b.contact,
+  };
 }

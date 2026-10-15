@@ -24,8 +24,12 @@ export interface Appointment {
   starts_at: string;
   ends_at: string;
   status: AppointmentStatus;
-  /** Who booked it: a teammate, a Flow, or the AI agent (migration 061). */
-  source: 'manual' | 'flow' | 'ai';
+  /** Who booked it: a teammate, a Flow, or the AI agent (migration 061).
+   *  'external' = booked by the AI in a partner system (ScaLE, migration
+   *  130), shown read-only — it lives there, not in `appointments`. */
+  source: 'manual' | 'flow' | 'ai' | 'external';
+  /** Only for source 'external'. */
+  external?: { provider: string; code: string | null; professional: string | null };
   contact: { id: string; name: string | null; phone: string | null } | null;
 }
 
@@ -44,6 +48,9 @@ export const STATUS_CLASS: Record<AppointmentStatus, string> = {
  * a Flow did, lilac when a teammate did. Finished ones use STATUS_CLASS.
  */
 export function eventToneClass(a: Pick<Appointment, 'status' | 'source'>): string {
+  // A partner-system booking: read-only, so it reads as a different kind
+  // of block (dashed outline) next to the CRM's own appointments.
+  if (a.source === 'external') return 'border-dashed border-foreground/30 bg-card text-foreground';
   if (a.status === 'scheduled' || a.status === 'confirmed') {
     return a.source === 'manual'
       ? 'border-transparent bg-tone-lilac text-tone-on'

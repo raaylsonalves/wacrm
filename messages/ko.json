@@ -4111,11 +4111,13 @@
       "source": {
         "ai": "대화 중 AI가 예약",
         "flow": "플로우가 예약",
+        "external": "AI가 ScaLE에 예약",
         "manual": "팀이 예약"
       },
       "status": "상태",
       "owner": "담당자",
       "noOwner": "없음",
+      "externalNote": "ScaLE에 예약됨 (코드 {code}). 변경과 취소는 ScaLE에서 합니다.",
       "openConversation": "대화 열기",
       "edit": "편집",
       "freeOn": "{day} 빈 시간",

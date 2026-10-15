@@ -182,6 +182,11 @@ export function AppointmentAside({
             {t('grid.openConversation')}
           </Link>
         )}
+        {selected.source === 'external' ? (
+          <p className="text-muted-foreground w-full text-[12.5px] leading-relaxed">
+            {t('grid.externalNote', { code: selected.external?.code ?? '—' })}
+          </p>
+        ) : (
         <button
           type="button"
           onClick={() => onEdit(selected)}
@@ -189,6 +194,7 @@ export function AppointmentAside({
         >
           {t('grid.edit')}
         </button>
+        )}
       </div>
 
       {free.day && (

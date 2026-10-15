@@ -4099,11 +4099,13 @@
       "source": {
         "ai": "Agendada por la IA en el chat",
         "flow": "Agendada por un flujo",
+        "external": "Agendado en ScaLE por la IA",
         "manual": "Agendada por el equipo"
       },
       "status": "Estado",
       "owner": "Responsable",
       "noOwner": "Nadie",
+      "externalNote": "Cita hecha en ScaLE (código {code}). Los cambios y cancelaciones se hacen en ScaLE.",
       "openConversation": "Abrir conversación",
       "edit": "Editar",
       "freeOn": "Libres el {day}",

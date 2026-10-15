@@ -4111,11 +4111,13 @@
       "source": {
         "ai": "Booked by the AI in the chat",
         "flow": "Booked by a flow",
+        "external": "Booked in ScaLE by the AI",
         "manual": "Booked by the team"
       },
       "status": "Status",
       "owner": "Assigned to",
       "noOwner": "Nobody",
+      "externalNote": "Booked in ScaLE (code {code}). Changes and cancellations are made in ScaLE.",
       "openConversation": "Open conversation",
       "edit": "Edit",
       "freeOn": "Free on {day}",
