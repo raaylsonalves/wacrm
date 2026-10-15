@@ -4106,6 +4106,7 @@
       "owner": "Responsável",
       "noOwner": "Ninguém",
       "externalNote": "Marcação feita no ScaLE (código {code}). Alterações e cancelamentos são feitos direto no ScaLE.",
+      "view": "Ver detalhes",
       "openConversation": "Abrir conversa",
       "edit": "Editar",
       "freeOn": "Livres em {day}",

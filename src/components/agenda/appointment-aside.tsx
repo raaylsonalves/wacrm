@@ -182,19 +182,13 @@ export function AppointmentAside({
             {t('grid.openConversation')}
           </Link>
         )}
-        {selected.source === 'external' ? (
-          <p className="text-muted-foreground w-full text-[12.5px] leading-relaxed">
-            {t('grid.externalNote', { code: selected.external?.code ?? '—' })}
-          </p>
-        ) : (
         <button
           type="button"
           onClick={() => onEdit(selected)}
           className="border-border bg-card hover:bg-muted inline-flex min-h-10 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors duration-150 ease-out"
         >
-          {t('grid.edit')}
+          {selected.source === 'external' ? t('grid.view') : t('grid.edit')}
         </button>
-        )}
       </div>
 
       {free.day && (

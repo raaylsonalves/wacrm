@@ -4106,6 +4106,7 @@
       "owner": "Responsable",
       "noOwner": "Nadie",
       "externalNote": "Cita hecha en ScaLE (código {code}). Los cambios y cancelaciones se hacen en ScaLE.",
+      "view": "Ver detalles",
       "openConversation": "Abrir conversación",
       "edit": "Editar",
       "freeOn": "Libres el {day}",

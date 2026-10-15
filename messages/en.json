@@ -4118,6 +4118,7 @@
       "owner": "Assigned to",
       "noOwner": "Nobody",
       "externalNote": "Booked in ScaLE (code {code}). Changes and cancellations are made in ScaLE.",
+      "view": "View details",
       "openConversation": "Open conversation",
       "edit": "Edit",
       "freeOn": "Free on {day}",

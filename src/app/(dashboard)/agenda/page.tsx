@@ -219,11 +219,7 @@ export default function AgendaPage() {
   }
 
   function openEdit(a: Appointment) {
-    // Read-only: it is changed in the partner system, not here.
-    if (a.source === 'external') {
-      toast.info(t('grid.externalNote', { code: a.external?.code ?? '—' }));
-      return;
-    }
+    // A partner booking opens too; the panel shows it view-only.
     setEditing(a);
   }
 

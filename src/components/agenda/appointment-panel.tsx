@@ -80,7 +80,9 @@ function PanelBody({
 }) {
   const t = useTranslations('Agenda');
   const { canSendMessages } = useAuth();
-  const readOnly = !canSendMessages;
+  // A partner-system booking (ScaLE) is view-only: it is changed there.
+  const external = initial.source === 'external';
+  const readOnly = !canSendMessages || external;
   const [a, setA] = useState(initial);
   const [pending, setPending] = useState(0);
   const [failed, setFailed] = useState(false);
@@ -232,6 +234,11 @@ function PanelBody({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 pt-2 pb-5">
+        {external && (
+          <p className="bg-muted text-muted-foreground rounded-[14px] px-3.5 py-2.5 text-[12.5px] leading-relaxed">
+            {t('grid.externalNote', { code: a.external?.code ?? '—' })}
+          </p>
+        )}
         <InlineField
           layout="bare"
           label={t('dialog.title')}

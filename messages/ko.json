@@ -4118,6 +4118,7 @@
       "owner": "담당자",
       "noOwner": "없음",
       "externalNote": "ScaLE에 예약됨 (코드 {code}). 변경과 취소는 ScaLE에서 합니다.",
+      "view": "자세히 보기",
       "openConversation": "대화 열기",
       "edit": "편집",
       "freeOn": "{day} 빈 시간",
