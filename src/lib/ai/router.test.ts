@@ -155,6 +155,38 @@ describe('resolveAgentViaRouter', () => {
     expect(h.generateReply).not.toHaveBeenCalled();
   });
 
+  it('keeps classifying while the fallback agent is answering', async () => {
+    h.generateReply.mockResolvedValue({
+      text: '{"intent": "sales", "confidence": 0.9}',
+      segments: [],
+      handoff: false,
+      usage: null,
+    });
+    const salesConfig = { ...DEFAULT_CONFIG, id: 'agent-sales' };
+    h.loadAiConfig.mockResolvedValue(salesConfig);
+    const persisted: unknown[] = [];
+    const db = fakeDb({
+      conversations: {
+        update: (row: unknown) => {
+          persisted.push(row);
+          return { eq: () => ({ eq: () => Promise.resolve({ error: null }) }) };
+        },
+      },
+    });
+    const result = await resolveAgentViaRouter({
+      db,
+      accountId: 'acc-1',
+      conversationId: 'conv-1',
+      defaultConfig: DEFAULT_CONFIG,
+      activeRouter: { router: { ...router, fallback_agent_id: 'agent-reception' }, members },
+      currentAgentId: 'agent-reception',
+      messageText: 'quero marcar um corte',
+    });
+    expect(h.generateReply).toHaveBeenCalled();
+    expect(result).toBe(salesConfig);
+    expect(persisted).toEqual([{ active_ai_agent_id: 'agent-sales' }]);
+  });
+
   it('never answers with an agent whose auto-reply is off (A4)', async () => {
     h.generateReply.mockResolvedValue({
       text: '{"intent": "sales", "confidence": 0.9}',

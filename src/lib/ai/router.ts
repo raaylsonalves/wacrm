@@ -202,7 +202,14 @@ export async function resolveAgentViaRouter(
   // its fallback): one removed from it stops answering old threads (A14).
   const inRouter = (id: string) =>
     id === router.fallback_agent_id || members.some((m) => m.agent_id === id);
-  if (router.sticky && currentAgentId && inRouter(currentAgentId)) {
+  // Sticky never holds the conversation on the FALLBACK agent: it answers
+  // while the intent is still unclear (a greeting), so the next message —
+  // "quero marcar um corte" — must still be classified. Seen live: a
+  // reception agent caught the "Oi", stayed stuck, and handed the
+  // booking request to a human instead of the scheduling agent.
+  const settled = (id: string | null): id is string =>
+    !!id && inRouter(id) && id !== router.fallback_agent_id;
+  if (router.sticky && settled(currentAgentId)) {
     const stuck = await usable(currentAgentId);
     if (stuck) return stuck;
   }
@@ -253,7 +260,7 @@ export async function resolveAgentViaRouter(
   // match, fallback agent, or the default) is what the rest of the
   // conversation gets, if sticky. Best-effort — a failed write just
   // means the next turn re-resolves, not a broken reply.
-  if (router.sticky && (!currentAgentId || !inRouter(currentAgentId))) {
+  if (router.sticky && !settled(currentAgentId)) {
     const stickyId = resolvedAgentId ?? defaultConfig.id ?? null;
     if (stickyId) {
       await db
