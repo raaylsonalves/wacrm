@@ -30,6 +30,12 @@ export interface ScaleSlot {
   inicio: string;
   fim: string;
 }
+/** One time from GET /horarios/proximos (v1.1): every professional free in it. */
+export interface ScaleNextSlot {
+  inicio: string;
+  fim: string;
+  barbeiros: ScaleProfessional[];
+}
 export interface ScaleBooking {
   id: string;
   codigo: string;
@@ -40,6 +46,8 @@ export interface ScaleBooking {
   fim: string;
   duracaoMin: number;
   status: string;
+  /** Only on POST /agendamentos/busca: can the bot still cancel it. */
+  cancelavel?: boolean;
 }
 
 export class ScaleError extends Error {
@@ -205,14 +213,29 @@ export interface ScaleClient {
     serviceIds: string[],
     stepMin?: number
   ): Promise<{ slots: ScaleSlot[]; truncated: boolean }>;
+  /** v1.1: next free times of any (or one) professional, one call. */
+  nextSlots(input: {
+    unitId: string;
+    serviceIds: string[];
+    professionalId?: string;
+    /** "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM". */
+    from?: string;
+    to?: string;
+    limit?: number;
+  }): Promise<{ slots: ScaleNextSlot[]; truncated: boolean }>;
+  /** Name is optional for an existing customer (v1.1); required for a new one. */
   book(input: {
     professionalId: string;
     serviceIds: string[];
     inicio: string;
-    name: string;
+    name?: string | null;
     phone: string;
     idempotencyKey: string;
   }): Promise<ScaleBooking>;
+  /** v1.1: the customer's upcoming bookings (phone in the body, not the URL). */
+  customerBookings(phone: string): Promise<ScaleBooking[]>;
+  /** v1.1: cancel, checked against the customer's phone; safe to repeat. */
+  cancel(bookingId: string, phone: string, reason?: string): Promise<ScaleBooking>;
 }
 
 export function createScaleClient(
@@ -308,9 +331,66 @@ export function createScaleClient(
           barbeiroId: input.professionalId,
           servicoIds: input.serviceIds,
           inicio: toMinute(input.inicio),
-          cliente: { nome: input.name, telefone: input.phone },
+          cliente: input.name
+            ? { nome: input.name, telefone: input.phone }
+            : { telefone: input.phone },
         }),
       });
     },
+    async nextSlots(input) {
+      const r = await call<{ horarios: ScaleNextSlot[]; truncado: boolean }>(
+        `/horarios/proximos?${q({
+          unidadeId: input.unitId,
+          servicoIds: input.serviceIds.join(','),
+          barbeiroId: input.professionalId,
+          de: input.from,
+          ate: input.to,
+          limite: input.limit ? String(input.limit) : undefined,
+          passoMin: '30',
+        })}`
+      );
+      return { slots: r.horarios ?? [], truncated: !!r.truncado };
+    },
+    async customerBookings(phone) {
+      return (
+        await call<{ agendamentos: ScaleBooking[] }>('/agendamentos/busca', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ telefone: phone }),
+        })
+      ).agendamentos ?? [];
+    },
+    async cancel(bookingId, phone, reason) {
+      return call<ScaleBooking>(
+        `/agendamentos/${encodeURIComponent(bookingId)}/cancelamento`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            reason ? { telefone: phone, motivo: reason.slice(0, 200) } : { telefone: phone }
+          ),
+        }
+      );
+    },
   };
+}
+
+/**
+ * Pure: next-slots (one row per time, with every free professional)
+ * regrouped per professional, for the model to answer in text.
+ */
+export function groupNextSlots(
+  slots: ScaleNextSlot[],
+  perProfessional: number
+): { professional_id: string; name: string; times: { date: string; time: string }[] }[] {
+  const map = new Map<string, { professional_id: string; name: string; times: { date: string; time: string }[] }>();
+  for (const s of slots) {
+    const at = toMinute(s.inicio);
+    for (const b of s.barbeiros) {
+      const row = map.get(b.id) ?? { professional_id: b.id, name: b.nome, times: [] };
+      if (row.times.length < perProfessional) row.times.push({ date: at.slice(0, 10), time: at.slice(11, 16) });
+      map.set(b.id, row);
+    }
+  }
+  return [...map.values()];
 }

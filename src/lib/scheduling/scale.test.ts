@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createScaleClient,
   groupByProfessional,
+  groupNextSlots,
   idempotencyKey,
   parseScaleSlotId,
   phoneDigits,
@@ -140,5 +141,42 @@ describe('groupByProfessional', () => {
   });
   it('closest to the asked time', () => {
     expect(groupByProfessional(data, { perProfessional: 2, nearTime: '14:00' })[0].times).toEqual(['13:30', '14:30']);
+  });
+});
+
+describe('API v1.1', () => {
+  it('regroups next slots per professional', () => {
+    const rows = [
+      { inicio: '2026-10-16T13:00:00', fim: '', barbeiros: [{ id: 'e', nome: 'Eudes' }, { id: 'i', nome: 'Italo' }] },
+      { inicio: '2026-10-16T13:30:00', fim: '', barbeiros: [{ id: 'i', nome: 'Italo' }] },
+    ];
+    expect(groupNextSlots(rows, 5)).toEqual([
+      { professional_id: 'e', name: 'Eudes', times: [{ date: '2026-10-16', time: '13:00' }] },
+      {
+        professional_id: 'i',
+        name: 'Italo',
+        times: [
+          { date: '2026-10-16', time: '13:00' },
+          { date: '2026-10-16', time: '13:30' },
+        ],
+      },
+    ]);
+  });
+
+  it('omits the name for an existing customer and puts the phone in the body', async () => {
+    const calls: { url: string; body: string }[] = [];
+    const fake = (async (url: string, init?: RequestInit) => {
+      calls.push({ url, body: String(init?.body ?? '') });
+      return new Response(JSON.stringify({ agendamentos: [], id: '1', codigo: 'AG-1', status: 'cancelado' }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const c = createScaleClient('k', 'https://x/v1', fake);
+    await c.book({ professionalId: 'b', serviceIds: ['s'], inicio: '2026-10-16T19:30', name: null, phone: '5585', idempotencyKey: 'nordia-1234' });
+    await c.customerBookings('5585999990000');
+    await c.cancel('abc', '5585999990000', 'viagem');
+    expect(JSON.parse(calls[0].body).cliente).toEqual({ telefone: '5585' });
+    expect(calls[1].url).toBe('https://x/v1/agendamentos/busca');
+    expect(calls[1].url).not.toContain('5585999990000');
+    expect(calls[2].url).toBe('https://x/v1/agendamentos/abc/cancelamento');
+    expect(JSON.parse(calls[2].body)).toEqual({ telefone: '5585999990000', motivo: 'viagem' });
   });
 });

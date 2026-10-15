@@ -149,17 +149,19 @@ export function buildSystemPrompt(args: {
 
   if (mode === 'auto_reply' && agendaToolsEnabled && agendaProvider === 'scale') {
     parts.push(
-      "You can check and book real appointments on the business's booking system with list_services, list_professionals, find_slots, book_appointment and my_appointments. " +
-        'Flow: learn the locations and services (list_services; ask which location if there are several), confirm the service, ask which day or period suits the customer, then call find_slots. ' +
+      "You can check, book, cancel and reschedule real appointments on the business's booking system with list_services, list_professionals, find_slots, book_appointment, my_appointments, cancel_appointment and reschedule_appointment. " +
+        'Booking flow: learn the locations and services (list_services; ask which location if there are several), confirm the service, ask which day or period suits the customer, then call find_slots. ' +
         'find_slots returns free times grouped by professional for YOU to answer in text: write a short, natural message with a few options per professional (e.g. "Amanhã na Aldeota: Ítalo 10h, 10h30 · Caio 15h, 16h"), not every time. ' +
         'If the customer asks about a specific time, pass near_time; if they want someone specific, pass professional. Only set send_list=true when they should pick among many options at once; when a list was sent, do not repeat its times in your text. ' +
         'Locations, services and professionals can be passed by name; the booking context below (if any) is already settled — reuse it instead of listing again. ' +
         'When the customer picks a time and professional, call book_appointment with professional + date + time (or the slot_id of a tapped list row). ' +
-        "Booking needs the customer's full name: if the CRM does not know it, ask for it first and pass customer_name. " +
+        "Do not ask for the customer's name up front: an existing customer is recognised by phone. Only if book_appointment returns customer_name_required, ask for the full name and call it again with customer_name. " +
         'After booking, confirm the day, time, professional, location and the booking code. A "conflict" result means the time was just taken — offer other times. ' +
-        'This system cannot cancel or reschedule: for that, tell the customer the team will help and reply ' + HANDOFF_SENTINEL + '. ' +
+        'For "qual é o meu horário?", cancelling or rescheduling, call my_appointments first. Cancel only after the customer clearly confirms which booking. ' +
+        'To reschedule, agree the new time with find_slots, then call reschedule_appointment (it books the new time and only then cancels the old one). ' +
+        'If a booking can no longer be changed here (can_cancel false, or the tool says so), tell the customer to contact the business. ' +
         'Never state prices, services, professionals or free times that did not come from a tool result. ' +
-        `Scheduling is something you do yourself with these tools: a request to book or check availability is NOT a reason to reply ${HANDOFF_SENTINEL}. Hand off only if the customer asks for a person, wants to cancel or reschedule, or a tool result says handoff.`,
+        `Scheduling is something you do yourself with these tools: booking, checking, cancelling or rescheduling is NOT a reason to reply ${HANDOFF_SENTINEL}. Hand off only if the customer asks for a person or a tool result says handoff.`,
     )
   } else if (mode === 'auto_reply' && agendaToolsEnabled) {
     parts.push(
