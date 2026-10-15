@@ -1023,6 +1023,12 @@ BEGIN
     RAISE EXCEPTION 'ai_configs.context_days missing — migration 131 did not apply';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'conversations'
+         AND column_name = 'ai_agenda_state') THEN
+    RAISE EXCEPTION 'conversations.ai_agenda_state missing — migration 132 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

@@ -47,7 +47,7 @@ import type { AiConfig } from './types'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
 import { AGENDA_TOOLS, createAgendaToolExecutor } from './tools/agenda'
-import { SCALE_TOOLS, createScaleToolExecutor } from './tools/scale'
+import { SCALE_TOOLS, agendaStatePrompt, createScaleToolExecutor, loadAgendaState } from './tools/scale'
 import { loadSchedulingIntegration } from '@/lib/scheduling/integration'
 import { CONTACT_TOOLS, createContactToolExecutor } from './tools/contact'
 import {
@@ -900,6 +900,14 @@ export async function dispatchInboundToAiReply(
     // Prospecting: only a conversation with an open campaign deal gets the
     // qualify tool, and the criteria go at the END of the prompt (the
     // variable part — see buildSystemPrompt's ordering note).
+    // What the booking already settled (migration 132) — tool results don't
+    // survive to the next turn, the conversation keeps them.
+    if (scheduling) {
+      const settled = agendaStatePrompt(await loadAgendaState(db, conversationId))
+      if (settled) systemPrompt = `${systemPrompt}
+
+${settled}`
+    }
     const prospect = await loadProspectContext(db, conversationId)
     if (prospect) systemPrompt = `${systemPrompt}\n\n${prospectPromptLine(prospect)}`
     const baseTools = config.agendaEnabled
@@ -954,9 +962,10 @@ export async function dispatchInboundToAiReply(
     const sentPromptTexts: string[] = []
     const executeTool = async (name: string, callArgs: Record<string, unknown>) => {
       const result = await routeTool(name, callArgs)
-      if (name === 'offer_slots' && typeof callArgs.intro_text === 'string') {
+      if ((name === 'offer_slots' || name === 'find_slots') && typeof callArgs.intro_text === 'string') {
         try {
-          if ((JSON.parse(result) as { sent?: boolean }).sent) sentPromptTexts.push(callArgs.intro_text)
+          const r = JSON.parse(result) as { sent?: boolean; list_sent?: boolean }
+          if (r.sent || r.list_sent) sentPromptTexts.push(callArgs.intro_text)
         } catch {
           // non-JSON result: nothing was sent
         }

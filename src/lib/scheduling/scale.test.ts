@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createScaleClient,
+  groupByProfessional,
   idempotencyKey,
   parseScaleSlotId,
   phoneDigits,
@@ -123,5 +124,21 @@ describe('client', () => {
     expect(h.Authorization).toBe('Bearer secret');
     expect(h['Idempotency-Key']).toBe('nordia-1234');
     expect(JSON.parse(String(s.init.body)).inicio).toBe('2026-10-16T19:30');
+  });
+});
+
+describe('groupByProfessional', () => {
+  const slot = (h: string) => ({ inicio: `2026-10-15T${h}:00`, fim: '' });
+  const data = [
+    { professional: { id: 'i', nome: 'Ítalo' }, slots: ['09:00', '10:00', '13:30', '14:30', '17:00'].map(slot) },
+    { professional: { id: 'c', nome: 'Caio' }, slots: [] },
+  ];
+  it('earliest per professional, nobody without times', () => {
+    expect(groupByProfessional(data, { perProfessional: 2 })).toEqual([
+      { professional_id: 'i', name: 'Ítalo', times: ['09:00', '10:00'] },
+    ]);
+  });
+  it('closest to the asked time', () => {
+    expect(groupByProfessional(data, { perProfessional: 2, nearTime: '14:00' })[0].times).toEqual(['13:30', '14:30']);
   });
 });

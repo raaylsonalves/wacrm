@@ -141,6 +141,40 @@ export function pickSlots(
   return out;
 }
 
+/** Minutes since midnight of "HH:MM" or of a wall-time string. */
+export function minuteOfDay(t: string): number {
+  const hhmm = t.includes('T') ? toMinute(t).slice(11, 16) : t.slice(0, 5);
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+/**
+ * Free times grouped by professional, for the model to answer in text
+ * ("Ítalo: 10h, 10h30 · Caio: 15h"). With `nearTime`, each professional's
+ * times closest to it are kept ("tem às 14h?"); otherwise the earliest.
+ * Professionals with nothing free are left out.
+ */
+export function groupByProfessional(
+  byProfessional: { professional: ScaleProfessional; slots: ScaleSlot[] }[],
+  opts: { perProfessional: number; nearTime?: string | null }
+): { professional_id: string; name: string; times: string[] }[] {
+  const target = opts.nearTime ? minuteOfDay(opts.nearTime) : null;
+  return byProfessional
+    .map(({ professional, slots }) => {
+      let times = slots.map((x) => toMinute(x.inicio).slice(11, 16));
+      if (target !== null) {
+        times = [...times]
+          .sort((a, b) => Math.abs(minuteOfDay(a) - target) - Math.abs(minuteOfDay(b) - target))
+          .slice(0, opts.perProfessional)
+          .sort();
+      } else {
+        times = times.slice(0, opts.perProfessional);
+      }
+      return { professional_id: professional.id, name: professional.nome, times };
+    })
+    .filter((p) => p.times.length > 0);
+}
+
 /** Stable per (conversation, slot): a retried tool call returns the same booking. */
 export function idempotencyKey(conversationId: string, slotId: string): string {
   let h = 5381;
