@@ -1017,6 +1017,12 @@ BEGIN
     RAISE EXCEPTION 'scheduling integrations missing or key readable — migration 130 did not apply';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'ai_configs'
+         AND column_name = 'context_days') THEN
+    RAISE EXCEPTION 'ai_configs.context_days missing — migration 131 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

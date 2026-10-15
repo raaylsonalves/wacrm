@@ -21,6 +21,7 @@ import { cleanHandoffKeywords } from '@/lib/ai/handoff-keywords';
 import { resolveFallbacks, type RawFallbackInput } from '@/lib/ai/fallbacks-input';
 import { parseTranscriptionModel } from '@/lib/ai/transcribe';
 import { parseVoiceMode, parseVoiceName } from '@/lib/ai/voice-reply';
+import { parseContextDays } from '@/lib/ai/context';
 
 const VALID_PROVIDERS: AiProvider[] = [
   'openai',
@@ -137,6 +138,7 @@ export async function PATCH(
     // Every agent has the same options as the default one (agenda tools,
     // a fallback provider) — they used to be default-only.
     if ('agenda_enabled' in body) update.agenda_enabled = body.agenda_enabled === true;
+    if ('context_days' in body) update.context_days = parseContextDays(body.context_days);
     if ('fallbacks' in body) {
       const prior = (existing.fallbacks ?? []) as {
         provider: string;

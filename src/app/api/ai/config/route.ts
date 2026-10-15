@@ -14,6 +14,7 @@ import { embedTexts } from '@/lib/ai/embeddings'
 import { AiError, type AiProvider } from '@/lib/ai/types'
 import { isUndefinedColumnError } from '@/lib/ai/config'
 import { resolveFallbacks, VALID_PROVIDERS, type RawFallbackInput } from '@/lib/ai/fallbacks-input'
+import { parseContextDays } from '@/lib/ai/context'
 
 function bad(message: string) {
   return NextResponse.json({ error: message }, { status: 400 })
@@ -40,7 +41,7 @@ export async function GET() {
     // /api/ai/agents.
     let { data, error } = await supabase
       .from('ai_configs')
-      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled, handoff_keywords, transcription_model, voice_reply_mode, voice_name, cases_enabled`)
+      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled, handoff_keywords, transcription_model, voice_reply_mode, voice_name, cases_enabled, context_days`)
       .eq('account_id', accountId)
       .eq('is_default', true)
       .maybeSingle()
@@ -319,6 +320,7 @@ export async function POST(request: Request) {
       fallbacks: encryptedFallbacks,
       agenda_enabled: agendaEnabled,
     }
+    if ('context_days' in body) shared.context_days = parseContextDays(body.context_days)
     // Only touch the handoff target when the form actually sent the field,
     // so a partial save (e.g. flipping a toggle) doesn't wipe it.
     if (handoffProvided) shared.handoff_agent_id = handoffAgentId

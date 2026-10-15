@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { buildConversationContext } from './context'
+import { buildConversationContext, currentSession } from './context'
 
 /** Minimal fake matching the query chain in buildConversationContext:
  *  from().select().eq().in().order().limit() → { data, error }. */
@@ -141,5 +141,25 @@ describe('buildConversationContext — author labels', () => {
   it('leaves the transcript plain for callers that do not ask', async () => {
     const out = await buildConversationContext(labelledDb(rows, []), 'conv-1')
     expect(out.every((m) => !m.content.startsWith('[enviada'))).toBe(true)
+  })
+})
+
+describe('currentSession', () => {
+  const row = (at: string, content_type = 'text') => ({ created_at: at, content_type })
+  const DAY = 86_400_000
+
+  it('drops what came before a long silence', () => {
+    const rows = [row('2026-09-27T18:00:00Z'), row('2026-10-08T15:00:00Z'), row('2026-10-14T23:53:00Z')]
+    expect(currentSession(rows, 3 * DAY)).toEqual([rows[2]])
+  })
+
+  it('keeps everything inside one session', () => {
+    const rows = [row('2026-10-12T10:00:00Z'), row('2026-10-13T09:00:00Z'), row('2026-10-14T08:00:00Z')]
+    expect(currentSession(rows, 3 * DAY)).toEqual(rows)
+  })
+
+  it('keeps the campaign the customer is answering days later', () => {
+    const rows = [row('2026-10-01T10:00:00Z'), row('2026-10-05T10:00:00Z', 'template'), row('2026-10-12T10:00:00Z')]
+    expect(currentSession(rows, 3 * DAY)).toEqual(rows.slice(1))
   })
 })

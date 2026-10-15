@@ -87,6 +87,8 @@ export function AiConfig({
   const [name, setName] = useState('');
   const [handoffKeywordsText, setHandoffKeywordsText] = useState('');
   const [transcriptionModel, setTranscriptionModel] = useState('');
+  // Auto-reply context window in days (migration 131); '' = whole window.
+  const [contextDays, setContextDays] = useState('');
   const [voiceMode, setVoiceMode] = useState<'off' | 'mirror'>('off');
   const [voiceName, setVoiceName] = useState('');
   const [casesEnabled, setCasesEnabled] = useState(false);
@@ -165,6 +167,7 @@ export function AiConfig({
         setHandoffAgentId(data.handoff_agent_id ?? '');
         setHandoffKeywordsText(((data.handoff_keywords ?? []) as string[]).join('\n'));
         setTranscriptionModel(data.transcription_model ?? '');
+        setContextDays(data.context_days ? String(data.context_days) : '');
         setVoiceMode(data.voice_reply_mode === 'mirror' ? 'mirror' : 'off');
         setVoiceName(data.voice_name ?? '');
         setCasesEnabled(data.cases_enabled === true);
@@ -235,6 +238,7 @@ export function AiConfig({
     handoff_agent_id: handoffAgentId || null,
     handoff_keywords: keywordsToList(handoffKeywordsText),
     transcription_model: transcriptionModel || null,
+    context_days: contextDays ? Number(contextDays) : null,
     voice_reply_mode: voiceMode,
     voice_name: voiceName || null,
     cases_enabled: casesEnabled,
@@ -802,6 +806,25 @@ export function AiConfig({
                 onChange={setHandoffKeywordsText}
                 disabled={disabled || !autoReplyEnabled}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ai-context-days">{t('contextDays')}</Label>
+              <p className="text-xs text-muted-foreground">{t('contextDaysDesc')}</p>
+              <select
+                id="ai-context-days"
+                value={contextDays}
+                onChange={(e) => setContextDays(e.target.value)}
+                disabled={disabled || !autoReplyEnabled}
+                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm disabled:opacity-50"
+              >
+                <option value="">{t('contextDaysAll')}</option>
+                {[3, 7, 30].map((d) => (
+                  <option key={d} value={String(d)}>
+                    {t('contextDaysN', { days: d })}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">

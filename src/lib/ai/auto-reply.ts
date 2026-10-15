@@ -735,6 +735,9 @@ export async function dispatchInboundToAiReply(
     // own role when the conversation changed hands.
     const messages = await buildConversationContext(db, conversationId, undefined, {
       selfAgentId: config.id ?? null,
+      // Per agent (migration 131): a customer back after that many days of
+      // silence starts fresh (currentSession). Null keeps the whole window.
+      sessionGapMs: config.contextDays ? config.contextDays * 86_400_000 : undefined,
     })
     if (messages.length === 0) {
       console.info(`${tag} skipped: no text/interactive messages to build context from`)

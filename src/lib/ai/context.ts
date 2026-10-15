@@ -35,6 +35,37 @@ interface DbMessage {
   transcript: string | null
   ai_generated?: boolean | null
   ai_agent_id?: string | null
+  created_at?: string
+}
+
+/** Agent setting (migration 131): null = whole window, else 1–365 days. */
+export function parseContextDays(v: unknown): number | null {
+  const n = Number(v)
+  return v === null || v === '' || !Number.isFinite(n) || n < 1 ? null : Math.min(365, Math.floor(n))
+}
+
+/**
+ * Pure: keep only the current session — the messages after the last
+ * silence longer than `gapMs`. A customer who comes back a week later
+ * with something new used to drag every old topic into the prompt; seen
+ * live on a reused test number, where a barbershop receptionist saw an
+ * earlier website-support thread and handed a plain "Oi" off. One
+ * exception: a campaign template sent right before the silence stays, so
+ * "can you explain what you sent?" days later still has it.
+ * `rows` are oldest-first.
+ */
+export function currentSession<T extends { created_at?: string; content_type: string }>(
+  rows: T[],
+  gapMs: number,
+): T[] {
+  for (let i = rows.length - 1; i > 0; i--) {
+    const cur = Date.parse(rows[i].created_at ?? '')
+    const prev = Date.parse(rows[i - 1].created_at ?? '')
+    if (Number.isFinite(cur) && Number.isFinite(prev) && cur - prev > gapMs) {
+      return rows[i - 1].content_type === 'template' ? rows.slice(i - 1) : rows.slice(i)
+    }
+  }
+  return rows
 }
 
 /**
@@ -72,12 +103,14 @@ export async function buildConversationContext(
   // When set, business turns not written by this agent are labelled with
   // their author (see AUTHOR_MARK_PREFIX). Draft/summary callers omit it
   // and get the plain transcript, as before.
-  opts: { selfAgentId?: string | null } = {},
+  // `sessionGapMs`: auto-reply only — drop what came before a long silence
+  // (currentSession). Draft/summary keep the whole window.
+  opts: { selfAgentId?: string | null; sessionGapMs?: number } = {},
 ): Promise<ChatMessage[]> {
   const { data, error } = await db
     .from('messages')
     .select(
-      'sender_type, content_type, content_text, interactive_reply_id, transcript, ai_generated, ai_agent_id',
+      'sender_type, content_type, content_text, interactive_reply_id, transcript, ai_generated, ai_agent_id, created_at',
     )
     .eq('conversation_id', conversationId)
     .in('content_type', ['text', 'interactive', 'audio', 'template'])
@@ -86,7 +119,8 @@ export async function buildConversationContext(
 
   if (error) throw error
 
-  const rows = ((data ?? []) as DbMessage[]).reverse()
+  const ordered = ((data ?? []) as DbMessage[]).reverse()
+  const rows = opts.sessionGapMs ? currentSession(ordered, opts.sessionGapMs) : ordered
 
   const labelled = opts.selfAgentId !== undefined
   // Names of the OTHER agents that wrote in this window, one query.
