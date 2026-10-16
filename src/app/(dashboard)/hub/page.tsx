@@ -85,7 +85,7 @@ export default function HubPage() {
   const showRoom = view === 'room' || (view === 'cycle' && cycleRoom);
   useEffect(() => {
     if (!demo) return;
-    const id = setInterval(() => setDemoTick((n) => n + 1), 12_000);
+    const id = setInterval(() => setDemoTick((n) => n + 1), 20_000);
     return () => clearInterval(id);
   }, [demo]);
 
