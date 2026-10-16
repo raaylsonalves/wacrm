@@ -1,5 +1,29 @@
 {
   "Hub": {
+    "viewLabel": "View",
+    "view": {
+      "panel": "Panel",
+      "room": "Room",
+      "cycle": "Rotate"
+    },
+    "room": {
+      "name": {
+        "gestao": "Management",
+        "atendimento": "Service",
+        "comemoracao": "Celebration",
+        "recepcao": "Reception",
+        "negociacao": "Negotiation"
+      },
+      "queue": "{n} in queue",
+      "ai": "{n} replies today",
+      "pose": {
+        "idle": "standing",
+        "desk": "working",
+        "phone": "customer waiting",
+        "celebrate": "celebrating a sale",
+        "away": "away"
+      }
+    },
     "title": "Live",
     "live": "Live",
     "back": "Back to Dashboard",

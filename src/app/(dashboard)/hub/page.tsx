@@ -17,8 +17,17 @@ import { formatDuration, perResponder, type ResponseRow } from '@/lib/analytics/
 import { liveTeam, startOfToday, type LiveMemberView, type TeamLiveRow, type TeamPerformanceRow } from '@/lib/dashboard/manager';
 import { GOAL_METRICS, findGoal, formatMinutes, metricValue, monthPace, progressPct, startOfMonth, type GoalRow, type PerfLike } from '@/lib/dashboard/goals';
 import { buildFeed, rankTeam, type FeedItem, type RankInput } from '@/lib/dashboard/hub';
+import { DEMO_TEAM, type RoomMemberInput } from '@/lib/dashboard/room';
+import { LiveRoom } from '@/components/dashboard/live-room';
 
 const REFRESH_MS = 30_000;
+// "Alternar": panel and room take turns, for a TV nobody touches.
+const CYCLE_MS = 45_000;
+// A win or a deal move this recent puts the person in that room.
+const RECENT_MS = 10 * 60_000;
+const VIEWS = ['panel', 'room', 'cycle'] as const;
+type View = (typeof VIEWS)[number];
+const VIEW_KEY = 'hub-view';
 
 interface HubData {
   team: LiveMemberView[];
@@ -31,6 +40,8 @@ interface HubData {
   ranking: RankInput[];
   goals: { metric: (typeof GOAL_METRICS)[number]; target: number; actual: number }[];
   feed: FeedItem[];
+  room: RoomMemberInput[];
+  queue: number;
 }
 
 /**
@@ -48,6 +59,29 @@ export default function HubPage() {
   const target = responseTimeTargetMinutes || 10;
   const [data, setData] = useState<HubData | null>(null);
   const [now, setNow] = useState(() => new Date());
+  const [view, setView] = useState<View>(() => {
+    try {
+      const v = localStorage.getItem(VIEW_KEY);
+      return (VIEWS as readonly string[]).includes(v ?? '') ? (v as View) : 'panel';
+    } catch {
+      return 'panel';
+    }
+  });
+  const [cycleRoom, setCycleRoom] = useState(false);
+  // /hub?demo=1 fills the room with a made-up team (sales demos, tests).
+  const [demo] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('demo'));
+  const chooseView = (v: View) => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {}
+  };
+  useEffect(() => {
+    if (view !== 'cycle') return;
+    const id = setInterval(() => setCycleRoom((r) => !r), CYCLE_MS);
+    return () => clearInterval(id);
+  }, [view]);
+  const showRoom = view === 'room' || (view === 'cycle' && cycleRoom);
 
   const load = useCallback(async () => {
     if (!accountId) return;
@@ -56,7 +90,7 @@ export default function HubPage() {
     const today = startOfToday(at);
     const range = (from: Date) => ({ p_account_id: accountId, p_from: from.toISOString(), p_to: at.toISOString() });
     try {
-      const [live, attention, responses, perf, month, goalRows, presence, won, appts, leads] = await Promise.all([
+      const [live, attention, responses, perf, month, goalRows, presence, won, appts, leads, recent] = await Promise.all([
         db.rpc('team_live', { p_account_id: accountId, p_since: today.toISOString() }),
         db.rpc('attention_items', { p_account_id: accountId, p_target_minutes: target }),
         fetchAllRows<ResponseRow>((f, to) => db.rpc('service_responses', range(today)).range(f, to)),
@@ -85,6 +119,12 @@ export default function HubPage() {
           .gte('created_at', today.toISOString())
           .order('created_at', { ascending: false })
           .limit(10),
+        db
+          .from('deal_events')
+          .select('actor_user_id, kind, to_value')
+          .in('kind', ['status', 'stage', 'created'])
+          .gte('created_at', new Date(at.getTime() - RECENT_MS).toISOString())
+          .limit(100),
       ]);
       if (live.error || perf.error) throw live.error ?? perf.error;
 
@@ -100,6 +140,26 @@ export default function HubPage() {
 
       setData({
         team: liveTeam(liveRows, responses, target, at),
+        queue: att.filter((a) => a.reason === 'unassigned').length,
+        room: (() => {
+          const ev = (recent.data ?? []) as { actor_user_id: string | null; kind: string; to_value: unknown }[];
+          const won = new Set(ev.filter((e) => e.kind === 'status' && e.to_value === 'won').map((e) => e.actor_user_id));
+          const moved = new Set(ev.filter((e) => e.kind !== 'status').map((e) => e.actor_user_id));
+          const views = new Map(liveTeam(liveRows, responses, target, at).map((v) => [v.userId, v]));
+          return liveRows.map((m) => {
+            const v = views.get(m.user_id);
+            return {
+              userId: m.user_id,
+              name: m.full_name?.trim() || '—',
+              role: m.account_role,
+              presence: (v?.presence ?? 'offline') as RoomMemberInput['presence'],
+              waiting: v?.waiting ?? 0,
+              late: v?.late ?? false,
+              justWon: won.has(m.user_id),
+              negotiating: moved.has(m.user_id),
+            };
+          });
+        })(),
         online: new Map(((presence.data as { user_id: string; online_minutes: number }[]) ?? []).map((r) => [r.user_id, Number(r.online_minutes) || 0])),
         waiting: liveRows.reduce((n, m) => n + Number(m.waiting_count), 0) + att.filter((a) => a.reason === 'unassigned').length,
         conversations: new Set(responses.map((r) => r.conversation_id)).size,
@@ -179,6 +239,20 @@ export default function HubPage() {
           <span className="bg-tone-mint-ink size-2 animate-pulse rounded-full" /> {t('live')}
         </span>
         <span className="flex-1" />
+        <div role="tablist" aria-label={t('viewLabel')} className="border-border flex gap-1 rounded-full border p-1 text-[0.8em]">
+          {VIEWS.map((v) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={view === v}
+              onClick={() => chooseView(v)}
+              className={cn('rounded-full px-3 py-1 font-semibold', view === v ? 'bg-foreground text-background' : 'hover:bg-muted')}
+            >
+              {t(`view.${v}`)}
+            </button>
+          ))}
+        </div>
         <span className="text-muted-foreground text-[0.9em] first-letter:uppercase inline-block">{format(now, "EEEE, d 'de' MMMM", { locale: dateFnsLocale })}</span>
         <span className="text-[1.8em] font-extrabold tabular-nums">{format(now, 'HH:mm')}</span>
         <button
@@ -193,6 +267,10 @@ export default function HubPage() {
 
       {!data ? (
         <div className="bg-muted flex-1 animate-pulse rounded-[28px]" />
+      ) : showRoom ? (
+        <div className="min-h-0 flex-1">
+          <LiveRoom members={demo ? DEMO_TEAM : data.room} queue={demo ? 4 : data.queue} aiReplies={demo ? 37 : data.ai.replies} />
+        </div>
       ) : (
         <>
           {/* KPIs */}

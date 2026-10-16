@@ -507,3 +507,12 @@ html[data-mode="dark"] .chat-wallpaper {
     --bottom-nav: calc(5rem + env(safe-area-inset-bottom));
   }
 }
+
+/* Live room (/hub): a person who just closed a sale jumps. */
+@keyframes hub-jump {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-14%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*='hub-jump'] { animation: none !important; }
+}

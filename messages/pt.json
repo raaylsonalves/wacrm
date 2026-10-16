@@ -1,5 +1,29 @@
 {
   "Hub": {
+    "viewLabel": "Visualização",
+    "view": {
+      "panel": "Painel",
+      "room": "Sala",
+      "cycle": "Alternar"
+    },
+    "room": {
+      "name": {
+        "gestao": "Gestão",
+        "atendimento": "Atendimento",
+        "comemoracao": "Comemoração",
+        "recepcao": "Recepção",
+        "negociacao": "Negociação"
+      },
+      "queue": "{n, plural, one {# na fila} other {# na fila}}",
+      "ai": "{n} respostas hoje",
+      "pose": {
+        "idle": "de pé",
+        "desk": "atendendo",
+        "phone": "com cliente esperando",
+        "celebrate": "comemorando uma venda",
+        "away": "ausente"
+      }
+    },
     "title": "Ao vivo",
     "live": "Ao vivo",
     "back": "Voltar ao Painel",

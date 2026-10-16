@@ -1,5 +1,29 @@
 {
   "Hub": {
+    "viewLabel": "Vista",
+    "view": {
+      "panel": "Panel",
+      "room": "Sala",
+      "cycle": "Alternar"
+    },
+    "room": {
+      "name": {
+        "gestao": "Gestión",
+        "atendimento": "Atención",
+        "comemoracao": "Celebración",
+        "recepcao": "Recepción",
+        "negociacao": "Negociación"
+      },
+      "queue": "{n} en la fila",
+      "ai": "{n} respuestas hoy",
+      "pose": {
+        "idle": "de pie",
+        "desk": "atendiendo",
+        "phone": "con cliente esperando",
+        "celebrate": "celebrando una venta",
+        "away": "ausente"
+      }
+    },
     "title": "En vivo",
     "live": "En vivo",
     "back": "Volver al Panel",
