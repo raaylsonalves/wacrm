@@ -1,4 +1,91 @@
 {
+  "Segments": {
+    "title": "Perfil del negocio",
+    "description": "Ajusta el CRM a tu tipo de negocio: el nombre de los negocios, el embudo predeterminado, lo que aparece primero en el Panel y el orden de los motivos de pérdida. No se quita nada; solo cambia lo predeterminado.",
+    "termLabel": "Los negocios se llaman",
+    "funnelLabel": "Embudo predeterminado",
+    "blocksLabel": "Destacados del Panel",
+    "blockAgenda": "Agenda del día",
+    "blockSales": "Valor vendido",
+    "createPipeline": "Crear embudo de este segmento",
+    "createPipelineHint": "Crea un embudo nuevo con las etapas de arriba. Los embudos actuales se mantienen.",
+    "pipelineCreated": "Embudo creado. Míralo en Negocios.",
+    "pipelineFailed": "No se pudo crear el embudo.",
+    "saveFailed": "No se pudo guardar.",
+    "adminOnly": "Solo los administradores cambian el perfil.",
+    "term": {
+      "deal": "Negocios",
+      "proposal": "Propuestas",
+      "sale": "Ventas",
+      "enrollment": "Matrículas",
+      "treatment": "Tratamientos"
+    },
+    "pipelineName": {
+      "beauty": "Atenciones",
+      "health": "Pacientes",
+      "retail": "Ventas",
+      "services": "Propuestas",
+      "education": "Matrículas",
+      "finance": "Propuestas de crédito",
+      "realestate": "Inmuebles",
+      "other": "Embudo de ventas"
+    },
+    "stages": {
+      "beauty": [
+        "Nuevo contacto",
+        "Agendado",
+        "Atendido",
+        "Regreso"
+      ],
+      "health": [
+        "Nuevo contacto",
+        "Evaluación agendada",
+        "Presupuesto",
+        "En tratamiento",
+        "Concluido"
+      ],
+      "retail": [
+        "Nuevo contacto",
+        "Presupuesto enviado",
+        "Esperando pago",
+        "Vendido"
+      ],
+      "services": [
+        "Nuevo contacto",
+        "Diagnóstico",
+        "Propuesta enviada",
+        "Negociación",
+        "Cerrado"
+      ],
+      "education": [
+        "Interesado",
+        "Clase de prueba",
+        "Matrícula en curso",
+        "Matriculado"
+      ],
+      "finance": [
+        "Nuevo contacto",
+        "Simulación",
+        "Documentación",
+        "Análisis del banco",
+        "Contrato pagado"
+      ],
+      "realestate": [
+        "Nuevo contacto",
+        "Visita agendada",
+        "Propuesta",
+        "Documentación",
+        "Cerrado"
+      ],
+      "other": [
+        "Nuevo contacto",
+        "En conversación",
+        "Propuesta",
+        "Negociación",
+        "Cerrado"
+      ]
+    }
+  },
   "Manager": {
     "origins": {
       "title": "De dónde vinieron los clientes",
@@ -32,6 +119,8 @@
     "loadError": "No se pudo cargar el panel.",
     "retry": "Intentar de nuevo",
     "kpi": {
+      "apptsToday": "Citas hoy",
+      "apptsHint": "aún por atender hoy",
       "waiting": "Esperando respuesta ahora",
       "waitingHint": "Mira quién en \"Necesita atención\"",
       "nobodyWaiting": "Nadie esperando",

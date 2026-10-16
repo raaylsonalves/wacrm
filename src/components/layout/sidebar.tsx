@@ -9,6 +9,7 @@ import { useTotalUnread } from '@/hooks/use-total-unread';
 import { useUnreadNotifications } from '@/hooks/use-unread-notifications';
 import { useOperator } from '@/hooks/use-operator';
 import { useModules } from '@/hooks/use-modules';
+import { useSegment } from '@/hooks/use-segment';
 import { Briefcase, ClipboardList, Target,
   Bell,
   Bot,
@@ -184,7 +185,12 @@ function readXl() {
 }
 
 export function Sidebar({ open = false, onClose }: SidebarProps) {
-  const t = useTranslations('Sidebar');
+  const tSidebar = useTranslations('Sidebar');
+  const tTerm = useTranslations('Segments.term');
+  const { profile: segmentProfile } = useSegment();
+  // "Negócios" follows the segment profile (Propostas, Vendas, …).
+  const t = (key: string, values?: Parameters<typeof tSidebar>[1]) =>
+    key === 'pipelines' && segmentProfile.term !== 'deal' ? tTerm(segmentProfile.term) : tSidebar(key, values);
   const pathname = usePathname();
   // The Canais entry is /settings?tab=whatsapp: it and Settings share a
   // path, so the query decides which of the two is the current page.

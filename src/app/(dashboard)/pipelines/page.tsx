@@ -38,6 +38,7 @@ import { GitBranch, Plus, ChevronDown, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCan } from '@/hooks/use-can';
 import { useAuth } from '@/hooks/use-auth';
+import { useSegment } from '@/hooks/use-segment';
 import { GatedButton } from '@/components/ui/gated-button';
 import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -60,7 +61,10 @@ const DEFAULT_STAGE_COLORS = [
 
 export default function PipelinesPage() {
   const t = useTranslations('Pipelines.page');
-  const defaultStageNames = t.raw('defaultStageNames') as string[];
+  const tSegments = useTranslations('Segments');
+  const { segment } = useSegment();
+  // The first funnel follows the segment profile (migration 135).
+  const defaultStageNames = (segment ? tSegments.raw(`stages.${segment}`) : t.raw('defaultStageNames')) as string[];
   const defaultStages = useMemo(
     () =>
       defaultStageNames.map((name, position) => ({

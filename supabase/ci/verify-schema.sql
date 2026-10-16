@@ -1045,6 +1045,11 @@ BEGIN
     RAISE EXCEPTION 'lead origin / loss reason objects missing — migration 134 did not apply';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'accounts' AND column_name = 'segment') THEN
+    RAISE EXCEPTION 'accounts.segment missing — migration 135 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

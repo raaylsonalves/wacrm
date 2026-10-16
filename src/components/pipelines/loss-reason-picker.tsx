@@ -6,6 +6,7 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { LOSS_REASONS, type LossReason } from '@/lib/leads/origin';
 import { cn } from '@/lib/utils';
+import { useSegment } from '@/hooks/use-segment';
 
 /**
  * Asked when a deal is marked lost (migration 134): one reason, required,
@@ -31,6 +32,7 @@ export function LossReasonPicker({
   );
   const [note, setNote] = useState(initialNote ?? '');
   const [suggesting, setSuggesting] = useState(false);
+  const { profile } = useSegment();
 
   async function suggest() {
     if (!conversationId) return;
@@ -70,7 +72,7 @@ export function LossReasonPicker({
         )}
       </div>
       <div role="radiogroup" aria-label={t('question')} className="flex flex-wrap gap-1.5">
-        {LOSS_REASONS.map((r) => (
+        {profile.lossOrder.map((r) => (
           <button
             key={r}
             type="button"

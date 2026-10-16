@@ -1,4 +1,91 @@
 {
+  "Segments": {
+    "title": "Business profile",
+    "description": "Fits the CRM to your kind of business: what deals are called, the default funnel, what the Dashboard shows first and the order of loss reasons. Nothing is removed; only the defaults change.",
+    "termLabel": "Deals are called",
+    "funnelLabel": "Default funnel",
+    "blocksLabel": "Dashboard highlights",
+    "blockAgenda": "Today's agenda",
+    "blockSales": "Value sold",
+    "createPipeline": "Create this segment's funnel",
+    "createPipelineHint": "Creates a new funnel with the stages above. Your current funnels stay.",
+    "pipelineCreated": "Funnel created. See it in Deals.",
+    "pipelineFailed": "Could not create the funnel.",
+    "saveFailed": "Could not save.",
+    "adminOnly": "Only admins change the profile.",
+    "term": {
+      "deal": "Deals",
+      "proposal": "Proposals",
+      "sale": "Sales",
+      "enrollment": "Enrollments",
+      "treatment": "Treatments"
+    },
+    "pipelineName": {
+      "beauty": "Appointments",
+      "health": "Patients",
+      "retail": "Sales",
+      "services": "Proposals",
+      "education": "Enrollments",
+      "finance": "Credit proposals",
+      "realestate": "Properties",
+      "other": "Sales funnel"
+    },
+    "stages": {
+      "beauty": [
+        "New contact",
+        "Booked",
+        "Served",
+        "Return visit"
+      ],
+      "health": [
+        "New contact",
+        "Assessment booked",
+        "Quote",
+        "In treatment",
+        "Completed"
+      ],
+      "retail": [
+        "New contact",
+        "Quote sent",
+        "Awaiting payment",
+        "Sold"
+      ],
+      "services": [
+        "New contact",
+        "Discovery",
+        "Proposal sent",
+        "Negotiation",
+        "Closed"
+      ],
+      "education": [
+        "Interested",
+        "Trial class",
+        "Enrolling",
+        "Enrolled"
+      ],
+      "finance": [
+        "New contact",
+        "Simulation",
+        "Documents",
+        "Bank review",
+        "Contract paid"
+      ],
+      "realestate": [
+        "New contact",
+        "Visit booked",
+        "Offer",
+        "Documents",
+        "Closed"
+      ],
+      "other": [
+        "New contact",
+        "Talking",
+        "Proposal",
+        "Negotiation",
+        "Closed"
+      ]
+    }
+  },
   "Manager": {
     "origins": {
       "title": "Where customers came from",
@@ -32,6 +119,8 @@
     "loadError": "Could not load the dashboard.",
     "retry": "Try again",
     "kpi": {
+      "apptsToday": "Appointments today",
+      "apptsHint": "still to serve today",
       "waiting": "Waiting for a reply now",
       "waitingHint": "See who in \"Needs attention\"",
       "nobodyWaiting": "Nobody waiting",

@@ -7,6 +7,7 @@ import { RefreshCw } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { fetchAllRows } from '@/lib/supabase/paginate';
 import { useAuth } from '@/hooks/use-auth';
+import { useSegment } from '@/hooks/use-segment';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/currency';
 import { formatDuration, perResponder, type ResponseRow } from '@/lib/analytics/service';
@@ -51,6 +52,8 @@ interface Data {
 export function ManagerOverview() {
   const t = useTranslations('Manager');
   const { accountId, responseTimeTargetMinutes, defaultCurrency } = useAuth();
+  // Segment profile (migration 135): which blocks lead the page.
+  const { profile } = useSegment();
   const target = responseTimeTargetMinutes || 10;
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState(false);
@@ -146,7 +149,11 @@ export function ManagerOverview() {
           hintTone={change !== null && change >= 0 ? 'good' : undefined}
         />
         <Kpi label={t('kpi.aiReplies')} value={String(data.ai.replies)} hint={t('kpi.aiSpeed', { time: formatDuration(data.ai.median) })} />
-        <Kpi label={t('kpi.won')} value={formatCurrency(data.wonToday, defaultCurrency)} hint={t('kpi.wonHint', { deals: data.dealsWonToday, appts: data.appts.length })} />
+        {profile.blocks.sales ? (
+          <Kpi label={t('kpi.won')} value={formatCurrency(data.wonToday, defaultCurrency)} hint={t('kpi.wonHint', { deals: data.dealsWonToday, appts: data.appts.length })} />
+        ) : (
+          <Kpi label={t('kpi.apptsToday')} value={String(data.appts.length)} hint={t('kpi.apptsHint')} />
+        )}
       </div>
 
       <div className="flex flex-wrap items-start gap-4">
@@ -232,6 +239,7 @@ export function ManagerOverview() {
         </section>
       </div>
 
+      {profile.blocks.agenda && (
       <section aria-labelledby="mgr-agenda" className="border-border bg-card flex flex-col gap-2 rounded-[24px] border p-5">
         <div className="flex items-center justify-between gap-2">
           <h2 id="mgr-agenda" className="text-lg font-extrabold">{t('agendaToday')}</h2>
@@ -251,6 +259,7 @@ export function ManagerOverview() {
           ))
         )}
       </section>
+      )}
     </div>
   );
 }

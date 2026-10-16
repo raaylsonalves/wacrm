@@ -26,6 +26,7 @@ import { useTranslations } from "next-intl";
 import { SettingsPanelHead } from "./settings-panel-head";
 import { SaveButton } from "@/components/ui/save-button";
 import { TrackingLinks } from "./tracking-links";
+import { SegmentSettings } from "./segment-settings";
 
 /**
  * Deals settings — account-wide default currency.
@@ -85,6 +86,7 @@ export function DealsSettings() {
         title={t("title")}
         description={t("description")}
       />
+      <SegmentSettings />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-foreground">

@@ -1,4 +1,91 @@
 {
+  "Segments": {
+    "title": "비즈니스 프로필",
+    "description": "CRM을 업종에 맞춥니다: 거래의 이름, 기본 파이프라인, 대시보드에 먼저 보이는 항목, 실패 사유 순서. 기능은 그대로이고 기본값만 바뀝니다.",
+    "termLabel": "거래 명칭",
+    "funnelLabel": "기본 파이프라인",
+    "blocksLabel": "대시보드 강조",
+    "blockAgenda": "오늘 일정",
+    "blockSales": "매출액",
+    "createPipeline": "이 업종의 파이프라인 만들기",
+    "createPipelineHint": "위 단계로 새 파이프라인을 만듭니다. 기존 파이프라인은 유지됩니다.",
+    "pipelineCreated": "파이프라인을 만들었습니다. 거래에서 확인하세요.",
+    "pipelineFailed": "파이프라인을 만들지 못했습니다.",
+    "saveFailed": "저장하지 못했습니다.",
+    "adminOnly": "관리자만 프로필을 바꿀 수 있습니다.",
+    "term": {
+      "deal": "거래",
+      "proposal": "제안",
+      "sale": "판매",
+      "enrollment": "등록",
+      "treatment": "치료"
+    },
+    "pipelineName": {
+      "beauty": "예약 고객",
+      "health": "환자",
+      "retail": "판매",
+      "services": "제안",
+      "education": "등록",
+      "finance": "대출 제안",
+      "realestate": "부동산",
+      "other": "영업 파이프라인"
+    },
+    "stages": {
+      "beauty": [
+        "새 연락처",
+        "예약됨",
+        "방문 완료",
+        "재방문"
+      ],
+      "health": [
+        "새 연락처",
+        "상담 예약",
+        "견적",
+        "치료 중",
+        "완료"
+      ],
+      "retail": [
+        "새 연락처",
+        "견적 발송",
+        "결제 대기",
+        "판매 완료"
+      ],
+      "services": [
+        "새 연락처",
+        "진단",
+        "제안 발송",
+        "협상",
+        "성사"
+      ],
+      "education": [
+        "관심",
+        "체험 수업",
+        "등록 진행",
+        "등록 완료"
+      ],
+      "finance": [
+        "새 연락처",
+        "시뮬레이션",
+        "서류",
+        "은행 심사",
+        "계약 지급"
+      ],
+      "realestate": [
+        "새 연락처",
+        "방문 예약",
+        "제안",
+        "서류",
+        "성사"
+      ],
+      "other": [
+        "새 연락처",
+        "대화 중",
+        "제안",
+        "협상",
+        "성사"
+      ]
+    }
+  },
   "Manager": {
     "origins": {
       "title": "고객 유입 경로",
@@ -32,6 +119,8 @@
     "loadError": "대시보드를 불러오지 못했습니다.",
     "retry": "다시 시도",
     "kpi": {
+      "apptsToday": "오늘 예약",
+      "apptsHint": "오늘 남은 방문",
       "waiting": "지금 답변 대기 중",
       "waitingHint": "\"주의 필요\"에서 확인",
       "nobodyWaiting": "대기 없음",

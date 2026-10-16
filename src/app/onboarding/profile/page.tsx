@@ -175,6 +175,14 @@ export default function OnboardingProfilePage() {
           });
         if (error) throw error;
       }
+      if (clean.segment && accountId) {
+        // Drives the segment profile (migration 135); best effort.
+        const { error: segError } = await createClient()
+          .from('accounts')
+          .update({ segment: clean.segment })
+          .eq('id', accountId);
+        if (segError) console.error('Failed to save segment:', segError);
+      }
       await markDone('profile', { profile: clean });
       router.push('/onboarding');
     } catch (err) {

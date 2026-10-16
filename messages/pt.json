@@ -1,4 +1,91 @@
 {
+  "Segments": {
+    "title": "Perfil do negócio",
+    "description": "Ajusta o CRM ao seu tipo de negócio: o nome dos negócios, o funil padrão, o que aparece primeiro no Painel e a ordem dos motivos de perda. Nada é removido; só muda o padrão.",
+    "termLabel": "Negócios se chamam",
+    "funnelLabel": "Funil padrão",
+    "blocksLabel": "Destaques do Painel",
+    "blockAgenda": "Agenda do dia",
+    "blockSales": "Valor vendido",
+    "createPipeline": "Criar funil deste segmento",
+    "createPipelineHint": "Cria um funil novo com as etapas acima. Os funis atuais continuam.",
+    "pipelineCreated": "Funil criado. Veja em Negócios.",
+    "pipelineFailed": "Não foi possível criar o funil.",
+    "saveFailed": "Não foi possível salvar.",
+    "adminOnly": "Só administradores mudam o perfil.",
+    "term": {
+      "deal": "Negócios",
+      "proposal": "Propostas",
+      "sale": "Vendas",
+      "enrollment": "Matrículas",
+      "treatment": "Tratamentos"
+    },
+    "pipelineName": {
+      "beauty": "Atendimentos",
+      "health": "Pacientes",
+      "retail": "Vendas",
+      "services": "Propostas",
+      "education": "Matrículas",
+      "finance": "Propostas de crédito",
+      "realestate": "Imóveis",
+      "other": "Funil de vendas"
+    },
+    "stages": {
+      "beauty": [
+        "Novo contato",
+        "Agendado",
+        "Atendido",
+        "Retorno"
+      ],
+      "health": [
+        "Novo contato",
+        "Avaliação agendada",
+        "Orçamento",
+        "Em tratamento",
+        "Concluído"
+      ],
+      "retail": [
+        "Novo contato",
+        "Orçamento enviado",
+        "Aguardando pagamento",
+        "Vendido"
+      ],
+      "services": [
+        "Novo contato",
+        "Diagnóstico",
+        "Proposta enviada",
+        "Negociação",
+        "Fechado"
+      ],
+      "education": [
+        "Interessado",
+        "Aula experimental",
+        "Matrícula em andamento",
+        "Matriculado"
+      ],
+      "finance": [
+        "Novo contato",
+        "Simulação",
+        "Documentação",
+        "Análise do banco",
+        "Contrato pago"
+      ],
+      "realestate": [
+        "Novo contato",
+        "Visita agendada",
+        "Proposta",
+        "Documentação",
+        "Fechado"
+      ],
+      "other": [
+        "Novo contato",
+        "Em conversa",
+        "Proposta",
+        "Negociação",
+        "Fechado"
+      ]
+    }
+  },
   "Manager": {
     "origins": {
       "title": "De onde vieram os clientes",
@@ -32,6 +119,8 @@
     "loadError": "Não foi possível carregar o painel.",
     "retry": "Tentar de novo",
     "kpi": {
+      "apptsToday": "Agendamentos hoje",
+      "apptsHint": "ainda por atender hoje",
       "waiting": "Esperando resposta agora",
       "waitingHint": "Veja quem em \"Precisa de atenção\"",
       "nobodyWaiting": "Ninguém esperando",
