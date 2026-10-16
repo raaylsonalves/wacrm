@@ -87,6 +87,56 @@
     }
   },
   "Manager": {
+    "member": {
+      "title": "Person's day",
+      "close": "Close",
+      "today": "Today",
+      "prevDay": "Previous day",
+      "nextDay": "Next day",
+      "online": "Online",
+      "firstSeen": "Came in",
+      "lastSeen": "Last seen",
+      "timeline": "Timeline",
+      "empty": "Nothing recorded this day.",
+      "kind": {
+        "online": "Connected until {end} ({dur}) · {active} active",
+        "away": "Away until {end} ({dur})",
+        "replies": "{n, plural, one {# reply} other {# replies}} this hour",
+        "dealWon": "Won \"{title}\" · {value}",
+        "dealLost": "Lost \"{title}\"",
+        "dealCreated": "Created \"{title}\"",
+        "dealMoved": "Moved \"{title}\" to another stage",
+        "appointment": "Appointment \"{title}\" for {when}",
+        "note": "Note: {text}"
+      }
+    },
+    "goals": {
+      "title": "Goals",
+      "none": "No goals for this person. Set them under \"Goals\" in the Team tab.",
+      "edit": "Goals",
+      "close": "Close",
+      "metricLabel": "What to measure",
+      "who": "Who",
+      "wholeTeam": "Whole team",
+      "teamMonth": "Month goal",
+      "metric": {
+        "won_value": "Value sold",
+        "deals_won": "Deals won",
+        "appointments": "Appointments",
+        "conversations": "Conversations"
+      },
+      "period": {
+        "day": "Per day",
+        "month": "Per month"
+      },
+      "pace": "{pct}% of goal · expected by today: {pace}%",
+      "hint": "Leave blank for no goal. \"Whole team\" adds up everyone's results.",
+      "cancel": "Cancel",
+      "save": "Save goals",
+      "saved": "Goals saved",
+      "saveFailed": "Could not save the goals."
+    },
+    "memberHint": "Click a name to see that person's day.",
     "origins": {
       "title": "Where customers came from",
       "empty": "No new contacts in this period.",
@@ -135,6 +185,7 @@
     "teamNow": "Your team now",
     "seeTeam": "See full performance →",
     "col": {
+      "online": "Online",
       "member": "Person",
       "status": "Status",
       "open": "Open",

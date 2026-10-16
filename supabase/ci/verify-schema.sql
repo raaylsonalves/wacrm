@@ -1050,6 +1050,18 @@ BEGIN
     RAISE EXCEPTION 'accounts.segment missing — migration 135 did not apply';
   END IF;
 
+  IF to_regclass('public.presence_sessions') IS NULL
+     OR to_regclass('public.team_goals') IS NULL
+     OR to_regprocedure('public.team_presence_minutes(uuid,timestamptz,timestamptz)') IS NULL
+     OR to_regprocedure('public.member_timeline(uuid,uuid,timestamptz,timestamptz)') IS NULL THEN
+    RAISE EXCEPTION 'goals / timeline / presence history missing — migration 136 did not apply';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'presence_sessions' AND column_name = 'online_seconds') THEN
+    RAISE EXCEPTION 'presence_sessions.online_seconds missing — migration 137 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

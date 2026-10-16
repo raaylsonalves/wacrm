@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Download } from 'lucide-react';
+import { Download, Target } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { fetchAllRows } from '@/lib/supabase/paginate';
 import { useAuth } from '@/hooks/use-auth';
@@ -17,6 +17,19 @@ import {
   type TeamPerformanceRow,
 } from '@/lib/dashboard/manager';
 import { ManagerOrigins } from './manager-origins';
+import { MemberPanel } from './member-panel';
+import { GoalsEditor } from './goals-editor';
+import {
+  GOAL_METRICS,
+  findGoal,
+  formatMinutes,
+  metricValue,
+  monthPace,
+  progressPct,
+  startOfMonth,
+  type GoalRow,
+  type PerfLike,
+} from '@/lib/dashboard/goals';
 
 const PERIODS = [1, 7, 30] as const;
 type Period = (typeof PERIODS)[number];
@@ -33,6 +46,12 @@ export function ManagerTeam() {
   const [period, setPeriod] = useState<Period>(7);
   const [rows, setRows] = useState<PerformanceView[] | null>(null);
   const [error, setError] = useState(false);
+  // Phase 4 (migration 136): goals, time online, one person's day.
+  const [goals, setGoals] = useState<GoalRow[]>([]);
+  const [online, setOnline] = useState<Map<string, number>>(new Map());
+  const [monthTotals, setMonthTotals] = useState<PerfLike | undefined>();
+  const [openMember, setOpenMember] = useState<{ userId: string; name: string } | null>(null);
+  const [editingGoals, setEditingGoals] = useState(false);
   // Fixed per period choice so the origin report doesn't refetch every render.
   const range = useMemo(() => {
     const now = new Date();
@@ -47,12 +66,22 @@ export function ManagerTeam() {
       const now = new Date();
       const from = period === 1 ? startOfToday(now) : new Date(now.getTime() - period * 86_400_000);
       const args = { p_account_id: accountId, p_from: from.toISOString(), p_to: now.toISOString() };
-      const [perf, live, responses] = await Promise.all([
+      const [perf, live, responses, goalRows, presence, month] = await Promise.all([
         db.rpc('team_performance', args),
         db.rpc('team_live', { p_account_id: accountId, p_since: startOfToday(now).toISOString() }),
         fetchAllRows<ResponseRow>((f, to) => db.rpc('service_responses', args).range(f, to)),
+        db.from('team_goals').select('id, user_id, metric, period, target'),
+        db.rpc('team_presence_minutes', args),
+        db.rpc('team_performance', { p_account_id: accountId, p_from: startOfMonth(now).toISOString(), p_to: now.toISOString() }),
       ]);
       if (perf.error || live.error) throw perf.error ?? live.error;
+      setGoals((goalRows.data as GoalRow[]) ?? []);
+      setOnline(
+        new Map(((presence.data as { user_id: string; online_minutes: number | null }[]) ?? []).map((r) => [r.user_id, Number(r.online_minutes) || 0]))
+      );
+      // Team month totals, for the whole-team goals strip.
+      const sum = (k: keyof PerfLike) => ((month.data as PerfLike[]) ?? []).reduce((s, r) => s + (Number(r[k]) || 0), 0);
+      setMonthTotals({ conversations: sum('conversations'), deals_won: sum('deals_won'), won_value: sum('won_value'), appointments: sum('appointments') });
       setRows(
         teamPerformance(
           (perf.data ?? []) as TeamPerformanceRow[],
@@ -87,8 +116,33 @@ export function ManagerTeam() {
     URL.revokeObjectURL(a.href);
   }
 
+  const pace = monthPace(new Date());
+  const teamGoals = GOAL_METRICS.map((m) => ({ metric: m, target: findGoal(goals, null, m, 'month') })).filter((g) => g.target !== null);
+  const members = (rows ?? []).map((r) => ({ userId: r.userId, name: r.name }));
+
   return (
     <div className="flex flex-col gap-4">
+    {teamGoals.length > 0 && (
+      <section aria-label={t('goals.teamMonth')} className="border-border bg-card grid gap-3 rounded-[24px] border p-5 sm:grid-cols-2 lg:grid-cols-4">
+        {teamGoals.map((g) => {
+          const actual = metricValue(monthTotals, g.metric);
+          const pct = progressPct(actual, g.target) ?? 0;
+          return (
+            <div key={g.metric} className="flex flex-col gap-1.5">
+              <span className="text-muted-foreground text-xs font-bold">{t('goals.teamMonth')} · {t(`goals.metric.${g.metric}`)}</span>
+              <span className="text-xl font-extrabold tabular-nums">
+                {g.metric === 'won_value' ? formatCurrency(actual, defaultCurrency) : actual}
+                <span className="text-muted-foreground text-sm font-semibold"> / {g.metric === 'won_value' ? formatCurrency(g.target!, defaultCurrency) : g.target}</span>
+              </span>
+              <div className="bg-muted h-2 overflow-hidden rounded-full">
+                <div className={cn('h-full rounded-full', pct >= 100 ? 'bg-tone-mint-ink' : pct < pace ? 'bg-tone-salmon-ink' : 'bg-foreground')} style={{ width: `${Math.min(pct, 100)}%` }} />
+              </div>
+              <span className={cn('text-[12px]', pct < pace ? 'text-tone-salmon-ink' : 'text-muted-foreground')}>{t('goals.pace', { pct, pace })}</span>
+            </div>
+          );
+        })}
+      </section>
+    )}
     <section aria-labelledby="mgr-perf" className="border-border bg-card flex flex-col gap-3 rounded-[24px] border p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="mgr-perf" className="text-lg font-extrabold">{t('whoDidWhat')}</h2>
@@ -107,6 +161,9 @@ export function ManagerTeam() {
               {t(`period.${p}`)}
             </button>
           ))}
+          <button type="button" onClick={() => setEditingGoals(true)} className="border-border hover:bg-muted inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold">
+            <Target className="size-3.5" /> {t('goals.edit')}
+          </button>
           <button type="button" onClick={exportCsv} disabled={!rows?.length} className="border-border hover:bg-muted inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold disabled:opacity-50">
             <Download className="size-3.5" /> CSV
           </button>
@@ -123,6 +180,7 @@ export function ManagerTeam() {
             <thead>
               <tr className="text-muted-foreground text-left text-xs">
                 <th className="px-1.5 py-2 font-bold">{t('col.member')}</th>
+                <th className="px-1.5 py-2 text-right font-bold">{t('col.online')}</th>
                 <th className="px-1.5 py-2 text-right font-bold">{t('col.conversations')}</th>
                 <th className="px-1.5 py-2 text-right font-bold">{t('col.typical')}</th>
                 <th className="px-1.5 py-2 text-right font-bold">{t('col.withinTarget')}</th>
@@ -137,7 +195,12 @@ export function ManagerTeam() {
                 const slow = r.medianMinutes !== null && r.medianMinutes > target;
                 return (
                   <tr key={r.userId} className="border-border border-t">
-                    <td className="px-1.5 py-3 font-bold">{r.name}</td>
+                    <td className="px-1.5 py-3 font-bold">
+                      <button type="button" onClick={() => setOpenMember({ userId: r.userId, name: r.name })} className="text-left hover:underline">
+                        {r.name}
+                      </button>
+                    </td>
+                    <td className="px-1.5 py-3 text-right tabular-nums">{formatMinutes(online.get(r.userId))}</td>
                     <td className="px-1.5 py-3 text-right tabular-nums">{r.conversations}</td>
                     <td className={cn('px-1.5 py-3 text-right tabular-nums', slow && 'text-tone-salmon-ink font-extrabold')}>{formatDuration(r.medianMinutes)}</td>
                     <td className="px-1.5 py-3 text-right">
@@ -158,9 +221,11 @@ export function ManagerTeam() {
           </table>
         </div>
       )}
-      <p className="text-muted-foreground text-[13px]">{t('teamNote', { min: target })}</p>
+      <p className="text-muted-foreground text-[13px]">{t('teamNote', { min: target })} {t('memberHint')}</p>
     </section>
     <ManagerOrigins from={range.from} to={range.to} />
+    <MemberPanel member={openMember} goals={goals} onClose={() => setOpenMember(null)} />
+    <GoalsEditor open={editingGoals} members={members} goals={goals} onClose={() => setEditingGoals(false)} onSaved={() => void load()} />
     </div>
   );
 }

@@ -87,6 +87,56 @@
     }
   },
   "Manager": {
+    "member": {
+      "title": "Día de la persona",
+      "close": "Cerrar",
+      "today": "Hoy",
+      "prevDay": "Día anterior",
+      "nextDay": "Día siguiente",
+      "online": "En línea",
+      "firstSeen": "Entró",
+      "lastSeen": "Última vez",
+      "timeline": "Línea de tiempo",
+      "empty": "Nada registrado este día.",
+      "kind": {
+        "online": "Conectado hasta {end} ({dur}) · {active} activo",
+        "away": "Ausente hasta {end} ({dur})",
+        "replies": "{n, plural, one {# respuesta} other {# respuestas}} en esta hora",
+        "dealWon": "Ganó \"{title}\" · {value}",
+        "dealLost": "Perdió \"{title}\"",
+        "dealCreated": "Creó \"{title}\"",
+        "dealMoved": "Movió \"{title}\" de etapa",
+        "appointment": "Cita \"{title}\" para {when}",
+        "note": "Nota: {text}"
+      }
+    },
+    "goals": {
+      "title": "Metas",
+      "none": "Sin metas para esta persona. Defínelas en \"Metas\" en la pestaña Equipo.",
+      "edit": "Metas",
+      "close": "Cerrar",
+      "metricLabel": "Qué medir",
+      "who": "Quién",
+      "wholeTeam": "Todo el equipo",
+      "teamMonth": "Meta del mes",
+      "metric": {
+        "won_value": "Valor vendido",
+        "deals_won": "Negocios ganados",
+        "appointments": "Citas",
+        "conversations": "Conversaciones"
+      },
+      "period": {
+        "day": "Por día",
+        "month": "Por mes"
+      },
+      "pace": "{pct}% de la meta · lo esperado hoy es {pace}%",
+      "hint": "Deja en blanco para no tener meta. \"Todo el equipo\" suma el resultado de todos.",
+      "cancel": "Cancelar",
+      "save": "Guardar metas",
+      "saved": "Metas guardadas",
+      "saveFailed": "No se pudieron guardar las metas."
+    },
+    "memberHint": "Haz clic en un nombre para ver el día de la persona.",
     "origins": {
       "title": "De dónde vinieron los clientes",
       "empty": "Ningún contacto nuevo en el período.",
@@ -135,6 +185,7 @@
     "teamNow": "Tu equipo ahora",
     "seeTeam": "Ver desempeño completo →",
     "col": {
+      "online": "En línea",
       "member": "Persona",
       "status": "Estado",
       "open": "Abiertas",

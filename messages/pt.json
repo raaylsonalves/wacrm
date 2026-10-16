@@ -87,6 +87,56 @@
     }
   },
   "Manager": {
+    "member": {
+      "title": "Dia da pessoa",
+      "close": "Fechar",
+      "today": "Hoje",
+      "prevDay": "Dia anterior",
+      "nextDay": "Próximo dia",
+      "online": "Online",
+      "firstSeen": "Entrou",
+      "lastSeen": "Última vez",
+      "timeline": "Linha do tempo",
+      "empty": "Nada registrado neste dia.",
+      "kind": {
+        "online": "Conectado até {end} ({dur}) · {active} ativo",
+        "away": "Ausente até {end} ({dur})",
+        "replies": "{n, plural, one {# resposta} other {# respostas}} nesta hora",
+        "dealWon": "Ganhou \"{title}\" · {value}",
+        "dealLost": "Perdeu \"{title}\"",
+        "dealCreated": "Criou \"{title}\"",
+        "dealMoved": "Moveu \"{title}\" de etapa",
+        "appointment": "Agendamento \"{title}\" para {when}",
+        "note": "Nota: {text}"
+      }
+    },
+    "goals": {
+      "title": "Metas",
+      "none": "Sem metas para esta pessoa. Defina em \"Metas\" na aba Equipe.",
+      "edit": "Metas",
+      "close": "Fechar",
+      "metricLabel": "O que medir",
+      "who": "Quem",
+      "wholeTeam": "Equipe toda",
+      "teamMonth": "Meta do mês",
+      "metric": {
+        "won_value": "Valor vendido",
+        "deals_won": "Negócios ganhos",
+        "appointments": "Agendamentos",
+        "conversations": "Conversas atendidas"
+      },
+      "period": {
+        "day": "Por dia",
+        "month": "Por mês"
+      },
+      "pace": "{pct}% da meta · o esperado hoje é {pace}%",
+      "hint": "Deixe em branco para não ter meta. \"Equipe toda\" soma o resultado de todos.",
+      "cancel": "Cancelar",
+      "save": "Salvar metas",
+      "saved": "Metas salvas",
+      "saveFailed": "Não foi possível salvar as metas."
+    },
+    "memberHint": "Clique num nome para ver o dia da pessoa.",
     "origins": {
       "title": "De onde vieram os clientes",
       "empty": "Nenhum contato novo no período.",
@@ -135,6 +185,7 @@
     "teamNow": "Sua equipe agora",
     "seeTeam": "Ver desempenho completo →",
     "col": {
+      "online": "Online",
       "member": "Pessoa",
       "status": "Status",
       "open": "Abertas",

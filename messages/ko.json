@@ -87,6 +87,56 @@
     }
   },
   "Manager": {
+    "member": {
+      "title": "담당자의 하루",
+      "close": "닫기",
+      "today": "오늘",
+      "prevDay": "이전 날",
+      "nextDay": "다음 날",
+      "online": "온라인",
+      "firstSeen": "접속",
+      "lastSeen": "마지막 접속",
+      "timeline": "타임라인",
+      "empty": "이 날 기록이 없습니다.",
+      "kind": {
+        "online": "{end}까지 접속 ({dur}) · 활동 {active}",
+        "away": "{end}까지 자리 비움 ({dur})",
+        "replies": "이 시간 답변 {n}건",
+        "dealWon": "\"{title}\" 성사 · {value}",
+        "dealLost": "\"{title}\" 실패",
+        "dealCreated": "\"{title}\" 생성",
+        "dealMoved": "\"{title}\" 단계 이동",
+        "appointment": "\"{title}\" 예약 ({when})",
+        "note": "메모: {text}"
+      }
+    },
+    "goals": {
+      "title": "목표",
+      "none": "이 담당자의 목표가 없습니다. 팀 탭의 \"목표\"에서 설정하세요.",
+      "edit": "목표",
+      "close": "닫기",
+      "metricLabel": "측정 항목",
+      "who": "대상",
+      "wholeTeam": "팀 전체",
+      "teamMonth": "이번 달 목표",
+      "metric": {
+        "won_value": "매출액",
+        "deals_won": "성사된 거래",
+        "appointments": "예약",
+        "conversations": "응대한 대화"
+      },
+      "period": {
+        "day": "일별",
+        "month": "월별"
+      },
+      "pace": "목표의 {pct}% · 오늘까지 예상 {pace}%",
+      "hint": "비워 두면 목표가 없습니다. \"팀 전체\"는 모두의 결과를 합산합니다.",
+      "cancel": "취소",
+      "save": "목표 저장",
+      "saved": "목표를 저장했습니다",
+      "saveFailed": "목표를 저장하지 못했습니다."
+    },
+    "memberHint": "이름을 누르면 그 사람의 하루를 볼 수 있습니다.",
     "origins": {
       "title": "고객 유입 경로",
       "empty": "기간 내 새 연락처가 없습니다.",
@@ -135,6 +185,7 @@
     "teamNow": "지금 팀 현황",
     "seeTeam": "전체 성과 보기 →",
     "col": {
+      "online": "온라인",
       "member": "담당자",
       "status": "상태",
       "open": "진행 중",
