@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
-import { placeTeam, spriteFor, type Placed, type RoomId, type RoomMemberInput } from '@/lib/dashboard/room';
+import { POSED_LOOKS, placeTeam, spriteFor, type Placed, type RoomId, type RoomMemberInput } from '@/lib/dashboard/room';
 
 /**
  * The live room for the TV hub (specs/painel-gestor.md phase 5). Five
@@ -100,7 +100,7 @@ function Person({ p, x, y }: { p: Placed; x: number; y: number }) {
   const t = useTranslations('Hub.room');
   const src = spriteFor(p.look, p.pose);
   // The desk sprite carries its own desk, so it is drawn wider.
-  const height = p.look === 0 && p.pose === 'desk' ? 6.4 : 6.2;
+  const height = POSED_LOOKS.has(p.look) && p.pose === 'desk' ? 6.4 : 6.2;
   return (
     <div
       className="absolute flex -translate-x-1/2 -translate-y-full flex-col items-center"

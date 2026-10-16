@@ -56,9 +56,14 @@ export function placeTeam(members: RoomMemberInput[]): Placed[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Sprite file for a person: only look 0 has the extra poses. */
+/** Looks drawn with every pose (public/hub/char-p<n>-<pose>.webp).
+ *  The others only have their idle sprite (char-p<n>.webp) until their
+ *  pose sheet is generated; add the look here when it is. */
+export const POSED_LOOKS = new Set([0, 1]);
+
+/** Sprite file for a person. */
 export function spriteFor(look: number, pose: Pose): string {
-  if (look === 0) return `/hub/char-p0-${pose}.webp`;
+  if (POSED_LOOKS.has(look)) return `/hub/char-p${look}-${pose}.webp`;
   return `/hub/char-p${look}.webp`;
 }
 

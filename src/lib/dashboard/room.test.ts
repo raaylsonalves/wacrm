@@ -28,6 +28,7 @@ describe('placeTeam', () => {
   it('looks are stable and sprites fall back to idle variants', () => {
     expect(lookFor('abc')).toBe(lookFor('abc'));
     expect(spriteFor(0, 'phone')).toBe('/hub/char-p0-phone.webp');
+    expect(spriteFor(1, 'desk')).toBe('/hub/char-p1-desk.webp');
     expect(spriteFor(3, 'phone')).toBe('/hub/char-p3.webp');
   });
 });
