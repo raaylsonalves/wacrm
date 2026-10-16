@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { lookFor, placeTeam, spriteFor, type RoomMemberInput } from './room';
 
 const m = (over: Partial<RoomMemberInput>): RoomMemberInput => ({
-  userId: 'u', name: 'Ana', role: 'agent', presence: 'online', waiting: 0, late: false, justWon: false, negotiating: false, ...over,
+  userId: 'u',
+  name: 'Ana',
+  role: 'agent',
+  presence: 'online',
+  waiting: 0,
+  late: false,
+  justWon: false,
+  negotiating: false,
+  ...over,
 });
 
 describe('placeTeam', () => {
@@ -27,7 +35,8 @@ describe('placeTeam', () => {
   });
   it('looks are stable and every look has every frame', () => {
     expect(lookFor('abc')).toBe(lookFor('abc'));
-    expect(spriteFor(0, 'phone')).toBe('/hub/char-p0-phone.webp');
+    for (const id of ['a', 'b', 'c', 'zz', 'demo-7'])
+      expect(lookFor(id)).toBeGreaterThanOrEqual(1);
     expect(spriteFor(1, 'desk')).toBe('/hub/char-p1-desk.webp');
     expect(spriteFor(3, 'walk-a')).toBe('/hub/char-p3-walk-a.webp');
   });

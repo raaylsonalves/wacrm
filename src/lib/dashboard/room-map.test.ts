@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { ROOM_DEFS, assignPlaces, blockedTiles, facingOf, findPath, gridToPx, placeTile, type Place } from './room-map';
+import {
+  ROOM_DEFS,
+  assignPlaces,
+  blockedTiles,
+  facingOf,
+  findPath,
+  gridToPx,
+  placeTile,
+  type Place,
+} from './room-map';
 import { ROOMS } from './room';
 
 describe('room maps', () => {
@@ -7,7 +16,8 @@ describe('room maps', () => {
     for (const room of ROOMS) {
       const def = ROOM_DEFS[room];
       const blocked = blockedTiles(def);
-      const inside = ([i, j]: [number, number]) => i >= 0 && j >= 0 && i < def.n && j < def.n;
+      const inside = ([i, j]: [number, number]) =>
+        i >= 0 && j >= 0 && i < def.n && j < def.n;
       for (const s of def.seats) expect(inside(s.tile)).toBe(true);
       for (const s of def.spots) {
         expect(inside(s)).toBe(true);
@@ -30,7 +40,9 @@ describe('room maps', () => {
     const def = ROOM_DEFS.atendimento;
     const path = findPath(def, [1, 2], [1, 4])!;
     const blocked = blockedTiles(def);
-    expect(path.slice(1, -1).every(([i, j]) => !blocked.has(`${i},${j}`))).toBe(true);
+    expect(path.slice(1, -1).every(([i, j]) => !blocked.has(`${i},${j}`))).toBe(
+      true
+    );
     expect(path.length).toBeGreaterThan(3);
   });
 
@@ -50,18 +62,28 @@ describe('room maps', () => {
 
 describe('assignPlaces', () => {
   it('never shares a place and keeps last time’s', () => {
-    const people = ['a', 'b', 'c'].map((id) => ({ id, room: 'atendimento' as const, sits: true }));
+    const people = ['a', 'b', 'c'].map((id) => ({
+      id,
+      room: 'atendimento' as const,
+      sits: true,
+    }));
     const first = assignPlaces(people, new Map());
     const tiles = [...first.values()].map((p) => placeTile(p!).join());
     expect(new Set(tiles).size).toBe(3);
-    const prev = new Map([...first].filter(([id]) => id !== 'a') as [string, Place][]);
+    const prev = new Map(
+      [...first].filter(([id]) => id !== 'a') as [string, Place][]
+    );
     const second = assignPlaces([...people].reverse(), prev);
     expect(second.get('b')).toEqual(first.get('b'));
     expect(second.get('c')).toEqual(first.get('c'));
   });
 
   it('overflows to spots, then to null', () => {
-    const people = Array.from({ length: 6 }, (_, k) => ({ id: `p${k}`, room: 'gestao' as const, sits: true }));
+    const people = Array.from({ length: 6 }, (_, k) => ({
+      id: `p${k}`,
+      room: 'gestao' as const,
+      sits: true,
+    }));
     const out = assignPlaces(people, new Map());
     expect(out.get('p0')).toMatchObject({ kind: 'seat' });
     expect(out.get('p1')).toMatchObject({ kind: 'spot' });

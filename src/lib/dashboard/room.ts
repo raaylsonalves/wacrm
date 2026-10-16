@@ -3,12 +3,18 @@
  * stands and what they are doing, from the same data as the hub.
  * Sprites live in public/hub (generated art, cut from a green sheet).
  */
-export const ROOMS = ['gestao', 'atendimento', 'comemoracao', 'recepcao', 'negociacao'] as const;
+export const ROOMS = [
+  'gestao',
+  'atendimento',
+  'comemoracao',
+  'recepcao',
+  'negociacao',
+] as const;
 export type RoomId = (typeof ROOMS)[number];
 export type Pose = 'idle' | 'desk' | 'phone' | 'celebrate';
 
-/** Character looks, each with every pose (public/hub/char-p<n>-<pose>.webp). */
-export const LOOKS = 7;
+/** Character looks 1..LOOKS, each with every pose (public/hub/char-p<n>-<pose>.webp). */
+export const LOOKS = 6;
 
 export interface RoomMemberInput {
   userId: string;
@@ -21,6 +27,8 @@ export interface RoomMemberInput {
   justWon: boolean;
   /** Created or moved a deal in the last few minutes. */
   negotiating: boolean;
+  /** Fixed character (the demo); otherwise derived from the id. */
+  look?: number;
 }
 
 export interface Placed {
@@ -32,25 +40,48 @@ export interface Placed {
   waiting: number;
   late: boolean;
   away: boolean;
+  /** A customer walking in (the demo), not a team member. */
+  visitor?: boolean;
 }
 
 /** Stable look per person (same person, same character every day). */
 export function lookFor(userId: string): number {
   let h = 0;
-  for (let i = 0; i < userId.length; i++) h = (h * 31 + userId.charCodeAt(i)) >>> 0;
-  return h % LOOKS;
+  for (let i = 0; i < userId.length; i++)
+    h = (h * 31 + userId.charCodeAt(i)) >>> 0;
+  return 1 + (h % LOOKS);
 }
 
 export function placeTeam(members: RoomMemberInput[]): Placed[] {
   return members
     .filter((m) => m.presence !== 'offline')
     .map((m) => {
-      const base = { userId: m.userId, name: m.name, look: lookFor(m.userId), waiting: m.waiting, late: m.late, away: m.presence === 'away' };
-      if (m.justWon) return { ...base, room: 'comemoracao' as const, pose: 'celebrate' as const };
-      if (m.negotiating) return { ...base, room: 'negociacao' as const, pose: 'idle' as const };
-      if (m.presence === 'away') return { ...base, room: 'recepcao' as const, pose: 'idle' as const };
-      if (m.waiting > 0) return { ...base, room: 'atendimento' as const, pose: 'phone' as const };
-      if (m.role === 'owner' || m.role === 'admin') return { ...base, room: 'gestao' as const, pose: 'desk' as const };
+      const base = {
+        userId: m.userId,
+        name: m.name,
+        look: m.look ?? lookFor(m.userId),
+        waiting: m.waiting,
+        late: m.late,
+        away: m.presence === 'away',
+      };
+      if (m.justWon)
+        return {
+          ...base,
+          room: 'comemoracao' as const,
+          pose: 'celebrate' as const,
+        };
+      if (m.negotiating)
+        return { ...base, room: 'negociacao' as const, pose: 'idle' as const };
+      if (m.presence === 'away')
+        return { ...base, room: 'recepcao' as const, pose: 'idle' as const };
+      if (m.waiting > 0)
+        return {
+          ...base,
+          room: 'atendimento' as const,
+          pose: 'phone' as const,
+        };
+      if (m.role === 'owner' || m.role === 'admin')
+        return { ...base, room: 'gestao' as const, pose: 'desk' as const };
       return { ...base, room: 'atendimento' as const, pose: 'desk' as const };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -65,18 +96,102 @@ export function spriteFor(look: number, frame: Frame): string {
 
 /** A made-up team for /hub?demo=1: shows every room and state. */
 export const DEMO_TEAM: RoomMemberInput[] = [
-  { userId: 'demo-0', name: 'Ana Souza', role: 'owner', presence: 'online', waiting: 0, late: false, justWon: false, negotiating: false },
-  { userId: 'demo-1', name: 'Bruno Lima', role: 'agent', presence: 'online', waiting: 2, late: false, justWon: false, negotiating: false },
-  { userId: 'demo-2', name: 'Carla Dias', role: 'agent', presence: 'online', waiting: 0, late: false, justWon: false, negotiating: false },
-  { userId: 'demo-3', name: 'Diego Rocha', role: 'agent', presence: 'online', waiting: 3, late: true, justWon: false, negotiating: false },
-  { userId: 'demo-4', name: 'Elisa Prado', role: 'agent', presence: 'online', waiting: 0, late: false, justWon: true, negotiating: false },
-  { userId: 'demo-5', name: 'Fábio Nunes', role: 'agent', presence: 'online', waiting: 0, late: false, justWon: false, negotiating: true },
-  { userId: 'demo-6', name: 'Gabi Torres', role: 'agent', presence: 'away', waiting: 0, late: false, justWon: false, negotiating: false },
-  { userId: 'demo-7', name: 'Hugo Melo', role: 'agent', presence: 'online', waiting: 0, late: false, justWon: false, negotiating: false },
+  {
+    userId: 'demo-0',
+    name: 'Ana Souza',
+    role: 'owner',
+    presence: 'online',
+    waiting: 0,
+    late: false,
+    justWon: false,
+    negotiating: false,
+  },
+  {
+    userId: 'demo-1',
+    name: 'Bruno Lima',
+    role: 'agent',
+    presence: 'online',
+    waiting: 2,
+    late: false,
+    justWon: false,
+    negotiating: false,
+  },
+  {
+    userId: 'demo-2',
+    name: 'Carla Dias',
+    role: 'agent',
+    presence: 'online',
+    waiting: 0,
+    late: false,
+    justWon: false,
+    negotiating: false,
+  },
+  {
+    userId: 'demo-3',
+    name: 'Diego Rocha',
+    role: 'agent',
+    presence: 'online',
+    waiting: 3,
+    late: true,
+    justWon: false,
+    negotiating: false,
+  },
+  {
+    userId: 'demo-4',
+    name: 'Elisa Prado',
+    role: 'agent',
+    presence: 'online',
+    waiting: 0,
+    late: false,
+    justWon: true,
+    negotiating: false,
+  },
+  {
+    userId: 'demo-5',
+    name: 'Fábio Nunes',
+    role: 'agent',
+    presence: 'online',
+    waiting: 0,
+    late: false,
+    justWon: false,
+    negotiating: true,
+  },
+  {
+    userId: 'demo-6',
+    name: 'Gabi Torres',
+    role: 'agent',
+    presence: 'away',
+    waiting: 0,
+    late: false,
+    justWon: false,
+    negotiating: false,
+  },
+  {
+    userId: 'demo-7',
+    name: 'Hugo Melo',
+    role: 'agent',
+    presence: 'online',
+    waiting: 0,
+    late: false,
+    justWon: false,
+    negotiating: false,
+  },
 ];
 
 /** The demo team with states rotated by `tick`, so people walk around. */
 export function demoTeamAt(tick: number): RoomMemberInput[] {
-  const states = DEMO_TEAM.map(({ role, presence, waiting, late, justWon, negotiating }) => ({ role, presence, waiting, late, justWon, negotiating }));
-  return DEMO_TEAM.map((m, i) => ({ ...m, ...states[(i + tick) % states.length] }));
+  const states = DEMO_TEAM.map(
+    ({ role, presence, waiting, late, justWon, negotiating }) => ({
+      role,
+      presence,
+      waiting,
+      late,
+      justWon,
+      negotiating,
+    })
+  );
+  return DEMO_TEAM.map((m, i) => ({
+    ...m,
+    ...states[(i + tick) % states.length],
+  }));
 }

@@ -52,11 +52,11 @@ const ROOM_ORDER: RoomId[] = [
   'recepcao',
 ];
 const FLOOR_W = 640;
-/** Looks that have the sitting and back-view poses (char-p<n>-sit-*.webp). */
-const FULL_LOOKS = new Set([1, 2, 3, 4, 5, 6]);
 /** Walking speed, in % of the stage width per second. */
-const SPEED = 7;
+const SPEED = 9;
 const GROUND_Z = 900_000;
+/** Where customers walk in from and out to: below the stage, between rooms. */
+const DOOR = { x: 50, y: 106 };
 
 /** Floor px → stage % (both axes in % of the stage's own size). */
 function toStage(room: RoomId, p: Pt): Pt {
@@ -79,14 +79,28 @@ function personZ(room: RoomId, tile: Tile): number {
     ? roomBase(room) + propPlacement(def, under).depth * 10 + 8
     : tileZ(room, tile, 7);
 }
-/** A standing person's height, in stage-width % (cqw). */
+/** A standing person's height, in stage-width % (cqw). Rooms are drawn
+ *  at different scales, so it changes along the way between them. */
 const personHeight = (room: RoomId) =>
   (tileWidth(ROOM_DEFS[room]) * 1.45 * BOX[room].width) / FLOOR_W;
+const DOOR_H =
+  ROOM_ORDER.reduce((sum, r) => sum + personHeight(r), 0) / ROOM_ORDER.length;
+
+/** A customer in the room (the demo). `say` is the text of their bubble. */
+export interface RoomVisitor {
+  id: string;
+  name: string;
+  look: number;
+  room: RoomId | 'out';
+  say?: string;
+}
 
 interface Waypoint {
   x: number;
   y: number;
   z: number;
+  /** Person height here (cqw). */
+  h: number;
 }
 
 interface Walker {
@@ -95,7 +109,41 @@ interface Walker {
   facing: Facing;
   step: number;
   room: RoomId;
-  height: number;
+  leaving?: boolean;
+}
+
+const wp = (room: RoomId, t: Tile): Waypoint => {
+  const s = toStage(room, tileCenter(ROOM_DEFS[room], t));
+  return { x: s.x, y: s.y, z: personZ(room, t), h: personHeight(room) };
+};
+const groundOf = (room: RoomId): Waypoint => ({
+  ...toStage(room, ROOM_DEFS[room].ground),
+  z: GROUND_Z,
+  h: personHeight(room),
+});
+const DOOR_WP: Waypoint = { ...DOOR, z: GROUND_Z, h: DOOR_H };
+
+/** From the door below the stage up into a room. */
+function routeIn(to: { room: RoomId; tile: Tile }): Waypoint[] {
+  const b = ROOM_DEFS[to.room];
+  return [
+    groundOf(to.room),
+    ...(findPath(b, b.entrance, to.tile) ?? [b.entrance, to.tile]).map((t) =>
+      wp(to.room, t)
+    ),
+  ];
+}
+
+/** From a room down the stairs and out through the door. */
+function routeOut(from: { room: RoomId; tile: Tile }): Waypoint[] {
+  const a = ROOM_DEFS[from.room];
+  return [
+    ...(findPath(a, from.tile, a.entrance) ?? [a.entrance])
+      .slice(1)
+      .map((t) => wp(from.room, t)),
+    groundOf(from.room),
+    DOOR_WP,
+  ];
 }
 
 /** Waypoints from one place to another, through stairs and ground if needed. */
@@ -103,10 +151,6 @@ function route(
   from: { room: RoomId; tile: Tile },
   to: { room: RoomId; tile: Tile }
 ): Waypoint[] {
-  const wp = (room: RoomId, t: Tile): Waypoint => {
-    const s = toStage(room, tileCenter(ROOM_DEFS[room], t));
-    return { x: s.x, y: s.y, z: personZ(room, t) };
-  };
   if (from.room === to.room) {
     const path = findPath(ROOM_DEFS[to.room], from.tile, to.tile) ?? [
       from.tile,
@@ -119,9 +163,7 @@ function route(
   const out = (findPath(a, from.tile, a.entrance) ?? [a.entrance])
     .slice(1)
     .map((t) => wp(from.room, t));
-  const ga = toStage(from.room, a.ground);
-  const gb = toStage(to.room, b.ground);
-  out.push({ ...ga, z: GROUND_Z }, { ...gb, z: GROUND_Z });
+  out.push(groundOf(from.room), groundOf(to.room));
   out.push(
     ...(findPath(b, b.entrance, to.tile) ?? [b.entrance, to.tile]).map((t) =>
       wp(to.room, t)
@@ -134,14 +176,31 @@ export function LiveRoom({
   members,
   queue,
   aiReplies,
+  visitors = NO_VISITORS,
+  aiSay,
 }: {
   members: RoomMemberInput[];
   /** Customers waiting with nobody assigned. */
   queue: number;
   aiReplies: number;
+  visitors?: RoomVisitor[];
+  /** What the AI is saying at the reception counter right now. */
+  aiSay?: string;
 }) {
   const t = useTranslations('Hub.room');
-  const placed = useMemo(() => placeTeam(members), [members]);
+  const placed = useMemo(
+    () => [
+      ...placeTeam(members),
+      ...visitors.filter((v) => v.room !== 'out').map(visitorPlaced),
+    ],
+    [members, visitors]
+  );
+  const says = new Map(visitors.map((v) => [v.id, v.say]));
+  // Customers on their way out: drawn until the demo drops them.
+  const leaving = useMemo(
+    () => visitors.filter((v) => v.room === 'out').map(visitorPlaced),
+    [visitors]
+  );
 
   // Seats for those who sit (working at a desk, the boss, a negotiation,
   // a coffee on the sofa); spots for the rest. Sticky between refreshes.
@@ -200,17 +259,24 @@ export function LiveRoom({
       const drop =
         place.kind === 'seat' ? (def.seats[place.index].drop ?? 0.22) : 0;
       const s = toStage(place.room, { x: c.x, y: c.y + tileWidth(def) * drop });
-      const target: Waypoint = { x: s.x, y: s.y, z: personZ(place.room, tile) };
+      const target: Waypoint = {
+        x: s.x,
+        y: s.y,
+        z: personZ(place.room, tile),
+        h: personHeight(place.room),
+      };
       const w = walkers.current.get(p.userId);
-      const height = personHeight(place.room);
       if (!w || reduce) {
+        // Customers walk in through the door; the team is just there.
+        const path =
+          p.visitor && !reduce && !w ? routeIn({ room: place.room, tile }) : [];
+        if (path.length) path[path.length - 1] = target;
         walkers.current.set(p.userId, {
-          pos: target,
-          path: [],
+          pos: path.length ? DOOR_WP : target,
+          path,
           facing: 'se',
           step: 0,
           room: place.room,
-          height,
         });
         continue;
       }
@@ -229,19 +295,35 @@ export function LiveRoom({
       if (w.path.length) w.path[w.path.length - 1] = target;
       else w.path = [target];
       w.room = place.room;
-      w.height = height;
+    }
+    for (const p of leaving) {
+      const w = walkers.current.get(p.userId);
+      if (!w) continue;
+      seen.add(p.userId);
+      if (w.leaving) continue;
+      w.leaving = true;
+      const fromTile = nearestTile(w.room, w.path.length ? w.path[0] : w.pos);
+      w.path = reduce ? [DOOR_WP] : routeOut({ room: w.room, tile: fromTile });
     }
     for (const id of walkers.current.keys())
       if (!seen.has(id)) walkers.current.delete(id);
-  }, [visible, places]);
+  }, [visible, places, leaving]);
 
   // The walk loop: move along the path, pick the frame, write the DOM.
-  const placedById = useRef(new Map<string, { p: Placed; place: Place }>());
+  const placedById = useRef(
+    new Map<string, { p: Placed; place: Place | null }>()
+  );
   useEffect(() => {
-    placedById.current = new Map(
-      visible.map((p) => [p.userId, { p, place: places.get(p.userId)! }])
-    );
-  }, [visible, places]);
+    placedById.current = new Map<
+      string,
+      { p: Placed; place: Place | null }
+    >([
+      ...visible.map(
+        (p) => [p.userId, { p, place: places.get(p.userId)! }] as const
+      ),
+      ...leaving.map((p) => [p.userId, { p, place: null }] as const),
+    ]);
+  }, [visible, places, leaving]);
   useEffect(() => {
     let raf = 0;
     let lastT = performance.now();
@@ -268,6 +350,7 @@ export function LiveRoom({
               x: w.pos.x + (dx / dist) * stepLen,
               y: w.pos.y + ((next.y - w.pos.y) / dist) * stepLen,
               z: Math.max(w.pos.z, next.z),
+              h: w.pos.h + (next.h - w.pos.h) * (stepLen / dist),
             };
             if (dist > 0.05) w.facing = facingOf(dx, dy);
           }
@@ -275,37 +358,33 @@ export function LiveRoom({
           if (!w.path.length) w.pos = { ...w.pos, z: next.z };
         }
         const look = info.p.look;
-        const full = FULL_LOOKS.has(look);
         let frame: string;
         let flip = false;
         let scale = 1;
         if (moving) {
           const alt = Math.floor(w.step / 0.22) % 2 === 0 ? 'a' : 'b';
-          const back = (w.facing === 'nw' || w.facing === 'ne') && full;
+          const back = w.facing === 'nw' || w.facing === 'ne';
           frame = back ? `back-walk-${alt}` : `walk-${alt}`;
           flip = w.facing === 'sw' || w.facing === 'ne';
-        } else if (info.place.kind === 'seat' && full) {
+        } else if (info.place?.kind === 'seat') {
           const seat = ROOM_DEFS[info.place.room].seats[info.place.index];
           frame = seat.pose;
           flip = seat.flip;
           scale = 0.8;
         } else {
-          frame =
-            info.p.pose === 'celebrate'
-              ? 'celebrate'
-              : info.p.pose === 'phone' && !full
-                ? 'phone'
-                : 'idle';
+          frame = info.p.pose === 'celebrate' ? 'celebrate' : 'idle';
         }
         const src = `/hub/char-p${look}-${frame}.webp`;
         if (el.img.getAttribute('src') !== src) el.img.setAttribute('src', src);
-        el.img.style.height = `${w.height * scale}cqw`;
+        el.img.style.height = `${w.pos.h * scale}cqw`;
         el.img.style.transform = flip ? 'scaleX(-1)' : '';
         el.root.style.left = `${w.pos.x}%`;
         el.root.style.top = `${w.pos.y}%`;
         el.root.style.zIndex = String(Math.round(w.pos.z));
+        el.root.style.visibility = 'visible';
         if (el.bubble)
-          el.bubble.style.visibility = moving ? 'hidden' : 'visible';
+          el.bubble.style.visibility =
+            moving && !info.p.visitor ? 'hidden' : 'visible';
       }
       raf = requestAnimationFrame(tick);
     };
@@ -405,7 +484,7 @@ export function LiveRoom({
         })}
 
         {/* Reception: the queue and the AI, over the counter. */}
-        {(queue > 0 || aiReplies > 0) &&
+        {(queue > 0 || aiReplies > 0 || aiSay) &&
           (() => {
             const def = ROOM_DEFS.recepcao;
             // Just above the reception counter.
@@ -425,6 +504,7 @@ export function LiveRoom({
                     {t('queue', { n: queue })}
                   </span>
                 )}
+                {aiSay && <Say text={`🤖 ${aiSay}`} />}
                 {aiReplies > 0 && (
                   <span className="rounded-full bg-white px-[0.8cqw] py-[0.2cqw] text-[0.95cqw] font-bold whitespace-nowrap text-[#1E2A2E] shadow">
                     🤖 {t('ai', { n: aiReplies })}
@@ -434,7 +514,7 @@ export function LiveRoom({
             );
           })()}
 
-        {visible.map((p) => (
+        {[...visible, ...leaving].map((p) => (
           <div
             key={p.userId}
             ref={(root) => {
@@ -445,7 +525,7 @@ export function LiveRoom({
               };
               els.current.set(p.userId, { ...cur, root });
             }}
-            className="absolute flex -translate-x-1/2 -translate-y-full flex-col items-center"
+            className="invisible absolute flex -translate-x-1/2 -translate-y-full flex-col items-center"
           >
             <span
               ref={(bubble) => {
@@ -458,7 +538,13 @@ export function LiveRoom({
               }}
               className="mb-[0.2cqw] h-[1.6cqw]"
             >
-              <Bubble p={p} />
+              {p.visitor ? (
+                says.get(p.userId) ? (
+                  <Say text={says.get(p.userId)!} />
+                ) : null
+              ) : (
+                <Bubble p={p} />
+              )}
             </span>
             {/* eslint-disable-next-line @next/next/no-img-element -- sprite, frame set by the walk loop */}
             <img
@@ -480,13 +566,20 @@ export function LiveRoom({
             <span
               className={cn(
                 'mt-[0.2cqw] max-w-[9cqw] truncate rounded-full px-[0.6cqw] text-[0.85cqw] font-bold shadow',
-                p.late ? 'bg-[#F06A5B] text-white' : 'bg-white text-[#1E2A2E]'
+                p.visitor
+                  ? 'bg-[#25D366] text-white'
+                  : p.late
+                    ? 'bg-[#F06A5B] text-white'
+                    : 'bg-white text-[#1E2A2E]'
               )}
             >
               {p.name.split(' ')[0]}
               <span className="sr-only">
                 {' '}
-                · {t(`pose.${p.away ? 'away' : p.pose}`)}
+                ·{' '}
+                {p.visitor
+                  ? t('customer')
+                  : t(`pose.${p.away ? 'away' : p.pose}`)}
               </span>
             </span>
           </div>
@@ -511,6 +604,31 @@ function nearestTile(room: RoomId, p: Pt): Tile {
       }
     }
   return best;
+}
+
+const NO_VISITORS: RoomVisitor[] = [];
+
+function visitorPlaced(v: RoomVisitor): Placed {
+  return {
+    userId: v.id,
+    name: v.name,
+    room: v.room === 'out' ? 'recepcao' : v.room,
+    pose: 'idle',
+    look: v.look,
+    waiting: 0,
+    late: false,
+    away: false,
+    visitor: true,
+  };
+}
+
+/** A speech bubble: what a customer or the AI is saying. */
+function Say({ text }: { text: string }) {
+  return (
+    <span className="relative block max-w-[16cqw] truncate rounded-[0.8cqw] bg-white px-[0.7cqw] py-[0.25cqw] text-[0.9cqw] font-semibold text-[#1E2A2E] shadow">
+      {text}
+    </span>
+  );
 }
 
 function Bubble({ p }: { p: Placed }) {

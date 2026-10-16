@@ -6,7 +6,38 @@
       "room": "Sala",
       "cycle": "Alternar"
     },
+    "sim": {
+      "badge": "Simulação",
+      "log": "Acontecendo agora",
+      "say": {
+        "install": "Oi, vocês fazem instalação?",
+        "quote": "Quero um orçamento",
+        "hours": "Que horas vocês abrem?",
+        "problem": "Meu pedido chegou com defeito"
+      },
+      "aiSay": {
+        "hello": "Olá! Já te ajudo 😊",
+        "hours": "Abrimos às 8h, até amanhã!",
+        "handoff": "Vou te passar para alguém da equipe"
+      },
+      "event": {
+        "enter": "{name} chegou pelo WhatsApp: “{line}”",
+        "ai": "IA respondeu {name}",
+        "triage": "IA entendeu o pedido de {name} e marcou como lead quente",
+        "handoff": "IA passou {name} para {agent}",
+        "reply": "{agent} respondeu {name}",
+        "deal": "{agent} abriu uma negociação com {name} · {value}",
+        "schedule": "{agent} agendou uma visita com {name}",
+        "won": "{agent} fechou negócio com {name} · {value}",
+        "solved": "IA resolveu a dúvida de {name} sem ajuda",
+        "leave": "{name} encerrou a conversa",
+        "away": "{agent} saiu para uma pausa",
+        "back": "{agent} voltou da pausa",
+        "desk": "{agent} voltou para a mesa"
+      }
+    },
     "room": {
+      "customer": "cliente",
       "name": {
         "gestao": "Gestão",
         "atendimento": "Atendimento",

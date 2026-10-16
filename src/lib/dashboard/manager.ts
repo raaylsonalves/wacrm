@@ -74,7 +74,9 @@ export function liveTeam(
   targetMinutes: number,
   now: Date
 ): LiveMemberView[] {
-  const speed = new Map(perResponder(todayResponses, targetMinutes).map((s) => [s.key, s]));
+  const speed = new Map(
+    perResponder(todayResponses, targetMinutes).map((s) => [s.key, s])
+  );
   return live
     .map((m) => {
       const oldest = minutesSince(m.oldest_wait_at, now);
@@ -88,10 +90,17 @@ export function liveTeam(
         oldestWaitMinutes: oldest,
         repliesToday: Number(m.replies_since),
         medianMinutesToday: median,
-        late: (oldest !== null && oldest > targetMinutes) || (median !== null && median > targetMinutes),
+        late:
+          (oldest !== null && oldest > targetMinutes) ||
+          (median !== null && median > targetMinutes),
       };
     })
-    .sort((a, b) => Number(b.late) - Number(a.late) || b.waiting - a.waiting || b.open - a.open);
+    .sort(
+      (a, b) =>
+        Number(b.late) - Number(a.late) ||
+        b.waiting - a.waiting ||
+        b.open - a.open
+    );
 }
 
 export interface PerformanceView {
@@ -114,7 +123,9 @@ export function teamPerformance(
   responses: ResponseRow[],
   targetMinutes: number
 ): PerformanceView[] {
-  const speed = new Map(perResponder(responses, targetMinutes).map((s) => [s.key, s]));
+  const speed = new Map(
+    perResponder(responses, targetMinutes).map((s) => [s.key, s])
+  );
   const byUser = new Map(live.map((m) => [m.user_id, m]));
   return perf
     .map((p) => {
@@ -133,7 +144,9 @@ export function teamPerformance(
         appointments: Number(p.appointments),
       };
     })
-    .sort((a, b) => b.conversations - a.conversations || b.wonValue - a.wonValue);
+    .sort(
+      (a, b) => b.conversations - a.conversations || b.wonValue - a.wonValue
+    );
 }
 
 /** Percent change, rounded; null when there is nothing to compare with. */

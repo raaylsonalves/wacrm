@@ -14,7 +14,13 @@ export interface RankInput {
 /** Sold value first, then deals, appointments and replies; idle people out. */
 export function rankTeam(rows: RankInput[], limit = 5): RankInput[] {
   return rows
-    .filter((r) => r.won_value > 0 || r.deals_won > 0 || r.appointments > 0 || r.replies > 0)
+    .filter(
+      (r) =>
+        r.won_value > 0 ||
+        r.deals_won > 0 ||
+        r.appointments > 0 ||
+        r.replies > 0
+    )
     .sort(
       (a, b) =>
         b.won_value - a.won_value ||
@@ -36,5 +42,7 @@ export interface FeedItem {
 
 /** Newest first, capped. */
 export function buildFeed(items: FeedItem[], limit = 8): FeedItem[] {
-  return [...items].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, limit);
+  return [...items]
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+    .slice(0, limit);
 }

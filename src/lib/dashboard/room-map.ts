@@ -259,9 +259,27 @@ export const ROOM_DEFS: Record<RoomId, RoomDef> = {
       { sprite: 'plant-small', tiles: [[7, 0]], fit: 0.6 },
     ],
     seats: [
-      { tile: [2, 4], pose: 'sit-relax', flip: false, chair: 'armchair-a', drop: 0.5 },
-      { tile: [4, 2], pose: 'sit-relax', flip: true, chair: 'armchair-b', drop: 0.5 },
-      { tile: [2, 3], pose: 'sit-relax', flip: false, chair: 'armchair-a', drop: 0.5 },
+      {
+        tile: [2, 4],
+        pose: 'sit-relax',
+        flip: false,
+        chair: 'armchair-a',
+        drop: 0.5,
+      },
+      {
+        tile: [4, 2],
+        pose: 'sit-relax',
+        flip: true,
+        chair: 'armchair-b',
+        drop: 0.5,
+      },
+      {
+        tile: [2, 3],
+        pose: 'sit-relax',
+        flip: false,
+        chair: 'armchair-a',
+        drop: 0.5,
+      },
     ],
     spots: [
       [5, 5],

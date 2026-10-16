@@ -6,7 +6,38 @@
       "room": "Room",
       "cycle": "Rotate"
     },
+    "sim": {
+      "badge": "Simulation",
+      "log": "Happening now",
+      "say": {
+        "install": "Hi, do you do installations?",
+        "quote": "I would like a quote",
+        "hours": "What time do you open?",
+        "problem": "My order arrived damaged"
+      },
+      "aiSay": {
+        "hello": "Hi! Happy to help 😊",
+        "hours": "We open at 8, see you!",
+        "handoff": "Let me get someone from the team"
+      },
+      "event": {
+        "enter": "{name} arrived on WhatsApp: “{line}”",
+        "ai": "AI replied to {name}",
+        "triage": "AI understood what {name} needs and marked a hot lead",
+        "handoff": "AI handed {name} to {agent}",
+        "reply": "{agent} replied to {name}",
+        "deal": "{agent} opened a deal with {name} · {value}",
+        "schedule": "{agent} booked a visit with {name}",
+        "won": "{agent} closed a deal with {name} · {value}",
+        "solved": "AI answered {name} on its own",
+        "leave": "{name} ended the conversation",
+        "away": "{agent} took a break",
+        "back": "{agent} is back from a break",
+        "desk": "{agent} went back to the desk"
+      }
+    },
     "room": {
+      "customer": "customer",
       "name": {
         "gestao": "Management",
         "atendimento": "Service",

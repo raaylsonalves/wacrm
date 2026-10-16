@@ -6,7 +6,38 @@
       "room": "사무실",
       "cycle": "번갈아"
     },
+    "sim": {
+      "badge": "시뮬레이션",
+      "log": "지금 일어나는 일",
+      "say": {
+        "install": "안녕하세요, 설치도 해주시나요?",
+        "quote": "견적을 받고 싶어요",
+        "hours": "몇 시에 여나요?",
+        "problem": "주문한 상품이 불량이에요"
+      },
+      "aiSay": {
+        "hello": "안녕하세요! 도와드릴게요 😊",
+        "hours": "8시에 엽니다. 내일 봬요!",
+        "handoff": "팀원에게 연결해 드릴게요"
+      },
+      "event": {
+        "enter": "{name}님이 WhatsApp으로 문의: “{line}”",
+        "ai": "AI가 {name}님에게 답변",
+        "triage": "AI가 {name}님의 요청을 파악하고 유망 리드로 표시",
+        "handoff": "AI가 {name}님을 {agent}에게 연결",
+        "reply": "{agent}이(가) {name}님에게 답변",
+        "deal": "{agent}이(가) {name}님과 협상 시작 · {value}",
+        "schedule": "{agent}이(가) {name}님과 방문 일정 예약",
+        "won": "{agent}이(가) {name}님과 거래 성사 · {value}",
+        "solved": "AI가 {name}님의 질문을 혼자 해결",
+        "leave": "{name}님이 대화를 종료",
+        "away": "{agent}이(가) 휴식 중",
+        "back": "{agent}이(가) 휴식에서 복귀",
+        "desk": "{agent}이(가) 자리로 복귀"
+      }
+    },
     "room": {
+      "customer": "고객",
       "name": {
         "gestao": "관리",
         "atendimento": "응대",
