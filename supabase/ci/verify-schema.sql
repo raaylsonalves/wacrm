@@ -1029,6 +1029,12 @@ BEGIN
     RAISE EXCEPTION 'conversations.ai_agenda_state missing — migration 132 did not apply';
   END IF;
 
+  IF to_regprocedure('public.team_live(uuid,timestamptz)') IS NULL
+     OR to_regprocedure('public.team_performance(uuid,timestamptz,timestamptz)') IS NULL
+     OR to_regprocedure('public.attention_items(uuid,integer)') IS NULL THEN
+    RAISE EXCEPTION 'manager dashboard functions missing — migration 133 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

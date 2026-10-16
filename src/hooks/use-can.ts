@@ -10,6 +10,7 @@ import {
   canSendMessages,
   canTransferOwnership,
   canViewOnly,
+  canViewTeam,
 } from '@/lib/auth/roles';
 
 /**
@@ -26,7 +27,8 @@ export type CanAction =
   | 'delete-account'
   | 'transfer-ownership'
   | 'manage-lgpd'
-  | 'clear-conversation-history';
+  | 'clear-conversation-history'
+  | 'view-team';
 
 /**
  * Inline alternative to `<RequireRole>` for places that need a
@@ -48,6 +50,8 @@ export function useCan(action: CanAction): boolean {
   switch (action) {
     case 'manage-members':
       return canManageMembers(accountRole);
+    case 'view-team':
+      return canViewTeam(accountRole);
     case 'edit-settings':
       return canEditSettings(accountRole);
     case 'send-messages':

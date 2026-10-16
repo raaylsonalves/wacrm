@@ -170,6 +170,9 @@ export async function POST(request: Request) {
         templateMessageParams: template_message_params,
         interactivePayload: interactive_payload,
         replyToMessageId: reply_to_message_id,
+        // Who on the team wrote it — the manager's per-person reports
+        // (specs/painel-gestor.md) and the service report read this.
+        senderUserId: userId,
       })
 
       return NextResponse.json({

@@ -97,6 +97,10 @@ export interface SendMessageParams {
   /** Structured payload for `messageType === 'interactive'`. */
   interactivePayload?: InteractiveMessagePayload | null;
   replyToMessageId?: string | null;
+  /** The team member sending from the Inbox (`messages.sender_id`). Unset
+   *  for automated senders (reminders, prospecting, the public API), so
+   *  per-person reports count only what a person actually wrote. */
+  senderUserId?: string | null;
 }
 
 export interface SendMessageResult {
@@ -215,6 +219,7 @@ export async function sendMessageToConversation(
     templateMessageParams,
     interactivePayload,
     replyToMessageId,
+    senderUserId,
   } = params;
 
   if (!conversationId) {
@@ -606,6 +611,7 @@ export async function sendMessageToConversation(
     .insert({
       conversation_id: conversationId,
       sender_type: 'agent',
+      sender_id: senderUserId ?? null,
       content_type: messageType,
       content_text: persistedText,
       media_url: mediaUrl || null,

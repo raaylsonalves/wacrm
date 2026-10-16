@@ -1,4 +1,72 @@
 {
+  "Manager": {
+    "tabsLabel": "대시보드 섹션",
+    "tabs": {
+      "overview": "개요",
+      "team": "팀",
+      "service": "응대",
+      "queue": "내 대기열"
+    },
+    "loadError": "대시보드를 불러오지 못했습니다.",
+    "retry": "다시 시도",
+    "kpi": {
+      "waiting": "지금 답변 대기 중",
+      "waitingHint": "\"주의 필요\"에서 확인",
+      "nobodyWaiting": "대기 없음",
+      "conversations": "오늘 응대",
+      "noCompare": "지난주 데이터 없음",
+      "vsLastWeek": "지난주 같은 요일 대비 {pct}",
+      "aiReplies": "오늘 AI 답변",
+      "aiSpeed": "일반 응답: {time}",
+      "won": "오늘 매출",
+      "wonHint": "성사 {deals}건 · 오늘 남은 예약 {appts}건"
+    },
+    "teamNow": "지금 팀 현황",
+    "seeTeam": "전체 성과 보기 →",
+    "col": {
+      "member": "담당자",
+      "status": "상태",
+      "open": "진행 중",
+      "waiting": "대기",
+      "speedToday": "오늘 응답",
+      "repliesToday": "오늘 답변",
+      "conversations": "응대한 대화",
+      "replies": "답변",
+      "typical": "첫 응답 (일반)",
+      "withinTarget": "목표 내",
+      "waitingNow": "지금 미응답",
+      "dealsWon": "성사된 거래",
+      "wonValue": "매출액",
+      "appointments": "예약"
+    },
+    "aiAgents": "AI 에이전트",
+    "presence": {
+      "online": "온라인",
+      "away": "자리 비움",
+      "offline": "오프라인",
+      "active": "활성"
+    },
+    "lateNote": "주황색: {min}분 목표 초과 (설정 → 응답 시간).",
+    "attention": "주의 필요",
+    "attentionEmpty": "대기 중인 항목이 없습니다. 모든 고객이 답변을 받았습니다.",
+    "reason": {
+      "unassigned": "담당자 없음 · {wait} 대기",
+      "aiHandoff": "AI가 팀에 넘김 · {wait} 대기",
+      "late": "{name} 님을 {wait} 기다리는 중"
+    },
+    "open": "열기",
+    "agendaToday": "오늘 일정",
+    "openAgenda": "일정 열기 →",
+    "agendaEmpty": "오늘 남은 예약이 없습니다.",
+    "bookedByAi": "AI가 예약",
+    "whoDidWhat": "누가 무엇을 했나",
+    "period": {
+      "1": "오늘",
+      "7": "7일",
+      "30": "30일"
+    },
+    "teamNote": "일반 응답 = 고객이 메시지를 보낸 뒤 담당자가 답하기까지의 보통 시간. 목표: {min}분. \"지금 미응답\" = 고객이 기다리는 그 담당자의 대화."
+  },
   "PlanGate": {
     "availableOn": "{plan} 플랜에서 사용할 수 있습니다.",
     "limitReached": "현재 플랜은 {what} 최대 {count}개까지 포함합니다.",

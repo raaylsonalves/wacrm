@@ -1,4 +1,72 @@
 {
+  "Manager": {
+    "tabsLabel": "Secciones del panel",
+    "tabs": {
+      "overview": "Visión general",
+      "team": "Equipo",
+      "service": "Atención",
+      "queue": "Mi fila"
+    },
+    "loadError": "No se pudo cargar el panel.",
+    "retry": "Intentar de nuevo",
+    "kpi": {
+      "waiting": "Esperando respuesta ahora",
+      "waitingHint": "Mira quién en \"Necesita atención\"",
+      "nobodyWaiting": "Nadie esperando",
+      "conversations": "Atenciones hoy",
+      "noCompare": "Sin datos de la semana pasada",
+      "vsLastWeek": "{pct} vs mismo día de la semana pasada",
+      "aiReplies": "Respuestas de la IA hoy",
+      "aiSpeed": "respuesta típica: {time}",
+      "won": "Vendido hoy",
+      "wonHint": "{deals} negocios ganados · {appts} citas aún hoy"
+    },
+    "teamNow": "Tu equipo ahora",
+    "seeTeam": "Ver desempeño completo →",
+    "col": {
+      "member": "Persona",
+      "status": "Estado",
+      "open": "Abiertas",
+      "waiting": "Esperando",
+      "speedToday": "Respuesta hoy",
+      "repliesToday": "Respuestas hoy",
+      "conversations": "Conversaciones",
+      "replies": "Respuestas",
+      "typical": "1.ª respuesta (típica)",
+      "withinTarget": "Dentro de la meta",
+      "waitingNow": "Sin respuesta ahora",
+      "dealsWon": "Negocios ganados",
+      "wonValue": "Valor vendido",
+      "appointments": "Citas"
+    },
+    "aiAgents": "Agentes de IA",
+    "presence": {
+      "online": "En línea",
+      "away": "Ausente",
+      "offline": "Desconectado",
+      "active": "Activa"
+    },
+    "lateNote": "En naranja: por encima de la meta de {min} min (Configuración → Tiempo de respuesta).",
+    "attention": "Necesita atención",
+    "attentionEmpty": "Nada pendiente. Todos los clientes recibieron respuesta.",
+    "reason": {
+      "unassigned": "Sin responsable · esperando {wait}",
+      "aiHandoff": "La IA lo pasó al equipo · esperando {wait}",
+      "late": "Esperando a {name} hace {wait}"
+    },
+    "open": "Abrir",
+    "agendaToday": "Agenda de hoy",
+    "openAgenda": "Abrir agenda →",
+    "agendaEmpty": "Nada más agendado hoy.",
+    "bookedByAi": "agendado por la IA",
+    "whoDidWhat": "Quién hizo qué",
+    "period": {
+      "1": "Hoy",
+      "7": "7 días",
+      "30": "30 días"
+    },
+    "teamNote": "Respuesta típica = el tiempo habitual entre que el cliente escribe y la persona responde. Meta: {min} min. \"Sin respuesta ahora\" = sus conversaciones donde el cliente espera."
+  },
   "PlanGate": {
     "availableOn": "Disponible en el plan {plan}.",
     "limitReached": "Tu plan incluye hasta {count} {what}.",

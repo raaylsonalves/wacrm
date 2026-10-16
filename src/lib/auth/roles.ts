@@ -66,6 +66,15 @@ export function isAccountRole(value: unknown): value is AccountRole {
 // = one new predicate here + one call site change per consumer.
 // ============================================================
 
+/**
+ * Owner / admin: the manager's view of the team — who is online, what
+ * each person owes and did (specs/painel-gestor.md). An agent sees only
+ * their own queue.
+ */
+export function canViewTeam(role: AccountRole): boolean {
+  return hasMinRole(role, 'admin');
+}
+
 /** Owner / admin: invite, remove, change roles. */
 export function canManageMembers(role: AccountRole): boolean {
   return hasMinRole(role, 'admin');

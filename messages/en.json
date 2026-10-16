@@ -1,4 +1,72 @@
 {
+  "Manager": {
+    "tabsLabel": "Dashboard sections",
+    "tabs": {
+      "overview": "Overview",
+      "team": "Team",
+      "service": "Service",
+      "queue": "My queue"
+    },
+    "loadError": "Could not load the dashboard.",
+    "retry": "Try again",
+    "kpi": {
+      "waiting": "Waiting for a reply now",
+      "waitingHint": "See who in \"Needs attention\"",
+      "nobodyWaiting": "Nobody waiting",
+      "conversations": "Conversations today",
+      "noCompare": "No data from last week",
+      "vsLastWeek": "{pct} vs same day last week",
+      "aiReplies": "AI replies today",
+      "aiSpeed": "typical reply: {time}",
+      "won": "Sold today",
+      "wonHint": "{deals} deals won · {appts} appointments still today"
+    },
+    "teamNow": "Your team now",
+    "seeTeam": "See full performance →",
+    "col": {
+      "member": "Person",
+      "status": "Status",
+      "open": "Open",
+      "waiting": "Waiting",
+      "speedToday": "Reply today",
+      "repliesToday": "Replies today",
+      "conversations": "Conversations",
+      "replies": "Replies",
+      "typical": "First reply (typical)",
+      "withinTarget": "Within target",
+      "waitingNow": "Unanswered now",
+      "dealsWon": "Deals won",
+      "wonValue": "Value sold",
+      "appointments": "Appointments"
+    },
+    "aiAgents": "AI agents",
+    "presence": {
+      "online": "Online",
+      "away": "Away",
+      "offline": "Offline",
+      "active": "Active"
+    },
+    "lateNote": "In orange: over the {min} min target (Settings → Response time).",
+    "attention": "Needs attention",
+    "attentionEmpty": "Nothing pending. Every customer got a reply.",
+    "reason": {
+      "unassigned": "No owner · waiting {wait}",
+      "aiHandoff": "The AI handed it to the team · waiting {wait}",
+      "late": "Waiting on {name} for {wait}"
+    },
+    "open": "Open",
+    "agendaToday": "Today's agenda",
+    "openAgenda": "Open agenda →",
+    "agendaEmpty": "Nothing else booked today.",
+    "bookedByAi": "booked by the AI",
+    "whoDidWhat": "Who did what",
+    "period": {
+      "1": "Today",
+      "7": "7 days",
+      "30": "30 days"
+    },
+    "teamNote": "Typical reply = the usual time between the customer writing and the person replying. Target: {min} min. \"Unanswered now\" = their conversations where the customer is waiting."
+  },
   "PlanGate": {
     "availableOn": "Available on the {plan} plan.",
     "limitReached": "Your plan includes up to {count} {what}.",

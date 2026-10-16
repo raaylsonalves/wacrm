@@ -1,405 +1,87 @@
 "use client"
 
-import { useCallback, useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/hooks/use-auth'
-import { formatCurrency } from '@/lib/currency'
-import {
-  MessageSquare,
-  UserPlus,
-  DollarSign,
-  Send,
-} from 'lucide-react'
-
-import {
-  loadActivity,
-  loadConversationsSeries,
-  loadMetrics,
-  loadPipelineDonut,
-  loadResponseTime,
-} from '@/lib/dashboard/queries'
-import type {
-  ActivityItem,
-  ConversationsSeriesPoint,
-  MetricsBundle,
-  PipelineDonutData,
-  ResponseTimeSummary,
-} from '@/lib/dashboard/types'
-
-import { RefreshCw } from 'lucide-react'
-import { MetricCard } from '@/components/dashboard/metric-card'
-import { SkeletonCard } from '@/components/dashboard/skeleton'
-import { QuickActions } from '@/components/dashboard/quick-actions'
-import { ConversationsChart } from '@/components/dashboard/conversations-chart'
-import { PipelineDonut } from '@/components/dashboard/pipeline-donut'
-import { ResponseTimeChart } from '@/components/dashboard/response-time-chart'
-import { ActivityFeed } from '@/components/dashboard/activity-feed'
-import { PriorityPanel, TodayGreeting, useTodayData } from '@/components/dashboard/today-focus'
-import { cn } from '@/lib/utils'
-import { OpsPanels } from '@/components/dashboard/ops-panels'
-
+import { Suspense } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { APP_LOCALE } from '@/lib/currency'
+import { PriorityPanel, TodayGreeting, useTodayData } from '@/components/dashboard/today-focus'
+import { ManagerOverview } from '@/components/dashboard/manager-overview'
+import { ManagerTeam } from '@/components/dashboard/manager-team'
+import { ServiceReport } from '@/components/analytics/service-report'
+import { useCan } from '@/hooks/use-can'
+import { cn } from '@/lib/utils'
 
-type RangeDays = 7 | 30 | 90
+// Painel in tabs (specs/painel-gestor.md). Each tab answers one question:
+//   overview — what is happening now (owner / admins)
+//   team     — what each person did (owner / admins)
+//   service  — how the business is doing: the service report
+//   queue    — what is mine to do (everyone; an agent's only tab)
+// The old metric cards and charts gave a manager numbers with no action
+// attached and no way to follow the team; they are gone from here.
+const MANAGER_TABS = ['overview', 'team', 'service', 'queue'] as const
+type Tab = (typeof MANAGER_TABS)[number]
 
 export default function DashboardPage() {
-  const t = useTranslations('Dashboard.page')
-  const tActivity = useTranslations('Dashboard.activityFeed')
-  const { defaultCurrency, responseTimeTargetMinutes } = useAuth()
-  const tToday = useTranslations('Today')
-  const today = useTodayData()
-  // Overview (numbers, charts, activity) | Conversations (what to answer).
-  const [tab, setTab] = useState<'overview' | 'conversations'>('overview')
-  const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
-  const [metricsLoading, setMetricsLoading] = useState(true)
-  const [metricsError, setMetricsError] = useState(false)
-
-  const [range, setRange] = useState<RangeDays>(30)
-  // Keep a cache per range so switching tabs doesn't re-fetch what we
-  // already have. Ranges the user hasn't opened yet stay null and
-  // trigger a fetch on first view.
-  const [series, setSeries] = useState<Record<RangeDays, ConversationsSeriesPoint[] | null>>({
-    7: null,
-    30: null,
-    90: null,
-  })
-  const [seriesLoading, setSeriesLoading] = useState(true)
-  const [seriesError, setSeriesError] = useState(false)
-
-  const [pipeline, setPipeline] = useState<PipelineDonutData | null>(null)
-  const [pipelineLoading, setPipelineLoading] = useState(true)
-  const [pipelineError, setPipelineError] = useState(false)
-
-  const [responseTime, setResponseTime] = useState<ResponseTimeSummary | null>(null)
-  const [responseTimeLoading, setResponseTimeLoading] = useState(true)
-  const [responseTimeError, setResponseTimeError] = useState(false)
-
-  const [activity, setActivity] = useState<ActivityItem[] | null>(null)
-  const [activityLoading, setActivityLoading] = useState(true)
-  const [activityError, setActivityError] = useState(false)
-
-  const loadAll = useCallback(() => {
-    const db = createClient()
-
-    // Kick everything off in parallel. Each block has its own
-    // setState + finally so a slow query doesn't hold up faster
-    // sections — each widget shows its own skeleton independently.
-    // Every loader also tracks its own error flag — a failed query used
-    // to leave `loading=false, data=null` indistinguishable from "still
-    // loading" (both render the skeleton forever, per the `loading ||
-    // !data` checks below and in each child component), with no way to
-    // tell the user anything was wrong or let them retry.
-    // Each `.then` also clears its error flag (rather than resetting it
-    // synchronously up front) so a retry that succeeds clears the error
-    // banner without a synchronous setState call inside this
-    // effect-invoked function.
-    void loadMetrics(db)
-      .then((m) => {
-        setMetrics(m)
-        setMetricsError(false)
-      })
-      .catch((err) => {
-        console.error('[dashboard] metrics failed:', err)
-        setMetricsError(true)
-      })
-      .finally(() => setMetricsLoading(false))
-
-    void loadConversationsSeries(db, 30)
-      .then((s) => {
-        setSeries((prev) => ({ ...prev, 30: s }))
-        setSeriesError(false)
-      })
-      .catch((err) => {
-        console.error('[dashboard] series failed:', err)
-        setSeriesError(true)
-      })
-      .finally(() => setSeriesLoading(false))
-
-    void loadPipelineDonut(db, defaultCurrency)
-      .then((p) => {
-        setPipeline(p)
-        setPipelineError(false)
-      })
-      .catch((err) => {
-        console.error('[dashboard] pipeline failed:', err)
-        setPipelineError(true)
-      })
-      .finally(() => setPipelineLoading(false))
-
-    void loadResponseTime(db)
-      .then((r) => {
-        setResponseTime(r)
-        setResponseTimeError(false)
-      })
-      .catch((err) => {
-        console.error('[dashboard] response time failed:', err)
-        setResponseTimeError(true)
-      })
-      .finally(() => setResponseTimeLoading(false))
-
-    // Fetch up to 50 so the biggest page-size option in the feed
-    // (50 rows) is already in memory — switching sizes then becomes
-    // a pure client-side slice with no extra round trip.
-    void loadActivity(db, 50, tActivity)
-      .then((a) => {
-        setActivity(a)
-        setActivityError(false)
-      })
-      .catch((err) => {
-        console.error('[dashboard] activity failed:', err)
-        setActivityError(true)
-      })
-      .finally(() => setActivityLoading(false))
-  }, [tActivity, defaultCurrency])
-
-  useEffect(() => {
-    loadAll()
-  }, [loadAll])
-
-  // Keep the dashboard from going stale on a tab left open: re-fetch
-  // every 2 minutes, and immediately when the user tabs back in after
-  // being away. `loadAll` doesn't flip the `xLoading` flags back to
-  // true on a re-run (they're only ever set once, in the initial
-  // `useState`), so this swaps in fresh numbers without flashing the
-  // skeletons — a no-op re-fetch (nothing changed) is invisible.
-  useEffect(() => {
-    const interval = setInterval(loadAll, 2 * 60 * 1000)
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') loadAll()
-    }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => {
-      clearInterval(interval)
-      document.removeEventListener('visibilitychange', onVisible)
-    }
-  }, [loadAll])
-
-  // Range switch handler — kept in an event callback (not an effect)
-  // so the setState calls stay out of the react-hooks/set-state-in-effect
-  // rule's way. The cached bucket check means switching back to a
-  // previously-viewed range is instant and doesn't re-fetch.
-  const handleRangeChange = useCallback(
-    (r: RangeDays) => {
-      setRange(r)
-      if (series[r] !== null) return
-      setSeriesLoading(true)
-      setSeriesError(false)
-      const db = createClient()
-      loadConversationsSeries(db, r)
-        .then((s) => setSeries((prev) => ({ ...prev, [r]: s })))
-        .catch((err) => {
-          console.error('[dashboard] series failed:', err)
-          setSeriesError(true)
-        })
-        .finally(() => setSeriesLoading(false))
-    },
-    [series],
+  return (
+    <Suspense fallback={null}>
+      <Dashboard />
+    </Suspense>
   )
+}
+
+function Dashboard() {
+  const t = useTranslations('Manager')
+  const today = useTodayData()
+  const canViewTeam = useCan('view-team')
+  const router = useRouter()
+  const pathname = usePathname()
+  const params = useSearchParams()
+
+  const tabs: readonly Tab[] = canViewTeam ? MANAGER_TABS : ['queue']
+  const asked = params.get('tab') as Tab | null
+  const tab: Tab = asked && tabs.includes(asked) ? asked : tabs[0]
+
+  const select = (next: Tab) => {
+    const q = new URLSearchParams(params.toString())
+    q.set('tab', next)
+    router.replace(`${pathname}?${q.toString()}`, { scroll: false })
+  }
 
   return (
     <div className="space-y-5">
       <TodayGreeting data={today} />
 
-      <div role="tablist" className="flex flex-wrap gap-1.5">
-        {(['overview', 'conversations'] as const).map((key) => {
-          const count = key === 'conversations' ? today.priority.length : 0
-          return (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={tab === key}
-              onClick={() => setTab(key)}
-              className={cn(
-                'flex min-h-10 items-center gap-2 rounded-full border px-4 text-[13px] font-semibold transition-colors duration-150 ease-out',
-                tab === key
-                  ? 'bg-foreground text-background border-transparent'
-                  : 'border-border text-foreground hover:bg-card',
-              )}
-            >
-              {tToday(`tabs.${key}`)}
-              {count > 0 && (
-                <span className="bg-tone-salmon text-tone-on rounded-full px-1.5 text-[11px] leading-5 font-bold tabular-nums">
-                  {count}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      {tab === 'conversations' ? (
-        <PriorityPanel data={today} />
-      ) : (
-      <>
-
-      {/* Metric cards */}
-      <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {!metricsLoading && metricsError ? (
-          <div className="col-span-2 lg:col-span-4">
-            <WidgetError onRetry={loadAll} t={t} />
-          </div>
-        ) : metricsLoading || !metrics ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-        ) : (
-          <>
-            <MetricCard
-              title={t('activeConversations')}
-              value={metrics.activeConversations.current.toLocaleString(APP_LOCALE)}
-              icon={MessageSquare}
-              tone="lilac"
-              delta={{
-                sign: metrics.activeConversations.previous,
-                label: deltaLabel(
-                  metrics.activeConversations.previous, 
-                  t('newTodayVsYesterday'), 
-                  t('noChange', { suffix: t('newTodayVsYesterday') })
-                ),
-              }}
-            />
-            <MetricCard
-              title={t('newContactsToday')}
-              value={metrics.newContactsToday.current.toLocaleString(APP_LOCALE)}
-              icon={UserPlus}
-              tone="mint"
-              delta={{
-                sign:
-                  metrics.newContactsToday.current - metrics.newContactsToday.previous,
-                label: deltaLabel(
-                  metrics.newContactsToday.current - metrics.newContactsToday.previous,
-                  t('vsYesterday'),
-                  t('noChange', { suffix: t('vsYesterday') })
-                ),
-              }}
-            />
-            <MetricCard
-              title={t('openDealsValue')}
-              value={
-                Object.keys(metrics.openDealsValueByCurrency).length === 0
-                  ? formatCurrency(0, defaultCurrency)
-                  : Object.entries(metrics.openDealsValueByCurrency)
-                      .map(([cur, total]) => formatCurrency(total, cur))
-                      .join(' + ')
-              }
-              icon={DollarSign}
-              tone="salmon"
-              subtitle={t('openDeals', { count: metrics.openDealsCount })}
-            />
-            <MetricCard
-              title={t('messagesSentToday')}
-              value={metrics.messagesSentToday.current.toLocaleString(APP_LOCALE)}
-              icon={Send}
-              tone="blue"
-              delta={{
-                sign:
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                label: deltaLabel(
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                  t('vsYesterday'),
-                  t('noChange', { suffix: t('vsYesterday') })
-                ),
-              }}
-            />
-          </>
-        )}
-      </div>
-
-      {/* Quick actions */}
-      <QuickActions />
-
-      {/* Charts row */}
-      {/* items-stretch (the grid default) stretches the two columns to
-          match the tallest sibling; adding h-full on each wrapper and
-          on the inner panels makes both cards actually fill that
-          stretched height so their rounded borders line up. Without
-          this, the pipeline card rendered at its natural (shorter)
-          height while the line chart drove the row height. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <div className="h-full lg:col-span-3">
-          {!seriesLoading && seriesError ? (
-            <WidgetError onRetry={loadAll} t={t} />
-          ) : (
-            <ConversationsChart
-              series={series}
-              loading={seriesLoading}
-              range={range}
-              onRangeChange={handleRangeChange}
-            />
-          )}
+      {tabs.length > 1 && (
+        <div role="tablist" aria-label={t('tabsLabel')} className="border-border bg-card flex flex-wrap gap-1 self-start rounded-full border p-1">
+          {tabs.map((key) => {
+            const count = key === 'queue' ? today.priority.length : 0
+            return (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => select(key)}
+                className={cn(
+                  'flex min-h-10 items-center gap-2 rounded-full px-4 text-[13.5px] font-semibold transition-colors duration-150 ease-out',
+                  tab === key ? 'bg-foreground text-background' : 'text-foreground hover:bg-muted'
+                )}
+              >
+                {t(`tabs.${key}`)}
+                {count > 0 && (
+                  <span className="bg-tone-salmon text-tone-on rounded-full px-1.5 text-[11px] leading-5 font-bold tabular-nums">
+                    {count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
-        <div className="h-full lg:col-span-2">
-          {!pipelineLoading && pipelineError ? (
-            <WidgetError onRetry={loadAll} t={t} />
-          ) : (
-            <PipelineDonut
-              data={pipeline}
-              loading={pipelineLoading}
-              currency={defaultCurrency}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Response time */}
-      {!responseTimeLoading && responseTimeError ? (
-        <WidgetError onRetry={loadAll} t={t} />
-      ) : (
-        <ResponseTimeChart
-          data={responseTime}
-          loading={responseTimeLoading}
-          thresholdMinutes={responseTimeTargetMinutes}
-        />
       )}
 
-      {/* Team, AI vs team, cases waiting, when customers write. */}
-      <OpsPanels />
-
-      {/* Activity feed */}
-      {!activityLoading && activityError ? (
-        <WidgetError onRetry={loadAll} t={t} />
-      ) : (
-        <ActivityFeed items={activity} loading={activityLoading} />
-      )}
-      </>
-      )}
-    </div>
-  )
-}
-
-// ------------------------------------------------------------
-
-function deltaLabel(delta: number, suffix: string, noChangeLabel: string): string {
-  if (delta === 0) return noChangeLabel
-  const sign = delta > 0 ? '+' : ''
-  return `${sign}${delta.toLocaleString(APP_LOCALE)} ${suffix}`
-}
-
-/**
- * A failed widget query used to be indistinguishable from "still
- * loading" — both left the child rendering its own skeleton forever
- * (`loading || !data`), with no signal that anything was actually
- * wrong and no way to retry short of a full page reload. Swapped in
- * per-widget when its loader's promise rejects.
- */
-function WidgetError({
-  onRetry,
-  t,
-}: {
-  onRetry: () => void
-  t: (key: string) => string
-}) {
-  return (
-    <div className="flex h-full min-h-[140px] flex-col items-center justify-center gap-2 rounded-[20px] border border-dashed border-border bg-card/40 p-6 text-center">
-      <p className="text-sm text-muted-foreground">{t('loadFailed')}</p>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
-      >
-        <RefreshCw className="h-3.5 w-3.5" />
-        {t('retry')}
-      </button>
+      {tab === 'overview' && <ManagerOverview />}
+      {tab === 'team' && <ManagerTeam />}
+      {tab === 'service' && <ServiceReport />}
+      {tab === 'queue' && <PriorityPanel data={today} />}
     </div>
   )
 }
