@@ -17,7 +17,7 @@ import { formatDuration, perResponder, type ResponseRow } from '@/lib/analytics/
 import { liveTeam, startOfToday, type LiveMemberView, type TeamLiveRow, type TeamPerformanceRow } from '@/lib/dashboard/manager';
 import { GOAL_METRICS, findGoal, formatMinutes, metricValue, monthPace, progressPct, startOfMonth, type GoalRow, type PerfLike } from '@/lib/dashboard/goals';
 import { buildFeed, rankTeam, type FeedItem, type RankInput } from '@/lib/dashboard/hub';
-import { DEMO_TEAM, type RoomMemberInput } from '@/lib/dashboard/room';
+import { demoTeamAt, type RoomMemberInput } from '@/lib/dashboard/room';
 import { LiveRoom } from '@/components/dashboard/live-room';
 
 const REFRESH_MS = 30_000;
@@ -68,6 +68,7 @@ export default function HubPage() {
     }
   });
   const [cycleRoom, setCycleRoom] = useState(false);
+  const [demoTick, setDemoTick] = useState(0);
   // /hub?demo=1 fills the room with a made-up team (sales demos, tests).
   const [demo] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('demo'));
   const chooseView = (v: View) => {
@@ -82,6 +83,11 @@ export default function HubPage() {
     return () => clearInterval(id);
   }, [view]);
   const showRoom = view === 'room' || (view === 'cycle' && cycleRoom);
+  useEffect(() => {
+    if (!demo) return;
+    const id = setInterval(() => setDemoTick((n) => n + 1), 12_000);
+    return () => clearInterval(id);
+  }, [demo]);
 
   const load = useCallback(async () => {
     if (!accountId) return;
@@ -269,7 +275,7 @@ export default function HubPage() {
         <div className="bg-muted flex-1 animate-pulse rounded-[28px]" />
       ) : showRoom ? (
         <div className="min-h-0 flex-1">
-          <LiveRoom members={demo ? DEMO_TEAM : data.room} queue={demo ? 4 : data.queue} aiReplies={demo ? 37 : data.ai.replies} />
+          <LiveRoom members={demo ? demoTeamAt(demoTick) : data.room} queue={demo ? 4 : data.queue} aiReplies={demo ? 37 : data.ai.replies} />
         </div>
       ) : (
         <>

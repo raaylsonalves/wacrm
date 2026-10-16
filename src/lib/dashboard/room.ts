@@ -7,7 +7,7 @@ export const ROOMS = ['gestao', 'atendimento', 'comemoracao', 'recepcao', 'negoc
 export type RoomId = (typeof ROOMS)[number];
 export type Pose = 'idle' | 'desk' | 'phone' | 'celebrate';
 
-/** p0 has every pose; p1–p6 are look variants with only the idle pose. */
+/** Character looks, each with every pose (public/hub/char-p<n>-<pose>.webp). */
 export const LOOKS = 7;
 
 export interface RoomMemberInput {
@@ -56,15 +56,11 @@ export function placeTeam(members: RoomMemberInput[]): Placed[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Looks drawn with every pose (public/hub/char-p<n>-<pose>.webp).
- *  The others only have their idle sprite (char-p<n>.webp) until their
- *  pose sheet is generated; add the look here when it is. */
-export const POSED_LOOKS = new Set([0, 1]);
+export type Frame = Pose | 'walk-a' | 'walk-b';
 
-/** Sprite file for a person. */
-export function spriteFor(look: number, pose: Pose): string {
-  if (POSED_LOOKS.has(look)) return `/hub/char-p${look}-${pose}.webp`;
-  return `/hub/char-p${look}.webp`;
+/** Sprite file for a look in a pose or walk frame. */
+export function spriteFor(look: number, frame: Frame): string {
+  return `/hub/char-p${look}-${frame}.webp`;
 }
 
 /** A made-up team for /hub?demo=1: shows every room and state. */
@@ -78,3 +74,9 @@ export const DEMO_TEAM: RoomMemberInput[] = [
   { userId: 'demo-6', name: 'Gabi Torres', role: 'agent', presence: 'away', waiting: 0, late: false, justWon: false, negotiating: false },
   { userId: 'demo-7', name: 'Hugo Melo', role: 'agent', presence: 'online', waiting: 0, late: false, justWon: false, negotiating: false },
 ];
+
+/** The demo team with states rotated by `tick`, so people walk around. */
+export function demoTeamAt(tick: number): RoomMemberInput[] {
+  const states = DEMO_TEAM.map(({ role, presence, waiting, late, justWon, negotiating }) => ({ role, presence, waiting, late, justWon, negotiating }));
+  return DEMO_TEAM.map((m, i) => ({ ...m, ...states[(i + tick) % states.length] }));
+}

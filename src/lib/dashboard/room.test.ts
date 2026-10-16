@@ -25,10 +25,10 @@ describe('placeTeam', () => {
       ['F', 'atendimento', 'desk'],
     ]);
   });
-  it('looks are stable and sprites fall back to idle variants', () => {
+  it('looks are stable and every look has every frame', () => {
     expect(lookFor('abc')).toBe(lookFor('abc'));
     expect(spriteFor(0, 'phone')).toBe('/hub/char-p0-phone.webp');
     expect(spriteFor(1, 'desk')).toBe('/hub/char-p1-desk.webp');
-    expect(spriteFor(3, 'phone')).toBe('/hub/char-p3.webp');
+    expect(spriteFor(3, 'walk-a')).toBe('/hub/char-p3-walk-a.webp');
   });
 });
