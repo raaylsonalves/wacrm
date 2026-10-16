@@ -9,6 +9,8 @@ import { ManagerTeam } from '@/components/dashboard/manager-team'
 import { ServiceReport } from '@/components/analytics/service-report'
 import { useCan } from '@/hooks/use-can'
 import { cn } from '@/lib/utils'
+import Link from 'next/link'
+import { Tv } from 'lucide-react'
 
 // Painel in tabs (specs/painel-gestor.md). Each tab answers one question:
 //   overview — what is happening now (owner / admins)
@@ -30,6 +32,7 @@ export default function DashboardPage() {
 
 function Dashboard() {
   const t = useTranslations('Manager')
+  const tHub = useTranslations('Hub')
   const today = useTodayData()
   const canViewTeam = useCan('view-team')
   const router = useRouter()
@@ -51,6 +54,7 @@ function Dashboard() {
       <TodayGreeting data={today} />
 
       {tabs.length > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
         <div role="tablist" aria-label={t('tabsLabel')} className="border-border bg-card flex flex-wrap gap-1 self-start rounded-full border p-1">
           {tabs.map((key) => {
             const count = key === 'queue' ? today.priority.length : 0
@@ -75,6 +79,14 @@ function Dashboard() {
               </button>
             )
           })}
+        </div>
+        <Link
+          href="/hub"
+          target="_blank"
+          className="border-border hover:bg-muted inline-flex min-h-10 items-center gap-2 rounded-full border px-4 text-[13.5px] font-semibold"
+        >
+          <Tv className="size-4" /> {tHub('open')}
+        </Link>
         </div>
       )}
 

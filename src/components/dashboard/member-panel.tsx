@@ -164,7 +164,7 @@ function MemberBody({
           <button type="button" onClick={() => setDayOffset((d) => d - 1)} aria-label={t('prevDay')} className="hover:bg-muted flex size-9 items-center justify-center rounded-full border">
             <ChevronLeft className="size-4" />
           </button>
-          <span className="flex-1 text-center text-sm font-bold capitalize">{dayLabel}</span>
+          <span className="flex-1 text-center text-sm font-bold first-letter:uppercase">{dayLabel}</span>
           <button type="button" disabled={dayOffset === 0} onClick={() => setDayOffset((d) => Math.min(0, d + 1))} aria-label={t('nextDay')} className="hover:bg-muted flex size-9 items-center justify-center rounded-full border disabled:opacity-40">
             <ChevronRight className="size-4" />
           </button>

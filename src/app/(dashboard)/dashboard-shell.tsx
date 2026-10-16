@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { Sidebar } from '@/components/layout/sidebar';
@@ -28,6 +28,9 @@ import { QueryProvider } from '@/lib/query/provider';
 function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const { user, loading, accountId } = useAuth();
   const router = useRouter();
+  // The TV hub (/hub) runs full screen: no menus, and no presence
+  // heartbeat, so a wall screen never counts as a person online.
+  const bare = usePathname()?.startsWith('/hub') ?? false;
 
   // Sidebar drawer state — only used on mobile. On lg+ the sidebar is
   // always visible and this stays at `false` (ignored by the component).
@@ -95,7 +98,13 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   return (
     <>
       <SplashScreen ready={!loading && gateOpen} />
-      {loading || !user || !gateOpen ? null : (
+      {loading || !user || !gateOpen ? null : bare ? (
+        <div className="bg-background h-screen overflow-hidden">
+          <BrandColorEffect />
+          <AccountTabBranding />
+          <ModuleGuard>{children}</ModuleGuard>
+        </div>
+      ) : (
         <div className="bg-background flex h-screen overflow-hidden lg:gap-3 lg:p-3">
           {/* Reports this tab's online/away presence once we know a user is
           signed in. Headless — renders nothing. */}
