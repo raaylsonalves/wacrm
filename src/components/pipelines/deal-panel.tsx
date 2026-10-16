@@ -1,6 +1,7 @@
 'use client';
 
 import { DealHistory } from './deal-history';
+import { LossReasonPicker } from './loss-reason-picker';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
@@ -95,6 +96,9 @@ function DealPanelBody({
   const [failed, setFailed] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [changingContact, setChangingContact] = useState(false);
+  // Marking lost asks why first (migration 134); also reopened to edit.
+  const [askLoss, setAskLoss] = useState(false);
+  const tl = useTranslations('Pipelines.loss');
 
   const save = (patch: DealPatch) => {
     setFailed(false);
@@ -343,7 +347,7 @@ function DealPanelBody({
               type="button"
               aria-pressed={status === 'lost'}
               onClick={() =>
-                save({ status: status === 'lost' ? 'open' : 'lost' })
+                status === 'lost' ? save({ status: 'open' }) : setAskLoss(true)
               }
               className={cn(
                 'min-h-11 rounded-full border text-[13.5px] font-bold transition-colors duration-150 ease-out',
@@ -355,6 +359,32 @@ function DealPanelBody({
               ✕ {t('lost')}
             </button>
           </div>
+          {askLoss ? (
+            <LossReasonPicker
+              initialReason={deal.lost_reason}
+              initialNote={deal.lost_note}
+              conversationId={conversationId}
+              onCancel={() => setAskLoss(false)}
+              onConfirm={(reason, note) => {
+                setAskLoss(false);
+                save({ status: 'lost', lost_reason: reason, lost_note: note || null });
+              }}
+            />
+          ) : (
+            status === 'lost' && (
+              <button
+                type="button"
+                onClick={() => setAskLoss(true)}
+                className="hover:bg-muted rounded-xl px-2 py-1.5 text-left text-[13px]"
+              >
+                <span className="text-muted-foreground">{tl('reasonLabel')}: </span>
+                <span className="font-semibold">
+                  {deal.lost_reason ? tl(`reason.${deal.lost_reason}`) : tl('reasonMissing')}
+                </span>
+                {deal.lost_note && <span className="text-muted-foreground"> · {deal.lost_note}</span>}
+              </button>
+            )
+          )}
         </div>
 
         {/* Details */}

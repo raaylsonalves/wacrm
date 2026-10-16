@@ -1,5 +1,27 @@
 {
   "Manager": {
+    "origins": {
+      "title": "Where customers came from",
+      "empty": "No new contacts in this period.",
+      "hint": "New contacts in the period, by first origin. Sales = deals won from those contacts.",
+      "col": {
+        "origin": "Origin",
+        "leads": "Contacts",
+        "won": "Sales",
+        "value": "Value"
+      },
+      "lossTitle": "Why we lost",
+      "lossEmpty": "No deals lost in this period.",
+      "source": {
+        "ad": "Ad",
+        "link": "Tracking link",
+        "organic": "Came via WhatsApp",
+        "manual": "Added manually",
+        "import": "Import",
+        "api": "API",
+        "unknown": "Unknown"
+      }
+    },
     "tabsLabel": "Dashboard sections",
     "tabs": {
       "overview": "Overview",
@@ -661,6 +683,15 @@
       "failed": "Could not re-enable."
     },
     "sidebar": {
+      "origin": {
+        "ad": "Ad",
+        "link": "Tracking link",
+        "organic": "Came via WhatsApp",
+        "manual": "Added manually",
+        "import": "Import",
+        "api": "API",
+        "unknown": "Unknown"
+      },
       "contactInfo": "Contact info",
       "tags": "Tags",
       "notes": "Notes",
@@ -1539,6 +1570,25 @@
     }
   },
   "Pipelines": {
+    "loss": {
+      "question": "Why was it lost?",
+      "suggest": "Suggest from the chat",
+      "aiOff": "Set up the AI to use suggestions.",
+      "aiFailed": "Could not suggest right now.",
+      "notePlaceholder": "Detail (optional)",
+      "cancel": "Cancel",
+      "confirm": "Mark as lost",
+      "reasonLabel": "Reason",
+      "reasonMissing": "No reason",
+      "reason": {
+        "price": "Price",
+        "timing": "Not the right time",
+        "competitor": "Went with someone else",
+        "no_response": "Stopped replying",
+        "not_fit": "Not a fit",
+        "other": "Other"
+      }
+    },
     "page": {
       "selectPipeline": "Select Pipeline",
       "noPipelinesYet": "No pipelines yet",
@@ -2719,6 +2769,23 @@
     "PENDING_DELETION": "Pending deletion"
   },
   "Settings": {
+    "trackingLinks": {
+      "title": "Tracking links",
+      "description": "One WhatsApp link per place you advertise (Instagram bio, flyer, Google). The message comes pre-typed with a code, and the CRM records where the customer came from. Meta ads need none of this: they arrive identified on their own.",
+      "noNumber": "Connect an official number to generate links.",
+      "labelField": "Where you'll use it",
+      "labelPlaceholder": "E.g. Instagram bio",
+      "messageField": "Message the customer sends",
+      "messagePlaceholder": "E.g. Hi! I'd like to know more",
+      "create": "Create link",
+      "empty": "No links yet.",
+      "copy": "Copy link",
+      "copied": "Link copied",
+      "delete": "Delete link",
+      "deleteConfirm": "Delete this link? Contacts who already came through it stay tagged.",
+      "duplicate": "A link with that name already exists.",
+      "saveFailed": "Could not save."
+    },
     "pageTitle": "Settings",
     "pageDesc": "Everything in one place — your account and your workspace. Pick a section to manage it.",
     "sectionsNav": "Settings sections",

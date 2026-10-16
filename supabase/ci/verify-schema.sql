@@ -1035,6 +1035,16 @@ BEGIN
     RAISE EXCEPTION 'manager dashboard functions missing — migration 133 did not apply';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'contacts' AND column_name = 'lead_source')
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'deals' AND column_name = 'lost_reason')
+     OR to_regclass('public.tracking_links') IS NULL
+     OR to_regprocedure('public.lead_origin_report(uuid,timestamptz,timestamptz)') IS NULL
+     OR to_regprocedure('public.loss_report(uuid,timestamptz,timestamptz)') IS NULL THEN
+    RAISE EXCEPTION 'lead origin / loss reason objects missing — migration 134 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

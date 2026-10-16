@@ -25,6 +25,7 @@ import {
 import { useTranslations } from "next-intl";
 import { SettingsPanelHead } from "./settings-panel-head";
 import { SaveButton } from "@/components/ui/save-button";
+import { TrackingLinks } from "./tracking-links";
 
 /**
  * Deals settings — account-wide default currency.
@@ -127,6 +128,7 @@ export function DealsSettings() {
           )}
         </CardContent>
       </Card>
+      <TrackingLinks />
     </section>
   );
 }

@@ -15,6 +15,7 @@ import {
   DollarSign,
   StickyNote,
   Plus,
+  Megaphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -288,6 +289,31 @@ export function ContactSidebar({ contact, conversationId, variant = "panel" }: C
               <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground">
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <span className="truncate">{contact.email}</span>
+              </div>
+            )}
+
+            {/* First touch (migration 134). */}
+            {contact.lead_source && (
+              <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground">
+                <Megaphone className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="truncate">
+                  {tSidebar(`origin.${contact.lead_source}`)}
+                  {(() => {
+                    const d = contact.lead_source_detail ?? {};
+                    const what = d.label || d.headline || d.source_id;
+                    if (!what) return null;
+                    return d.source_url ? (
+                      <>
+                        {" · "}
+                        <a href={d.source_url} target="_blank" rel="noopener noreferrer" className="underline">
+                          {what}
+                        </a>
+                      </>
+                    ) : (
+                      ` · ${what}`
+                    );
+                  })()}
+                </span>
               </div>
             )}
           </div>

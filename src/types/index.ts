@@ -122,6 +122,10 @@ export interface Contact {
   /** Set once a STOP-style reply is detected (migration 053); never
    *  cleared automatically. `null`/absent means still subscribed. */
   opted_out_at?: string | null;
+  /** First touch (migration 134): 'ad' | 'link' | 'organic' | … */
+  lead_source?: string | null;
+  lead_source_detail?: Record<string, string> | null;
+  lead_source_at?: string | null;
   /** How the contact was obtained (migration 081); null = before imports tracked it. */
   consent_basis?: string | null;
   /** Set by `POST /api/contacts/[id]/anonymize` (migration 054), the
@@ -506,6 +510,9 @@ export interface Deal {
   notes?: string;
   expected_close_date?: string;
   status?: DealStatus;
+  /** Why it was lost (migration 134) — lib/leads/origin LOSS_REASONS. */
+  lost_reason?: string | null;
+  lost_note?: string | null;
   /** Manual card order within `stage_id` (migration 055). A DB trigger
    *  fills this in on insert / cross-stage move when omitted — most
    *  callers never need to set it themselves. See

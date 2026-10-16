@@ -1,5 +1,27 @@
 {
   "Manager": {
+    "origins": {
+      "title": "De dónde vinieron los clientes",
+      "empty": "Ningún contacto nuevo en el período.",
+      "hint": "Contactos nuevos en el período, por primer origen. Ventas = negocios ganados de esos contactos.",
+      "col": {
+        "origin": "Origen",
+        "leads": "Contactos",
+        "won": "Ventas",
+        "value": "Valor"
+      },
+      "lossTitle": "Por qué perdimos",
+      "lossEmpty": "Ningún negocio perdido en el período.",
+      "source": {
+        "ad": "Anuncio",
+        "link": "Enlace rastreable",
+        "organic": "Llegó por WhatsApp",
+        "manual": "Registro manual",
+        "import": "Importación",
+        "api": "API",
+        "unknown": "No informado"
+      }
+    },
     "tabsLabel": "Secciones del panel",
     "tabs": {
       "overview": "Visión general",
@@ -661,6 +683,15 @@
       "failed": "Could not re-enable."
     },
     "sidebar": {
+      "origin": {
+        "ad": "Anuncio",
+        "link": "Enlace rastreable",
+        "organic": "Llegó por WhatsApp",
+        "manual": "Registro manual",
+        "import": "Importación",
+        "api": "API",
+        "unknown": "No informado"
+      },
       "contactInfo": "Información del contacto",
       "tags": "Etiquetas",
       "notes": "Notas",
@@ -1539,6 +1570,25 @@
     }
   },
   "Pipelines": {
+    "loss": {
+      "question": "¿Por qué se perdió?",
+      "suggest": "Sugerir por la conversación",
+      "aiOff": "Configura la IA para usar la sugerencia.",
+      "aiFailed": "No se pudo sugerir ahora.",
+      "notePlaceholder": "Detalle (opcional)",
+      "cancel": "Cancelar",
+      "confirm": "Marcar como perdido",
+      "reasonLabel": "Motivo",
+      "reasonMissing": "Sin motivo",
+      "reason": {
+        "price": "Precio",
+        "timing": "No es el momento",
+        "competitor": "Cerró con otro",
+        "no_response": "Dejó de responder",
+        "not_fit": "No le sirve",
+        "other": "Otro"
+      }
+    },
     "page": {
       "selectPipeline": "Seleccionar pipeline",
       "noPipelinesYet": "Aún no hay pipelines",
@@ -2719,6 +2769,23 @@
     "PENDING_DELETION": "Eliminación pendiente"
   },
   "Settings": {
+    "trackingLinks": {
+      "title": "Enlaces rastreables",
+      "description": "Un enlace de WhatsApp por cada lugar donde haces publicidad (bio de Instagram, folleto, Google). El mensaje ya viene escrito con un código y el CRM registra de dónde vino el cliente. Los anuncios de Meta no lo necesitan: llegan identificados solos.",
+      "noNumber": "Conecta un número oficial para generar los enlaces.",
+      "labelField": "Dónde lo usarás",
+      "labelPlaceholder": "Ej.: Bio de Instagram",
+      "messageField": "Mensaje que envía el cliente",
+      "messagePlaceholder": "Ej.: ¡Hola! Quiero saber más",
+      "create": "Crear enlace",
+      "empty": "Aún no hay enlaces.",
+      "copy": "Copiar enlace",
+      "copied": "Enlace copiado",
+      "delete": "Eliminar enlace",
+      "deleteConfirm": "¿Eliminar este enlace? Los contactos que ya llegaron por él siguen marcados.",
+      "duplicate": "Ya existe un enlace con ese nombre.",
+      "saveFailed": "No se pudo guardar."
+    },
     "pageTitle": "Configuración",
     "pageDesc": "Todo en un solo lugar: tu cuenta y tu espacio de trabajo. Elige una sección para administrarla.",
     "sectionsNav": "Secciones de configuración",

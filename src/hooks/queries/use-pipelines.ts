@@ -71,6 +71,8 @@ export interface DealPatch {
   stage_id?: string;
   position_in_stage?: number | null;
   status?: Deal['status'];
+  lost_reason?: string | null;
+  lost_note?: string | null;
   expected_close_date?: string | null;
   notes?: string | null;
   assigned_to?: string | null;

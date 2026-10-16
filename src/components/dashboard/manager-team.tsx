@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Download } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -16,6 +16,7 @@ import {
   type TeamLiveRow,
   type TeamPerformanceRow,
 } from '@/lib/dashboard/manager';
+import { ManagerOrigins } from './manager-origins';
 
 const PERIODS = [1, 7, 30] as const;
 type Period = (typeof PERIODS)[number];
@@ -32,6 +33,11 @@ export function ManagerTeam() {
   const [period, setPeriod] = useState<Period>(7);
   const [rows, setRows] = useState<PerformanceView[] | null>(null);
   const [error, setError] = useState(false);
+  // Fixed per period choice so the origin report doesn't refetch every render.
+  const range = useMemo(() => {
+    const now = new Date();
+    return { from: period === 1 ? startOfToday(now) : new Date(now.getTime() - period * 86_400_000), to: now };
+  }, [period]);
 
   const load = useCallback(async () => {
     if (!accountId) return;
@@ -82,6 +88,7 @@ export function ManagerTeam() {
   }
 
   return (
+    <div className="flex flex-col gap-4">
     <section aria-labelledby="mgr-perf" className="border-border bg-card flex flex-col gap-3 rounded-[24px] border p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="mgr-perf" className="text-lg font-extrabold">{t('whoDidWhat')}</h2>
@@ -153,5 +160,7 @@ export function ManagerTeam() {
       )}
       <p className="text-muted-foreground text-[13px]">{t('teamNote', { min: target })}</p>
     </section>
+    <ManagerOrigins from={range.from} to={range.to} />
+    </div>
   );
 }

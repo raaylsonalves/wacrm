@@ -28,6 +28,7 @@ import { pushInboundMessage } from '@/lib/push/send';
 import type { ContentType } from '@/types';
 import { dispatchWebhookEvent } from '@/lib/webhooks/deliver';
 import { databaseReachable } from '@/lib/health/db';
+import { codesIn, detectOrigin, type MetaReferral } from '@/lib/leads/origin';
 import {
   handleTemplateWebhookChange,
   isTemplateWebhookField,
@@ -110,6 +111,8 @@ interface WhatsAppMessage {
   button?: { text?: string; payload?: string };
   /** Present when the customer swipe-replies to one of our messages. */
   context?: { id: string };
+  /** Present when the customer came from a click-to-WhatsApp ad. */
+  referral?: MetaReferral;
 }
 
 /** One entry of a failed status's `errors` array, as Meta sends it. */
@@ -892,6 +895,13 @@ async function processMessage(
       mirrorMedia ? { accountId } : null
     );
 
+  // Lead origin (migration 134): the first touch only. A new contact
+  // always gets one; an existing contact only when an ad brought them
+  // and nothing was recorded before.
+  if (contactOutcome.wasCreated || message.referral) {
+    await recordLeadOrigin(accountId, contactRecord.id, message.referral, contentText);
+  }
+
   // Resolve swipe-reply context if present. A missing parent is fine —
   // we just store NULL and the UI renders the message without a quote.
   let replyToInternalId: string | null = null;
@@ -1628,6 +1638,42 @@ async function findOrCreateContact(
   }
 
   return { contact: newContact, wasCreated: true };
+}
+
+async function recordLeadOrigin(
+  accountId: string,
+  contactId: string,
+  referral: MetaReferral | undefined,
+  text: string | null | undefined
+) {
+  try {
+    const db = supabaseAdmin();
+    let links: { code: string; label: string }[] = [];
+    const codes = codesIn(text);
+    if (codes.length > 0) {
+      const { data } = await db
+        .from('tracking_links')
+        .select('code, label')
+        .eq('account_id', accountId)
+        .in('code', codes);
+      links = data ?? [];
+    }
+    const origin = detectOrigin(referral, text, links);
+    // `is null` keeps it first-touch even when two deliveries race.
+    await db
+      .from('contacts')
+      .update({
+        lead_source: origin.source,
+        lead_source_detail: origin.detail,
+        lead_source_at: new Date().toISOString(),
+      })
+      .eq('id', contactId)
+      .eq('account_id', accountId)
+      .is('lead_source', null);
+  } catch (err) {
+    // Never block the message on reporting data.
+    console.error('[webhook] lead origin not recorded:', err);
+  }
 }
 
 async function findOrCreateConversation(
