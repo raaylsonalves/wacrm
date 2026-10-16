@@ -23,6 +23,7 @@ import {
   MessageSquareDashed,
   Zap,
   Trash2,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GatedButton } from "@/components/ui/gated-button";
@@ -121,6 +122,8 @@ interface MessageComposerProps {
   onOpenTemplates: () => void;
   replyTo?: ReplyDraft | null;
   onClearReply?: () => void;
+  /** Saves an internal note (team only). Enables the "Nota interna" mode. */
+  onAddNote?: (text: string) => Promise<boolean>;
 }
 
 function formatDuration(seconds: number): string {
@@ -143,12 +146,18 @@ export function MessageComposer({
   onOpenTemplates,
   replyTo,
   onClearReply,
+  onAddNote,
 }: MessageComposerProps) {
   const t = useTranslations("Inbox.composer");
 
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [drafting, setDrafting] = useState(false);
+  // "Nota interna" mode: the box writes a team-only note instead of a
+  // message. Back to "Mensagem" on every conversation switch so a note
+  // never turns into a customer message by accident (or the reverse).
+  const [noteMode, setNoteMode] = useState(false);
+  useEffect(() => setNoteMode(false), [conversationId]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // "Reply" from the dashboard opens the thread with ?focus=1 — land the
@@ -233,6 +242,19 @@ export function MessageComposer({
 
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
+    if (noteMode) {
+      if (!trimmed || sending || !onAddNote) return;
+      setSending(true);
+      try {
+        if (await onAddNote(trimmed)) {
+          setText("");
+          if (textareaRef.current) textareaRef.current.style.height = "auto";
+        }
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
     if (!trimmed || sending || sessionExpired) return;
 
     setSending(true);
@@ -245,7 +267,7 @@ export function MessageComposer({
     } finally {
       setSending(false);
     }
-  }, [text, sending, sessionExpired, onSend, replyTo?.id]);
+  }, [text, sending, sessionExpired, onSend, replyTo?.id, noteMode, onAddNote]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -621,7 +643,34 @@ export function MessageComposer({
           {t("dropToAttach")}
         </div>
       )}
-      {replyTo && (
+      {onAddNote && !readOnly && (
+        <div role="tablist" aria-label={t("modeLabel")} className="mb-2 flex gap-1">
+          {([false, true] as const).map((note) => (
+            <button
+              key={String(note)}
+              type="button"
+              role="tab"
+              aria-selected={noteMode === note}
+              onClick={() => {
+                setNoteMode(note);
+                textareaRef.current?.focus();
+              }}
+              className={cn(
+                "inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors",
+                noteMode === note
+                  ? note
+                    ? "bg-amber-500/20 text-amber-800 dark:text-amber-300"
+                    : "bg-foreground text-background"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {note && <Lock className="h-3 w-3" aria-hidden />}
+              {note ? t("modeNote") : t("modeReply")}
+            </button>
+          ))}
+        </div>
+      )}
+      {replyTo && !noteMode && (
         <div className="mb-2">
           <ReplyQuote
             authorLabel={replyTo.authorLabel}
@@ -630,7 +679,7 @@ export function MessageComposer({
           />
         </div>
       )}
-      {sessionExpired && (
+      {sessionExpired && !noteMode && (
         <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-500/10 px-3 py-2">
           <p className="text-xs text-amber-600 dark:text-amber-400">
             {t("sessionExpiredHint")}
@@ -764,7 +813,8 @@ export function MessageComposer({
           <div
             className={cn(
               "flex min-h-12 min-w-0 flex-1 items-end rounded-3xl border border-border bg-card-2 px-1.5 transition-colors duration-150 ease-out focus-within:border-foreground/30",
-              (sessionExpired || readOnly) && "opacity-50"
+              (noteMode ? readOnly : sessionExpired || readOnly) && "opacity-50",
+              noteMode && "border-amber-500/50 bg-amber-50 dark:bg-amber-500/10"
             )}
           >
           <EmojiPicker onPick={insertEmoji} disabled={inputsDisabled} />
@@ -779,11 +829,13 @@ export function MessageComposer({
             placeholder={
               readOnly
                 ? t("readOnlyPlaceholder")
-                : sessionExpired
+                : noteMode
+                  ? t("notePlaceholder")
+                  : sessionExpired
                   ? t("sessionExpiredPlaceholder")
                   : t("typeMessagePlaceholder")
             }
-            disabled={sessionExpired || readOnly}
+            disabled={noteMode ? readOnly : sessionExpired || readOnly}
             rows={1}
             // Textarea keeps its own inline title — the GatedButton
             // wrapping pattern doesn't apply to non-button inputs.
@@ -797,7 +849,7 @@ export function MessageComposer({
           {/* Attach menu — photo / video / document / voice. */}
           <DropdownMenu>
             <DropdownMenuTrigger
-              disabled={inputsDisabled || busy}
+              disabled={inputsDisabled || busy || noteMode}
               title={
                 readOnly
                   ? t("readOnlyTitle")
@@ -836,13 +888,14 @@ export function MessageComposer({
           </div>
 
           {/* WhatsApp: an empty box shows the mic, typing turns it into send. */}
-          {text.trim() || inputsDisabled ? (
+          {text.trim() || inputsDisabled || noteMode ? (
             <GatedButton
               size="sm"
               canAct={!readOnly}
               gateReason="sendMessages"
-              disabled={!text.trim() || sessionExpired || sending}
+              disabled={!text.trim() || (!noteMode && sessionExpired) || sending}
               onClick={handleSend}
+              aria-label={noteMode ? t("saveNote") : undefined}
               className="h-10 w-10 shrink-0 rounded-full bg-foreground text-background p-0 hover:bg-foreground/90 disabled:opacity-40"
             >
               <Send className="h-4 w-4" />

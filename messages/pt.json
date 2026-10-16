@@ -509,6 +509,12 @@
       "reconnect": "Reconectar"
     },
     "composer": {
+      "modeLabel": "Tipo de envio",
+      "modeReply": "Mensagem",
+      "modeNote": "Nota interna",
+      "notePlaceholder": "Nota interna — só a equipe vê",
+      "saveNote": "Salvar nota",
+      "noteFailed": "Falha ao salvar a nota",
       "draftHint": "Toque em ✨ para redigir uma resposta com IA — você pode editá-la antes de enviar",
       "sessionExpiredHint": "A sessão de 24 horas expirou. Use um modelo para retomar o contato.",
       "templates": "Modelos",

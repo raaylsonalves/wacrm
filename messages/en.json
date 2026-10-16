@@ -509,6 +509,12 @@
       "reconnect": "Reconnect"
     },
     "composer": {
+      "modeLabel": "What to send",
+      "modeReply": "Message",
+      "modeNote": "Internal note",
+      "notePlaceholder": "Internal note — only the team sees it",
+      "saveNote": "Save note",
+      "noteFailed": "Could not save the note",
       "draftHint": "Tap the ✨ to draft a reply with AI — you can edit it before sending",
       "sessionExpiredHint": "24-hour session expired. Use a template to re-engage.",
       "templates": "Templates",

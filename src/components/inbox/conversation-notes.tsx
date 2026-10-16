@@ -41,6 +41,7 @@ export function ConversationNotes({
   );
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // The parent keys this component by conversation id, so switching
   // threads remounts it with fresh state — no manual reset needed.
@@ -62,6 +63,15 @@ export function ConversationNotes({
     return () => {
       cancelled = true;
     };
+  }, [conversationId, reloadKey]);
+
+  // Notes written from the composer's "Nota interna" mode.
+  useEffect(() => {
+    const onChanged = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === conversationId) setReloadKey((k) => k + 1);
+    };
+    window.addEventListener(NOTES_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(NOTES_CHANGED_EVENT, onChanged);
   }, [conversationId]);
 
   async function handleAdd() {

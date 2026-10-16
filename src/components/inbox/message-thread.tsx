@@ -1135,6 +1135,22 @@ export function MessageThread({
   }
 
   const displayName = contact.name || contactHandle(contact);
+  const handleAddNote = async (body: string) => {
+    if (!user || !accountId) return false;
+    const { data, error } = await createClient()
+      .from("conversation_notes")
+      .insert({ conversation_id: conversation.id, account_id: accountId, author_user_id: user.id, body })
+      .select("*")
+      .single();
+    if (error || !data) {
+      console.error("Failed to add conversation note:", error);
+      toast.error(tComposer("noteFailed"));
+      return false;
+    }
+    setNotes((prev) => [...prev, data as ConversationNote]);
+    window.dispatchEvent(new CustomEvent(NOTES_CHANGED_EVENT, { detail: conversation.id }));
+    return true;
+  };
   const messageGroups = groupMessagesByDate(messages);
   const notePlacement = placeNotes(messages, notes);
   const renderNote = (note: ConversationNote) => (
@@ -1671,6 +1687,7 @@ export function MessageThread({
         onOpenTemplates={handleOpenTemplates}
         replyTo={replyTo}
         onClearReply={() => setReplyTo(null)}
+        onAddNote={handleAddNote}
       />
 
       <TemplatePicker
