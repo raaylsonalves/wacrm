@@ -17,7 +17,9 @@ import type {
   ConversationStatus,
   MessageTemplate,
   InteractiveMessagePayload,
+  ConversationNote,
 } from "@/types";
+import { NOTES_CHANGED_EVENT, placeNotes } from "@/lib/inbox/notes-timeline";
 import {
   MessageSquare,
   ChevronDown,
@@ -31,6 +33,7 @@ import {
   X,
   PanelRightOpen,
   PanelRightClose,
+  Lock,
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { useTranslations } from "next-intl";
@@ -524,6 +527,32 @@ export function MessageThread({
     // the realtime channel reconnects or the tab regains focus —
     // realtime is best-effort and any message events sent while the WS
     // was disconnected or throttled are otherwise lost.
+  }, [conversationId, resyncToken]);
+
+  // Internal notes, shown in the thread where they were written. Not in
+  // the realtime publication; the notes panel announces its own changes.
+  const [notes, setNotes] = useState<ConversationNote[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      createClient()
+        .from("conversation_notes")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .then(({ data, error }) => {
+          if (cancelled) return;
+          if (error) console.error("Failed to load conversation notes:", error);
+          else setNotes((data as ConversationNote[]) ?? []);
+        });
+    void load();
+    const onChanged = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === conversationId) void load();
+    };
+    window.addEventListener(NOTES_CHANGED_EVENT, onChanged);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(NOTES_CHANGED_EVENT, onChanged);
+    };
   }, [conversationId, resyncToken]);
 
   // Reactions fetch — pulls the current state from the DB. Kept separate
@@ -1107,6 +1136,20 @@ export function MessageThread({
 
   const displayName = contact.name || contactHandle(contact);
   const messageGroups = groupMessagesByDate(messages);
+  const notePlacement = placeNotes(messages, notes);
+  const renderNote = (note: ConversationNote) => (
+    <div key={`note-${note.id}`} className="my-3 flex justify-center">
+      <div className="max-w-[85%] rounded-xl border border-amber-500/40 bg-amber-50 px-3 py-2 text-[13px] shadow-sm dark:bg-amber-500/15">
+        <div className="mb-0.5 flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+          <Lock className="h-3 w-3" aria-hidden />
+          {t("internalNote")} ·{" "}
+          {profiles.find((p) => p.user_id === note.author_user_id)?.full_name || t("unknown")} ·{" "}
+          {format(new Date(note.created_at), "HH:mm")}
+        </div>
+        <p className="text-foreground whitespace-pre-wrap">{note.body}</p>
+      </div>
+    </div>
+  );
   const currentStatus = STATUS_OPTIONS.find(
     (s) => s.value === conversation.status
   );
@@ -1533,8 +1576,9 @@ export function MessageThread({
                       void postReaction(msg.id, next);
                     };
                     return (
+                      <div key={msg.id}>
+                      {notePlacement.before.get(msg.id)?.map(renderNote)}
                       <div
-                        key={msg.id}
                         id={`msg-${msg.id}`}
                         className={cn(
                           i === 0 ? "" : runStart ? "mt-3" : "mt-0.5",
@@ -1562,11 +1606,13 @@ export function MessageThread({
                         />
                       </MessageActions>
                       </div>
+                      </div>
                     );
                   })}
                 </div>
               </div>
             ))}
+            {notePlacement.after.map(renderNote)}
           </div>
         )}
       </div>

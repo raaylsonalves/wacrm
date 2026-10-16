@@ -438,6 +438,7 @@
       "slaWaitingTitle": "Waiting for a reply — target is {minutes}m"
     },
     "messageThread": {
+      "internalNote": "Internal note",
       "dealStage": "Funnel stage",
       "caseOne": "Open case",
       "caseCount": "{count} open cases",

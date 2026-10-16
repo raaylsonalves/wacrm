@@ -14,6 +14,10 @@ import { dateFnsLocale } from '@/lib/date-fns-locale';
 import { Button } from '@/components/ui/button';
 import type { ConversationNote } from '@/types';
 import { confirmDialog } from '@/components/confirm-dialog';
+import { NOTES_CHANGED_EVENT } from '@/lib/inbox/notes-timeline';
+
+const announce = (id: string) =>
+  window.dispatchEvent(new CustomEvent(NOTES_CHANGED_EVENT, { detail: id }));
 
 /**
  * Teammate-only notes on one conversation (migration 070). Lives in its
@@ -82,6 +86,7 @@ export function ConversationNotes({
     }
     setNotes((prev) => [data as ConversationNote, ...prev]);
     setDraft('');
+    announce(conversationId);
   }
 
   async function handleDelete(id: string) {
@@ -96,6 +101,7 @@ export function ConversationNotes({
           return;
         }
         setNotes((prev) => prev.filter((n) => n.id !== id));
+        announce(conversationId);
       },
     });
   }

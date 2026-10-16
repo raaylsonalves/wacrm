@@ -438,6 +438,7 @@
       "slaWaitingTitle": "Esperando respuesta — objetivo de {minutes}min"
     },
     "messageThread": {
+      "internalNote": "Nota interna",
       "dealStage": "Etapa del embudo",
       "caseOne": "Caso abierto",
       "caseCount": "{count} casos abiertos",

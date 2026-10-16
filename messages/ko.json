@@ -438,6 +438,7 @@
       "slaWaitingTitle": "답변 대기 중 — 목표 {minutes}분"
     },
     "messageThread": {
+      "internalNote": "내부 메모",
       "dealStage": "퍼널 단계",
       "caseOne": "열린 케이스",
       "caseCount": "열린 케이스 {count}건",
