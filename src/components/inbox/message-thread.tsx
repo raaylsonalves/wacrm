@@ -533,6 +533,7 @@ export function MessageThread({
   // the realtime publication; the notes panel announces its own changes.
   const [notes, setNotes] = useState<ConversationNote[]>([]);
   useEffect(() => {
+    if (!conversationId) return;
     let cancelled = false;
     const load = () =>
       createClient()
