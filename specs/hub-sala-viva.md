@@ -20,6 +20,21 @@ dessa imagem, o código não sabe onde eles estão. Os problemas que isso causa:
 As regras de quem fica em qual sala continuam em `lib/dashboard/room.ts`
 (`placeTeam`). Muda só o desenho e o movimento.
 
+## Decisão (16/10/2026): manter as salas inteiras
+
+Só geramos as poses novas (A3). A1 e A2 ficam de reserva.
+
+- **Lugares:** cada cadeira, sofá e ponto de pé das imagens atuais vira um
+  lugar marcado à mão, com pose e dono. Dois personagens nunca ocupam o mesmo
+  lugar.
+- **Pessoa atrás da mesa:** recortamos da própria imagem da sala a frente do
+  móvel (um polígono) e desenhamos esse pedaço por cima da pessoa.
+- **Caminho:** um grafo de pontos de passagem leva pelo chão, pelas escadas
+  e entre as salas.
+- **Limite:** os móveis não mudam de lugar.
+- **Poses obrigatórias em A3:** 1 e 2 (sentado sem cadeira). As poses 3 a 5
+  (de costas) são opcionais.
+
 ## Regras para todas as gerações de arte
 
 - Use a mesma conversa do ChatGPT em que a sala e os personagens foram
