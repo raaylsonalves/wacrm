@@ -304,12 +304,29 @@ export function parseStateSync(value: unknown): AppContact[] {
 
 // ---- Meta calls -------------------------------------------------------
 
-async function metaJson<T>(res: Response): Promise<T> {
+async function metaJson<T>(res: Response, step: string): Promise<T> {
   const body = (await res.json().catch(() => ({}))) as T & {
-    error?: { message?: string };
+    error?: {
+      message?: string;
+      code?: number;
+      error_subcode?: number;
+      type?: string;
+      fbtrace_id?: string;
+    };
   };
-  if (!res.ok)
-    throw new Error(body.error?.message || `Meta API error: ${res.status}`);
+  if (!res.ok) {
+    // Meta's bare message can be just "Fatal": keep the code, subcode and
+    // trace id, which are what Meta support and their docs key on.
+    const e = body.error;
+    const parts = [
+      `${step}: ${e?.message || `HTTP ${res.status}`}`,
+      e?.code != null && `code ${e.code}`,
+      e?.error_subcode != null && `subcode ${e.error_subcode}`,
+      e?.type,
+      e?.fbtrace_id && `trace ${e.fbtrace_id}`,
+    ].filter(Boolean);
+    throw new Error(parts.join(' · '));
+  }
   return body;
 }
 
@@ -341,7 +358,7 @@ export async function fetchBusinessToken(args: {
       }).toString(),
     }
   );
-  const data = await metaJson<{ access_token?: string }>(res);
+  const data = await metaJson<{ access_token?: string }>(res, 'business_token');
   if (!data.access_token) throw new Error('Meta returned no business token');
   return data.access_token;
 }
@@ -363,7 +380,9 @@ export async function listCoexPhones(args: {
     `${META_API_BASE}/${args.wabaId}/phone_numbers?fields=id,display_phone_number,verified_name,is_on_biz_app,platform_type`,
     { headers: { Authorization: `Bearer ${args.accessToken}` } }
   );
-  return (await metaJson<{ data?: CoexPhone[] }>(res)).data ?? [];
+  return (
+    (await metaJson<{ data?: CoexPhone[] }>(res, 'phone_numbers')).data ?? []
+  );
 }
 
 /**
@@ -389,6 +408,6 @@ export async function requestSmbSync(args: {
       }),
     }
   );
-  const data = await metaJson<{ request_id?: string }>(res);
+  const data = await metaJson<{ request_id?: string }>(res, args.syncType);
   return data.request_id ?? '';
 }
