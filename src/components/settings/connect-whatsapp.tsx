@@ -15,7 +15,6 @@ import {
   ChevronDown,
   Loader2,
   MessageCircle,
-  Rocket,
   Smartphone,
   TriangleAlert,
   X,
@@ -45,18 +44,10 @@ interface Signup {
   created_at: string;
 }
 
-/** The illustrated panel of each option (pastel tones, no stock photos). */
+/** The picture of each option (public/whatsapp, generated art). */
 const MODE_ART = {
-  coexistence: {
-    Icon: Smartphone,
-    panel: 'bg-tone-mint-soft',
-    ink: 'text-tone-mint-ink',
-  },
-  api: {
-    Icon: Rocket,
-    panel: 'bg-tone-lilac-soft',
-    ink: 'text-tone-lilac-ink',
-  },
+  coexistence: '/whatsapp/connect-app.webp',
+  api: '/whatsapp/connect-api.webp',
 } as const;
 
 const POLL_MS = 3_000;
@@ -242,25 +233,20 @@ export function ConnectWhatsApp({
           <div className="mt-4 space-y-3">
             <div className="grid gap-3 lg:grid-cols-2">
               {(['coexistence', 'api'] as const).map((m) => {
-                const Art = MODE_ART[m];
                 return (
                   <article
                     key={m}
                     className="border-border bg-card flex min-h-40 overflow-hidden rounded-2xl border"
                   >
-                    <div
-                      aria-hidden
+                    {/* eslint-disable-next-line @next/next/no-img-element -- static art */}
+                    <img
+                      src={MODE_ART[m]}
+                      alt=""
                       className={cn(
-                        'relative hidden w-2/5 shrink-0 items-center justify-center overflow-hidden sm:flex',
-                        Art.panel
+                        'hidden w-2/5 shrink-0 object-cover sm:block',
+                        m === 'api' ? 'object-left' : 'object-center'
                       )}
-                    >
-                      <span className="absolute -top-6 -left-6 size-24 rounded-full bg-white/30" />
-                      <span className="absolute -right-8 -bottom-8 size-28 rounded-full bg-white/20" />
-                      <span className="relative flex size-16 items-center justify-center rounded-2xl bg-white/80 shadow-sm">
-                        <Art.Icon className={cn('size-8', Art.ink)} />
-                      </span>
-                    </div>
+                    />
                     <div className="flex flex-1 flex-col gap-2 p-4">
                       <span className="flex size-8 items-center justify-center rounded-lg bg-[#25D366]/15 text-[#128C4B] dark:text-[#5BE38F]">
                         <MessageCircle className="size-4" />
