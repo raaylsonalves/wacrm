@@ -224,10 +224,19 @@ Meta also offers Hosted ES: a Meta-hosted page linked from WhatsApp > Quickstart
 ("Zero integration onboarding"), reported by an `account_update` `PARTNER_ADDED`
 webhook; the business token is then fetched with the system token. Its guide says
 it "can only be used to onboard business customers to Cloud API" and "cannot be
-customized". Coexistence needs `extras.featureType =
-'whatsapp_business_app_onboarding'` in our own launch code, so Hosted ES does not
-cover coexistence: Phase 1 keeps the self-hosted SDK flow. Hosted ES could still
-serve "Só API" onboarding.
+customized". **Correction (same day, App Dashboard):** the Embedded Signup
+guide in the dashboard has a "Tipo de recurso" option "Integração do app
+WhatsApp Business", which puts the feature type into the hosted link's
+`extras`:
+
+    https://business.facebook.com/messaging/whatsapp/onboard/?app_id=922855287130446
+      &config_id=1843249156698654
+      &extras={"featureType":"whatsapp_business_app_onboarding","sessionInfoVersion":"3","version":"v4"}
+
+So Hosted ES can launch the coexistence flow. Our side still has to handle
+`PARTNER_ADDED`, fetch the business token and phone number, skip register,
+run both `smb_app_data` syncs within 24 h, and match the new number to the
+right CRM account (the hosted link carries no state of ours).
 
 ## Sources
 
