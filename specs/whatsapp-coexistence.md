@@ -230,10 +230,10 @@ WhatsApp Business", which puts the feature type into the hosted link's
 `extras`:
 
     https://business.facebook.com/messaging/whatsapp/onboard/?app_id=922855287130446
-      &config_id=1843249156698654
+      &config_id=1138134431900910
       &extras={"featureType":"whatsapp_business_app_onboarding","sessionInfoVersion":"3","version":"v4"}
 
-So Hosted ES can launch the coexistence flow. Our side still has to handle
+So Hosted ES can launch the coexistence flow. Since 2026-10-15 the Facebook Login for Business configuration decides the products: the first one (1843249156698654, Cloud API + Marketing Messages Lite) forced business app onboarding **off** whatever the link asked. A new configuration with only Cloud API (1138134431900910) checks as **on**. Our side still has to handle
 `PARTNER_ADDED`, fetch the business token and phone number, skip register,
 run both `smb_app_data` syncs within 24 h, and match the new number to the
 right CRM account (the hosted link carries no state of ours).
