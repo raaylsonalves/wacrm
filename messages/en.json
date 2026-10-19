@@ -3380,7 +3380,6 @@
         "whatChanges": "What changes in the phone app",
         "cancel": "Cancel",
         "manual": "Connect with a token (advanced)",
-        "closed": "Meta’s window was closed before finishing.",
         "popupBlocked": "The browser blocked Meta’s window. Allow pop-ups for this site and try again."
       },
       "numbers": {

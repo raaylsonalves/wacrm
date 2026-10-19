@@ -3370,7 +3370,6 @@
         "whatChanges": "Qué cambia en la app del celular",
         "cancel": "Cancelar",
         "manual": "Conectar con token (avanzado)",
-        "closed": "La ventana de Meta se cerró antes de terminar.",
         "popupBlocked": "El navegador bloqueó la ventana de Meta. Permite ventanas emergentes para este sitio e inténtalo de nuevo."
       },
       "numbers": {

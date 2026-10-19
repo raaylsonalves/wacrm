@@ -51,10 +51,13 @@ const MODE_ART = {
 } as const;
 
 const POLL_MS = 3_000;
-/** Meta's webhook can land a little after the popup closes. */
-const AFTER_CLOSE_MS = 20_000;
-/** An open request older than this is shown as expired. */
-const WAIT_LIMIT_MS = 15 * 60_000;
+/**
+ * An open request older than this is shown as expired. There is no
+ * "popup closed" detection: Facebook's pages send Cross-Origin-Opener-
+ * Policy, which cuts the popup off from us, so `win.closed` reads true
+ * while the customer is still filling Meta's form. Cancel is a button.
+ */
+const WAIT_LIMIT_MS = 30 * 60_000;
 
 function popupFeatures() {
   const w = 600;
@@ -80,7 +83,6 @@ export function ConnectWhatsApp({
   const [open, setOpen] = useState(!compact);
   const [now, setNow] = useState(() => Date.now());
   const popup = useRef<Window | null>(null);
-  const closedAt = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/whatsapp/signup', { cache: 'no-store' });
@@ -109,12 +111,11 @@ export function ConnectWhatsApp({
   const cancel = useCallback(async () => {
     popup.current?.close();
     popup.current = null;
-    closedAt.current = null;
     await fetch('/api/whatsapp/signup', { method: 'DELETE' });
     await load();
   }, [load]);
 
-  // While waiting: poll for Meta's webhook, and notice the popup closing.
+  // While waiting: poll for Meta's webhook.
   useEffect(() => {
     if (!waiting) return;
     const id = setInterval(async () => {
@@ -125,20 +126,10 @@ export function ConnectWhatsApp({
         popup.current = null;
         toast.success(t('connected'));
         onConnected();
-        return;
-      }
-      if (popup.current?.closed && closedAt.current === null)
-        closedAt.current = Date.now();
-      if (
-        closedAt.current !== null &&
-        Date.now() - closedAt.current > AFTER_CLOSE_MS
-      ) {
-        toast.message(t('closed'));
-        await cancel();
       }
     }, POLL_MS);
     return () => clearInterval(id);
-  }, [waiting, load, cancel, onConnected, t]);
+  }, [waiting, load, onConnected, t]);
 
   async function start(mode: Mode) {
     setBusy(mode);
@@ -173,7 +164,6 @@ export function ConnectWhatsApp({
       win.location.href = data.url;
       win.focus();
       popup.current = win;
-      closedAt.current = null;
       setNow(Date.now());
       await load();
     } finally {
