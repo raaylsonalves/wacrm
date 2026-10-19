@@ -34,6 +34,7 @@ interface SignupRow {
   account_id: string | null;
   requested_by: string | null;
   phone_digits: string | null;
+  created_at: string;
 }
 
 export async function completeHostedSignup(
@@ -112,7 +113,7 @@ async function connectPhone(
 
   const { data: waiting } = await db
     .from('whatsapp_signups')
-    .select('id, account_id, requested_by, phone_digits')
+    .select('id, account_id, requested_by, phone_digits, created_at')
     .eq('status', 'waiting')
     .gte('created_at', new Date(Date.now() - CLAIM_WINDOW_MS).toISOString())
     .order('created_at', { ascending: false });

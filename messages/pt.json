@@ -3336,8 +3336,7 @@
     "whatsapp": {
       "connect": {
         "title": "Conectar WhatsApp",
-        "hint": "Conecte seu número pela Meta, sem colar token. Leva uns 2 minutos.",
-        "modeLabel": "Como você usa esse número",
+        "hint": "Entre com o Facebook numa janela da Meta, sem colar token. Leva uns 2 minutos.",
         "mode": {
           "coexistence": {
             "title": "Já uso o WhatsApp Business no celular",
@@ -3354,21 +3353,24 @@
           "windows": "O WhatsApp para Windows deixa de funcionar com esse número; os aparelhos conectados precisam ser vinculados de novo.",
           "active": "Abra o app no celular pelo menos a cada 14 dias, senão a Meta desconecta o número do CRM."
         },
-        "phoneLabel": "Número do WhatsApp (com DDI e DDD)",
-        "phonePlaceholder": "+55 85 99999-9999",
-        "start": "Conectar pela Meta",
         "connected": "WhatsApp conectado!",
         "status": {
-          "waiting": "Aguardando você concluir na página da Meta ({phone})…",
+          "waiting": "Conclua a conexão na janela da Meta…",
           "expired": "A conexão não foi concluída. Tente de novo.",
           "connected": "Número {phone} conectado.",
-          "failed": "A Meta concluiu, mas não conseguimos ligar o número a esta conta. Fale com o suporte."
+          "failed": "A Meta concluiu, mas não conseguimos ligar o número a esta conta. Fale com o suporte.",
+          "cancelled": "Conexão cancelada."
         },
         "error": {
-          "invalid_phone": "Informe o número completo, com DDI e DDD.",
           "number_limit": "Seu plano já atingiu o limite de números de WhatsApp.",
           "generic": "Não foi possível iniciar a conexão. Tente de novo."
-        }
+        },
+        "compactTitle": "Conectar outro número pela Meta",
+        "whatChanges": "O que muda no app do celular",
+        "cancel": "Cancelar",
+        "manual": "Conectar com token (avançado)",
+        "closed": "A janela da Meta foi fechada antes de concluir.",
+        "popupBlocked": "O navegador bloqueou a janela da Meta. Permita pop-ups para este site e tente de novo."
       },
       "numbers": {
         "healthFailing": "Token recusado pela Meta — atualize as credenciais",

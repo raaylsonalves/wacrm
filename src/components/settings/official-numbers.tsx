@@ -90,18 +90,21 @@ export function OfficialNumbers() {
     );
   }
 
-  // Meta's hosted signup (no token to paste), above the manual form.
-  const connect = canEditSettings ? <ConnectWhatsApp onConnected={() => load(null)} /> : null;
-
-  // No number yet: the plain form, exactly as before.
+  // No number yet: Meta's hosted signup first, the token form folded
+  // under "advanced" (shown as before when the signup is unavailable).
   if (numbers.length === 0) {
-    return (
-      <>
-        {connect}
-        <WhatsAppConfig onChanged={() => load()} />
-      </>
+    const form = <WhatsAppConfig onChanged={() => load()} />;
+    return canEditSettings ? (
+      <ConnectWhatsApp onConnected={() => load(null)} manual={form} />
+    ) : (
+      form
     );
   }
+
+  // With numbers: the signup folds to one line above the list.
+  const connect = canEditSettings ? (
+    <ConnectWhatsApp compact onConnected={() => load(null)} />
+  ) : null;
 
   const header = (
     <div className="border-border mb-6 space-y-2 rounded-2xl border p-4">

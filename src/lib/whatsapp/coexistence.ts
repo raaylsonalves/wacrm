@@ -44,14 +44,28 @@ export function hostedSignupUrl(args: {
   return `https://business.facebook.com/messaging/whatsapp/onboard/?${q.toString()}`;
 }
 
-/** The waiting attempt that claims this number, if any (newest first). */
-export function matchSignup<T extends { phone_digits: string | null }>(
-  waiting: T[],
-  displayPhone: string
-): T | null {
+/** A request this recent may claim a number it did not name. */
+export const FRESH_SIGNUP_MS = 60 * 60_000;
+
+/**
+ * The waiting request that claims this number (`waiting` newest first).
+ * Meta's webhook carries no state of ours: a request that named the number
+ * wins; otherwise the newest request opened in the last hour — the
+ * customer who just went through Meta's page. Older unnamed requests
+ * claim nothing (they could belong to anyone).
+ */
+export function matchSignup<
+  T extends { phone_digits: string | null; created_at: string },
+>(waiting: T[], displayPhone: string, now: number = Date.now()): T | null {
+  const named = waiting.find(
+    (s) => !!s.phone_digits && phonesMatch(s.phone_digits, displayPhone)
+  );
+  if (named) return named;
   return (
     waiting.find(
-      (s) => !!s.phone_digits && phonesMatch(s.phone_digits, displayPhone)
+      (s) =>
+        !s.phone_digits &&
+        now - new Date(s.created_at).getTime() < FRESH_SIGNUP_MS
     ) ?? null
   );
 }

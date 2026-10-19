@@ -32,16 +32,38 @@ describe('hostedSignupUrl', () => {
 });
 
 describe('matchSignup', () => {
-  it('matches the typed number to Meta’s display number, Brazil’s 9th digit included', () => {
+  const now = Date.parse('2026-10-19T20:00:00Z');
+  const ago = (min: number) => new Date(now - min * 60_000).toISOString();
+
+  it('a request that named the number wins, Brazil’s 9th digit included', () => {
     const waiting = [
-      { id: 'a', phone_digits: '5511988887777' },
-      { id: 'b', phone_digits: '558591331364' },
+      { id: 'fresh', phone_digits: null, created_at: ago(1) },
+      { id: 'a', phone_digits: '5511988887777', created_at: ago(5) },
+      { id: 'b', phone_digits: '558591331364', created_at: ago(5) },
     ];
-    expect(matchSignup(waiting, '+55 85 9133-1364')?.id).toBe('b');
-    expect(matchSignup(waiting, '+55 11 98888-7777')?.id).toBe('a');
-    expect(matchSignup(waiting, '+1 555 198 9056')).toBeNull();
+    expect(matchSignup(waiting, '+55 85 9133-1364', now)?.id).toBe('b');
+    expect(matchSignup(waiting, '+55 11 98888-7777', now)?.id).toBe('a');
+  });
+
+  it('otherwise the newest unnamed request of the last hour claims it', () => {
+    const waiting = [
+      { id: 'new', phone_digits: null, created_at: ago(2) },
+      { id: 'old', phone_digits: null, created_at: ago(10) },
+    ];
+    expect(matchSignup(waiting, '+55 85 9133-1364', now)?.id).toBe('new');
     expect(
-      matchSignup([{ id: 'c', phone_digits: null }], '+55 85 9133-1364')
+      matchSignup(
+        [{ id: 'stale', phone_digits: null, created_at: ago(90) }],
+        '+55 85 9133-1364',
+        now
+      )
+    ).toBeNull();
+    expect(
+      matchSignup(
+        [{ id: 'other', phone_digits: '5511988887777', created_at: ago(1) }],
+        '+55 85 9133-1364',
+        now
+      )
     ).toBeNull();
   });
 });

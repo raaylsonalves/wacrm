@@ -3,9 +3,11 @@
 // Embedded Signup (specs/whatsapp-coexistence.md).
 //
 //   GET   the account's recent attempts (the settings card polls them)
-//   POST  { phone, mode }  record who is connecting which number, and
+//   POST  { mode, phone? }  record that this account is connecting, and
 //         return Meta's hosted link. Meta's webhook carries no state of
-//         ours, so the number is how the result finds this account.
+//         ours: the result finds this account as the newest open request
+//         (or by the number, when one was given — lib/whatsapp/coexistence
+//         matchSignup).
 // ============================================================
 
 import { NextResponse } from 'next/server';
@@ -60,8 +62,8 @@ export async function POST(request: Request) {
       typeof body?.phone === 'string' ? body.phone : ''
     );
     const mode: SignupMode = body?.mode === 'api' ? 'api' : 'coexistence';
-    // Country code + area code + number: 10 to 15 digits.
-    if (phone.length < 10 || phone.length > 15) {
+    // Optional; when given: country code + area code + number, 10–15 digits.
+    if (phone && (phone.length < 10 || phone.length > 15)) {
       return NextResponse.json({ error: 'invalid_phone' }, { status: 400 });
     }
 
@@ -80,18 +82,32 @@ export async function POST(request: Request) {
       .update({ status: 'failed', error: 'replaced' })
       .eq('account_id', accountId)
       .eq('status', 'waiting');
-    const { error } = await db
-      .from('whatsapp_signups')
-      .insert({
-        account_id: accountId,
-        requested_by: userId,
-        phone_digits: phone,
-        mode,
-        status: 'waiting',
-      });
+    const { error } = await db.from('whatsapp_signups').insert({
+      account_id: accountId,
+      requested_by: userId,
+      phone_digits: phone || null,
+      mode,
+      status: 'waiting',
+    });
     if (error) throw error;
 
     return NextResponse.json({ url: hostedSignupUrl({ ...cfg, mode }) });
+  } catch (err) {
+    return toErrorResponse(err);
+  }
+}
+
+/** Cancel the account's open request (the customer closed Meta's window). */
+export async function DELETE() {
+  try {
+    const { accountId } = await requireRole('admin');
+    const { error } = await supabaseAdmin()
+      .from('whatsapp_signups')
+      .update({ status: 'failed', error: 'cancelled' })
+      .eq('account_id', accountId)
+      .eq('status', 'waiting');
+    if (error) throw error;
+    return NextResponse.json({ ok: true });
   } catch (err) {
     return toErrorResponse(err);
   }

@@ -1,48 +1,85 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { CheckCircle2, Loader2, Smartphone, TriangleAlert } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronDown,
+  Loader2,
+  Smartphone,
+  TriangleAlert,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 /**
  * "Connect WhatsApp" through Meta's hosted Embedded Signup
- * (specs/whatsapp-coexistence.md). The customer types the number, opens
- * Meta's page, scans the QR in the WhatsApp Business app, and the number
- * shows up here when Meta's webhook arrives — no token to paste.
- * Renders nothing on installs without the hosted signup configured.
+ * (specs/whatsapp-coexistence.md). One click opens Meta's page in a small
+ * popup; the customer logs in with Facebook and, for a number on the
+ * WhatsApp Business app, scans a QR. The number shows up here when Meta's
+ * webhook arrives — no token to paste.
+ *
+ * `manual` is the token form: folded under "advanced" when the hosted
+ * signup is available, shown as-is when it is not (self-hosted installs).
+ * `compact` (the account already has numbers) folds the card to one line.
  */
 
 type Mode = 'coexistence' | 'api';
 
 interface Signup {
   id: string;
-  phone_digits: string | null;
-  mode: Mode;
   status: 'waiting' | 'connected' | 'unmatched' | 'failed';
   display_phone_number: string | null;
   error: string | null;
   created_at: string;
 }
 
-const POLL_MS = 5_000;
-/** Stop polling a request after this long; the customer can retry. */
-const WAIT_LIMIT_MS = 30 * 60_000;
+const POLL_MS = 3_000;
+/** Meta's webhook can land a little after the popup closes. */
+const AFTER_CLOSE_MS = 20_000;
+/** An open request older than this is shown as expired. */
+const WAIT_LIMIT_MS = 15 * 60_000;
 
-export function ConnectWhatsApp({ onConnected }: { onConnected: () => void }) {
+function popupFeatures() {
+  const w = 600;
+  const h = 760;
+  const left = Math.max(0, window.screenX + (window.outerWidth - w) / 2);
+  const top = Math.max(0, window.screenY + (window.outerHeight - h) / 2);
+  return `popup,width=${w},height=${h},left=${Math.round(left)},top=${Math.round(top)}`;
+}
+
+export function ConnectWhatsApp({
+  onConnected,
+  compact = false,
+  manual,
+}: {
+  onConnected: () => void;
+  compact?: boolean;
+  manual?: ReactNode;
+}) {
   const t = useTranslations('Settings.whatsapp.connect');
-  const [available, setAvailable] = useState(false);
+  const [available, setAvailable] = useState<boolean | null>(null);
   const [latest, setLatest] = useState<Signup | null>(null);
-  const [phone, setPhone] = useState('');
-  const [mode, setMode] = useState<Mode>('coexistence');
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<Mode | null>(null);
+  const [open, setOpen] = useState(!compact);
+  const [now, setNow] = useState(() => Date.now());
+  const popup = useRef<Window | null>(null);
+  const closedAt = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/whatsapp/signup', { cache: 'no-store' });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      setAvailable(false);
+      return null;
+    }
     const data = (await res.json()) as {
       available: boolean;
       signups: Signup[];
@@ -57,32 +94,53 @@ export function ConnectWhatsApp({ onConnected }: { onConnected: () => void }) {
     void load();
   }, [load]);
 
-  // While a request waits, poll until Meta's webhook settles it.
   const waiting =
     latest?.status === 'waiting' &&
-    Date.now() - new Date(latest.created_at).getTime() < WAIT_LIMIT_MS;
+    now - new Date(latest.created_at).getTime() < WAIT_LIMIT_MS;
+
+  const cancel = useCallback(async () => {
+    popup.current?.close();
+    popup.current = null;
+    closedAt.current = null;
+    await fetch('/api/whatsapp/signup', { method: 'DELETE' });
+    await load();
+  }, [load]);
+
+  // While waiting: poll for Meta's webhook, and notice the popup closing.
   useEffect(() => {
     if (!waiting) return;
     const id = setInterval(async () => {
+      setNow(Date.now());
       const next = await load();
       if (next?.status === 'connected') {
+        popup.current?.close();
+        popup.current = null;
         toast.success(t('connected'));
         onConnected();
+        return;
+      }
+      if (popup.current?.closed && closedAt.current === null)
+        closedAt.current = Date.now();
+      if (
+        closedAt.current !== null &&
+        Date.now() - closedAt.current > AFTER_CLOSE_MS
+      ) {
+        toast.message(t('closed'));
+        await cancel();
       }
     }, POLL_MS);
     return () => clearInterval(id);
-  }, [waiting, load, onConnected, t]);
+  }, [waiting, load, cancel, onConnected, t]);
 
-  async function start() {
-    setBusy(true);
-    // Opened before the request so the browser treats it as the click's
-    // own popup; the URL is filled in once we have it.
-    const win = window.open('', '_blank');
+  async function start(mode: Mode) {
+    setBusy(mode);
+    // Opened inside the click so the browser allows it; the URL comes next.
+    const win = window.open('', 'meta-whatsapp-signup', popupFeatures());
     try {
       const res = await fetch('/api/whatsapp/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, mode }),
+        body: JSON.stringify({ mode }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         url?: string;
@@ -92,130 +150,172 @@ export function ConnectWhatsApp({ onConnected }: { onConnected: () => void }) {
         win?.close();
         toast.error(
           t(
-            `error.${data.error === 'invalid_phone' || data.error === 'number_limit' ? data.error : 'generic'}`
+            data.error === 'number_limit'
+              ? 'error.number_limit'
+              : 'error.generic'
           )
         );
         return;
       }
-      if (win) win.location.href = data.url;
-      else window.location.href = data.url;
+      if (!win) {
+        toast.error(t('popupBlocked'));
+        await fetch('/api/whatsapp/signup', { method: 'DELETE' });
+        return;
+      }
+      win.location.href = data.url;
+      win.focus();
+      popup.current = win;
+      closedAt.current = null;
+      setNow(Date.now());
       await load();
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
-  if (!available) return null;
+  if (available === null) {
+    return (
+      <div
+        className="bg-muted mb-6 h-24 animate-pulse rounded-2xl"
+        aria-hidden
+      />
+    );
+  }
+  if (!available) return <>{manual}</>;
+
+  const status =
+    latest && (latest.status !== 'failed' || latest.error !== 'replaced')
+      ? latest
+      : null;
 
   return (
-    <section className="border-border mb-6 space-y-4 rounded-2xl border p-4">
-      <div className="flex items-start gap-3">
-        <span className="bg-tone-mint-soft text-tone-mint-ink flex size-9 shrink-0 items-center justify-center rounded-full">
-          <Smartphone className="size-4" />
-        </span>
-        <div>
-          <h3 className="text-foreground text-sm font-semibold">
-            {t('title')}
-          </h3>
-          <p className="text-muted-foreground text-xs">{t('hint')}</p>
-        </div>
-      </div>
-
-      <div
-        role="radiogroup"
-        aria-label={t('modeLabel')}
-        className="grid gap-2 sm:grid-cols-2"
-      >
-        {(['coexistence', 'api'] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            role="radio"
-            aria-checked={mode === m}
-            onClick={() => setMode(m)}
-            className={cn(
-              'rounded-xl border p-3 text-left transition-colors',
-              mode === m
-                ? 'border-foreground bg-muted'
-                : 'border-border hover:bg-muted/60'
-            )}
-          >
-            <span className="text-foreground block text-sm font-medium">
-              {t(`mode.${m}.title`)}
+    <>
+      <section className="border-border mb-6 rounded-2xl border p-4">
+        <button
+          type="button"
+          onClick={() => compact && setOpen((o) => !o)}
+          aria-expanded={open}
+          className={cn(
+            'flex w-full items-start gap-3 text-left',
+            !compact && 'cursor-default'
+          )}
+        >
+          <span className="bg-tone-mint-soft text-tone-mint-ink flex size-9 shrink-0 items-center justify-center rounded-full">
+            <Smartphone className="size-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="text-foreground block text-sm font-semibold">
+              {compact ? t('compactTitle') : t('title')}
             </span>
             <span className="text-muted-foreground block text-xs">
-              {t(`mode.${m}.hint`)}
+              {t('hint')}
             </span>
-          </button>
-        ))}
-      </div>
-
-      {mode === 'coexistence' && (
-        <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-xs">
-          <li>{t('notes.app')}</li>
-          <li>{t('notes.lost')}</li>
-          <li>{t('notes.windows')}</li>
-          <li>{t('notes.active')}</li>
-        </ul>
-      )}
-
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="min-w-[14rem] flex-1 space-y-1">
-          <span className="text-foreground text-xs font-medium">
-            {t('phoneLabel')}
           </span>
-          <Input
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder={t('phonePlaceholder')}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-        </label>
-        <Button
-          onClick={start}
-          disabled={busy || phone.replace(/\D/g, '').length < 10}
-        >
-          {busy && <Loader2 className="size-4 animate-spin" />}
-          {t('start')}
-        </Button>
-      </div>
-
-      {latest && (
-        <p
-          aria-live="polite"
-          className={cn(
-            'flex items-center gap-2 rounded-lg px-3 py-2 text-xs',
-            latest.status === 'connected'
-              ? 'bg-tone-mint-soft text-tone-mint-ink'
-              : latest.status === 'waiting'
-                ? 'bg-muted text-foreground'
-                : 'bg-tone-salmon-soft text-tone-salmon-ink'
-          )}
-        >
-          {latest.status === 'connected' ? (
-            <CheckCircle2 className="size-4 shrink-0" />
-          ) : latest.status === 'waiting' ? (
-            <Loader2
-              className={cn('size-4 shrink-0', waiting && 'animate-spin')}
+          {compact && (
+            <ChevronDown
+              className={cn(
+                'text-muted-foreground mt-1 size-4 transition-transform',
+                open && 'rotate-180'
+              )}
             />
-          ) : (
-            <TriangleAlert className="size-4 shrink-0" />
           )}
-          {latest.status === 'waiting'
-            ? waiting
-              ? t('status.waiting', { phone: latest.phone_digits ?? '' })
-              : t('status.expired')
-            : latest.status === 'connected'
-              ? t('status.connected', {
-                  phone:
-                    latest.display_phone_number ?? latest.phone_digits ?? '',
-                })
-              : latest.error === 'number_limit'
-                ? t('error.number_limit')
-                : t('status.failed')}
-        </p>
+        </button>
+
+        {open && (
+          <div className="mt-4 space-y-3">
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(['coexistence', 'api'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  disabled={busy !== null || waiting}
+                  onClick={() => start(m)}
+                  className="border-border hover:bg-muted/60 rounded-xl border p-3 text-left transition-colors disabled:opacity-60"
+                >
+                  <span className="text-foreground flex items-center gap-2 text-sm font-medium">
+                    {busy === m && (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    )}
+                    {t(`mode.${m}.title`)}
+                  </span>
+                  <span className="text-muted-foreground block text-xs">
+                    {t(`mode.${m}.hint`)}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <details className="text-xs">
+              <summary className="text-muted-foreground hover:text-foreground cursor-pointer">
+                {t('whatChanges')}
+              </summary>
+              <ul className="text-muted-foreground mt-2 list-disc space-y-1 pl-5">
+                <li>{t('notes.app')}</li>
+                <li>{t('notes.lost')}</li>
+                <li>{t('notes.windows')}</li>
+                <li>{t('notes.active')}</li>
+              </ul>
+            </details>
+          </div>
+        )}
+
+        {status && (open || waiting) && (
+          <div
+            aria-live="polite"
+            className={cn(
+              'mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs',
+              status.status === 'connected'
+                ? 'bg-tone-mint-soft text-tone-mint-ink'
+                : waiting
+                  ? 'bg-muted text-foreground'
+                  : 'bg-tone-salmon-soft text-tone-salmon-ink'
+            )}
+          >
+            {status.status === 'connected' ? (
+              <CheckCircle2 className="size-4 shrink-0" />
+            ) : waiting ? (
+              <Loader2 className="size-4 shrink-0 animate-spin" />
+            ) : (
+              <TriangleAlert className="size-4 shrink-0" />
+            )}
+            <span className="flex-1">
+              {status.status === 'connected'
+                ? t('status.connected', {
+                    phone: status.display_phone_number ?? '',
+                  })
+                : waiting
+                  ? t('status.waiting')
+                  : status.status === 'waiting'
+                    ? t('status.expired')
+                    : status.error === 'cancelled'
+                      ? t('status.cancelled')
+                      : status.error === 'number_limit'
+                        ? t('error.number_limit')
+                        : t('status.failed')}
+            </span>
+            {waiting && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2"
+                onClick={cancel}
+              >
+                <X className="size-3.5" />
+                {t('cancel')}
+              </Button>
+            )}
+          </div>
+        )}
+      </section>
+
+      {manual && (
+        <details className="group mb-6">
+          <summary className="text-muted-foreground hover:text-foreground mb-4 cursor-pointer text-sm">
+            {t('manual')}
+          </summary>
+          {manual}
+        </details>
       )}
-    </section>
+    </>
   );
 }

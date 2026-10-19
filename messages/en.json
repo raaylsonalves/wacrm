@@ -3346,8 +3346,7 @@
     "whatsapp": {
       "connect": {
         "title": "Connect WhatsApp",
-        "hint": "Connect your number through Meta, no token to paste. Takes about 2 minutes.",
-        "modeLabel": "How you use this number",
+        "hint": "Log in with Facebook in a Meta window, no token to paste. Takes about 2 minutes.",
         "mode": {
           "coexistence": {
             "title": "I already use WhatsApp Business on my phone",
@@ -3364,21 +3363,24 @@
           "windows": "WhatsApp for Windows stops working with this number; linked devices must be linked again.",
           "active": "Open the app on the phone at least every 14 days, or Meta disconnects the number from the CRM."
         },
-        "phoneLabel": "WhatsApp number (with country and area code)",
-        "phonePlaceholder": "+1 555 123 4567",
-        "start": "Connect through Meta",
         "connected": "WhatsApp connected!",
         "status": {
-          "waiting": "Waiting for you to finish on Meta’s page ({phone})…",
+          "waiting": "Finish connecting in Meta’s window…",
           "expired": "The connection was not completed. Try again.",
           "connected": "Number {phone} connected.",
-          "failed": "Meta finished, but we could not link the number to this account. Contact support."
+          "failed": "Meta finished, but we could not link the number to this account. Contact support.",
+          "cancelled": "Connection cancelled."
         },
         "error": {
-          "invalid_phone": "Enter the full number, with country and area code.",
           "number_limit": "Your plan has reached its WhatsApp number limit.",
           "generic": "Could not start the connection. Try again."
-        }
+        },
+        "compactTitle": "Connect another number through Meta",
+        "whatChanges": "What changes in the phone app",
+        "cancel": "Cancel",
+        "manual": "Connect with a token (advanced)",
+        "closed": "Meta’s window was closed before finishing.",
+        "popupBlocked": "The browser blocked Meta’s window. Allow pop-ups for this site and try again."
       },
       "numbers": {
         "healthFailing": "Token refused by Meta — update the credentials",
