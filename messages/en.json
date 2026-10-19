@@ -3359,8 +3359,8 @@
           }
         },
         "notes": {
-          "app": "Keep the WhatsApp Business app updated and open on the phone while connecting: you will scan a QR code.",
-          "lost": "After connecting, the app loses disappearing messages, view once, live location and broadcast lists.",
+          "app": "Keep the WhatsApp Business app updated (version 2.24.17 or newer) and open on the phone while connecting: you will scan a QR code.",
+          "lost": "After connecting, one-to-one chats lose disappearing messages, view once and live location; you can no longer create broadcast lists, and existing ones become read-only.",
           "windows": "WhatsApp for Windows stops working with this number; linked devices must be linked again.",
           "active": "Open the app on the phone at least every 14 days, or Meta disconnects the number from the CRM."
         },

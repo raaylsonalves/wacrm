@@ -3349,8 +3349,8 @@
           }
         },
         "notes": {
-          "app": "Mantén la app WhatsApp Business actualizada y abierta en el celular durante la conexión: vas a escanear un código QR.",
-          "lost": "Después de conectar, la app pierde los mensajes temporales, la visualización única, la ubicación en tiempo real y las listas de difusión.",
+          "app": "Mantén la app WhatsApp Business actualizada (versión 2.24.17 o más reciente) y abierta en el celular durante la conexión: vas a escanear un código QR.",
+          "lost": "Después de conectar, los chats individuales pierden los mensajes temporales, la visualización única y la ubicación en tiempo real; ya no se pueden crear listas de difusión y las existentes quedan solo de lectura.",
           "windows": "WhatsApp para Windows deja de funcionar con este número; los dispositivos vinculados deben vincularse de nuevo.",
           "active": "Abre la app en el celular al menos cada 14 días, o Meta desconecta el número del CRM."
         },
