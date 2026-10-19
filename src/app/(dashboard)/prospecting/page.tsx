@@ -189,7 +189,7 @@ export default function ProspectingPage() {
     const supabase = createClient();
     const timers: number[] = [];
     const channel = supabase
-      .channel('prospecting:replies')
+      .channel(`prospecting:replies:${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },

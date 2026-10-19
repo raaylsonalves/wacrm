@@ -41,7 +41,7 @@ export function CaseChip({
         });
     void load();
     const channel = supabase
-      .channel(`case-chip-${conversationId}`)
+      .channel(`case-chip-${conversationId}:${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         {

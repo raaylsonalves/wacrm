@@ -44,8 +44,11 @@ export function useRealtime({
 
     const supabase = createClient();
 
+    // Unique topic per subscription: supabase-js hands back an existing
+    // channel for a repeated topic, so a remount while the old one is
+    // still closing would get the dying channel and never receive events.
     const channel = supabase
-      .channel(channelName)
+      .channel(`${channelName}:${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "messages" },

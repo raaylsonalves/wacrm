@@ -594,7 +594,7 @@ export function MessageThread({
     const supabase = createClient();
 
     const channel = supabase
-      .channel(`reactions:${conversationId}`)
+      .channel(`reactions:${conversationId}:${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         {

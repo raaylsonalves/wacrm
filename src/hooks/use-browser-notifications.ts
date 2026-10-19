@@ -144,7 +144,7 @@ export function useBrowserNotifications(): void {
     };
 
     const channel = supabase
-      .channel("browser-notifications")
+      .channel(`browser-notifications:${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },

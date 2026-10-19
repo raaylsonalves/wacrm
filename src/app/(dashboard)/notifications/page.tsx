@@ -186,7 +186,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
-      .channel('notifications-page')
+      .channel(`notifications-page:${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notifications' },

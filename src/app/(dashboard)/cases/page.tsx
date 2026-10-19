@@ -68,7 +68,7 @@ export default function CasesPage() {
     const supabase = createClient();
     let timer: ReturnType<typeof setTimeout> | null = null;
     const channel = supabase
-      .channel(`cases-${accountId}`)
+      .channel(`cases-${accountId}:${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         {

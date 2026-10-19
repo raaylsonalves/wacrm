@@ -151,7 +151,7 @@ export default function AgendaPage() {
     if (!accountId) return;
     const supabase = createClient();
     const channel = supabase
-      .channel(`appointments:${accountId}`)
+      .channel(`appointments:${accountId}:${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'appointments', filter: `account_id=eq.${accountId}` },
