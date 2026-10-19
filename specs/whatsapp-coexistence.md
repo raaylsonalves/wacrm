@@ -218,6 +218,17 @@ the webhook fields above subscribed.
 - The deprecation of Embedded Signup v2 on 2026-10-15 does not affect us
   (we have none yet), but every example online older than that is v2/v3.
 
+### Hosted Embedded Signup (checked 2026-10-19)
+
+Meta also offers Hosted ES: a Meta-hosted page linked from WhatsApp > Quickstart
+("Zero integration onboarding"), reported by an `account_update` `PARTNER_ADDED`
+webhook; the business token is then fetched with the system token. Its guide says
+it "can only be used to onboard business customers to Cloud API" and "cannot be
+customized". Coexistence needs `extras.featureType =
+'whatsapp_business_app_onboarding'` in our own launch code, so Hosted ES does not
+cover coexistence: Phase 1 keeps the self-hosted SDK flow. Hosted ES could still
+serve "Só API" onboarding.
+
 ## Sources
 
 - Meta — Onboard WhatsApp Business app users (Coexistence):
