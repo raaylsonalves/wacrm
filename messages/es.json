@@ -832,6 +832,8 @@
       "unsupported": "[Tipo de mensaje no compatible]",
       "aiBadge": "IA",
       "aiBadgeTitle": "Enviado automáticamente por el asistente de IA",
+      "phoneBadge": "Celular",
+      "phoneBadgeTitle": "Enviada desde la app WhatsApp Business en el celular",
       "notDelivered": "No entregado",
       "download": "Descargar",
       "downloadFailed": "No se pudo descargar el adjunto",
@@ -954,7 +956,8 @@
           "caseEscalated": "Una persona asumió desde un caso",
           "flowHandoff": "Un flujo pasó la conversación a una persona",
           "followupExhausted": "El seguimiento terminó sin respuesta y pasó a una persona",
-          "automatedSender": "La IA se detuvo: el otro lado parece un bot (respuestas automáticas)"
+          "automatedSender": "La IA se detuvo: el otro lado parece un bot (respuestas automáticas)",
+          "phoneReply": "La IA se pausó: alguien respondió desde WhatsApp Business en el celular"
         },
         "lastMessage": "Último mensaje del cliente",
         "showMore": "Ver más",
@@ -3331,6 +3334,42 @@
       "ownerHint": "Control total de la cuenta y la facturación"
     },
     "whatsapp": {
+      "connect": {
+        "title": "Conectar WhatsApp",
+        "hint": "Conecta tu número a través de Meta, sin pegar token. Toma unos 2 minutos.",
+        "modeLabel": "Cómo usas este número",
+        "mode": {
+          "coexistence": {
+            "title": "Ya uso WhatsApp Business en el celular",
+            "hint": "El número sigue en la app; las conversaciones también aparecen en el CRM."
+          },
+          "api": {
+            "title": "Número nuevo, solo en el CRM",
+            "hint": "El número funciona solo por la API, fuera de la app."
+          }
+        },
+        "notes": {
+          "app": "Mantén la app WhatsApp Business actualizada y abierta en el celular durante la conexión: vas a escanear un código QR.",
+          "lost": "Después de conectar, la app pierde los mensajes temporales, la visualización única, la ubicación en tiempo real y las listas de difusión.",
+          "windows": "WhatsApp para Windows deja de funcionar con este número; los dispositivos vinculados deben vincularse de nuevo.",
+          "active": "Abre la app en el celular al menos cada 14 días, o Meta desconecta el número del CRM."
+        },
+        "phoneLabel": "Número de WhatsApp (con código de país y de área)",
+        "phonePlaceholder": "+52 55 1234 5678",
+        "start": "Conectar con Meta",
+        "connected": "¡WhatsApp conectado!",
+        "status": {
+          "waiting": "Esperando que termines en la página de Meta ({phone})…",
+          "expired": "La conexión no se completó. Inténtalo de nuevo.",
+          "connected": "Número {phone} conectado.",
+          "failed": "Meta terminó, pero no pudimos vincular el número a esta cuenta. Contacta a soporte."
+        },
+        "error": {
+          "invalid_phone": "Ingresa el número completo, con código de país y de área.",
+          "number_limit": "Tu plan alcanzó el límite de números de WhatsApp.",
+          "generic": "No se pudo iniciar la conexión. Inténtalo de nuevo."
+        }
+      },
       "numbers": {
         "healthFailing": "Token rechazado por Meta — actualiza las credenciales",
         "limitReached": "Tu plan incluye 1 número de WhatsApp. Más números forman parte de un plan a medida — habla con Nordia.",
@@ -4069,7 +4108,8 @@
       "case_escalated": "Taken over from a case",
       "flow_handoff": "Transferida por un flujo",
       "followup_exhausted": "Seguimiento sin respuesta",
-      "automated_sender": "Remitente automático"
+      "automated_sender": "Remitente automático",
+      "phone_reply": "Respondida desde el celular"
     }
   },
   "Agents": {

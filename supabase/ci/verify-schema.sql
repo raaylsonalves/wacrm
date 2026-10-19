@@ -1062,6 +1062,17 @@ BEGIN
     RAISE EXCEPTION 'presence_sessions.online_seconds missing — migration 137 did not apply';
   END IF;
 
+  IF to_regclass('public.whatsapp_signups') IS NULL
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'whatsapp_config' AND column_name = 'onboarding_mode')
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'sent_from')
+     OR NOT EXISTS (SELECT 1 FROM pg_constraint
+       WHERE conname = 'conversations_ai_handoff_reason_check'
+         AND pg_get_constraintdef(oid) LIKE '%phone_reply%') THEN
+    RAISE EXCEPTION 'WhatsApp coexistence objects missing — migration 138 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

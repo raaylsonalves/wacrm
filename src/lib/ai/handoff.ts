@@ -20,6 +20,7 @@ export type HandoffReason =
   | 'flow_handoff'
   | 'followup_exhausted'
   | 'automated_sender'
+  | 'phone_reply'
 
 /** Structured, non-translated facts stored in `ai_handoff_meta`. */
 export interface HandoffMeta {

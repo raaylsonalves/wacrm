@@ -224,6 +224,7 @@ const REASON_KEYS: Record<string, string> = {
   flow_handoff: "flowHandoff",
   followup_exhausted: "followupExhausted",
   automated_sender: "automatedSender",
+  phone_reply: "phoneReply",
 };
 
 const ATTEMPT_CODES = new Set([

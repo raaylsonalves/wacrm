@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { WhatsAppConfig } from './whatsapp-config';
+import { ConnectWhatsApp } from './connect-whatsapp';
 
 /**
  * Settings → WhatsApp with several official numbers
@@ -89,9 +90,17 @@ export function OfficialNumbers() {
     );
   }
 
+  // Meta's hosted signup (no token to paste), above the manual form.
+  const connect = canEditSettings ? <ConnectWhatsApp onConnected={() => load(null)} /> : null;
+
   // No number yet: the plain form, exactly as before.
   if (numbers.length === 0) {
-    return <WhatsAppConfig onChanged={() => load()} />;
+    return (
+      <>
+        {connect}
+        <WhatsAppConfig onChanged={() => load()} />
+      </>
+    );
   }
 
   const header = (
@@ -175,12 +184,15 @@ export function OfficialNumbers() {
   );
 
   return (
-    <WhatsAppConfig
-      key={selected ?? 'primary'}
-      configId={selected === 'new' ? null : selected}
-      addNew={selected === 'new'}
-      header={header}
-      onChanged={() => load(selected === 'new' ? null : undefined)}
-    />
+    <>
+      {connect}
+      <WhatsAppConfig
+        key={selected ?? 'primary'}
+        configId={selected === 'new' ? null : selected}
+        addNew={selected === 'new'}
+        header={header}
+        onChanged={() => load(selected === 'new' ? null : undefined)}
+      />
+    </>
   );
 }

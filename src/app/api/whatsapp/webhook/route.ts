@@ -33,6 +33,15 @@ import {
   handleTemplateWebhookChange,
   isTemplateWebhookField,
 } from '@/lib/whatsapp/template-webhook';
+import {
+  parseDisconnect,
+  parseEchoes,
+  parseHistory,
+  parsePartnerAdded,
+  parseStateSync,
+  type CoexMessage,
+} from '@/lib/whatsapp/coexistence';
+import { completeHostedSignup } from '@/lib/whatsapp/coexistence-onboard';
 
 // The `after()` callback in POST runs within this route's max duration.
 // Inbound processing can fan out to per-media Meta verification calls, so
@@ -367,6 +376,18 @@ async function processWebhook(
             wabaId: entry.id,
           },
           supabaseAdmin()
+        );
+        continue;
+      }
+
+      // WhatsApp Business app coexistence and account lifecycle
+      // (specs/whatsapp-coexistence.md): a different value shape per
+      // field, so they never reach the messaging branches below.
+      if (COEXISTENCE_FIELDS.has(change.field)) {
+        failed += await handleCoexistenceChange(
+          change.field,
+          change.value as unknown,
+          entry.id
         );
         continue;
       }
@@ -1740,4 +1761,194 @@ async function findOrCreateConversation(
   }
 
   return { conversation: newConv, created: true };
+}
+
+// ============================================================
+// WhatsApp Business app coexistence (specs/whatsapp-coexistence.md)
+// ============================================================
+
+const COEXISTENCE_FIELDS = new Set([
+  'account_update',
+  'account_offboarded',
+  'account_reconnected',
+  'smb_message_echoes',
+  'history',
+  'smb_app_state_sync',
+]);
+
+/** Returns how many items could not be stored (the delivery is retried). */
+async function handleCoexistenceChange(
+  field: string,
+  value: unknown,
+  // For these fields the entry id is the WhatsApp Business Account id.
+  wabaId: string
+): Promise<number> {
+  if (field === 'account_update') {
+    const partner = parsePartnerAdded(value);
+    if (partner) {
+      await completeHostedSignup(supabaseAdmin(), partner);
+      return 0;
+    }
+  }
+
+  const disconnect = parseDisconnect(field, value);
+  if (disconnect || field === 'account_reconnected') {
+    // Every number on that account follows it. Reuses health_error so the
+    // settings list and the inbox banner already show it.
+    await supabaseAdmin()
+      .from('whatsapp_config')
+      .update(
+        disconnect
+          ? { status: 'disconnected', health_error: `Meta: ${disconnect}`, health_checked_at: new Date().toISOString() }
+          : { status: 'connected', health_error: null, health_checked_at: new Date().toISOString() }
+      )
+      .eq('waba_id', wabaId);
+    return 0;
+  }
+
+  if (field !== 'smb_message_echoes' && field !== 'history' && field !== 'smb_app_state_sync') {
+    return 0;
+  }
+
+  const phoneNumberId = (value as { metadata?: { phone_number_id?: string } } | null)
+    ?.metadata?.phone_number_id;
+  if (!phoneNumberId) return 0;
+  const { data: config, error } = await supabaseAdmin()
+    .from('whatsapp_config')
+    .select('id, account_id, user_id, access_token, display_phone_number, mirror_inbound_media')
+    .eq('phone_number_id', phoneNumberId)
+    .maybeSingle();
+  if (error) return 1;
+  if (!config) {
+    console.error('[coexistence] no config for phone_number_id:', phoneNumberId);
+    return 0;
+  }
+
+  let failed = 0;
+  if (field === 'smb_message_echoes') {
+    let token = '';
+    try {
+      token = decrypt(config.access_token);
+    } catch {
+      // Text still lands; only media needs the token.
+    }
+    const raw = ((value as { message_echoes?: WhatsAppMessage[] }).message_echoes ?? []);
+    for (const echo of parseEchoes(value)) {
+      const original = raw.find((r) => r.id === echo.id);
+      // Media in an echo has an id like an inbound one: same mirror path.
+      const media =
+        original && echo.contentType !== 'text'
+          ? await parseMessageContent(original, token, config.mirror_inbound_media !== false ? { accountId: config.account_id } : null)
+          : null;
+      const ok = await storeCoexMessage(config, echo, {
+        live: true,
+        text: media ? media.contentText : echo.text,
+        mediaUrl: media?.mediaUrl ?? null,
+        mediaType: media?.mediaType ?? null,
+      });
+      if (!ok) failed++;
+    }
+  } else if (field === 'history') {
+    for (const chunk of parseHistory(value, config.display_phone_number ?? '')) {
+      if (chunk.declined) {
+        console.info('[coexistence] the owner declined to share history:', phoneNumberId);
+        continue;
+      }
+      for (const m of chunk.messages) {
+        if (!(await storeCoexMessage(config, m, { live: false, text: m.text, mediaUrl: null, mediaType: null }))) failed++;
+      }
+    }
+  } else {
+    for (const c of parseStateSync(value)) {
+      // A contact removed from the phone stays in the CRM: it may have
+      // conversations and deals here.
+      if (c.action !== 'add' || !c.phone) continue;
+      const outcome = await findOrCreateContact(config.account_id, config.user_id, {
+        phone: c.phone,
+        name: c.name,
+        waUserId: null,
+        waParentUserId: null,
+        waUsername: null,
+      });
+      if (!outcome) failed++;
+    }
+  }
+  return failed;
+}
+
+/**
+ * Store one message from the app: an echo (live) or history. Idempotent on
+ * the message id like every inbound path. History never fans out (no AI, no
+ * automations, no unread); a live echo means a person answered from the
+ * phone, so the AI steps back in that conversation.
+ */
+async function storeCoexMessage(
+  config: { id: string; account_id: string; user_id: string },
+  m: CoexMessage,
+  opts: { live: boolean; text: string | null; mediaUrl: string | null; mediaType: string | null }
+): Promise<boolean> {
+  const contactOutcome = await findOrCreateContact(config.account_id, config.user_id, {
+    phone: m.customer,
+    name: '',
+    waUserId: null,
+    waParentUserId: null,
+    waUsername: null,
+  });
+  if (!contactOutcome) return false;
+  const convResult = await findOrCreateConversation(
+    config.account_id,
+    config.user_id,
+    contactOutcome.contact.id,
+    config.id
+  );
+  if (!convResult) return false;
+  const conversation = convResult.conversation;
+  const createdAt = new Date(m.timestamp * 1000).toISOString();
+
+  const { data: inserted, error } = await supabaseAdmin()
+    .from('messages')
+    .upsert(
+      {
+        conversation_id: conversation.id,
+        sender_type: m.fromBusiness ? 'agent' : 'customer',
+        sent_from: m.fromBusiness ? 'business_app' : null,
+        content_type: m.contentType,
+        content_text: opts.text,
+        media_url: opts.mediaUrl,
+        media_type: opts.mediaType,
+        message_id: m.id,
+        status: m.status,
+        created_at: createdAt,
+      },
+      { onConflict: 'conversation_id,message_id', ignoreDuplicates: true }
+    )
+    .select('id');
+  if (error) {
+    console.error('[coexistence] message insert failed:', error.message);
+    return false;
+  }
+  if (!inserted || inserted.length === 0) return true;
+
+  // The list preview follows the newest message only: history arrives
+  // out of order.
+  const lastAt = conversation.last_message_at as string | null;
+  if (!lastAt || lastAt <= createdAt) {
+    await supabaseAdmin()
+      .from('conversations')
+      .update({
+        last_message_text: opts.text || `[${m.contentType}]`,
+        last_message_at: createdAt,
+        last_message_sender_type: m.fromBusiness ? 'agent' : 'customer',
+      })
+      .eq('id', conversation.id);
+  }
+
+  if (opts.live && m.fromBusiness) {
+    await supabaseAdmin()
+      .from('conversations')
+      .update({ ai_autoreply_disabled: true, ai_handoff_reason: 'phone_reply' })
+      .eq('id', conversation.id)
+      .eq('ai_autoreply_disabled', false);
+  }
+  return true;
 }

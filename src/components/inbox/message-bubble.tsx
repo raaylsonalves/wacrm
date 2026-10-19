@@ -16,6 +16,7 @@ import {
   Phone,
   Copy,
   Image as ImageIcon,
+  Smartphone,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ReplyQuote } from "./reply-quote";
@@ -342,6 +343,15 @@ export function MessageBubble({
             >
               <Sparkles className="h-2.5 w-2.5" />
               {t("aiBadge")}
+            </span>
+          )}
+          {message.sent_from === "business_app" && (
+            <span
+              className="inline-flex items-center gap-0.5 rounded-full bg-primary-foreground/20 px-1.5 py-px text-[9px] font-semibold uppercase leading-none tracking-wide text-primary-foreground"
+              title={t("phoneBadgeTitle")}
+            >
+              <Smartphone className="h-2.5 w-2.5" />
+              {t("phoneBadge")}
             </span>
           )}
           <span

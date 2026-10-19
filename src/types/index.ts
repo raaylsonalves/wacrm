@@ -367,6 +367,9 @@ export interface Message {
    * badge in the inbox. Migration 033.
    */
   ai_generated?: boolean;
+  /** 'business_app' = the owner sent it from the WhatsApp Business app on
+   *  the phone (coexistence echo, migration 138). */
+  sent_from?: 'business_app' | null;
   /**
    * Meta's reason for a failed send, from the `failed` status webhook's
    * `errors[0]` (code / title / error_data.details). Only set when
