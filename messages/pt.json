@@ -3335,16 +3335,16 @@
     },
     "whatsapp": {
       "connect": {
-        "title": "Conectar WhatsApp",
+        "title": "Contas do WhatsApp",
         "hint": "Entre com o Facebook numa janela da Meta, sem colar token. Leva uns 2 minutos.",
         "mode": {
           "coexistence": {
-            "title": "Já uso o WhatsApp Business no celular",
-            "hint": "O número continua no app; as conversas aparecem também no CRM."
+            "title": "Coexistência com o app WhatsApp Business",
+            "hint": "Use a conta e o número que você já tem no app do celular. As conversas continuam no celular e aparecem também no CRM."
           },
           "api": {
-            "title": "Número novo, só no CRM",
-            "hint": "O número passa a funcionar apenas pela API, fora do app."
+            "title": "API do WhatsApp Business",
+            "hint": "Para atender em escala: um número usado só pelo CRM, com disparos, automações e vários atendentes."
           }
         },
         "notes": {
@@ -3366,6 +3366,7 @@
           "generic": "Não foi possível iniciar a conexão. Tente de novo."
         },
         "compactTitle": "Conectar outro número pela Meta",
+        "start": "Comece",
         "whatChanges": "O que muda no app do celular",
         "cancel": "Cancelar",
         "manual": "Conectar com token (avançado)",

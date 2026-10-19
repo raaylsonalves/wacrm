@@ -10,9 +10,12 @@ import {
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import {
+  ArrowRight,
   CheckCircle2,
   ChevronDown,
   Loader2,
+  MessageCircle,
+  Rocket,
   Smartphone,
   TriangleAlert,
   X,
@@ -41,6 +44,20 @@ interface Signup {
   error: string | null;
   created_at: string;
 }
+
+/** The illustrated panel of each option (pastel tones, no stock photos). */
+const MODE_ART = {
+  coexistence: {
+    Icon: Smartphone,
+    panel: 'bg-tone-mint-soft',
+    ink: 'text-tone-mint-ink',
+  },
+  api: {
+    Icon: Rocket,
+    panel: 'bg-tone-lilac-soft',
+    ink: 'text-tone-lilac-ink',
+  },
+} as const;
 
 const POLL_MS = 3_000;
 /** Meta's webhook can land a little after the popup closes. */
@@ -223,26 +240,54 @@ export function ConnectWhatsApp({
 
         {open && (
           <div className="mt-4 space-y-3">
-            <div className="grid gap-2 sm:grid-cols-2">
-              {(['coexistence', 'api'] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  disabled={busy !== null || waiting}
-                  onClick={() => start(m)}
-                  className="border-border hover:bg-muted/60 rounded-xl border p-3 text-left transition-colors disabled:opacity-60"
-                >
-                  <span className="text-foreground flex items-center gap-2 text-sm font-medium">
-                    {busy === m && (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    )}
-                    {t(`mode.${m}.title`)}
-                  </span>
-                  <span className="text-muted-foreground block text-xs">
-                    {t(`mode.${m}.hint`)}
-                  </span>
-                </button>
-              ))}
+            <div className="grid gap-3 lg:grid-cols-2">
+              {(['coexistence', 'api'] as const).map((m) => {
+                const Art = MODE_ART[m];
+                return (
+                  <article
+                    key={m}
+                    className="border-border bg-card flex min-h-40 overflow-hidden rounded-2xl border"
+                  >
+                    <div
+                      aria-hidden
+                      className={cn(
+                        'relative hidden w-2/5 shrink-0 items-center justify-center overflow-hidden sm:flex',
+                        Art.panel
+                      )}
+                    >
+                      <span className="absolute -top-6 -left-6 size-24 rounded-full bg-white/30" />
+                      <span className="absolute -right-8 -bottom-8 size-28 rounded-full bg-white/20" />
+                      <span className="relative flex size-16 items-center justify-center rounded-2xl bg-white/80 shadow-sm">
+                        <Art.Icon className={cn('size-8', Art.ink)} />
+                      </span>
+                    </div>
+                    <div className="flex flex-1 flex-col gap-2 p-4">
+                      <span className="flex size-8 items-center justify-center rounded-lg bg-[#25D366]/15 text-[#128C4B] dark:text-[#5BE38F]">
+                        <MessageCircle className="size-4" />
+                      </span>
+                      <h4 className="text-foreground text-sm font-semibold">
+                        {t(`mode.${m}.title`)}
+                      </h4>
+                      <p className="text-muted-foreground text-xs">
+                        {t(`mode.${m}.hint`)}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-auto self-start"
+                        disabled={busy !== null || waiting}
+                        onClick={() => start(m)}
+                      >
+                        {busy === m ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : null}
+                        {t('start')}
+                        <ArrowRight className="size-3.5" />
+                      </Button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
 
             <details className="text-xs">

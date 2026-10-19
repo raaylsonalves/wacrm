@@ -3345,16 +3345,16 @@
     },
     "whatsapp": {
       "connect": {
-        "title": "WhatsApp 연결",
+        "title": "WhatsApp 계정",
         "hint": "토큰을 붙여 넣지 않고 Meta 창에서 Facebook으로 로그인합니다. 약 2분 걸립니다.",
         "mode": {
           "coexistence": {
-            "title": "이미 휴대폰에서 WhatsApp Business를 사용 중",
-            "hint": "번호는 앱에 그대로 남고, 대화는 CRM에도 표시됩니다."
+            "title": "WhatsApp Business 앱과 함께 사용",
+            "hint": "휴대폰 앱에 있는 계정과 번호를 그대로 사용합니다. 대화는 휴대폰에 남고 CRM에도 표시됩니다."
           },
           "api": {
-            "title": "새 번호, CRM 전용",
-            "hint": "번호가 앱 밖에서 API로만 작동합니다."
+            "title": "WhatsApp Business API",
+            "hint": "대규모 응대용: CRM에서만 사용하는 번호로 대량 발송, 자동화, 여러 상담원을 지원합니다."
           }
         },
         "notes": {
@@ -3376,6 +3376,7 @@
           "generic": "연결을 시작할 수 없습니다. 다시 시도하세요."
         },
         "compactTitle": "Meta로 다른 번호 연결",
+        "start": "시작하기",
         "whatChanges": "휴대폰 앱에서 달라지는 점",
         "cancel": "취소",
         "manual": "토큰으로 연결 (고급)",

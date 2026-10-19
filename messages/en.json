@@ -3345,16 +3345,16 @@
     },
     "whatsapp": {
       "connect": {
-        "title": "Connect WhatsApp",
+        "title": "WhatsApp accounts",
         "hint": "Log in with Facebook in a Meta window, no token to paste. Takes about 2 minutes.",
         "mode": {
           "coexistence": {
-            "title": "I already use WhatsApp Business on my phone",
-            "hint": "The number stays in the app; conversations also show up in the CRM."
+            "title": "WhatsApp Business app coexistence",
+            "hint": "Use the account and number you already have in the phone app. Conversations stay on the phone and also show up in the CRM."
           },
           "api": {
-            "title": "New number, CRM only",
-            "hint": "The number works only through the API, outside the app."
+            "title": "WhatsApp Business API",
+            "hint": "For messaging at scale: a number used only by the CRM, with broadcasts, automations and several agents."
           }
         },
         "notes": {
@@ -3376,6 +3376,7 @@
           "generic": "Could not start the connection. Try again."
         },
         "compactTitle": "Connect another number through Meta",
+        "start": "Get started",
         "whatChanges": "What changes in the phone app",
         "cancel": "Cancel",
         "manual": "Connect with a token (advanced)",
