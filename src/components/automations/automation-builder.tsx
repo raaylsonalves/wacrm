@@ -2209,7 +2209,10 @@ function previewFor(
   const cfg = step.step_config;
   switch (step.step_type) {
     case 'send_message':
-      return (cfg.text as string) || t('preview.noText');
+      return (
+        (cfg.text as string) ||
+        (cfg.media_url ? t('config.imageLabel') : t('preview.noText'))
+      );
     case 'ai_followup':
       return cfg.final ? t('preview.aiFinal') : t('preview.aiContext');
     case 'send_buttons':

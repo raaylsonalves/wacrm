@@ -83,7 +83,7 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
   const c = step.step_config ?? {}
   switch (step.step_type) {
     case 'send_message':
-      if (!nonEmpty(c.text)) {
+      if (!nonEmpty(c.text) && !nonEmpty(c.media_url)) {
         issues.push({ path: `${path}.text`, message: 'message text is required' })
       }
       if (

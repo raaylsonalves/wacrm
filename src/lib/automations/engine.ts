@@ -578,7 +578,9 @@ async function runStep(
         ? (pickVariant([cfg.text, ...cfg.variants], conversationId) ?? cfg.text)
         : cfg.text;
       const text = interpolate(chosen, args);
-      if (!text.trim()) throw new Error('send_message has empty text');
+      // A picture may go alone; a text-only message needs its text.
+      if (!text.trim() && !cfg.media_url)
+        throw new Error('send_message has empty text');
       if (cfg.media_url) {
         const { whatsapp_message_id } = await engineSendMedia({
           accountId: args.automation.account_id,
@@ -587,7 +589,7 @@ async function runStep(
           contactId: args.contactId,
           kind: 'image',
           link: cfg.media_url,
-          caption: text,
+          caption: text.trim() || undefined,
         });
         return {
           key: 'sentViaMeta',
