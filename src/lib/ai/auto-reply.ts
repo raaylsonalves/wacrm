@@ -72,6 +72,7 @@ import {
   loadAccountMetaCredentials,
 } from '@/lib/flows/meta-send'
 import { sendTypingIndicator } from '@/lib/whatsapp/meta-api'
+import { typingOverWaha, wahaChannelOfConversation } from '@/lib/whatsapp/waha-send'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { agendaClockText } from './agenda-clock'
 import { loadAppointmentSettings } from '@/lib/appointments/store'
@@ -1371,6 +1372,19 @@ async function showTypingIndicator(
   conversationId: string,
 ): Promise<void> {
   try {
+    // A QR (WAHA) conversation: typing goes out over its own session.
+    const waha = await wahaChannelOfConversation(db, accountId, conversationId)
+    if (waha) {
+      const { data: conv } = await db
+        .from('conversations')
+        .select('contact:contacts(phone)')
+        .eq('id', conversationId)
+        .eq('account_id', accountId)
+        .maybeSingle()
+      const phone = (conv?.contact as { phone?: string } | null)?.phone
+      if (phone) await typingOverWaha(waha, phone)
+      return
+    }
     // The number the customer wrote to — Meta only knows the message there.
     const { phoneNumberId, accessToken } = await loadAccountMetaCredentials(
       db,

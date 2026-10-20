@@ -339,6 +339,18 @@ export async function sendWahaText(
   return { id: wahaMessageId(r) };
 }
 
+/** "Seen" + "typing…" in the customer's chat while the reply is written. */
+export async function startWahaTyping(
+  baseUrl: string,
+  apiKey: string,
+  sessionName: string,
+  chatId: string
+): Promise<void> {
+  const body = { session: sessionName, chatId };
+  await wahaFetch(baseUrl, apiKey, '/api/sendSeen', { method: 'POST', body });
+  await wahaFetch(baseUrl, apiKey, '/api/startTyping', { method: 'POST', body });
+}
+
 /** What WAHA answers to a send: WEBJS `{ id }`, NOWEB `{ key: { id } }`. */
 type WahaSendResponse = {
   id?: string | { id?: string; _serialized?: string };
