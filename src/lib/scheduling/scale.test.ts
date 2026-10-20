@@ -9,6 +9,7 @@ import {
   pickSlots,
   priceText,
   restrictUnits,
+  timesByPeriod,
   scaleSlotId,
   ScaleError,
   slotLabel,
@@ -248,5 +249,17 @@ describe('restrictUnits', () => {
   it('leaves the client alone without a list', () => {
     expect(restrictUnits(base, null)).toBe(base);
     expect(restrictUnits(base, [])).toBe(base);
+  });
+});
+
+describe('timesByPeriod', () => {
+  it('splits morning, afternoon and evening from 18h', () => {
+    expect(
+      timesByPeriod(['09:00', '11:30', '12:00', '17:30', '18:00', '19:30'])
+    ).toEqual({
+      manhã: ['09:00', '11:30'],
+      tarde: ['12:00', '17:30'],
+      noite: ['18:00', '19:30'],
+    });
   });
 });

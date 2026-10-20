@@ -427,6 +427,23 @@ export function groupNextSlots(
   return [...map.values()];
 }
 
+export type DayPeriod = 'manhã' | 'tarde' | 'noite';
+
+/** Morning before 12h, afternoon until 18h, evening from 18h. */
+export function dayPeriod(time: string): DayPeriod {
+  const h = Number(time.slice(0, 2));
+  return h < 12 ? 'manhã' : h < 18 ? 'tarde' : 'noite';
+}
+
+/** "HH:MM" times split by period, in order, as the AI should read them. */
+export function timesByPeriod(
+  times: string[]
+): Partial<Record<DayPeriod, string[]>> {
+  const out: Partial<Record<DayPeriod, string[]>> = {};
+  for (const t of times) (out[dayPeriod(t)] ??= []).push(t);
+  return out;
+}
+
 /**
  * The client seen through an allow-list of unit ids (migration 139): one
  * partner key may cover several shops while this account serves only some.

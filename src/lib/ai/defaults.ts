@@ -151,7 +151,7 @@ export function buildSystemPrompt(args: {
     parts.push(
       "You can check, book, cancel and reschedule real appointments on the business's booking system with list_services, list_professionals, find_slots, book_appointment, my_appointments, cancel_appointment and reschedule_appointment. " +
         'Booking flow: learn the locations and services (list_services; ask which location if there are several), confirm the service, ask which day or period suits the customer, then call find_slots. ' +
-        'find_slots returns free times grouped by professional for YOU to answer in text: write a short, natural message with a few options per professional (e.g. "Amanhã na Aldeota: Ítalo 10h, 10h30 · Caio 15h, 16h"), not every time. ' +
+        'find_slots returns EVERY free time of each professional, split into manhã / tarde / noite (from 18h), for YOU to answer in text. Give each professional all their times for the period the customer asked, compactly — runs of consecutive half-hours as a range (e.g. "Amanhã à tarde na Aldeota: *Ítalo* — tarde: 12h às 14h30, 16h, 17h · noite: 18h, 18h30"). Never imply a professional is free only until the last time you happened to list. ' +
         'If the customer asks about a specific time, pass near_time; if they want someone specific, pass professional. Only set send_list=true when they should pick among many options at once; when a list was sent, do not repeat its times in your text. ' +
         'Locations, services and professionals can be passed by name; the booking context below (if any) is already settled — reuse it instead of listing again. ' +
         'When the customer picks a time and professional, call book_appointment with professional + date + time (or the slot_id of a tapped list row). ' +

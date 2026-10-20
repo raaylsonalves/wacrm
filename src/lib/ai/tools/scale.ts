@@ -3,6 +3,7 @@ import type { ToolDefinition, ToolExecutor } from '../types'
 import { engineSendInteractiveList } from '@/lib/flows/meta-send'
 import {
   groupNextSlots,
+  timesByPeriod,
   idempotencyKey,
   minuteOfDay,
   parseScaleSlotId,
@@ -56,7 +57,9 @@ export interface AgendaState {
   updated_at?: string
 }
 
-const TIMES_PER_PROFESSIONAL = 6
+/** Every free time goes back, split by period: a short list read as
+ *  "until 14h30" made the customer think the afternoon was full. */
+const TIMES_PER_PROFESSIONAL = 40
 /** Distinct times asked of /horarios/proximos; each carries every free professional. */
 const NEXT_SLOTS_LIMIT = 40
 /** ± window around a time the customer asked about ("tem às 14h?"). */
@@ -492,11 +495,18 @@ async function findSlots(ctx: ScaleToolContext, args: Record<string, unknown>) {
     unit: unit.name,
     services: services.names,
     ...(nearTime ? { near_time: nearTime } : {}),
-    by_professional: grouped.map((g) => ({
-      name: g.name,
-      id: g.professional_id,
-      times: g.times.map((t) => (date ? t.time : `${t.date} ${t.time}`)),
-    })),
+    by_professional: grouped.map((g) => {
+      // One day: { manhã, tarde, noite }. Several days: the same per date.
+      const days = new Map<string, string[]>()
+      for (const t of g.times) days.set(t.date, [...(days.get(t.date) ?? []), t.time])
+      return {
+        name: g.name,
+        id: g.professional_id,
+        times: date
+          ? timesByPeriod(g.times.map((t) => t.time))
+          : Object.fromEntries([...days].map(([d, ts]) => [d, timesByPeriod(ts)])),
+      }
+    }),
     list_sent: listSent,
     ...(listSent ? { note: "The list is already on the customer's screen: do not repeat its times." } : {}),
   }

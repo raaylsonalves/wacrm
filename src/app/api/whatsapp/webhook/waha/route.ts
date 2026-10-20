@@ -127,6 +127,9 @@ async function handleMessage(
   // contact binding for a group.
   if (payload.fromMe) return;
   if (payload.from?.endsWith('@g.us')) return;
+  // Status updates (`status@broadcast`), broadcast lists and channels
+  // (`@newsletter`) are not a customer writing to the business.
+  if (/@(broadcast|newsletter)$/.test(payload.from ?? '')) return;
 
   // Unresolved, the contact keeps the LID itself (`…@lid`): replies then
   // go to that chat id as-is (toWahaChatId), which WAHA accepts.
