@@ -119,7 +119,9 @@ export async function createWahaSession(
         webhooks: [
           {
             url: webhookUrl,
-            events: ['message', 'session.status'],
+            // message.any also carries what the number itself sends, so a
+            // reply typed on the phone reaches the inbox (and pauses the AI).
+            events: ['message.any', 'session.status'],
             hmac: { key: webhookSecret },
           },
         ],

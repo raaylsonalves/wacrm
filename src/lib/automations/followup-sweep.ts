@@ -20,6 +20,7 @@ import {
   type SilenceConfig,
 } from './followup-logic'
 import { notifyUsers, teamForConversation } from '@/lib/notifications/notify'
+import { localNow } from '@/lib/scheduling/reminders'
 
 /** Bounded per automation per run, oldest first: a backlog drains over a
  *  few cron ticks instead of one run texting hundreds of people at once. */
@@ -110,9 +111,29 @@ async function sweepOne(automation: Automation, now: Date): Promise<number> {
     .not('opted_out_at', 'is', null)
   const blocked = new Set((optedOut ?? []).map((c) => c.id as string))
 
+  // A customer who already booked is not a lead gone cold: the booking
+  // reminder (lib/scheduling/reminders.ts) talks to them instead.
+  const { data: integ } = await db
+    .from('scheduling_integrations')
+    .select('timezone')
+    .eq('account_id', automation.account_id)
+    .maybeSingle()
+  const { data: booked } = await db
+    .from('external_bookings')
+    .select('conversation_id, status')
+    .eq('account_id', automation.account_id)
+    .in('conversation_id', candidates.map((c) => c.id as string))
+    .gt('starts_local', localNow((integ?.timezone as string) || 'America/Sao_Paulo', now))
+  const hasBooking = new Set(
+    (booked ?? [])
+      .filter((b) => !/cancel/i.test(String(b.status ?? '')))
+      .map((b) => b.conversation_id as string)
+  )
+
   let enrolled = 0
   for (const conv of candidates) {
     if (blocked.has(conv.contact_id as string)) continue
+    if (hasBooking.has(conv.id as string)) continue
 
     // The unique key IS the claim: a returned row means THIS run won it.
     // ignoreDuplicates → ON CONFLICT DO NOTHING, so two overlapping

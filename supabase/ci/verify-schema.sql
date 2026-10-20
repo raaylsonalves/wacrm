@@ -1085,6 +1085,13 @@ BEGIN
     RAISE EXCEPTION 'ai_configs.media_library missing — migration 140 did not apply';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'scheduling_integrations' AND column_name = 'reminder_minutes')
+     OR NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'external_bookings' AND column_name = 'reminded_at') THEN
+    RAISE EXCEPTION 'booking reminder columns missing — migration 141 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

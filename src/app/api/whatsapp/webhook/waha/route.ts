@@ -45,7 +45,11 @@ import { supabaseAdmin } from '@/lib/whatsapp/waha-admin-client';
 interface WahaMessagePayload {
   id: string;
   from: string;
+  /** The recipient — the customer, on a message our own number sent. */
+  to?: string;
   fromMe?: boolean;
+  /** 'api' = sent through WAHA (the CRM), 'app' = typed on the phone. */
+  source?: string;
   body?: string;
   hasMedia?: boolean;
   media?: { url?: string; mimetype?: string };
@@ -149,6 +153,137 @@ function wahaProfileName(payload: WahaMessagePayload): string | null {
   return name && !/^[+\d\s()-]+$/.test(name) ? name : null;
 }
 
+/**
+ * WAHA reports media at its own container address (localhost) behind the
+ * API key, and deletes the file minutes later. Fetch it from the public
+ * base URL and keep a copy in chat-media, so the inbox can play it and
+ * the AI can transcribe it.
+ */
+async function storeWahaMedia(
+  channelId: string,
+  accountId: string,
+  payload: WahaMessagePayload
+): Promise<{
+  mediaUrl: string | null;
+  fetchMedia: (() => Promise<{ buffer: Buffer; contentType: string }>) | null;
+}> {
+  if (!payload.hasMedia || !payload.media?.url) {
+    return { mediaUrl: payload.media?.url ?? null, fetchMedia: null };
+  }
+  const creds = await wahaCreds(channelId);
+  if (!creds) return { mediaUrl: payload.media.url, fetchMedia: null };
+  const url = wahaMediaUrl(payload.media.url, creds.baseUrl);
+  const fetchMedia = () => downloadWahaMedia(url, creds.apiKey);
+  const mirrored = await mirrorInboundMedia({
+    storage: supabaseAdmin().storage,
+    accountId,
+    mediaId: payload.id.replace(/[^A-Za-z0-9]/g, '').slice(-24) || 'waha',
+    downloadUrl: url,
+    accessToken: '',
+    mimeType: payload.media.mimetype ?? null,
+    messageTimestamp: payload.timestamp ?? null,
+    download: fetchMedia,
+  }).catch((err) => {
+    console.error('[webhook/waha] media mirror failed:', err);
+    return null;
+  });
+  return { mediaUrl: mirrored ?? url, fetchMedia };
+}
+
+/**
+ * A message our own number sent (needs the `message.any` event). Sends
+ * made through WAHA — the AI, an agent in the inbox, automations — are
+ * stored by the CRM already; one typed on the phone is not. Store it as
+ * the team's reply and pause the AI, so it does not talk over a person
+ * (same as WhatsApp Business coexistence: handoff reason phone_reply).
+ */
+async function handleOwnMessage(
+  channel: { id: string; account_id: string },
+  payload: WahaMessagePayload
+) {
+  const to = payload.to ?? '';
+  if (!to || to.endsWith('@g.us') || /@(broadcast|newsletter)$/.test(to)) {
+    return;
+  }
+  if (payload.source === 'api') return;
+
+  const db = supabaseAdmin();
+  // NOWEB ids are `true_<chat>_<KEYID>`; the CRM stores the KEYID it got
+  // back from the send. Without `source` (older WAHA) an API send echoes
+  // here too — give the CRM's own insert a moment, then look for it.
+  const keyId = payload.id.split('_').pop() || payload.id;
+  if (payload.source !== 'app') await new Promise((r) => setTimeout(r, 4000));
+  const { data: ours } = await db
+    .from('messages')
+    .select('id')
+    .in('message_id', [keyId, payload.id])
+    .limit(1);
+  if (ours && ours.length > 0) return;
+
+  const phone = to.endsWith('@lid')
+    ? (phoneFromWahaAlt(payload) ?? (await phoneOfLid(channel.id, to)) ?? to)
+    : fromWahaChatId(to);
+  const contact = await findExistingContact(db, channel.account_id, phone);
+  if (!contact) return;
+  const conversation = await findConversationOnNumber(
+    db,
+    channel.account_id,
+    contact.id,
+    { channelId: channel.id, configId: null }
+  ).catch(() => null);
+  if (!conversation) return;
+
+  const contentType = payload.hasMedia
+    ? mediaContentType(payload.media?.mimetype)
+    : 'text';
+  const { mediaUrl } = await storeWahaMedia(
+    channel.id,
+    channel.account_id,
+    payload
+  );
+  const text = payload.body?.trim() || null;
+  const createdAt = payload.timestamp
+    ? new Date(payload.timestamp * 1000).toISOString()
+    : new Date().toISOString();
+  const { data: inserted, error } = await db
+    .from('messages')
+    .upsert(
+      {
+        conversation_id: conversation.id,
+        sender_type: 'agent',
+        sent_from: 'business_app',
+        content_type: contentType,
+        content_text: text,
+        media_url: mediaUrl,
+        message_id: keyId,
+        status: 'sent',
+        created_at: createdAt,
+      },
+      { onConflict: 'conversation_id,message_id', ignoreDuplicates: true }
+    )
+    .select('id');
+  if (error) {
+    console.error('[webhook/waha] own message insert failed:', error);
+    return;
+  }
+  if (!inserted || inserted.length === 0) return;
+
+  await db
+    .from('conversations')
+    .update({
+      last_message_text: text || `[${contentType}]`,
+      last_message_at: createdAt,
+      last_message_sender_type: 'agent',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', conversation.id);
+  await db
+    .from('conversations')
+    .update({ ai_autoreply_disabled: true, ai_handoff_reason: 'phone_reply' })
+    .eq('id', conversation.id)
+    .eq('ai_autoreply_disabled', false);
+}
+
 async function handleMessage(
   channel: { id: string; account_id: string; created_by: string },
   payload: WahaMessagePayload
@@ -157,7 +292,7 @@ async function handleMessage(
   // inbound message. Group chats (`@g.us`) are out of scope for the
   // same reason the Cloud API webhook skips them: there's no CRM
   // contact binding for a group.
-  if (payload.fromMe) return;
+  if (payload.fromMe) return handleOwnMessage(channel, payload);
   if (payload.from?.endsWith('@g.us')) return;
   // Status updates (`status@broadcast`), broadcast lists and channels
   // (`@newsletter`) are not a customer writing to the business.
@@ -293,34 +428,11 @@ async function handleMessage(
     ? mediaContentType(payload.media?.mimetype)
     : 'text';
 
-  // Media: WAHA's URL points at its own container (localhost) and needs
-  // the API key. Fetch it from the public base URL and keep a copy in
-  // chat-media, so the inbox can play it and the AI can transcribe it.
-  let mediaUrl: string | null = payload.media?.url ?? null;
-  let fetchMedia:
-    (() => Promise<{ buffer: Buffer; contentType: string }>) | null = null;
-  if (payload.hasMedia && payload.media?.url) {
-    const creds = await wahaCreds(channel.id);
-    if (creds) {
-      const url = wahaMediaUrl(payload.media.url, creds.baseUrl);
-      mediaUrl = url;
-      fetchMedia = () => downloadWahaMedia(url, creds.apiKey);
-      const mirrored = await mirrorInboundMedia({
-        storage: db.storage,
-        accountId,
-        mediaId: payload.id.replace(/[^A-Za-z0-9]/g, '').slice(-24) || 'waha',
-        downloadUrl: url,
-        accessToken: '',
-        mimeType: payload.media.mimetype ?? null,
-        messageTimestamp: payload.timestamp ?? null,
-        download: () => downloadWahaMedia(url, creds.apiKey),
-      }).catch((err) => {
-        console.error('[webhook/waha] media mirror failed:', err);
-        return null;
-      });
-      if (mirrored) mediaUrl = mirrored;
-    }
-  }
+  const { mediaUrl, fetchMedia } = await storeWahaMedia(
+    channel.id,
+    accountId,
+    payload
+  );
 
   const { data: insertedMsg, error: msgErr } = await db
     .from('messages')
@@ -518,7 +630,7 @@ export async function POST(request: Request) {
           channel,
           body.payload as WahaSessionStatusPayload
         );
-      } else if (body.event === 'message') {
+      } else if (body.event === 'message' || body.event === 'message.any') {
         await handleMessage(channel, body.payload as WahaMessagePayload);
       }
     } catch (err) {

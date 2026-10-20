@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/automations/admin-client'
 import { resumePendingExecution } from '@/lib/automations/engine'
 import type { AutomationContext } from '@/lib/automations/engine'
 import { runFollowupSweep } from '@/lib/automations/followup-sweep'
+import { sweepBookingReminders } from '@/lib/scheduling/reminders'
 import { runProspectingTick } from '@/lib/prospecting/tick'
 import { syncContactAvatars } from '@/lib/contacts/avatar-sync'
 import { retryPendingRelays } from '@/lib/cases/relay'
@@ -170,6 +171,8 @@ export async function GET(request: Request) {
   const notifications = {
     sla: await sweepSlaBreaches(supabaseAdmin()),
     reminders: await sweepAppointmentReminders(supabaseAdmin()),
+    // Partner-system bookings (ScaLE, migration 141). Never throws.
+    bookingReminders: await sweepBookingReminders(supabaseAdmin()),
     push: await dispatchPendingPushes(supabaseAdmin()),
   }
 
