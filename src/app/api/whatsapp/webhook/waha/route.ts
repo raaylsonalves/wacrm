@@ -609,6 +609,10 @@ async function handleMessage(
       conversationId: conversation.id,
       contactId: contact.id,
       configOwnerUserId: ownerUserId,
+      // Which message started this dispatch: without it, two messages a
+      // second apart both look like "the newest" and the burst gets two
+      // replies instead of one.
+      inboundMessageId: payload.id,
       // A voice note is transcribed before the AI answers it
       // (specs/ai-audio-inbound.md), as on the Cloud API.
       audio:
