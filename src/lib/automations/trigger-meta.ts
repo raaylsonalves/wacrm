@@ -18,6 +18,9 @@ export const TRIGGER_META: Record<AutomationTriggerType, TriggerMeta> = {
   first_inbound_message: {
     pillClass: 'border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-300',
   },
+  customer_arrived: {
+    pillClass: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  },
   keyword_match: {
     pillClass: 'border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300',
   },

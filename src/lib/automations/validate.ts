@@ -242,6 +242,11 @@ export function validateTriggerForActivation(
     if (!nonEmpty(cfg.tag_id)) {
       issues.push({ path: 'trigger.tag_id', message: 'tag is required' })
     }
+  } else if (triggerType === 'customer_arrived') {
+    const h = cfg.idle_hours
+    if (h != null && (typeof h !== 'number' || !Number.isFinite(h) || h < 1 || h > 720)) {
+      issues.push({ path: 'trigger.idle_hours', message: 'idle_hours must be between 1 and 720' })
+    }
   } else if (triggerType === 'conversation_silence') {
     const sa = cfg.silence_after as Record<string, unknown> | undefined
     const unit = sa?.unit

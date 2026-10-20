@@ -2455,6 +2455,8 @@
         "send_webhook": "Enviar webhook",
         "close_conversation": "Fechar conversa"
       },
+      "arrivedIdleHours": "Sem escrever há pelo menos (horas)",
+      "arrivedIdleHoursHint": "Mensagens dentro desse intervalo continuam o mesmo atendimento.",
       "triggers": {
         "new_message_received": {
           "label": "Nova mensagem recebida",
@@ -2463,6 +2465,10 @@
         "first_inbound_message": {
           "label": "Primeira mensagem do contato",
           "hint": "Primeira vez que este contato envia uma mensagem (funciona também para contatos adicionados manualmente)"
+        },
+        "customer_arrived": {
+          "label": "Cliente chegou (novo atendimento)",
+          "hint": "Primeira mensagem do cliente — novo ou antigo — depois de um tempo sem escrever. Use para boas-vindas."
         },
         "keyword_match": {
           "label": "Palavra-chave",

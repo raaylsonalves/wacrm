@@ -598,6 +598,9 @@ export interface BroadcastRecipient {
 export type AutomationTriggerType =
   | 'new_message_received'
   | 'first_inbound_message'
+  /** The customer writes after `idle_hours` without writing (or for the
+   *  first time): a new visit, new customer or not. */
+  | 'customer_arrived'
   | 'keyword_match'
   | 'new_contact_created'
   | 'conversation_assigned'

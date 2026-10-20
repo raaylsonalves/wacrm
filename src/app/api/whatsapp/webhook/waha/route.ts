@@ -31,6 +31,7 @@ import { isOptOutMessage } from '@/lib/contacts/opt-out';
 import { confirmOptOut } from '@/lib/contacts/opt-out-confirm';
 import { reopenClosedConversation } from '@/lib/conversations/reopen';
 import { runAutomationsForTrigger } from '@/lib/automations/engine';
+import { hoursSincePreviousCustomerMessage } from '@/lib/automations/arrival';
 import { dispatchInboundToFlows } from '@/lib/flows/engine';
 import { dispatchInboundToAiReply } from '@/lib/ai/auto-reply';
 import { pushInboundMessage } from '@/lib/push/send';
@@ -328,6 +329,12 @@ async function handleMessage(
     .eq('sender_type', 'customer');
   const isFirstInboundMessage = (customerMsgCount ?? 0) <= 1;
 
+  const idleHoursBefore = await hoursSincePreviousCustomerMessage(
+    db,
+    accountId,
+    contact.id
+  );
+
   const flowResult = await dispatchInboundToFlows({
     accountId,
     userId: ownerUserId,
@@ -339,11 +346,13 @@ async function handleMessage(
 
   // Welcome automations run before the AI answers the same message.
   const triggers: (
+    | 'customer_arrived'
     | 'first_inbound_message'
     | 'new_contact_created'
     | 'new_message_received'
     | 'keyword_match'
   )[] = [
+    'customer_arrived',
     ...(isFirstInboundMessage ? (['first_inbound_message'] as const) : []),
     ...(contactCreated ? (['new_contact_created'] as const) : []),
     ...(flowResult.consumed
@@ -355,7 +364,11 @@ async function handleMessage(
       accountId,
       triggerType,
       contactId: contact.id,
-      context: { message_text: contentText, conversation_id: conversation.id },
+      context: {
+        message_text: contentText,
+        conversation_id: conversation.id,
+        idle_hours: idleHoursBefore,
+      },
     }).catch((err) =>
       console.error('[webhook/waha] automation dispatch failed:', err)
     );

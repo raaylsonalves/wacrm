@@ -2455,6 +2455,8 @@
         "send_webhook": "웹훅 보내기",
         "close_conversation": "대화 닫기"
       },
+      "arrivedIdleHours": "최소 연락 없는 시간 (시간)",
+      "arrivedIdleHoursHint": "이 시간 안의 메시지는 같은 상담으로 이어집니다.",
       "triggers": {
         "new_message_received": {
           "label": "새 메시지 수신",
@@ -2463,6 +2465,10 @@
         "first_inbound_message": {
           "label": "연락처의 첫 메시지",
           "hint": "이 연락처가 처음으로 메시지를 보냈을 때 (수동으로 추가한 연락처에도 적용됨)"
+        },
+        "customer_arrived": {
+          "label": "고객 방문 (새 상담)",
+          "hint": "신규 또는 기존 고객이 한동안 연락이 없다가 보낸 첫 메시지. 환영 인사에 사용하세요."
         },
         "keyword_match": {
           "label": "키워드 일치",

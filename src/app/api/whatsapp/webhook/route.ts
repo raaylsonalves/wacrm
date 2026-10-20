@@ -3,6 +3,7 @@ import {
   numberColumns,
 } from '@/lib/whatsapp/conversation-number';
 import { isUnsupportedPlaceholder } from '@/lib/ai/automated-sender';
+import { hoursSincePreviousCustomerMessage } from '@/lib/automations/arrival';
 import { NextResponse, after } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption';
@@ -1160,6 +1161,7 @@ async function processMessage(
   }
 
   const automationTriggers: (
+    | 'customer_arrived'
     | 'new_contact_created'
     | 'first_inbound_message'
     | 'new_message_received'
@@ -1188,6 +1190,14 @@ async function processMessage(
     automationTriggers.unshift('new_contact_created');
   if (isFirstInboundMessage)
     automationTriggers.unshift('first_inbound_message');
+  // A new visit (first message, or after a quiet spell): greetings go
+  // out before anything else, and before the AI answers.
+  automationTriggers.unshift('customer_arrived');
+  const idleHoursBefore = await hoursSincePreviousCustomerMessage(
+    supabaseAdmin(),
+    accountId,
+    contactRecord.id
+  );
   // Awaited — not fire-and-forget. We're inside the route's `after()`
   // block, which only keeps the function alive for promises it can see, so
   // a detached dispatch can be frozen part-way through: the log row is
@@ -1207,6 +1217,7 @@ async function processMessage(
         // Only set on interactive taps; drives the interactive_reply
         // trigger's exact-id match.
         interactive_reply_id: interactiveReplyId ?? undefined,
+        idle_hours: idleHoursBefore,
       },
     }).catch((err) => console.error('[automations] dispatch failed:', err));
   }

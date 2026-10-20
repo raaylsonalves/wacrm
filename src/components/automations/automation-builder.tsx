@@ -112,6 +112,7 @@ const ADDABLE_STEPS: AutomationStepType[] = [
 const TRIGGER_OPTIONS: { value: AutomationTriggerType }[] = [
   { value: 'new_message_received' },
   { value: 'first_inbound_message' },
+  { value: 'customer_arrived' },
   { value: 'keyword_match' },
   { value: 'interactive_reply' },
   { value: 'new_contact_created' },
@@ -1011,6 +1012,25 @@ function TriggerEditor({
             onChange={(v) => onConfigChange({ ...config, tag_id: v })}
             t={t}
           />
+        </div>
+      )}
+      {type === 'customer_arrived' && (
+        <div>
+          <label className="text-muted-foreground mb-1 block text-xs font-medium">
+            {t('arrivedIdleHours')}
+          </label>
+          <Input
+            type="number"
+            min={1}
+            max={720}
+            value={(config.idle_hours as number | undefined) ?? 12}
+            onChange={(e) =>
+              onConfigChange({ ...config, idle_hours: Number(e.target.value) })
+            }
+          />
+          <p className="text-muted-foreground mt-1 text-[11px]">
+            {t('arrivedIdleHoursHint')}
+          </p>
         </div>
       )}
       {type === 'conversation_silence' && (

@@ -83,6 +83,9 @@ export interface AutomationContext {
    *  re-checked against this enrollment, and parked waits carry it so a
    *  customer reply can cancel them. */
   followup_enrollment_id?: string;
+  /** Hours since the customer's previous message; null = their first.
+   *  For customer_arrived. */
+  idle_hours?: number | null;
 }
 
 export interface DispatchInput {
@@ -1081,6 +1084,15 @@ export function triggerMatches(
   // Match on the tapped button / list-row id (exact). Lets multi-step
   // menus be chained: automation A sends buttons, automation B fires on
   // the reply id and sends the next step.
+  // A new visit: the customer's first message, or the first after
+  // `idle_hours` (default 12) without writing.
+  if (automation.trigger_type === 'customer_arrived') {
+    if (ctx?.idle_hours === undefined) return false;
+    const cfg = automation.trigger_config as { idle_hours?: number };
+    const after = cfg?.idle_hours && cfg.idle_hours > 0 ? cfg.idle_hours : 12;
+    return ctx.idle_hours === null || ctx.idle_hours >= after;
+  }
+
   if (automation.trigger_type === 'interactive_reply') {
     const cfg = automation.trigger_config as InteractiveReplyTriggerConfig;
     const replyId = ctx?.interactive_reply_id;

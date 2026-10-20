@@ -110,6 +110,7 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
           .enum([
             'new_message_received',
             'first_inbound_message',
+            'customer_arrived',
             'keyword_match',
             'new_contact_created',
             'conversation_assigned',
@@ -151,6 +152,7 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
           .enum([
             'new_message_received',
             'first_inbound_message',
+            'customer_arrived',
             'keyword_match',
             'new_contact_created',
             'conversation_assigned',
