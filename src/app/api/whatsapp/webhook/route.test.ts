@@ -200,6 +200,15 @@ vi.mock('@supabase/supabase-js', () => ({
                   //   select().eq('message_id',...).eq('conversations.account_id',...)
                   //   awaited directly (array of {id, conversation_id}).
                   {
+                    // hoursSincePreviousCustomerMessage (customer_arrived):
+                    //   select('created_at').in().eq().order().limit()
+                    in: () => ({
+                      eq: () => ({
+                        order: () => ({
+                          limit: () => Promise.resolve({ data: [], error: null }),
+                        }),
+                      }),
+                    }),
                     eq: () => ({
                       eq: () => ({
                         then: (
@@ -711,11 +720,12 @@ describe('inbound webhook: after() awaits automations (#368)', () => {
   it('every triggered automation settles before the after() callback resolves', async () => {
     await runWebhook()
 
-    // first_inbound_message + new_message_received + keyword_match.
-    expect(h.state.automationStarted).toBe(3)
+    // customer_arrived + first_inbound_message + new_message_received +
+    // keyword_match.
+    expect(h.state.automationStarted).toBe(4)
     // If the dispatches were fire-and-forget, completed would still be 0
     // here — the callback would have resolved before the timers fired.
-    expect(h.state.automationCompleted).toBe(3)
+    expect(h.state.automationCompleted).toBe(4)
   })
 })
 

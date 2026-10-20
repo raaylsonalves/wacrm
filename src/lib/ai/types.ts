@@ -66,6 +66,8 @@ export interface AiConfig {
   /** 'mirror' = answer a voice note with a voice note. */
   voiceReplyMode?: 'off' | 'mirror'
   voiceName?: string | null
+  /** Pictures the agent may send with send_image (migration 140). */
+  mediaLibrary?: import('./media-library').MediaItem[]
   /** Human cases tools on (specs/human-cases.md). */
   casesEnabled?: boolean
 }

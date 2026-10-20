@@ -7,6 +7,7 @@
 // ============================================================
 
 import { NextResponse } from 'next/server';
+import { parseMediaLibrary } from '@/lib/ai/media-library';
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
 import {
   checkRateLimit,
@@ -135,6 +136,7 @@ export async function PATCH(
     if ('voice_reply_mode' in body) update.voice_reply_mode = parseVoiceMode(body.voice_reply_mode);
     if ('voice_name' in body) update.voice_name = parseVoiceName(body.voice_name);
     if ('cases_enabled' in body) update.cases_enabled = body.cases_enabled === true;
+    if ('media_library' in body) update.media_library = parseMediaLibrary(body.media_library);
     // Every agent has the same options as the default one (agenda tools,
     // a fallback provider) — they used to be default-only.
     if ('agenda_enabled' in body) update.agenda_enabled = body.agenda_enabled === true;

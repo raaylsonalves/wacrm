@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { parseMediaLibrary } from '@/lib/ai/media-library'
 import { cleanHandoffKeywords } from '@/lib/ai/handoff-keywords'
 import { parseTranscriptionModel } from '@/lib/ai/transcribe'
 import { parseVoiceMode, parseVoiceName } from '@/lib/ai/voice-reply'
@@ -41,7 +42,7 @@ export async function GET() {
     // /api/ai/agents.
     let { data, error } = await supabase
       .from('ai_configs')
-      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled, handoff_keywords, transcription_model, voice_reply_mode, voice_name, cases_enabled, context_days`)
+      .select(`${BASE_COLUMNS}, fallbacks, agenda_enabled, handoff_keywords, transcription_model, voice_reply_mode, voice_name, cases_enabled, context_days, media_library`)
       .eq('account_id', accountId)
       .eq('is_default', true)
       .maybeSingle()
@@ -341,6 +342,7 @@ export async function POST(request: Request) {
     if ('voice_reply_mode' in body) shared.voice_reply_mode = parseVoiceMode(body.voice_reply_mode)
     if ('voice_name' in body) shared.voice_name = parseVoiceName(body.voice_name)
     if ('cases_enabled' in body) shared.cases_enabled = body.cases_enabled === true
+    if ('media_library' in body) shared.media_library = parseMediaLibrary(body.media_library)
     if (rawEmbeddingsKey) {
       shared.embeddings_api_key = encrypt(rawEmbeddingsKey)
     } else if (clearEmbeddingsKey) {

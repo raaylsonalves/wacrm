@@ -4171,6 +4171,18 @@
         "title": "Casos para a equipe",
         "description": "A IA abre um caso quando precisa que alguém da equipe faça algo (liberar acesso, verificar um pagamento) e continua conversando com o cliente. Se ela prometer que a equipe vai verificar sem abrir um caso, o sistema abre um automaticamente."
       },
+      "media": {
+        "title": "Imagens que a IA pode enviar",
+        "description": "Ex.: tabela de preços. Diga quando enviar — a IA decide pela conversa e não repete a mesma imagem.",
+        "add": "Adicionar imagem",
+        "name": "Nome",
+        "namePlaceholder": "Nome (ex.: Tabela de preços)",
+        "when": "Quando enviar",
+        "whenPlaceholder": "Quando enviar (ex.: o cliente pede os preços dos serviços)",
+        "remove": "Remover imagem",
+        "tooLarge": "Imagem grande demais.",
+        "failed": "Não foi possível enviar a imagem."
+      },
       "voice": {
         "title": "Responder áudio com áudio",
         "description": "Quando o cliente manda um áudio, a IA responde com uma mensagem de voz (respostas longas continuam em texto). Usa a mesma chave OpenAI da transcrição e custa mais que texto.",

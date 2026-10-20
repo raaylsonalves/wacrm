@@ -4183,6 +4183,18 @@
         "title": "Cases for the team",
         "description": "The AI opens a case when it needs a teammate to do something (grant access, check a payment) and keeps talking to the customer. If it promises the team will check without opening one, the system opens it."
       },
+      "media": {
+        "title": "Pictures the AI can send",
+        "description": "E.g. a price list. Say when to send it — the AI decides from the conversation and never repeats a picture.",
+        "add": "Add picture",
+        "name": "Name",
+        "namePlaceholder": "Name (e.g. Price list)",
+        "when": "When to send",
+        "whenPlaceholder": "When to send (e.g. the customer asks for prices)",
+        "remove": "Remove picture",
+        "tooLarge": "Picture too large.",
+        "failed": "Could not upload the picture."
+      },
       "voice": {
         "title": "Answer voice notes with voice",
         "description": "When a customer sends a voice note, the AI answers with a voice message (long replies stay as text). Uses the same OpenAI key as transcription and costs more than text.",

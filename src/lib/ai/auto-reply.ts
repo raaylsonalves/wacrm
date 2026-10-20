@@ -49,6 +49,7 @@ import type { AiConfig } from './types'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
 import { AGENDA_TOOLS, createAgendaToolExecutor } from './tools/agenda'
+import { createMediaToolExecutor, mediaPromptSection, mediaTools } from './tools/media'
 import { SCALE_TOOLS, agendaStatePrompt, createScaleToolExecutor, loadAgendaState } from './tools/scale'
 import { loadSchedulingIntegration } from '@/lib/scheduling/integration'
 import { CONTACT_TOOLS, createContactToolExecutor } from './tools/contact'
@@ -947,10 +948,27 @@ ${settled}`
           },
         })
       : null
+    // Pictures the agent may send (migration 140): the model picks them
+    // from the conversation, listed at the end of the prompt.
+    const mediaItems = config.mediaLibrary ?? []
+    const mediaSection = mediaPromptSection(mediaItems)
+    if (mediaSection) systemPrompt = `${systemPrompt}\n\n${mediaSection}`
+    const mediaExecutor = mediaItems.length
+      ? createMediaToolExecutor({
+          db,
+          accountId,
+          conversationId,
+          contactId,
+          userId: configOwnerUserId,
+          agentId: config.id ?? null,
+          items: mediaItems,
+        })
+      : null
     const tools = [
       ...baseTools,
       ...(prospect ? PROSPECTING_TOOLS : []),
       ...(caseExecutor ? CASE_TOOLS : []),
+      ...mediaTools(mediaItems),
     ]
     const prospectExecutor = prospect
       ? createProspectingToolExecutor({ db, accountId, ctx: prospect })
@@ -993,6 +1011,8 @@ ${settled}`
     const routeTool = (name: string, callArgs: Record<string, unknown>) =>
       (name === 'open_human_case' || name === 'provide_case_update') && caseExecutor
         ? caseExecutor(name, callArgs)
+        : name === 'send_image' && mediaExecutor
+        ? mediaExecutor(name, callArgs)
         : name === 'qualify_lead' && prospectExecutor
         ? prospectExecutor(name, callArgs)
         : name === 'save_contact_name'

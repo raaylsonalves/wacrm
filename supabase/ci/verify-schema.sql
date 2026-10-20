@@ -1079,6 +1079,12 @@ BEGIN
     RAISE EXCEPTION 'scheduling_integrations.unit_ids missing — migration 139 did not apply';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'ai_configs'
+         AND column_name = 'media_library') THEN
+    RAISE EXCEPTION 'ai_configs.media_library missing — migration 140 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

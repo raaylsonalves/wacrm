@@ -34,6 +34,8 @@ import { fetchAccountMembers, memberLabel } from '@/lib/account/members';
 import { ModelPicker } from '@/components/agents/model-picker';
 import { TranscriptionModelField } from '@/components/agents/transcription-model-field';
 import { VoiceReplyField } from '@/components/agents/voice-reply-field';
+import { MediaLibraryField } from '@/components/agents/media-library-field';
+import { parseMediaLibrary, type MediaItem } from '@/lib/ai/media-library';
 import {
   HandoffKeywordsField,
   keywordsToList,
@@ -92,6 +94,7 @@ export function AiConfig({
   const [voiceMode, setVoiceMode] = useState<'off' | 'mirror'>('off');
   const [voiceName, setVoiceName] = useState('');
   const [casesEnabled, setCasesEnabled] = useState(false);
+  const [mediaLibrary, setMediaLibrary] = useState<MediaItem[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -171,6 +174,7 @@ export function AiConfig({
         setVoiceMode(data.voice_reply_mode === 'mirror' ? 'mirror' : 'off');
         setVoiceName(data.voice_name ?? '');
         setCasesEnabled(data.cases_enabled === true);
+        setMediaLibrary(parseMediaLibrary(data.media_library));
         setHasStoredKey(Boolean(data.has_key));
         setApiKey(data.has_key ? MASKED_KEY : '');
         setKeyEdited(false);
@@ -242,6 +246,7 @@ export function AiConfig({
     voice_reply_mode: voiceMode,
     voice_name: voiceName || null,
     cases_enabled: casesEnabled,
+    media_library: mediaLibrary,
     fallbacks: fallbackEnabled
       ? [
           {
@@ -845,6 +850,12 @@ export function AiConfig({
                 <p className="text-xs text-muted-foreground">{tDetail('cases.description')}</p>
               </div>
               <Switch checked={casesEnabled} onCheckedChange={setCasesEnabled} disabled={disabled} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{tDetail('media.title')}</Label>
+              <p className="text-xs text-muted-foreground">{tDetail('media.description')}</p>
+              <MediaLibraryField value={mediaLibrary} onChange={setMediaLibrary} disabled={disabled} />
             </div>
 
             <div className="space-y-2">
