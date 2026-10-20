@@ -225,6 +225,9 @@ async function handleExhausted(automation: Automation, now: Date): Promise<numbe
       .is('exhaust_handled_at', null)
       .select('id')
     if (!claimed || claimed.length === 0 || verdict === 'replied') continue
+    // Nothing was sent: a condition kept this contact out of the sequence
+    // (e.g. a tag-gated branch). There is no follow-up to report on.
+    if (!e.steps_sent) continue
 
     try {
       await runExhaustActions(automation, cfg, {
