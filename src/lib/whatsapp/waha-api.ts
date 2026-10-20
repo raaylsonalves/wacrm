@@ -335,8 +335,30 @@ export async function sendWahaText(
  * through.
  */
 export function toWahaChatId(phone: string): string {
+  // A privacy id we could not turn into a number is already a chat id.
+  if (phone.endsWith('@lid')) return phone;
   const digits = phone.replace(/\D/g, '');
   return `${digits}@c.us`;
+}
+
+/**
+ * The phone number behind a WhatsApp privacy id (`123…@lid`), or null when
+ * WAHA does not know it yet. Newer WhatsApp versions hide the customer's
+ * number behind a LID; replying to `<lid digits>@c.us` reaches nobody.
+ */
+export async function resolveWahaLid(
+  baseUrl: string,
+  apiKey: string,
+  sessionName: string,
+  lid: string
+): Promise<string | null> {
+  const body = await wahaFetch<{ pn?: string | null } | null>(
+    baseUrl,
+    apiKey,
+    `/api/${encodeURIComponent(sessionName)}/lids/${encodeURIComponent(lid)}`
+  );
+  const digits = body?.pn?.replace(/@.*$/, '').replace(/\D/g, '') ?? '';
+  return digits.length >= 10 ? digits : null;
 }
 
 /** Inverse of `toWahaChatId` — strips the `@c.us`/`@g.us` suffix. */

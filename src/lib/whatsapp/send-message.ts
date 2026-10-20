@@ -345,7 +345,10 @@ export async function sendMessageToConversation(
         wahaChannel.waha_base_url,
         decrypt(wahaChannel.waha_api_key),
         wahaChannel.waha_session_name,
-        toWahaChatId(sanitizedPhone),
+        // A sender WAHA could not map to a number keeps its privacy id.
+        toWahaChatId(
+          contact.phone?.endsWith('@lid') ? contact.phone : sanitizedPhone
+        ),
         contentText!
       );
       waMessageId = result.id;

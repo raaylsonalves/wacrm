@@ -128,10 +128,17 @@ export async function engineSendText(
   // WhatsApp, not the official number (review 2026-10, M1).
   let workingPhone = sanitized;
   let waMessageId = '';
-  const waha = await wahaChannelOfConversation(db, args.accountId, args.conversationId);
+  const waha = await wahaChannelOfConversation(
+    db,
+    args.accountId,
+    args.conversationId
+  );
   if (waha) {
-    if (!sendTarget.isPhone) throw new WahaUnsupportedError('to a contact without a phone number');
-    waMessageId = await sendTextOverWaha(waha, sanitized, args.text);
+    if (!sendTarget.isPhone)
+      throw new WahaUnsupportedError('to a contact without a phone number');
+    // A sender WAHA could not map to a number keeps its privacy id.
+    const lid = contact.phone?.endsWith('@lid') ? contact.phone : null;
+    waMessageId = await sendTextOverWaha(waha, lid ?? sanitized, args.text);
   } else {
     const { phoneNumberId, accessToken } = await loadAccountMetaCredentials(
       db,
@@ -149,7 +156,9 @@ export async function engineSendText(
       return r.messageId;
     };
 
-    const variants = sendTarget.isPhone ? phoneVariants(sanitized) : [sanitized];
+    const variants = sendTarget.isPhone
+      ? phoneVariants(sanitized)
+      : [sanitized];
     let lastError: unknown = null;
     for (const v of variants) {
       try {

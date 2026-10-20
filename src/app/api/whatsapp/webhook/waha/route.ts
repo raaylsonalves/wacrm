@@ -20,7 +20,7 @@ import { NextResponse, after } from 'next/server';
 import { findConversationOnNumber } from '@/lib/whatsapp/conversation-number';
 
 import { decrypt } from '@/lib/whatsapp/encryption';
-import { fromWahaChatId } from '@/lib/whatsapp/waha-api';
+import { fromWahaChatId, resolveWahaLid } from '@/lib/whatsapp/waha-api';
 import { verifyWahaWebhookSignature } from '@/lib/whatsapp/waha-webhook-signature';
 import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe';
 import { isOptOutMessage } from '@/lib/contacts/opt-out';
@@ -85,6 +85,33 @@ function mediaContentType(mimetype: string | undefined): string {
   return 'document';
 }
 
+/**
+ * A sender hidden behind a WhatsApp privacy id (`…@lid`): ask WAHA for the
+ * real number. Without it the reply would go to `<lid>@c.us`, nobody.
+ */
+async function phoneOfLid(
+  channelId: string,
+  lid: string
+): Promise<string | null> {
+  const { data } = await supabaseAdmin()
+    .from('whatsapp_waha_channels')
+    .select('waha_base_url, waha_api_key, waha_session_name')
+    .eq('id', channelId)
+    .maybeSingle();
+  if (!data) return null;
+  try {
+    return await resolveWahaLid(
+      data.waha_base_url as string,
+      decrypt(data.waha_api_key as string),
+      data.waha_session_name as string,
+      lid
+    );
+  } catch (err) {
+    console.error('[webhook/waha] could not resolve', lid, err);
+    return null;
+  }
+}
+
 async function handleMessage(
   channel: { id: string; account_id: string; created_by: string },
   payload: WahaMessagePayload
@@ -96,7 +123,11 @@ async function handleMessage(
   if (payload.fromMe) return;
   if (payload.from?.endsWith('@g.us')) return;
 
-  const phone = fromWahaChatId(payload.from);
+  // Unresolved, the contact keeps the LID itself (`…@lid`): replies then
+  // go to that chat id as-is (toWahaChatId), which WAHA accepts.
+  const phone = payload.from?.endsWith('@lid')
+    ? ((await phoneOfLid(channel.id, payload.from)) ?? payload.from)
+    : fromWahaChatId(payload.from);
   if (!phone) {
     console.error(
       '[webhook/waha] message has no usable sender id:',
@@ -163,10 +194,15 @@ async function handleMessage(
       // the thread (one per contact + number, migration 114). Join it
       // instead of dropping this message (review 2026-10, M5).
       if (isUniqueViolation(convInsertErr)) {
-        conversation = (await findConversationOnNumber(db, accountId, contact.id, {
-          channelId: channel.id,
-          configId: null,
-        }).catch(() => null)) as typeof conversation;
+        conversation = (await findConversationOnNumber(
+          db,
+          accountId,
+          contact.id,
+          {
+            channelId: channel.id,
+            configId: null,
+          }
+        ).catch(() => null)) as typeof conversation;
       }
       if (!conversation) {
         console.error(
