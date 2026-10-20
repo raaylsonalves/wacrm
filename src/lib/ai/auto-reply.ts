@@ -75,6 +75,7 @@ import { sendTypingIndicator } from '@/lib/whatsapp/meta-api'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { agendaClockText } from './agenda-clock'
 import { loadAppointmentSettings } from '@/lib/appointments/store'
+import { adPromptLine } from '@/lib/leads/origin'
 
 /** Pause between successive bubbles of a split reply — long enough to
  *  read as a person pausing between messages, short enough that a
@@ -886,7 +887,7 @@ export async function dispatchInboundToAiReply(
     // name as unknown (the model asks for it), not a hard failure.
     const { data: contactRow } = await db
       .from('contacts')
-      .select('name')
+      .select('name, lead_source, lead_source_detail, lead_source_at')
       .eq('id', contactId)
       .eq('account_id', accountId)
       .maybeSingle()
@@ -907,6 +908,17 @@ export async function dispatchInboundToAiReply(
         ? agendaClockText(new Date(), await loadAppointmentSettings(db, accountId))
         : null,
     })
+    // The ad a recent lead clicked (lead origin, migration 134).
+    if (
+      contactRow?.lead_source === 'ad' &&
+      contactRow.lead_source_at &&
+      Date.now() - Date.parse(contactRow.lead_source_at as string) < 7 * 86_400_000
+    ) {
+      const line = adPromptLine(contactRow.lead_source_detail as Record<string, string> | null)
+      if (line) systemPrompt = `${systemPrompt}
+
+${line}`
+    }
     if (messages.some((m) => m.role === 'assistant' && m.content.startsWith(AUTHOR_MARK_PREFIX))) {
       systemPrompt = `${systemPrompt}\n\n${AUTHOR_MARKS_PROMPT}`
     }

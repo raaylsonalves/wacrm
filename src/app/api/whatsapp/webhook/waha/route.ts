@@ -41,6 +41,12 @@ import { pushInboundMessage } from '@/lib/push/send';
 import type { ContentType } from '@/types';
 import { dispatchWebhookEvent } from '@/lib/webhooks/deliver';
 import { supabaseAdmin } from '@/lib/whatsapp/waha-admin-client';
+import {
+  adReferralFromRaw,
+  codesIn,
+  detectOrigin,
+  type MetaReferral,
+} from '@/lib/leads/origin';
 
 interface WahaMessagePayload {
   id: string;
@@ -58,6 +64,7 @@ interface WahaMessagePayload {
     key?: Record<string, unknown>;
     pushName?: string;
     notifyName?: string;
+    message?: Record<string, unknown>;
   } | null;
 }
 
@@ -151,6 +158,39 @@ function wahaProfileName(payload: WahaMessagePayload): string | null {
   const raw = payload._data?.pushName ?? payload._data?.notifyName ?? '';
   const name = raw.trim().slice(0, 120);
   return name && !/^[+\d\s()-]+$/.test(name) ? name : null;
+}
+
+/** Same first-touch rule as the Cloud API webhook's recordLeadOrigin. */
+async function recordLeadOrigin(
+  db: ReturnType<typeof supabaseAdmin>,
+  accountId: string,
+  contactId: string,
+  referral: MetaReferral | null,
+  text: string
+) {
+  try {
+    const codes = codesIn(text);
+    const { data: links } = codes.length
+      ? await db
+          .from('tracking_links')
+          .select('code, label')
+          .eq('account_id', accountId)
+          .in('code', codes)
+      : { data: [] };
+    const origin = detectOrigin(referral, text, links ?? []);
+    await db
+      .from('contacts')
+      .update({
+        lead_source: origin.source,
+        lead_source_detail: origin.detail,
+        lead_source_at: new Date().toISOString(),
+      })
+      .eq('id', contactId)
+      .eq('account_id', accountId)
+      .is('lead_source', null);
+  } catch (err) {
+    console.error('[webhook/waha] lead origin not recorded:', err);
+  }
 }
 
 /**
@@ -424,6 +464,11 @@ async function handleMessage(
   }
 
   const contentText = payload.body ?? '';
+  // Click-to-WhatsApp ad (Instagram/Facebook): first touch + AI context.
+  const adReferral = adReferralFromRaw(payload._data);
+  if (contactCreated || adReferral) {
+    await recordLeadOrigin(db, accountId, contact.id, adReferral, contentText);
+  }
   const contentType = payload.hasMedia
     ? mediaContentType(payload.media?.mimetype)
     : 'text';

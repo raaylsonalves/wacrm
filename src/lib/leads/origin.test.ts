@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { codesIn, detectOrigin, parseLossReason, slugCode, trackingUrl } from './origin';
+import { adPromptLine, adReferralFromRaw, codesIn, detectOrigin, parseLossReason, slugCode, trackingUrl } from './origin';
 
 const links = [{ code: 'insta', label: 'Instagram bio' }];
 
@@ -32,5 +32,34 @@ describe('helpers', () => {
     expect(parseLossReason('Reason: price')).toBe('price');
     expect(parseLossReason('no_response')).toBe('no_response');
     expect(parseLossReason('nada')).toBeNull();
+  });
+});
+
+describe('adReferralFromRaw', () => {
+  it('reads the click-to-WhatsApp preview from a NOWEB message', () => {
+    const raw = {
+      message: {
+        extendedTextMessage: {
+          text: 'Olá! Posso ter mais informações sobre isso?',
+          contextInfo: {
+            externalAdReply: {
+              title: 'Mr Jack Aldeota',
+              body: 'Na Sala VIP da Mr Jack, cada detalhe foi pensado.',
+              sourceUrl: 'https://www.instagram.com/p/abc',
+              ctwaClid: 'clid1',
+            },
+          },
+        },
+      },
+    };
+    const ref = adReferralFromRaw(raw);
+    expect(ref?.body).toContain('Sala VIP');
+    expect(detectOrigin(ref, null, []).detail?.body).toContain('Sala VIP');
+    expect(adPromptLine(detectOrigin(ref, null, []).detail)).toContain('Mr Jack Aldeota — Na Sala VIP');
+  });
+
+  it('is null for a plain message', () => {
+    expect(adReferralFromRaw({ message: { conversation: 'oi' } })).toBeNull();
+    expect(adReferralFromRaw(null)).toBeNull();
   });
 });
