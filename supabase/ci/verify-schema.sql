@@ -1073,6 +1073,12 @@ BEGIN
     RAISE EXCEPTION 'WhatsApp coexistence objects missing — migration 138 did not apply';
   END IF;
 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'scheduling_integrations'
+         AND column_name = 'unit_ids') THEN
+    RAISE EXCEPTION 'scheduling_integrations.unit_ids missing — migration 139 did not apply';
+  END IF;
+
   RAISE NOTICE 'schema verification passed';
 END
 $$;

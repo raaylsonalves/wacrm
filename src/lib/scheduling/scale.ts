@@ -172,13 +172,21 @@ export function groupByProfessional(
       let times = slots.map((x) => toMinute(x.inicio).slice(11, 16));
       if (target !== null) {
         times = [...times]
-          .sort((a, b) => Math.abs(minuteOfDay(a) - target) - Math.abs(minuteOfDay(b) - target))
+          .sort(
+            (a, b) =>
+              Math.abs(minuteOfDay(a) - target) -
+              Math.abs(minuteOfDay(b) - target)
+          )
           .slice(0, opts.perProfessional)
           .sort();
       } else {
         times = times.slice(0, opts.perProfessional);
       }
-      return { professional_id: professional.id, name: professional.nome, times };
+      return {
+        professional_id: professional.id,
+        name: professional.nome,
+        times,
+      };
     })
     .filter((p) => p.times.length > 0);
 }
@@ -235,7 +243,11 @@ export interface ScaleClient {
   /** v1.1: the customer's upcoming bookings (phone in the body, not the URL). */
   customerBookings(phone: string): Promise<ScaleBooking[]>;
   /** v1.1: cancel, checked against the customer's phone; safe to repeat. */
-  cancel(bookingId: string, phone: string, reason?: string): Promise<ScaleBooking>;
+  cancel(
+    bookingId: string,
+    phone: string,
+    reason?: string
+  ): Promise<ScaleBooking>;
 }
 
 export function createScaleClient(
@@ -353,12 +365,14 @@ export function createScaleClient(
     },
     async customerBookings(phone) {
       return (
-        await call<{ agendamentos: ScaleBooking[] }>('/agendamentos/busca', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ telefone: phone }),
-        })
-      ).agendamentos ?? [];
+        (
+          await call<{ agendamentos: ScaleBooking[] }>('/agendamentos/busca', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telefone: phone }),
+          })
+        ).agendamentos ?? []
+      );
     },
     async cancel(bookingId, phone, reason) {
       return call<ScaleBooking>(
@@ -367,7 +381,9 @@ export function createScaleClient(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(
-            reason ? { telefone: phone, motivo: reason.slice(0, 200) } : { telefone: phone }
+            reason
+              ? { telefone: phone, motivo: reason.slice(0, 200) }
+              : { telefone: phone }
           ),
         }
       );
@@ -382,15 +398,72 @@ export function createScaleClient(
 export function groupNextSlots(
   slots: ScaleNextSlot[],
   perProfessional: number
-): { professional_id: string; name: string; times: { date: string; time: string }[] }[] {
-  const map = new Map<string, { professional_id: string; name: string; times: { date: string; time: string }[] }>();
+): {
+  professional_id: string;
+  name: string;
+  times: { date: string; time: string }[];
+}[] {
+  const map = new Map<
+    string,
+    {
+      professional_id: string;
+      name: string;
+      times: { date: string; time: string }[];
+    }
+  >();
   for (const s of slots) {
     const at = toMinute(s.inicio);
     for (const b of s.barbeiros) {
-      const row = map.get(b.id) ?? { professional_id: b.id, name: b.nome, times: [] };
-      if (row.times.length < perProfessional) row.times.push({ date: at.slice(0, 10), time: at.slice(11, 16) });
+      const row = map.get(b.id) ?? {
+        professional_id: b.id,
+        name: b.nome,
+        times: [],
+      };
+      if (row.times.length < perProfessional)
+        row.times.push({ date: at.slice(0, 10), time: at.slice(11, 16) });
       map.set(b.id, row);
     }
   }
   return [...map.values()];
+}
+
+/**
+ * The client seen through an allow-list of unit ids (migration 139): one
+ * partner key may cover several shops while this account serves only some.
+ * Units outside the list are hidden, and asking for one is `unidade_nao_encontrada`.
+ * Null or empty = no restriction.
+ */
+export function restrictUnits(
+  client: ScaleClient,
+  unitIds: string[] | null | undefined
+): ScaleClient {
+  if (!unitIds?.length) return client;
+  const allowed = new Set(unitIds);
+  const check = (unitId: string) => {
+    if (!allowed.has(unitId)) {
+      throw new ScaleError(
+        404,
+        'unidade_nao_encontrada',
+        'Unidade não atendida.'
+      );
+    }
+  };
+  return {
+    ...client,
+    async units() {
+      return (await client.units()).filter((u) => allowed.has(u.id));
+    },
+    async services(unitId) {
+      check(unitId);
+      return client.services(unitId);
+    },
+    async professionals(unitId, serviceIds) {
+      check(unitId);
+      return client.professionals(unitId, serviceIds);
+    },
+    async nextSlots(input) {
+      check(input.unitId);
+      return client.nextSlots(input);
+    },
+  };
 }

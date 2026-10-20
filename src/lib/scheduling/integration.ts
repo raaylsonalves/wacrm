@@ -4,7 +4,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { decrypt } from '@/lib/whatsapp/encryption';
-import { createScaleClient, type ScaleClient } from './scale';
+import { createScaleClient, restrictUnits, type ScaleClient } from './scale';
 
 export interface SchedulingIntegration {
   provider: 'scale';
@@ -17,16 +17,19 @@ export async function loadSchedulingIntegration(
 ): Promise<SchedulingIntegration | null> {
   const { data, error } = await db
     .from('scheduling_integrations')
-    .select('provider, api_key_enc, base_url, enabled')
+    .select('provider, api_key_enc, base_url, enabled, unit_ids')
     .eq('account_id', accountId)
     .maybeSingle();
   if (error || !data || !data.enabled || data.provider !== 'scale') return null;
   try {
     return {
       provider: 'scale',
-      client: createScaleClient(
-        decrypt(data.api_key_enc as string),
-        data.base_url as string
+      client: restrictUnits(
+        createScaleClient(
+          decrypt(data.api_key_enc as string),
+          data.base_url as string
+        ),
+        data.unit_ids as string[] | null
       ),
     };
   } catch (err) {

@@ -8,6 +8,7 @@ import {
   phoneDigits,
   pickSlots,
   priceText,
+  restrictUnits,
   scaleSlotId,
   ScaleError,
   slotLabel,
@@ -131,7 +132,10 @@ describe('client', () => {
 describe('groupByProfessional', () => {
   const slot = (h: string) => ({ inicio: `2026-10-15T${h}:00`, fim: '' });
   const data = [
-    { professional: { id: 'i', nome: 'Ítalo' }, slots: ['09:00', '10:00', '13:30', '14:30', '17:00'].map(slot) },
+    {
+      professional: { id: 'i', nome: 'Ítalo' },
+      slots: ['09:00', '10:00', '13:30', '14:30', '17:00'].map(slot),
+    },
     { professional: { id: 'c', nome: 'Caio' }, slots: [] },
   ];
   it('earliest per professional, nobody without times', () => {
@@ -140,18 +144,36 @@ describe('groupByProfessional', () => {
     ]);
   });
   it('closest to the asked time', () => {
-    expect(groupByProfessional(data, { perProfessional: 2, nearTime: '14:00' })[0].times).toEqual(['13:30', '14:30']);
+    expect(
+      groupByProfessional(data, { perProfessional: 2, nearTime: '14:00' })[0]
+        .times
+    ).toEqual(['13:30', '14:30']);
   });
 });
 
 describe('API v1.1', () => {
   it('regroups next slots per professional', () => {
     const rows = [
-      { inicio: '2026-10-16T13:00:00', fim: '', barbeiros: [{ id: 'e', nome: 'Eudes' }, { id: 'i', nome: 'Italo' }] },
-      { inicio: '2026-10-16T13:30:00', fim: '', barbeiros: [{ id: 'i', nome: 'Italo' }] },
+      {
+        inicio: '2026-10-16T13:00:00',
+        fim: '',
+        barbeiros: [
+          { id: 'e', nome: 'Eudes' },
+          { id: 'i', nome: 'Italo' },
+        ],
+      },
+      {
+        inicio: '2026-10-16T13:30:00',
+        fim: '',
+        barbeiros: [{ id: 'i', nome: 'Italo' }],
+      },
     ];
     expect(groupNextSlots(rows, 5)).toEqual([
-      { professional_id: 'e', name: 'Eudes', times: [{ date: '2026-10-16', time: '13:00' }] },
+      {
+        professional_id: 'e',
+        name: 'Eudes',
+        times: [{ date: '2026-10-16', time: '13:00' }],
+      },
       {
         professional_id: 'i',
         name: 'Italo',
@@ -167,16 +189,64 @@ describe('API v1.1', () => {
     const calls: { url: string; body: string }[] = [];
     const fake = (async (url: string, init?: RequestInit) => {
       calls.push({ url, body: String(init?.body ?? '') });
-      return new Response(JSON.stringify({ agendamentos: [], id: '1', codigo: 'AG-1', status: 'cancelado' }), { status: 200 });
+      return new Response(
+        JSON.stringify({
+          agendamentos: [],
+          id: '1',
+          codigo: 'AG-1',
+          status: 'cancelado',
+        }),
+        { status: 200 }
+      );
     }) as unknown as typeof fetch;
     const c = createScaleClient('k', 'https://x/v1', fake);
-    await c.book({ professionalId: 'b', serviceIds: ['s'], inicio: '2026-10-16T19:30', name: null, phone: '5585', idempotencyKey: 'nordia-1234' });
+    await c.book({
+      professionalId: 'b',
+      serviceIds: ['s'],
+      inicio: '2026-10-16T19:30',
+      name: null,
+      phone: '5585',
+      idempotencyKey: 'nordia-1234',
+    });
     await c.customerBookings('5585999990000');
     await c.cancel('abc', '5585999990000', 'viagem');
     expect(JSON.parse(calls[0].body).cliente).toEqual({ telefone: '5585' });
     expect(calls[1].url).toBe('https://x/v1/agendamentos/busca');
     expect(calls[1].url).not.toContain('5585999990000');
     expect(calls[2].url).toBe('https://x/v1/agendamentos/abc/cancelamento');
-    expect(JSON.parse(calls[2].body)).toEqual({ telefone: '5585999990000', motivo: 'viagem' });
+    expect(JSON.parse(calls[2].body)).toEqual({
+      telefone: '5585999990000',
+      motivo: 'viagem',
+    });
+  });
+});
+
+describe('restrictUnits', () => {
+  const base = {
+    units: async () => [
+      { id: 'u-aldeota', nome: 'Mr.Jack Aldeota' },
+      { id: 'u-sul', nome: 'Mr.Jack Sul' },
+    ],
+    services: async (unitId: string) => [
+      {
+        id: `s-${unitId}`,
+        nome: 'Corte',
+        duracaoMin: 30,
+        precoCentavos: 5000,
+        precoAPartirDe: false,
+      },
+    ],
+  } as unknown as Parameters<typeof restrictUnits>[0];
+
+  it('hides units outside the list and refuses to look into them', async () => {
+    const client = restrictUnits(base, ['u-aldeota']);
+    expect((await client.units()).map((u) => u.id)).toEqual(['u-aldeota']);
+    expect(await client.services('u-aldeota')).toHaveLength(1);
+    await expect(client.services('u-sul')).rejects.toBeInstanceOf(ScaleError);
+  });
+
+  it('leaves the client alone without a list', () => {
+    expect(restrictUnits(base, null)).toBe(base);
+    expect(restrictUnits(base, [])).toBe(base);
   });
 });
