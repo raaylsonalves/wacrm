@@ -20,7 +20,11 @@ import { NextResponse, after } from 'next/server';
 import { findConversationOnNumber } from '@/lib/whatsapp/conversation-number';
 
 import { decrypt } from '@/lib/whatsapp/encryption';
-import { fromWahaChatId, resolveWahaLid } from '@/lib/whatsapp/waha-api';
+import {
+  fromWahaChatId,
+  phoneFromWahaAlt,
+  resolveWahaLid,
+} from '@/lib/whatsapp/waha-api';
 import { verifyWahaWebhookSignature } from '@/lib/whatsapp/waha-webhook-signature';
 import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe';
 import { isOptOutMessage } from '@/lib/contacts/opt-out';
@@ -42,6 +46,7 @@ interface WahaMessagePayload {
   hasMedia?: boolean;
   media?: { url?: string; mimetype?: string };
   timestamp?: number;
+  _data?: { key?: Record<string, unknown> } | null;
 }
 
 interface WahaSessionStatusPayload {
@@ -126,8 +131,17 @@ async function handleMessage(
   // Unresolved, the contact keeps the LID itself (`…@lid`): replies then
   // go to that chat id as-is (toWahaChatId), which WAHA accepts.
   const phone = payload.from?.endsWith('@lid')
-    ? ((await phoneOfLid(channel.id, payload.from)) ?? payload.from)
+    ? (phoneFromWahaAlt(payload) ??
+      (await phoneOfLid(channel.id, payload.from)) ??
+      payload.from)
     : fromWahaChatId(payload.from);
+  if (phone?.endsWith('@lid')) {
+    // Which fields this WAHA version sends, to read the number from them.
+    console.warn('[webhook/waha] LID sender without a number', {
+      key: payload._data?.key ?? null,
+      dataKeys: Object.keys(payload._data ?? {}),
+    });
+  }
   if (!phone) {
     console.error(
       '[webhook/waha] message has no usable sender id:',

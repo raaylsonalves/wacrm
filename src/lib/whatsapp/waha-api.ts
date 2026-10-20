@@ -113,6 +113,9 @@ export async function createWahaSession(
     body: {
       name: sessionName,
       config: {
+        // The NOWEB store lets /lids/{lid} map a privacy id back to the
+        // customer's number (resolveWahaLid). Ignored by other engines.
+        noweb: { store: { enabled: true, full_sync: false } },
         webhooks: [
           {
             url: webhookUrl,
@@ -339,6 +342,24 @@ export function toWahaChatId(phone: string): string {
   if (phone.endsWith('@lid')) return phone;
   const digits = phone.replace(/\D/g, '');
   return `${digits}@c.us`;
+}
+
+/**
+ * The customer's number when WAHA's message carries it next to a privacy
+ * id: NOWEB puts it in `_data.key.remoteJidAlt` / `senderPn`
+ * ("5585…@s.whatsapp.net"). Null when absent.
+ */
+export function phoneFromWahaAlt(payload: {
+  _data?: { key?: Record<string, unknown> } | null;
+}): string | null {
+  const key = payload._data?.key ?? {};
+  for (const field of ['remoteJidAlt', 'senderPn', 'participantAlt']) {
+    const v = key[field];
+    if (typeof v !== 'string' || v.endsWith('@lid')) continue;
+    const digits = v.replace(/@.*$/, '').replace(/:.*$/, '').replace(/\D/g, '');
+    if (digits.length >= 10) return digits;
+  }
+  return null;
 }
 
 /**
