@@ -405,6 +405,39 @@ export function toWahaChatId(phone: string): string {
 }
 
 /**
+ * WAHA reports media at its own internal address
+ * (`http://localhost:3000/api/files/...`, from the server's
+ * WHATSAPP_API_HOSTNAME), which nothing outside its container can reach.
+ * Same path, on the channel's public base URL.
+ */
+export function wahaMediaUrl(rawUrl: string, baseUrl: string): string {
+  try {
+    const u = new URL(rawUrl);
+    const base = new URL(baseUrl);
+    if (u.host === base.host) return rawUrl;
+    return new URL(u.pathname + u.search, base).toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
+/** A WAHA media file's bytes (the API key is required). */
+export async function downloadWahaMedia(
+  url: string,
+  apiKey: string
+): Promise<{ buffer: Buffer; contentType: string }> {
+  const res = await fetch(url, {
+    headers: { 'X-Api-Key': apiKey },
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!res.ok) throw new WahaApiError(`WAHA media download failed`, res.status);
+  return {
+    buffer: Buffer.from(await res.arrayBuffer()),
+    contentType: res.headers.get('content-type') || 'application/octet-stream',
+  };
+}
+
+/**
  * The customer's number when WAHA's message carries it next to a privacy
  * id: NOWEB puts it in `_data.key.remoteJidAlt` / `senderPn`
  * ("5585…@s.whatsapp.net"). Null when absent.

@@ -44,3 +44,17 @@ describe('wahaMessageId', () => {
     expect(wahaMessageId(null)).toBe('');
   });
 });
+
+describe('wahaMediaUrl', () => {
+  it("moves WAHA's internal media address onto the public base URL", async () => {
+    const { wahaMediaUrl } = await import('./waha-api');
+    const base = 'https://waha.example.com';
+    expect(wahaMediaUrl('http://localhost:3000/api/files/s/a.oga', base)).toBe(
+      'https://waha.example.com/api/files/s/a.oga'
+    );
+    expect(
+      wahaMediaUrl('https://waha.example.com/api/files/s/a.oga', base)
+    ).toBe('https://waha.example.com/api/files/s/a.oga');
+    expect(wahaMediaUrl('not a url', base)).toBe('not a url');
+  });
+});

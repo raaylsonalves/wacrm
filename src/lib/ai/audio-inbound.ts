@@ -20,9 +20,11 @@ import { hashKey } from '@/lib/variant'
 export interface InboundAudio {
   /** messages.id of the stored audio message. */
   messageRowId: string
-  /** Meta's media id. */
-  mediaId: string
-  accessToken: string
+  /** Meta's media id (Cloud API). */
+  mediaId?: string
+  accessToken?: string
+  /** Any other source (a WAHA channel): returns the bytes directly. */
+  fetchFile?: () => Promise<{ buffer: Uint8Array; contentType: string }>
 }
 
 export type AudioTranscription =
@@ -80,10 +82,17 @@ export async function transcribeInboundAudio(
   let bytes: Uint8Array
   let mimeType: string | null
   try {
-    const info = await getUrl({ mediaId: audio.mediaId, accessToken: audio.accessToken })
-    const file = await download({ downloadUrl: info.url, accessToken: audio.accessToken })
-    bytes = file.buffer
-    mimeType = info.mimeType || file.contentType
+    if (audio.fetchFile) {
+      const file = await audio.fetchFile()
+      bytes = file.buffer
+      mimeType = file.contentType
+    } else {
+      if (!audio.mediaId || !audio.accessToken) throw new Error('no media id')
+      const info = await getUrl({ mediaId: audio.mediaId, accessToken: audio.accessToken })
+      const file = await download({ downloadUrl: info.url, accessToken: audio.accessToken })
+      bytes = file.buffer
+      mimeType = info.mimeType || file.contentType
+    }
   } catch (err) {
     console.warn('[ai audio] could not fetch the audio:', err instanceof Error ? err.message : err)
     return record({ status: 'failed', reason: 'download' })

@@ -21,10 +21,13 @@ import { findConversationOnNumber } from '@/lib/whatsapp/conversation-number';
 
 import { decrypt } from '@/lib/whatsapp/encryption';
 import {
+  downloadWahaMedia,
   fromWahaChatId,
   phoneFromWahaAlt,
   resolveWahaLid,
+  wahaMediaUrl,
 } from '@/lib/whatsapp/waha-api';
+import { mirrorInboundMedia } from '@/lib/whatsapp/mirror-inbound-media';
 import { verifyWahaWebhookSignature } from '@/lib/whatsapp/waha-webhook-signature';
 import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe';
 import { isOptOutMessage } from '@/lib/contacts/opt-out';
@@ -99,10 +102,9 @@ function mediaContentType(mimetype: string | undefined): string {
  * A sender hidden behind a WhatsApp privacy id (`…@lid`): ask WAHA for the
  * real number. Without it the reply would go to `<lid>@c.us`, nobody.
  */
-async function phoneOfLid(
-  channelId: string,
-  lid: string
-): Promise<string | null> {
+async function wahaCreds(
+  channelId: string
+): Promise<{ baseUrl: string; apiKey: string; session: string } | null> {
   const { data } = await supabaseAdmin()
     .from('whatsapp_waha_channels')
     .select('waha_base_url, waha_api_key, waha_session_name')
@@ -110,10 +112,28 @@ async function phoneOfLid(
     .maybeSingle();
   if (!data) return null;
   try {
+    return {
+      baseUrl: data.waha_base_url as string,
+      apiKey: decrypt(data.waha_api_key as string),
+      session: data.waha_session_name as string,
+    };
+  } catch (err) {
+    console.error('[webhook/waha] could not decrypt the channel key:', err);
+    return null;
+  }
+}
+
+async function phoneOfLid(
+  channelId: string,
+  lid: string
+): Promise<string | null> {
+  const creds = await wahaCreds(channelId);
+  if (!creds) return null;
+  try {
     return await resolveWahaLid(
-      data.waha_base_url as string,
-      decrypt(data.waha_api_key as string),
-      data.waha_session_name as string,
+      creds.baseUrl,
+      creds.apiKey,
+      creds.session,
       lid
     );
   } catch (err) {
@@ -273,6 +293,35 @@ async function handleMessage(
     ? mediaContentType(payload.media?.mimetype)
     : 'text';
 
+  // Media: WAHA's URL points at its own container (localhost) and needs
+  // the API key. Fetch it from the public base URL and keep a copy in
+  // chat-media, so the inbox can play it and the AI can transcribe it.
+  let mediaUrl: string | null = payload.media?.url ?? null;
+  let fetchMedia:
+    (() => Promise<{ buffer: Buffer; contentType: string }>) | null = null;
+  if (payload.hasMedia && payload.media?.url) {
+    const creds = await wahaCreds(channel.id);
+    if (creds) {
+      const url = wahaMediaUrl(payload.media.url, creds.baseUrl);
+      mediaUrl = url;
+      fetchMedia = () => downloadWahaMedia(url, creds.apiKey);
+      const mirrored = await mirrorInboundMedia({
+        storage: db.storage,
+        accountId,
+        mediaId: payload.id.replace(/[^A-Za-z0-9]/g, '').slice(-24) || 'waha',
+        downloadUrl: url,
+        accessToken: '',
+        mimeType: payload.media.mimetype ?? null,
+        messageTimestamp: payload.timestamp ?? null,
+        download: () => downloadWahaMedia(url, creds.apiKey),
+      }).catch((err) => {
+        console.error('[webhook/waha] media mirror failed:', err);
+        return null;
+      });
+      if (mirrored) mediaUrl = mirrored;
+    }
+  }
+
   const { data: insertedMsg, error: msgErr } = await db
     .from('messages')
     .upsert(
@@ -281,7 +330,7 @@ async function handleMessage(
         sender_type: 'customer',
         content_type: contentType,
         content_text: contentText || null,
-        media_url: payload.media?.url ?? null,
+        media_url: mediaUrl,
         message_id: payload.id,
         status: 'delivered',
         created_at: payload.timestamp
@@ -403,6 +452,12 @@ async function handleMessage(
       conversationId: conversation.id,
       contactId: contact.id,
       configOwnerUserId: ownerUserId,
+      // A voice note is transcribed before the AI answers it
+      // (specs/ai-audio-inbound.md), as on the Cloud API.
+      audio:
+        contentType === 'audio' && fetchMedia
+          ? { messageRowId: insertedMsg[0].id as string, fetchFile: fetchMedia }
+          : undefined,
     }).catch((err) =>
       console.error('[webhook/waha] AI auto-reply dispatch failed:', err)
     );
