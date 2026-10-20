@@ -33,7 +33,33 @@ export function agendaClockText(now: Date, s: ClockSettings): string {
     `Right now it is ${WEEKDAYS[localWeekday(p)]}, ${p.year}-${pad(p.month)}-${pad(p.day)} ${pad(p.hour)}:${pad(p.minute)} (${s.timezone}). ` +
     'Work out "today", "tomorrow", weekdays and dates from this — never guess a year or date. ' +
     `Appointments can only be booked on ${days || 'no days'}, between ${hhmm(s.day_start)} and ${hhmm(s.day_end)}. ` +
-    'If the customer asks for a time outside that, say so kindly and offer the nearest times that work.'
+    'If the customer asks for a time outside that, say so kindly and offer the nearest times that work. ' +
+    openNowText(now, s)
+  )
+}
+
+/** Open right now, or closed and when it opens: so the model offers
+ *  "today" only while there is still a working day left. */
+function openNowText(now: Date, s: ClockSettings): string {
+  const p = localParts(now, s.timezone)
+  const minute = p.hour * 60 + p.minute
+  const today = localWeekday(p)
+  if (s.work_days.includes(today) && minute >= minutesOf(s.day_start) && minute < minutesOf(s.day_end)) {
+    return `The business is open now (until ${hhmm(s.day_end)} today).`
+  }
+  const opensLaterToday = s.work_days.includes(today) && minute < minutesOf(s.day_start)
+  let next = 'today'
+  if (!opensLaterToday) {
+    for (let i = 1; i <= 7; i++) {
+      if (s.work_days.includes((today + i) % 7)) {
+        next = i === 1 ? 'tomorrow' : WEEKDAYS[(today + i) % 7]
+        break
+      }
+    }
+  }
+  return (
+    `The business is CLOSED right now; it opens ${next} at ${hhmm(s.day_start)}. ` +
+    'Say so warmly in your first reply, and when talking about times offer that day, never "today".'
   )
 }
 

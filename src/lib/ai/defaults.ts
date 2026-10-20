@@ -203,7 +203,9 @@ export function buildSystemPrompt(args: {
     )
   }
 
-  if (mode === 'auto_reply' && agendaToolsEnabled && agendaClock) {
+  // Every agent gets the clock: one without agenda tools still has to
+  // know it is 20h and the shop is closed ("horários para amanhã").
+  if (mode === 'auto_reply' && agendaClock) {
     parts.push(agendaClock)
   }
 

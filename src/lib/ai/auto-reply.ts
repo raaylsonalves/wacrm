@@ -904,9 +904,7 @@ export async function dispatchInboundToAiReply(
       knowledge,
       agendaToolsEnabled: config.agendaEnabled,
       contactName: contactRow?.name ?? null,
-      agendaClock: config.agendaEnabled
-        ? agendaClockText(new Date(), await loadAppointmentSettings(db, accountId))
-        : null,
+      agendaClock: agendaClockText(new Date(), await loadAppointmentSettings(db, accountId)),
     })
     // The ad a recent lead clicked (lead origin, migration 134).
     if (

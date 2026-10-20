@@ -31,3 +31,22 @@ describe('isWithinBusinessHours', () => {
     expect(isWithinBusinessHours(new Date('2026-10-03T13:00:00Z'), 30, S)).toBe(false) // Saturday
   })
 })
+
+describe('agendaClockText open/closed', () => {
+  const S = { timezone: 'America/Fortaleza', work_days: [1, 2, 3, 4, 5, 6], day_start: '09:00', day_end: '20:00' }
+  it('is open in the afternoon', () => {
+    // Tue 2026-10-20 15:00 Fortaleza
+    expect(agendaClockText(new Date('2026-10-20T18:00:00Z'), S)).toContain('open now (until 20:00')
+  })
+  it('after closing it opens tomorrow', () => {
+    // Tue 2026-10-20 20:10 Fortaleza
+    expect(agendaClockText(new Date('2026-10-20T23:10:00Z'), S)).toContain('opens tomorrow at 09:00')
+  })
+  it('Saturday night opens Monday', () => {
+    // Sat 2026-10-24 21:00 Fortaleza
+    expect(agendaClockText(new Date('2026-10-25T00:00:00Z'), S)).toContain('opens Monday at 09:00')
+  })
+  it('early morning opens today', () => {
+    expect(agendaClockText(new Date('2026-10-20T10:00:00Z'), S)).toContain('opens today at 09:00')
+  })
+})
