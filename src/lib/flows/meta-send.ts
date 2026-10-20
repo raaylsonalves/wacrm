@@ -547,7 +547,11 @@ async function persistEngineMedia(
   // messages_content_type_check constraint (migration 001 + 010).
   // content_text carries the caption (or empty) so the conversation
   // list preview shows something meaningful when the user glances at it.
-  const preview = args.caption?.trim() || `[${args.kind}]`;
+  // Language-neutral marker for a file without caption (the app's locale
+  // is not known here).
+  const preview =
+    args.caption?.trim() ||
+    { image: '📷', video: '🎥', document: '📄', audio: '🎤' }[args.kind];
   const { error: msgErr } = await db.from('messages').insert({
     conversation_id: args.conversationId,
     sender_type: 'bot',

@@ -2455,6 +2455,8 @@
         "send_webhook": "Enviar webhook",
         "close_conversation": "Cerrar conversación"
       },
+      "thenAi": "Dejar que la IA responda después",
+      "thenAiHint": "Si no, la IA no responde a los mensajes que activan esta automatización.",
       "arrivedIdleHours": "Sin escribir durante al menos (horas)",
       "arrivedIdleHoursHint": "Los mensajes dentro de este intervalo siguen la misma atención.",
       "triggers": {

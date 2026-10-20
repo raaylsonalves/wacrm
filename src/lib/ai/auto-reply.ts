@@ -1,4 +1,6 @@
 import { supabaseAdmin } from './admin-client'
+import { triggerMatches } from '@/lib/automations/engine'
+import type { Automation } from '@/types'
 import { adminsFor, notifyUsers, teamForConversation } from '@/lib/notifications/notify'
 import { loadAiConfig } from './config'
 import { loadActiveRouterForChannel, resolveAgentViaRouter } from './router'
@@ -431,23 +433,39 @@ export async function dispatchInboundToAiReply(
     }
 
     // Deterministic, user-configured responders win over the LLM — the
-    // caller already excludes messages a Flow consumed. Message-level
-    // automations (`new_message_received` / `keyword_match`) are
-    // dispatched independently for this same inbound and may send their
-    // own reply, so if the account has any active one we stand down to
-    // avoid double-texting the customer. (Relationship triggers like
-    // `first_inbound_message` don't count — they're not per-message
-    // auto-responders.)
+    // caller already excludes messages a Flow consumed. A message-level
+    // automation (`new_message_received`, or a `keyword_match` whose
+    // keywords are in THIS message) may send its own reply, so we stand
+    // down to avoid double-texting — unless it was set to hand over to the
+    // AI afterwards (`trigger_config.then_ai`, e.g. an ad greeting). Only
+    // automations that match count: one keyword automation used to mute
+    // the AI on every message of the account.
     const { data: autoResponders } = await db
       .from('automations')
-      .select('id')
+      .select('id, trigger_type, trigger_config')
       .eq('account_id', accountId)
       .eq('is_active', true)
       .in('trigger_type', ['new_message_received', 'keyword_match'])
-      .limit(1)
     if (autoResponders && autoResponders.length > 0) {
-      console.info(`${tag} skipped: an active new_message_received/keyword_match automation owns this inbound`)
-      return
+      const { data: lastInbound } = await db
+        .from('messages')
+        .select('content_text')
+        .eq('conversation_id', conversationId)
+        .eq('sender_type', 'customer')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      const owner = autoResponders.find(
+        (a) =>
+          (a.trigger_config as { then_ai?: boolean } | null)?.then_ai !== true &&
+          triggerMatches(a as unknown as Automation, {
+            message_text: (lastInbound?.content_text as string | null) ?? '',
+          }),
+      )
+      if (owner) {
+        console.info(`${tag} skipped: automation ${owner.id} owns this inbound`)
+        return
+      }
     }
 
     const { data: conv, error: convErr } = await db

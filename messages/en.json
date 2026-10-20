@@ -2455,6 +2455,8 @@
         "send_webhook": "Send Webhook",
         "close_conversation": "Close Conversation"
       },
+      "thenAi": "Let the AI answer afterwards",
+      "thenAiHint": "Otherwise the AI does not answer messages that trigger this automation.",
       "arrivedIdleHours": "Without writing for at least (hours)",
       "arrivedIdleHoursHint": "Messages within this window continue the same visit.",
       "triggers": {

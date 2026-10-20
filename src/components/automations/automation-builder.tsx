@@ -1014,6 +1014,24 @@ function TriggerEditor({
           />
         </div>
       )}
+      {(type === 'keyword_match' || type === 'new_message_received') && (
+        <label className="text-foreground flex items-start gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={config.then_ai === true}
+            onChange={(e) =>
+              onConfigChange({ ...config, then_ai: e.target.checked || undefined })
+            }
+            className="mt-0.5"
+          />
+          <span>
+            {t('thenAi')}
+            <span className="text-muted-foreground block text-[11px]">
+              {t('thenAiHint')}
+            </span>
+          </span>
+        </label>
+      )}
       {type === 'customer_arrived' && (
         <div>
           <label className="text-muted-foreground mb-1 block text-xs font-medium">

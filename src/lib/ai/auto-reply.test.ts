@@ -24,7 +24,7 @@ const h = vi.hoisted(() => ({
     /** The business's latest message (for the acknowledgment skip). */
     lastBusiness: null as { content_type: string; content_text: string } | null,
     conv: null as Record<string, unknown> | null,
-    autoResponders: [] as { id: string }[],
+    autoResponders: [] as { id: string; trigger_type?: string; trigger_config?: unknown }[],
     claim: 'claimed' as string,
     /** The first conversations UPDATE — the handoff write itself. */
     updatePayload: null as Record<string, unknown> | null,
@@ -115,11 +115,15 @@ vi.mock('./admin-client', () => ({
   supabaseAdmin: () => ({
     from: (table: string) => {
       if (table === 'automations') {
-        // .select().eq().eq().in().limit() → active auto-responders
-        const chain = {
+        // .select().eq().eq().in() → active auto-responders
+        const chain: Record<string, unknown> = {
           select: () => chain,
           eq: () => chain,
-          in: () => chain,
+          in: () =>
+            Object.assign(
+              Promise.resolve({ data: h.state.autoResponders, error: null }),
+              chain,
+            ),
           limit: () =>
             Promise.resolve({ data: h.state.autoResponders, error: null }),
         }
@@ -325,11 +329,25 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
   })
 
   it('stands down when an active message-level automation exists', async () => {
-    h.state.autoResponders = [{ id: 'auto-1' }]
+    h.state.autoResponders = [{ id: 'auto-1', trigger_type: 'new_message_received', trigger_config: {} }]
     await dispatchInboundToAiReply(ARGS)
     expect(h.generateReplyWithFallback).not.toHaveBeenCalled()
     expect(h.engineSendText).not.toHaveBeenCalled()
     expect(h.sendTypingIndicator).not.toHaveBeenCalled()
+  })
+
+  it('answers when a keyword automation exists but its keyword is not in the message', async () => {
+    h.state.autoResponders = [
+      { id: 'vip', trigger_type: 'keyword_match', trigger_config: { keywords: ['vip'], match_type: 'contains' } },
+    ]
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).toHaveBeenCalled()
+  })
+
+  it('answers after an automation set to hand over to the AI', async () => {
+    h.state.autoResponders = [{ id: 'greet', trigger_type: 'new_message_received', trigger_config: { then_ai: true } }]
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.generateReplyWithFallback).toHaveBeenCalled()
   })
 
   it('stops, without answering, when the other side is a bot', async () => {

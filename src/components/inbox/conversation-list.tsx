@@ -1598,7 +1598,9 @@ function ConversationItem({
             {channelLabel && (
               <span
                 title={channelLabel}
-                className="bg-muted text-muted-foreground shrink-0 truncate rounded-full px-1.5 py-0.5 text-[9px] leading-none font-medium"
+                // Shrinks (and truncates) before the name and the time do:
+                // a long number label used to run over both.
+                className="bg-muted text-muted-foreground max-w-[50%] min-w-0 truncate rounded-full px-1.5 py-0.5 text-[9px] leading-none font-medium"
               >
                 {channelLabel}
               </span>

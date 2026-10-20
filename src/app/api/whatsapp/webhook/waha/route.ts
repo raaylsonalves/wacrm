@@ -47,7 +47,11 @@ interface WahaMessagePayload {
   hasMedia?: boolean;
   media?: { url?: string; mimetype?: string };
   timestamp?: number;
-  _data?: { key?: Record<string, unknown> } | null;
+  _data?: {
+    key?: Record<string, unknown>;
+    pushName?: string;
+    notifyName?: string;
+  } | null;
 }
 
 interface WahaSessionStatusPayload {
@@ -118,6 +122,13 @@ async function phoneOfLid(
   }
 }
 
+/** The sender's WhatsApp profile name, when WAHA sends one. */
+function wahaProfileName(payload: WahaMessagePayload): string | null {
+  const raw = payload._data?.pushName ?? payload._data?.notifyName ?? '';
+  const name = raw.trim().slice(0, 120);
+  return name && !/^[+\d\s()-]+$/.test(name) ? name : null;
+}
+
 async function handleMessage(
   channel: { id: string; account_id: string; created_by: string },
   payload: WahaMessagePayload
@@ -183,6 +194,18 @@ async function handleMessage(
     }
   }
   if (!contact) return;
+
+  // The WhatsApp profile name (NOWEB `pushName`, WEBJS `notifyName`):
+  // fills a contact that has none, never overwrites one the team typed.
+  const profileName = wahaProfileName(payload);
+  if (profileName && !(contact as { name?: string | null }).name) {
+    await db
+      .from('contacts')
+      .update({ name: profileName })
+      .eq('id', contact.id)
+      .eq('account_id', accountId)
+      .is('name', null);
+  }
 
   // One conversation per (contact, number) — migration 114: this
   // channel's thread with the contact, not whichever thread is oldest.

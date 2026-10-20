@@ -2455,6 +2455,8 @@
         "send_webhook": "웹훅 보내기",
         "close_conversation": "대화 닫기"
       },
+      "thenAi": "이후 AI가 답변하도록 허용",
+      "thenAiHint": "선택하지 않으면 이 자동화를 실행하는 메시지에 AI가 답변하지 않습니다.",
       "arrivedIdleHours": "최소 연락 없는 시간 (시간)",
       "arrivedIdleHoursHint": "이 시간 안의 메시지는 같은 상담으로 이어집니다.",
       "triggers": {
