@@ -80,7 +80,11 @@ export async function DELETE(
         const parsed = row.media_url
           ? parseStorageObjectUrl(row.media_url as string)
           : null;
-        if (!parsed) continue;
+        // Only the conversation's own files (chat-media). flow-media holds
+        // shared assets — a flow, automation or AI-library picture sent to
+        // many customers — and deleting one thread used to delete them
+        // for everyone.
+        if (!parsed || parsed.bucket !== 'chat-media') continue;
         const bucket = pathsByBucket.get(parsed.bucket) ?? [];
         bucket.push(parsed.path);
         pathsByBucket.set(parsed.bucket, bucket);

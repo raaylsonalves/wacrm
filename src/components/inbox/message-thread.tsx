@@ -1232,13 +1232,15 @@ export function MessageThread({
               type="button"
               onClick={onOpenContact}
               disabled={!onOpenContact}
-              className="flex max-w-full min-w-0 items-center gap-1.5 text-left"
+              className="flex w-full max-w-full min-w-0 items-center gap-1.5 overflow-hidden text-left"
             >
-              <h2 className="truncate text-sm font-bold text-foreground lg:text-base">{displayName}</h2>
+              <h2 className="min-w-0 shrink truncate text-sm font-bold text-foreground lg:text-base">{displayName}</h2>
               {channelLabel && (
+                // Shrinks and truncates instead of pushing the name out and
+                // running over the status menu on a phone.
                 <span
                   title={channelLabel}
-                  className="bg-muted text-muted-foreground shrink-0 truncate rounded-full px-1.5 py-0.5 text-[10px] leading-none font-medium"
+                  className="bg-muted text-muted-foreground max-w-[45%] min-w-0 truncate rounded-full px-1.5 py-0.5 text-[10px] leading-none font-medium"
                 >
                   {channelLabel}
                 </span>
