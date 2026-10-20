@@ -12,7 +12,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { decrypt } from './encryption';
-import { sendWahaText, toWahaChatId } from './waha-api';
+import { sendWahaMedia, sendWahaText, toWahaChatId } from './waha-api';
 import { claimWahaSendSlot } from './waha-throttle';
 
 export interface WahaChannelRow {
@@ -64,6 +64,22 @@ export async function sendTextOverWaha(
     channel.waha_session_name,
     toWahaChatId(phone),
     text
+  );
+  return r.id;
+}
+/** Media by public URL over a WAHA channel, after the anti-ban throttle. */
+export async function sendMediaOverWaha(
+  channel: WahaChannelRow,
+  phone: string,
+  media: Parameters<typeof sendWahaMedia>[4]
+): Promise<string> {
+  await claimWahaSendSlot(channel.id, { connectedAt: channel.connected_at });
+  const r = await sendWahaMedia(
+    channel.waha_base_url,
+    decrypt(channel.waha_api_key),
+    channel.waha_session_name,
+    toWahaChatId(phone),
+    media
   );
   return r.id;
 }

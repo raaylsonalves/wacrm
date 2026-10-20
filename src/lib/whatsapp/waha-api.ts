@@ -325,10 +325,70 @@ export async function sendWahaText(
   chatId: string,
   text: string
 ): Promise<WahaSendTextResult> {
-  return wahaFetch<WahaSendTextResult>(baseUrl, apiKey, '/api/sendText', {
-    method: 'POST',
-    body: { session: sessionName, chatId, text },
-  });
+  const r = await wahaFetch<WahaSendResponse>(
+    baseUrl,
+    apiKey,
+    '/api/sendText',
+    {
+      method: 'POST',
+      body: { session: sessionName, chatId, text },
+    }
+  );
+  return { id: wahaMessageId(r) };
+}
+
+/** What WAHA answers to a send: WEBJS `{ id }`, NOWEB `{ key: { id } }`. */
+type WahaSendResponse = {
+  id?: string | { id?: string; _serialized?: string };
+  key?: { id?: string };
+} | null;
+
+/** The sent message's id, whatever the engine. Empty when absent. */
+export function wahaMessageId(r: WahaSendResponse): string {
+  if (typeof r?.id === 'string') return r.id;
+  return r?.key?.id ?? r?.id?._serialized ?? r?.id?.id ?? '';
+}
+
+const WAHA_MEDIA_ENDPOINT = {
+  image: '/api/sendImage',
+  video: '/api/sendVideo',
+  audio: '/api/sendVoice',
+  document: '/api/sendFile',
+} as const;
+
+/** An image / video / voice note / document by public URL, with caption. */
+export async function sendWahaMedia(
+  baseUrl: string,
+  apiKey: string,
+  sessionName: string,
+  chatId: string,
+  media: {
+    kind: keyof typeof WAHA_MEDIA_ENDPOINT;
+    url: string;
+    mimetype?: string;
+    filename?: string;
+    caption?: string;
+  }
+): Promise<WahaSendTextResult> {
+  const r = await wahaFetch<WahaSendResponse>(
+    baseUrl,
+    apiKey,
+    WAHA_MEDIA_ENDPOINT[media.kind],
+    {
+      method: 'POST',
+      body: {
+        session: sessionName,
+        chatId,
+        file: {
+          url: media.url,
+          ...(media.mimetype ? { mimetype: media.mimetype } : {}),
+          ...(media.filename ? { filename: media.filename } : {}),
+        },
+        ...(media.caption ? { caption: media.caption } : {}),
+      },
+    }
+  );
+  return { id: wahaMessageId(r) };
 }
 
 /**

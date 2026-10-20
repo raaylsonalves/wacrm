@@ -2595,6 +2595,12 @@
         "aiFollowupFallbackPlaceholder": "Sent only if the AI fails. Without it the sequence ends.",
         "messageText": "Texto del mensaje",
         "placeholderMessageText": "¡Hola! Gracias por escribirnos…",
+        "imageLabel": "Imagen (opcional)",
+        "imageAdd": "Agregar imagen",
+        "imageHint": "Se envía como imagen, con el texto de arriba como pie de foto.",
+        "imageRemove": "Quitar imagen",
+        "imageTooLarge": "Imagen demasiado grande.",
+        "imageFailed": "No se pudo subir la imagen.",
         "tagLabel": "Etiqueta",
         "modeLabel": "Modo",
         "modes": {

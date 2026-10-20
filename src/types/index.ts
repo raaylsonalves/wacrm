@@ -670,6 +670,8 @@ export interface SendMessageStepConfig {
   /** Alternative phrasings; one is picked per conversation (by hash), so
    *  many customers don't all receive the identical sentence. */
   variants?: string[];
+  /** Public image URL: sent as a picture with the text as its caption. */
+  media_url?: string;
 }
 
 /**

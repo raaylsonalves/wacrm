@@ -32,3 +32,15 @@ describe('WhatsApp privacy ids (@lid)', () => {
     expect(toWahaChatId('+55 85 99999-8888')).toBe('5585999998888@c.us');
   });
 });
+
+describe('wahaMessageId', () => {
+  it('reads the id whatever the engine', async () => {
+    const { wahaMessageId } = await import('./waha-api');
+    expect(wahaMessageId({ id: 'abc' })).toBe('abc');
+    expect(wahaMessageId({ key: { id: '3EB0' } })).toBe('3EB0');
+    expect(wahaMessageId({ id: { _serialized: 'true_1@c.us_X' } })).toBe(
+      'true_1@c.us_X'
+    );
+    expect(wahaMessageId(null)).toBe('');
+  });
+});

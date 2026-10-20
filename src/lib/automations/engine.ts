@@ -35,6 +35,7 @@ import {
   engineSendTemplate,
   engineSendInteractive,
 } from './meta-send';
+import { engineSendMedia } from '@/lib/flows/meta-send';
 import { validateInteractivePayload } from '@/lib/whatsapp/interactive';
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf';
 import { pickVariant } from '@/lib/variant';
@@ -578,6 +579,21 @@ async function runStep(
         : cfg.text;
       const text = interpolate(chosen, args);
       if (!text.trim()) throw new Error('send_message has empty text');
+      if (cfg.media_url) {
+        const { whatsapp_message_id } = await engineSendMedia({
+          accountId: args.automation.account_id,
+          userId: args.automation.user_id,
+          conversationId,
+          contactId: args.contactId,
+          kind: 'image',
+          link: cfg.media_url,
+          caption: text,
+        });
+        return {
+          key: 'sentViaMeta',
+          params: { messageId: whatsapp_message_id },
+        };
+      }
       const { whatsapp_message_id } = await engineSendText({
         accountId: args.automation.account_id,
         userId: args.automation.user_id,

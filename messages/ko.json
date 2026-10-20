@@ -2595,6 +2595,12 @@
         "aiFollowupFallbackPlaceholder": "Sent only if the AI fails. Without it the sequence ends.",
         "messageText": "메시지 텍스트",
         "placeholderMessageText": "안녕하세요! 문의해주셔서 감사합니다…",
+        "imageLabel": "이미지 (선택)",
+        "imageAdd": "이미지 추가",
+        "imageHint": "위 텍스트를 캡션으로 하여 이미지로 전송됩니다.",
+        "imageRemove": "이미지 삭제",
+        "imageTooLarge": "이미지가 너무 큽니다.",
+        "imageFailed": "이미지를 업로드할 수 없습니다.",
         "tagLabel": "태그",
         "modeLabel": "모드",
         "modes": {

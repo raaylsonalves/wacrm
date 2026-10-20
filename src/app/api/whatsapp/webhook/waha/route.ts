@@ -158,6 +158,7 @@ async function handleMessage(
   const ownerUserId = channel.created_by;
 
   let contact = await findExistingContact(db, accountId, phone);
+  let contactCreated = false;
   if (!contact) {
     const { data: inserted, error: insertErr } = await db
       .from('contacts')
@@ -177,6 +178,7 @@ async function handleMessage(
       }
     } else {
       contact = inserted as typeof contact;
+      contactCreated = true;
     }
   }
   if (!contact) return;
@@ -308,17 +310,46 @@ async function handleMessage(
     });
   }
 
+  // The contact's first message ever, across all of its conversations
+  // (this one is already stored): drives the welcome automations and
+  // first_inbound_message flows, as in the Cloud API webhook.
+  const { data: contactConvs } = await db
+    .from('conversations')
+    .select('id')
+    .eq('account_id', accountId)
+    .eq('contact_id', contact.id);
+  const { count: customerMsgCount } = await db
+    .from('messages')
+    .select('id', { count: 'exact', head: true })
+    .in(
+      'conversation_id',
+      (contactConvs ?? []).map((c: { id: string }) => c.id)
+    )
+    .eq('sender_type', 'customer');
+  const isFirstInboundMessage = (customerMsgCount ?? 0) <= 1;
+
   const flowResult = await dispatchInboundToFlows({
     accountId,
     userId: ownerUserId,
     contactId: contact.id,
     conversationId: conversation.id,
     message: { kind: 'text', text: contentText, meta_message_id: payload.id },
-    isFirstInboundMessage: false,
+    isFirstInboundMessage,
   });
 
-  const triggers: ('new_message_received' | 'keyword_match')[] =
-    flowResult.consumed ? [] : ['new_message_received', 'keyword_match'];
+  // Welcome automations run before the AI answers the same message.
+  const triggers: (
+    | 'first_inbound_message'
+    | 'new_contact_created'
+    | 'new_message_received'
+    | 'keyword_match'
+  )[] = [
+    ...(isFirstInboundMessage ? (['first_inbound_message'] as const) : []),
+    ...(contactCreated ? (['new_contact_created'] as const) : []),
+    ...(flowResult.consumed
+      ? []
+      : (['new_message_received', 'keyword_match'] as const)),
+  ];
   for (const triggerType of triggers) {
     await runAutomationsForTrigger({
       accountId,

@@ -18,6 +18,7 @@ import {
 import { resolveContactSendTarget } from '@/lib/whatsapp/wa-identity';
 import {
   WahaUnsupportedError,
+  sendMediaOverWaha,
   sendTextOverWaha,
   wahaChannelOfConversation,
 } from '@/lib/whatsapp/waha-send';
@@ -261,6 +262,23 @@ export async function engineSendMedia(
   }
   const sanitized = sendTarget.target;
 
+  // A QR (WAHA) conversation sends the file from that same WhatsApp.
+  const waha = await wahaChannelOfConversation(
+    db,
+    args.accountId,
+    args.conversationId
+  );
+  if (waha) {
+    const lid = contact.phone?.endsWith('@lid') ? contact.phone : null;
+    const id = await sendMediaOverWaha(waha, lid ?? sanitized, {
+      kind: args.kind,
+      url: args.link,
+      caption: args.caption,
+      filename: args.filename,
+    });
+    return persistEngineMedia(db, args, id);
+  }
+
   const { phoneNumberId, accessToken } = await loadAccountMetaCredentials(
     db,
     args.accountId,
@@ -305,39 +323,7 @@ export async function engineSendMedia(
       .eq('id', contact.id);
   }
 
-  // content_type='image'|'video'|'document' — these are already in the
-  // messages_content_type_check constraint (migration 001 + 010).
-  // content_text carries the caption (or empty) so the conversation
-  // list preview shows something meaningful when the user glances at it.
-  const preview = args.caption?.trim() || `[${args.kind}]`;
-  const { error: msgErr } = await db.from('messages').insert({
-    conversation_id: args.conversationId,
-    sender_type: 'bot',
-    content_type: args.kind,
-    content_text: args.caption ?? null,
-    // Without it the inbox has nothing to play or show — the customer got
-    // the file, the thread said "unavailable".
-    media_url: args.link,
-    message_id: waMessageId,
-    status: 'sent',
-    ai_generated: args.aiGenerated ?? false,
-    ai_agent_id: args.aiAgentId ?? null,
-  });
-  if (msgErr) {
-    throw new Error(`sent to Meta but DB insert failed: ${msgErr.message}`);
-  }
-
-  await db
-    .from('conversations')
-    .update({
-      last_message_text: preview,
-      last_message_at: new Date().toISOString(),
-      last_message_sender_type: 'bot',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', args.conversationId);
-
-  return { whatsapp_message_id: waMessageId };
+  return persistEngineMedia(db, args, waMessageId);
 }
 
 interface SendInteractiveButtonsEngineArgs {
@@ -547,6 +533,47 @@ async function sendInteractiveViaMeta(
       updated_at: new Date().toISOString(),
     })
     .eq('id', input.conversationId);
+
+  return { whatsapp_message_id: waMessageId };
+}
+
+/** The bot's media row + the conversation preview, after either provider. */
+async function persistEngineMedia(
+  db: ReturnType<typeof supabaseAdmin>,
+  args: SendMediaEngineArgs,
+  waMessageId: string
+): Promise<{ whatsapp_message_id: string }> {
+  // content_type='image'|'video'|'document' — these are already in the
+  // messages_content_type_check constraint (migration 001 + 010).
+  // content_text carries the caption (or empty) so the conversation
+  // list preview shows something meaningful when the user glances at it.
+  const preview = args.caption?.trim() || `[${args.kind}]`;
+  const { error: msgErr } = await db.from('messages').insert({
+    conversation_id: args.conversationId,
+    sender_type: 'bot',
+    content_type: args.kind,
+    content_text: args.caption ?? null,
+    // Without it the inbox has nothing to play or show — the customer got
+    // the file, the thread said "unavailable".
+    media_url: args.link,
+    message_id: waMessageId,
+    status: 'sent',
+    ai_generated: args.aiGenerated ?? false,
+    ai_agent_id: args.aiAgentId ?? null,
+  });
+  if (msgErr) {
+    throw new Error(`sent to Meta but DB insert failed: ${msgErr.message}`);
+  }
+
+  await db
+    .from('conversations')
+    .update({
+      last_message_text: preview,
+      last_message_at: new Date().toISOString(),
+      last_message_sender_type: 'bot',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', args.conversationId);
 
   return { whatsapp_message_id: waMessageId };
 }

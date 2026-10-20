@@ -24,7 +24,9 @@ import {
   Search,
   X,
   FlaskConical,
+  ImagePlus,
 } from 'lucide-react';
+import { uploadAccountMedia, MEDIA_MAX_BYTES } from '@/lib/storage/upload-media';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1922,14 +1924,20 @@ function StepEditor({
   switch (step.step_type) {
     case 'send_message':
       return (
-        <FieldBlock label={t('config.messageText')}>
-          <Textarea
-            value={(cfg.text as string) ?? ''}
-            onChange={(e) => set({ text: e.target.value })}
-            placeholder={t('config.placeholderMessageText')}
-            className="min-h-24"
+        <>
+          <FieldBlock label={t('config.messageText')}>
+            <Textarea
+              value={(cfg.text as string) ?? ''}
+              onChange={(e) => set({ text: e.target.value })}
+              placeholder={t('config.placeholderMessageText')}
+              className="min-h-24"
+            />
+          </FieldBlock>
+          <MessageImageField
+            url={(cfg.media_url as string) ?? ''}
+            onChange={(media_url) => set({ media_url: media_url || undefined })}
           />
-        </FieldBlock>
+        </>
       );
     case 'ai_followup':
       return (
@@ -2484,5 +2492,80 @@ function SimulatePanel({
         </div>
       </div>
     </SidePanel>
+  );
+}
+
+/**
+ * Optional picture on a send_message step: sent as an image with the
+ * message text as its caption (lib/automations/engine.ts). Same bucket
+ * and account-scoped path as the Flows send_media node.
+ */
+function MessageImageField({
+  url,
+  onChange,
+}: {
+  url: string;
+  onChange: (url: string) => void;
+}) {
+  const t = useTranslations('Automations.builder');
+  const [uploading, setUploading] = useState(false);
+
+  async function upload(file: File) {
+    if (file.size > MEDIA_MAX_BYTES) {
+      toast.error(t('config.imageTooLarge'));
+      return;
+    }
+    setUploading(true);
+    try {
+      const { publicUrl } = await uploadAccountMedia('flow-media', file);
+      onChange(publicUrl);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('config.imageFailed'));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <FieldBlock label={t('config.imageLabel')}>
+      {url ? (
+        <div className="border-border flex items-center gap-3 rounded-md border p-2">
+          {/* eslint-disable-next-line @next/next/no-img-element -- user upload */}
+          <img src={url} alt="" className="size-14 rounded object-cover" />
+          <span className="text-muted-foreground flex-1 text-[11px]">
+            {t('config.imageHint')}
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => onChange('')}
+            aria-label={t('config.imageRemove')}
+          >
+            <X className="size-3.5" />
+          </Button>
+        </div>
+      ) : (
+        <label className="border-border text-muted-foreground hover:bg-muted flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 py-3 text-xs">
+          {uploading ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <ImagePlus className="size-3.5" />
+          )}
+          {t('config.imageAdd')}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            disabled={uploading}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void upload(f);
+              e.target.value = '';
+            }}
+          />
+        </label>
+      )}
+    </FieldBlock>
   );
 }

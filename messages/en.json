@@ -2595,6 +2595,12 @@
         "aiFollowupFallbackPlaceholder": "Sent only if the AI fails. Without it the sequence ends.",
         "messageText": "Message text",
         "placeholderMessageText": "Hi! Thanks for reaching out…",
+        "imageLabel": "Image (optional)",
+        "imageAdd": "Add image",
+        "imageHint": "Sent as an image, with the text above as its caption.",
+        "imageRemove": "Remove image",
+        "imageTooLarge": "Image too large.",
+        "imageFailed": "Could not upload the image.",
         "tagLabel": "Tag",
         "modeLabel": "Mode",
         "modes": {

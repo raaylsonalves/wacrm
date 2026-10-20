@@ -2595,6 +2595,12 @@
         "aiFollowupFallbackPlaceholder": "Enviado só se a IA falhar. Sem ele, a sequência encerra.",
         "messageText": "Texto da mensagem",
         "placeholderMessageText": "Olá! Obrigado por entrar em contato…",
+        "imageLabel": "Imagem (opcional)",
+        "imageAdd": "Adicionar imagem",
+        "imageHint": "Enviada como imagem, com o texto acima como legenda.",
+        "imageRemove": "Remover imagem",
+        "imageTooLarge": "Imagem grande demais.",
+        "imageFailed": "Não foi possível enviar a imagem.",
         "tagLabel": "Tag",
         "modeLabel": "Modo",
         "modes": {
