@@ -7,7 +7,7 @@
 > for implementada ou uma nova for aberta.
 >
 > PRD-mãe: [`prd-melhorias-inspiradas-no-deskcomm.md`](prd-melhorias-inspiradas-no-deskcomm.md).
-> Última revisão: 2026-09-29 (PWA + Web Push implementado).
+> Última revisão: 2026-10-14 (rodada 3: deskcomm v1.60–v1.80).
 > Migrations 064-071 (throttle WAHA, audit log, multi-agente,
 > onboarding, rodízio de broadcast, responsáveis por canal, inbox
 > power features, push subscriptions) foram
@@ -250,14 +250,14 @@ implementação. Nenhuma tem código ainda.
 | # | Spec | O que resolve |
 |---|---|---|
 | 1 ✅ | [`handoff-customer-notice.md`](../specs/handoff-customer-notice.md) | Quando a IA repassa para humano o **cliente não recebe nada** (achado nos 4 caminhos de `handOffToHuman`, mais 2 que retornam calados) e a nota interna é uma frase em inglês fixa, cortada numa linha. Guarda o *motivo* e não a frase, renderiza traduzido e legível, e manda um aviso ao cliente (varia por motivo, por disponibilidade da equipe e por conversa). Pequena, e conserta um buraco que o usuário viu em produção. |
-| 2 | [`scheduled-broadcasts.md`](../specs/scheduled-broadcasts.md) | Disparo agendado — **já existia como spec e continua sem código** (`scheduled_at` existe desde a migration 001 e nada usa). Atualizada com pausa/retomada, janela de envio, compatibilidade com o rodízio WAHA e o filtro de consentimento. |
+| 2 ✅ | [`scheduled-broadcasts.md`](../specs/scheduled-broadcasts.md) | Disparo agendado — **já existia como spec e continua sem código** (`scheduled_at` existe desde a migration 001 e nada usa). Atualizada com pausa/retomada, janela de envio, compatibilidade com o rodízio WAHA e o filtro de consentimento. |
 | 3 ✅ | [`followup-sequences.md`](../specs/followup-sequences.md) | Follow-up em sequência quando o cliente esfria. Substitui `ai-conversation-followup-on-silence.md`. O achado central: hoje **uma espera já armada não pode ser cancelada**, então não dá para montar follow-up seguro com as peças atuais — a spec adiciona as condições de parada (cliente respondeu, humano assumiu, fechou, opt-out) em três camadas. |
-| 4 | [`human-cases.md`](../specs/human-cases.md) | "Casos": a IA continua falando com o cliente enquanto um colega resolve uma tarefa de retaguarda e responde *para a IA*. Não substitui o aviso do item 1 (situações diferentes). Tem uma restrição que o deskcomm não tem: a janela de 24h da API oficial. |
+| 4 ✅ | [`human-cases.md`](../specs/human-cases.md) | "Casos": a IA continua falando com o cliente enquanto um colega resolve uma tarefa de retaguarda e responde *para a IA*. Não substitui o aviso do item 1 (situações diferentes). Tem uma restrição que o deskcomm não tem: a janela de 24h da API oficial. |
 | 5 ✅ | [`ai-agents-management.md`](../specs/ai-agents-management.md) | Agentes gerenciáveis: hoje um agente que não é o padrão só pode ser criado e apagado na tela (a API já edita, a UI não); modelo é campo de texto livre. Traz seletor de modelos vindo do provedor, página de edição, uso por agente e (fase 2) histórico com restauração. |
-| 6 | [`prospecting-csv-import.md`](../specs/prospecting-csv-import.md) | Prospecção completa a partir de um CSV (decisão: a fonte é planilha própria, sem a busca por API do deskcomm). **Parte A:** importação no servidor (`;`, Latin-1, relatório por linha) com portão de consentimento. **Parte B:** campanha de prospecção só em número WAHA — cada contato vira negócio no funil, a IA escreve a abordagem, envio lento (teto diário, aquecimento, intervalo com variação, janela de horário, saída em toda mensagem), o mesmo agente atende a resposta e move o negócio para "qualificados" (nova ferramenta `move_deal_stage`). Funil por campanha: enviados → responderam → qualificados. |
-| 7 | [`google-calendar-sync.md`](../specs/google-calendar-sync.md) | Agendamentos vão para o Google Agenda do dono e eventos do Google bloqueiam horários para a IA. A maior incerteza não é código: é a verificação do app pelo Google. |
-| 8 | [`operator-multi-account.md`](../specs/operator-multi-account.md) | Modo operador: uma pessoa cuidando de vários clientes (a barbearia). Hoje o convite **recusa** quem já está numa conta. Traz memberships com conta ativa, carteira de saúde por cliente, experiência "essencial" e links para o cliente conectar QR/Google sem passar senha. |
-| 9 | [`ai-output-guardrails.md`](../specs/ai-output-guardrails.md) | Hoje toda regra de segurança da IA é uma frase no prompt: nada confere o texto antes de sair. O deskcomm tem uma cadeia fixa de verificações entre o modelo e o cliente (opt-out, tabela de preço/desconto/parcelas, promessa de humano sem repasse, vazamento de vocabulário interno, aviso de assistente virtual), com rastro por verificação. Propõe as cinco determinísticas (sem custo de IA), em modo só-observar antes de bloquear. |
+| 6 ✅ | [`prospecting-csv-import.md`](../specs/prospecting-csv-import.md) | Prospecção completa a partir de um CSV (decisão: a fonte é planilha própria, sem a busca por API do deskcomm). **Parte A:** importação no servidor (`;`, Latin-1, relatório por linha) com portão de consentimento. **Parte B:** campanha de prospecção só em número WAHA — cada contato vira negócio no funil, a IA escreve a abordagem, envio lento (teto diário, aquecimento, intervalo com variação, janela de horário, saída em toda mensagem), o mesmo agente atende a resposta e move o negócio para "qualificados" (nova ferramenta `move_deal_stage`). Funil por campanha: enviados → responderam → qualificados. |
+| 7 ✅ (fase A) | [`google-calendar-sync.md`](../specs/google-calendar-sync.md) | Agendamentos vão para o Google Agenda do dono e eventos do Google bloqueiam horários para a IA. A maior incerteza não é código: é a verificação do app pelo Google. |
+| 8 ✅ | [`operator-multi-account.md`](../specs/operator-multi-account.md) | Modo operador: uma pessoa cuidando de vários clientes (a barbearia). Hoje o convite **recusa** quem já está numa conta. Traz memberships com conta ativa, carteira de saúde por cliente, experiência "essencial" e links para o cliente conectar QR/Google sem passar senha. |
+| 9 ✅ | [`ai-output-guardrails.md`](../specs/ai-output-guardrails.md) | Hoje toda regra de segurança da IA é uma frase no prompt: nada confere o texto antes de sair. O deskcomm tem uma cadeia fixa de verificações entre o modelo e o cliente (opt-out, tabela de preço/desconto/parcelas, promessa de humano sem repasse, vazamento de vocabulário interno, aviso de assistente virtual), com rastro por verificação. Propõe as cinco determinísticas (sem custo de IA), em modo só-observar antes de bloquear. |
 | 10 | [`product-differentiators.md`](../specs/product-differentiators.md) | Nota estratégica (sem pesquisa de mercado): nenhum lead se perde (e medido), número protegido como recurso, IA que dá para governar, pacotes por nicho + modo operador, CRM operado pela própria IA (MCP). Vale para pequenos negócios operados por você e para empresas que gerem o próprio CRM. |
 
 Ordem: 1 é pequena e urgente; 2 e 3 dependem da mesma decisão sobre a
@@ -422,6 +422,42 @@ consentimento, os links de conexão).
   `isSnoozed`, presets). **Não testado no navegador**: o app local
   aponta pro Supabase real e exige login — não entrei com credencial.
 - Spec: [`inbox-power-features.md`](../specs/inbox-power-features.md).
+
+## Rodada 3 — deskcomm v1.60 → v1.80 (revisado em 2026-10-14)
+
+O clone local (`../deskcomm`) foi atualizado de v1.59 para v1.80 (merge
+de `upstream/main`, 3.516 commits). As specs 1–9 da tabela acima estão
+implementadas (confirmado por `git log`; o Google Agenda só a fase A).
+Lista do que o deskcomm lançou nesse intervalo e o wacrm ainda **não**
+tem, conferida por busca no código em 2026-10-14. Nenhum item tem spec
+ainda.
+
+**Prioridade alta** — barato e resolve dor real de pequeno negócio:
+
+| Feature (versão deskcomm) | Por que vale |
+|---|---|
+| Aviso fora do horário de atendimento, 1× por contato por período fechado (1.72) | O horário já existe na agenda/IA; falta a mensagem automática quando a IA está desligada ou ninguém atende. |
+| Motivo de perda no negócio + marcar vários como perdidos (1.80/unreleased); "PARAR" fecha o negócio aberto com motivo (1.70) | Hoje não há `lost_reason`; sem ele não há relatório de por que se perde. O opt-out já existe, só falta fechar o negócio. |
+| Distribuição automática de conversas: rodízio e menor carga (1.70) — spec: [`auto-assignment-and-customer-owner.md`](../specs/auto-assignment-and-customer-owner.md), parte A | Não existe auto-atribuição no wacrm; os responsáveis por canal (migration 069) já dizem *quem pode*, falta *quem recebe*. |
+| Carteira: vendedor dono do cliente, avisado quando o cliente fala com outro (1.79) — mesma spec, parte B | Encaixa em equipes de venda (ex.: Agius); o negócio novo nasce com o dono. |
+| Tarefas no card do negócio + planos de tarefa aplicados por regra (1.77, EPIC-04) | O wacrm só tem "casos" humanos ligados à conversa, não tarefas de funil. |
+| Meta Conversions API: venda e etapas do funil reportadas ao pixel para quem veio de anúncio (1.70) | Clientes que rodam anúncio click-to-WhatsApp otimizam campanha pela venda real. Diferencial comercial. |
+
+**Prioridade média**:
+
+- Menção `@` de atendente em nota interna, notificando só a pessoa (1.76); anexo em nota interna (1.62).
+- Prévia do template preenchido ao reabrir conversa com janela de 24h fechada (1.78).
+- Funil: visão Calendário por campo de data, tempo na etapa (`stage_changed_at`), janela de "esfriando" por etapa, taxa histórica de ganho por etapa (1.71–1.73, unreleased).
+- Campos personalizados condicionais e campos personalizados nas mensagens de campanha (1.74, unreleased).
+- Card de pós-venda nasce quando o negócio é ganho (unreleased).
+- Relatórios por etiqueta e por canal (1.63/1.72/1.77) — complementam o relatório de Atendimento já feito.
+- Formulários de captação com fonte e HMAC, direcionando automações por fonte (1.70/1.78).
+- Conexões: pausar/retomar número (e em lote) e janela de manutenção agendada (1.74–1.79).
+- Prospecção: dias da semana próprios, ajustar ritmo e fila de campanha pausada (1.70/1.80).
+- Espera antes de responder (rajada) configurável por agente/número (1.67) — o wacrm tem `lib/ai/burst.ts` com valor fixo.
+- Agente de IA chamando servidor MCP externo (1.77, só a base).
+
+**Baixa / não se aplica agora**: cobrança de tenants por Asaas/Stripe (já temos Mercado Pago), módulos de nicho (Honorários, B2B/Empresas), LGPD/RGPD de Portugal, login do Codex, Jitsi, CSS personalizado, logo/cor por tema, grupos de WhatsApp, 2FA por papel, o "Jev" (IA observadora deles — os guardrails em modo observar já cobrem a ideia central), coexistência (parada, ver memória do projeto).
 
 ## Gap conhecido — multi-número fora do Inbox
 
